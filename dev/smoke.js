@@ -69,9 +69,9 @@ fs.mkdirSync(SHOTS, { recursive: true });
       if (!await page.locator('#btn-load').isDisabled()) {
         await click('#btn-load');
         await page.waitForTimeout(300);
-        const chips = page.locator('#load-strip .shell-chip');
+        const chips = page.locator('#load-strip button');
         if (await chips.count() > 0) await chips.first().click();
-        else await click('#mm-close');
+        else await click('.m-close');
         await page.waitForTimeout(300);
       }
     }
@@ -90,14 +90,14 @@ fs.mkdirSync(SHOTS, { recursive: true });
 
     for (let i = 0; i < 3; i++) await page.locator('button', { hasText: '+100⛁' }).click();
 
-    await page.locator('.station', { hasText: 'ONE-ARMED BANDIT' }).click();
+    await page.locator('.station[data-station="slots"]').click();
     await page.waitForTimeout(300);
     await click('#btn-spin-slots');
     await page.waitForTimeout(2800);
     await shot('06-slots');
-    await click('#mm-close');
+    await click('.m-close');
 
-    await page.locator('.station', { hasText: 'BLACKJACK' }).click();
+    await page.locator('.station[data-station="bj"]').click();
     await page.waitForTimeout(300);
     await click('#bj-deal');
     await page.waitForTimeout(600);
@@ -106,30 +106,30 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await page.waitForTimeout(2500);
     }
     await shot('07-blackjack');
-    await click('#mm-close');
+    await click('.m-close');
 
-    await page.locator('.station', { hasText: 'WHEEL OF FATES' }).click();
+    await page.locator('.station[data-station="roulette"]').click();
     await page.waitForTimeout(300);
     await page.locator('[data-col="R"]').click();
     await click('#btn-spin-wheel');
     await page.waitForTimeout(3800);
     await shot('08-roulette');
-    await click('#mm-close');
+    await click('.m-close');
 
-    await page.locator('.station', { hasText: 'CHICKEN DERBY' }).click();
+    await page.locator('.station[data-station="derby"]').click();
     await page.waitForTimeout(300);
     await page.locator('.chick-btn').first().click();
     await click('#btn-race');
     await page.waitForTimeout(6000);
     await shot('09-derby');
-    await click('#mm-close');
+    await click('.m-close');
 
-    await page.locator('.station', { hasText: 'PAWN SHOP' }).click();
+    await page.locator('.station[data-station="pawn"]').click();
     await page.waitForTimeout(300);
     await shot('10-pawn');
     const buy = page.locator('#pawn-charms .w-buy:not([disabled])');
     if (await buy.count() > 0) { await buy.first().click(); await page.waitForTimeout(300); }
-    await click('#mm-close');
+    await click('.m-close');
 
     await click('#btn-next');
     await page.waitForTimeout(700);

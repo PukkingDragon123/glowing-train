@@ -1,67 +1,124 @@
 'use strict';
 /* ============================================================
    SHELL & DEBT — ui.js
-   Screens, the chamber wheel, panels, tooltips, FX, log.
+   All presentation: pixel HUD, the living cylinder, stamps,
+   toasts, tooltips, title & end screens. Nearly wordless —
+   icons and numbers on screen, prose only in hover tooltips.
    ============================================================ */
 
-const UI = {
-  call: null,        // currently selected call
-  busy: false,       // input lock during animations
-  logLines: [],
-  holeEls: new Map(), // uid -> element
-  $: {},             // cached element refs for the round screen
+/* a couple of UI-only sprites */
+PIX.def('ic_trigger', `
+....KKKKKK....
+..KKRRRRRRKK..
+.KRRRYYRRRRRK.
+.KRRYWWYRRRRK.
+KRRRYWWYRRRRrK
+KRRRRYYRRRRrrK
+KRRRRRRRRRrrdK
+KrRRRRRRRrrddK
+.KrrRRRrrrddK.
+.KdrrrrrdddK..
+..KKddddddKK..
+....KKKKKK....`);
 
-  /* ================= boot / router ================= */
+PIX.def('ic_arrow_r', `
+K....
+KK...
+KKK..
+KKKK.
+KKKKK
+KKKK.
+KKK..
+KK...
+K....`.replace(/K/g, 'W'));
+
+const UI = {
+  call: null,
+  busy: false,
+  $: {},
+  cyl: { rot: 0, target: 0, flash: null, snapshot: null, raf: null },
+  toasts: [],
+
+  /* ================= router ================= */
 
   render() {
     const app = document.getElementById('app');
     app.innerHTML = '';
-    UI.holeEls.clear();
+    UI.stopCylLoop();
     app.appendChild(UI.buildTopbar());
-    if (G.phase === 'round') UI.buildRound(app);
-    else if (G.phase === 'casino') CASINO.buildFloor(app);
-    else if (G.phase === 'gameover') UI.buildEnd(app, false);
-    else if (G.phase === 'win') UI.buildEnd(app, true);
-    else UI.buildTitle(app);
+    if (G.phase === 'round') { BG.set(G.boss ? 'boss' : 'round'); UI.buildRound(app); }
+    else if (G.phase === 'casino') { BG.set('casino'); CASINO.buildFloor(app); }
+    else if (G.phase === 'gameover') { BG.set('dead'); UI.buildEnd(app, false); }
+    else if (G.phase === 'win') { BG.set('win'); UI.buildEnd(app, true); }
+    else { BG.set('title'); UI.buildTitle(app); }
+  },
+
+  /* small builders */
+  txt(str, opts) { return PIXFONT.render(str, Object.assign({ scale: 2, shadow: PIX.PAL.K }, opts)); },
+  num(n, opts) { return UI.txt(U.fmt(Math.round(n)), opts); },
+  put(holder, canvas) { if (!holder) return; holder.innerHTML = ''; holder.appendChild(canvas); },
+  icon(name, scale, tipKey, tipVal) {
+    const c = PIX.el(name, scale || 2);
+    if (tipKey) { c.classList.add('has-tip'); c.dataset[tipKey] = tipVal || '1'; }
+    return c;
   },
 
   buildTopbar() {
-    const bar = U.el('div', '');
+    const bar = U.el('div');
     bar.id = 'topbar';
     const inRun = ['round', 'casino'].includes(G.phase);
-    let tags = '';
+
+    const left = U.el('div', 'tb-side');
+    const logo = UI.txt('SHELL&DEBT', { scale: 2, color: PIX.PAL.G, outline: PIX.PAL.K });
+    logo.classList.add('breathe');
+    left.appendChild(logo);
     if (inRun) {
-      tags += `<span class="ante-tag">ANTE ${G.ante}${G.ante > WIN_ANTE ? ' · ENDLESS' : ''}</span>`;
+      const seed = UI.txt(G.seedStr, { scale: 1, color: PIX.PAL.q, shadow: null });
+      seed.style.opacity = .6;
+      left.appendChild(seed);
+    }
+    bar.appendChild(left);
+
+    const right = U.el('div', 'tb-side');
+    if (inRun) {
+      const ante = U.el('span', 'tb-chip has-tip');
+      ante.dataset.tipText = 'ANTE ' + G.ante + (G.ante > WIN_ANTE ? ' — ENDLESS' : '') +
+        ' — debt: ' + U.fmt(G.debt || 0);
+      ante.appendChild(UI.icon('ic_chip', 2));
+      ante.appendChild(UI.txt('A' + G.ante, { scale: 2, color: PIX.PAL.N }));
+      right.appendChild(ante);
       if (G.phase === 'round' && G.boss) {
-        const b = BOSSES[G.boss];
-        tags += `<span class="boss-tag has-tip" data-tip-boss="${G.boss}">${b.icon} ${b.name}</span>`;
+        const b = SPR.emblemEl('boss', G.boss, 2, 'has-tip pulse-red');
+        b.dataset.tipBoss = G.boss;
+        right.appendChild(b);
       }
       if (G.phase === 'round' && G.fate) {
-        const f = FATES[G.fate];
-        tags += `<span class="fate-tag has-tip" data-tip-fate="${G.fate}">${f.icon} ${f.name}</span>`;
+        const f = SPR.emblemEl('fate', G.fate, 2, 'has-tip');
+        f.dataset.tipFate = G.fate;
+        right.appendChild(f);
       }
     }
-    bar.innerHTML = `
-      <div class="logo">SHELL <em>&amp;</em> DEBT</div>
-      ${inRun ? `<span class="seed mono">${U.esc(G.seedStr)}</span>` : ''}
-      <div class="spacer"></div>
-      ${tags}
-      <button id="btn-help">RULES</button>
-      <button id="btn-mute">${SFX.muted ? '🔇' : '🔊'}</button>
-      ${inRun ? '<button id="btn-abandon" title="Abandon this run">🏳️</button>' : ''}
-    `;
-    bar.querySelector('#btn-help').onclick = () => { SFX.click(); UI.showHelp(); };
-    bar.querySelector('#btn-mute').onclick = (e) => {
+    const mkBtn = (id, iconName, tip, fn) => {
+      const b = U.el('button', 'pixbtn tb-btn has-tip');
+      b.id = id;
+      b.dataset.tipText = tip;
+      b.appendChild(PIX.el(iconName, 2));
+      b.onclick = fn;
+      return b;
+    };
+    right.appendChild(mkBtn('btn-help', 'ic_help', 'House rules', () => { SFX.click(); UI.showHelp(); }));
+    right.appendChild(mkBtn('btn-mute', SFX.muted ? 'ic_sound_off' : 'ic_sound_on', 'Sound', (e) => {
       SFX.init(); const m = SFX.toggleMute();
-      e.target.textContent = m ? '🔇' : '🔊';
+      const btn = e.currentTarget; btn.innerHTML = '';
+      btn.appendChild(PIX.el(m ? 'ic_sound_off' : 'ic_sound_on', 2));
       if (!m) SFX.click();
-    };
-    const ab = bar.querySelector('#btn-abandon');
-    if (ab) ab.onclick = () => {
+    }));
+    if (inRun) right.appendChild(mkBtn('btn-abandon', 'ic_flag', 'Abandon the run', () => {
       if (confirm('Walk away from the table? The run ends here.')) {
-        E.gameOver('debt'); G.overReason = 'walk'; UI.render();
+        E.gameOver('walk'); UI.render();
       }
-    };
+    }));
+    bar.appendChild(right);
     return bar;
   },
 
@@ -70,98 +127,116 @@ const UI = {
   buildTitle(app) {
     const best = E.loadBest();
     const wrap = U.el('div', 'splash');
-    wrap.innerHTML = `
-      <h1>SHELL <em>&amp;</em> DEBT</h1>
-      <div class="tagline">
-        The house found you. The chamber is loaded. Call the shot — <b style="color:var(--fire)">FIRE</b>,
-        <b style="color:var(--dud)">DUD</b>, <b style="color:var(--jam)">JAM</b> or
-        <b style="color:var(--backfire)">BACKFIRE</b> — ride the pot, bank the streak,
-        and pay your debt before your nerve runs out.<br>
-        Everything is gambling. Everything combos. Nobody leaves rich. Prove it wrong.
-      </div>
-      <div class="seed-row">
-        <input id="seed-in" maxlength="24" placeholder="CURSED SEED (optional)" spellcheck="false">
-      </div>
-      <button class="big-btn gold-btn" id="btn-deal">🎰 &nbsp;DEAL ME IN</button>
-      <button class="big-btn" id="btn-rules2">HOW TO PLAY</button>
-      ${best ? `<div class="best-line">Deepest run: <b>ANTE ${best.ante}</b> · ${U.fmt(best.score)} total score · seed <span class="mono">${U.esc(best.seed)}</span></div>` : ''}
-      <div class="best-line" style="opacity:.6">a 2D dark casino roguelike · inspired by the greats, cursed by the rest</div>
-    `;
-    app.appendChild(wrap);
-    wrap.querySelector('#btn-deal').onclick = () => {
-      SFX.init(); SFX.chak();
-      const seed = wrap.querySelector('#seed-in').value;
-      UI.call = null; UI.logLines = [];
-      E.newRun(seed);
-      UI.render();
-      UI.log(`The velvet door closes behind you. Seed: ${G.seedStr}`, true);
-      UI.log(`ANTE ${G.ante} — the house wants ${U.fmt(G.debt)}.`);
+
+    const logoBox = U.el('div', 'logo-stack');
+    const l1 = UI.txt('SHELL', { scale: 9, color: PIX.PAL.G, outline: PIX.PAL.K, shadow: PIX.PAL.H });
+    const amp = UI.txt('&', { scale: 6, color: PIX.PAL.r, outline: PIX.PAL.K });
+    const l2 = UI.txt('DEBT', { scale: 9, color: PIX.PAL.r, outline: PIX.PAL.K, shadow: PIX.PAL.D });
+    l1.classList.add('breathe'); l2.classList.add('breathe2'); amp.classList.add('breathe');
+    logoBox.append(l1, amp, l2);
+    wrap.appendChild(logoBox);
+
+    // spinning cylinder centerpiece
+    const cylCv = document.createElement('canvas');
+    cylCv.width = 120; cylCv.height = 120;
+    cylCv.className = 'pix title-cyl';
+    wrap.appendChild(cylCv);
+    const tctx = cylCv.getContext('2d');
+    const fakeHoles = ['live', 'blank', 'cursed', 'gilded', 'web', 'buck']
+      .map(id => ({ inst: { id, uid: 0 }, revealed: true }));
+    let trot = 0;
+    const spinTitle = () => {
+      if (!document.body.contains(cylCv)) return;
+      trot += 0.006;
+      tctx.clearRect(0, 0, 120, 120);
+      SPR.drawCylinder(tctx, { cx: 60, cy: 60, r: 52, rot: trot, holes: fakeHoles, ptr: -1, blind: false });
+      requestAnimationFrame(spinTitle);
     };
-    wrap.querySelector('#btn-rules2').onclick = () => { SFX.init(); UI.showHelp(); };
+    requestAnimationFrame(spinTitle);
+
+    const row = U.el('div', 'seed-row');
+    const input = U.el('input');
+    input.id = 'seed-in';
+    input.maxLength = 24;
+    input.placeholder = 'CURSED SEED';
+    input.spellcheck = false;
+    row.appendChild(input);
+    wrap.appendChild(row);
+
+    const deal = U.el('button', 'pixbtn gold big-deal');
+    deal.id = 'btn-deal';
+    deal.append(PIX.el('ic_trigger', 3), UI.txt('DEAL', { scale: 4, color: PIX.PAL.K, shadow: null }));
+    wrap.appendChild(deal);
+    deal.onclick = () => {
+      SFX.init(); SFX.chak();
+      UI.call = null;
+      E.newRun(input.value);
+      UI.render();
+    };
+
+    if (best) {
+      const b = U.el('div', 'best-line has-tip');
+      b.dataset.tipText = 'Deepest run — seed ' + best.seed;
+      b.append(UI.icon('ic_crown', 2), UI.txt('A' + best.ante, { scale: 2, color: PIX.PAL.G }),
+        UI.icon('ic_bank', 2), UI.num(best.score, { scale: 2, color: PIX.PAL.w }));
+      wrap.appendChild(b);
+    }
+    app.appendChild(wrap);
   },
 
   /* ================= round screen ================= */
 
   buildRound(app) {
-    const grid = U.el('div', '');
+    const grid = U.el('div');
     grid.id = 'round-grid';
     grid.innerHTML = `
       <div class="col" id="left-col">
-        <div class="panel">
-          <h3>THE DEBT</h3>
-          <div class="debt-num mono" id="p-debt"></div>
-          <div class="stat-row"><span class="lab">YOUR SCORE</span><span class="score-num mono" id="p-score"></span></div>
-          <div class="debt-bar"><div class="ghost" id="p-ghost"></div><div class="fill" id="p-fill"></div></div>
+        <div class="ppanel has-tip" data-tip-key="debt">
+          <div class="prow"><span class="picon" id="i-debt"></span><span id="p-debt"></span></div>
+          <div class="prow"><span class="picon" id="i-score"></span><span id="p-score"></span></div>
+          <div class="pixbar"><div class="ghost" id="p-ghost"></div><div class="fill" id="p-fill"></div></div>
         </div>
-        <div class="panel">
-          <h3>THE POT <span style="float:right" id="p-streak-lab"></span></h3>
-          <div class="pot-num mono" id="p-pot"></div>
-          <div class="streak-tag" id="p-streak"></div>
-          <button class="btn-bank" id="btn-bank"></button>
+        <div class="ppanel has-tip" data-tip-key="pot">
+          <div class="prow"><span class="picon" id="i-pot"></span><span id="p-pot"></span></div>
+          <div class="prow" id="p-streak"></div>
+          <button class="pixbtn bank" id="btn-bank"></button>
         </div>
-        <div class="panel">
-          <h3>YOU</h3>
-          <div class="stat-row"><span class="lab">CHIPS</span><span class="mono" style="color:var(--gold-hi)" id="p-chips"></span></div>
-          <div class="stat-row"><span class="lab">NERVE</span><span class="hearts" id="p-nerve"></span></div>
-          <div class="stat-row"><span class="lab">PULLS</span><span class="mono" id="p-pulls"></span></div>
-          <div class="stat-row"><span class="lab">SLEIGHT</span><span class="pips" id="p-sleight"></span></div>
+        <div class="ppanel">
+          <div class="prow has-tip" data-tip-key="nerve" id="p-nerve"></div>
+          <div class="prow has-tip" data-tip-key="pulls" id="p-pulls"></div>
+          <div class="prow has-tip" data-tip-key="sleight" id="p-sleight"></div>
+          <div class="prow has-tip" data-tip-key="chips"><span class="picon" id="i-chips"></span><span id="p-chips"></span></div>
         </div>
       </div>
 
       <div id="center-col">
         <div id="chamber-zone">
-          <div class="hammer" id="hammer">▼</div>
-          <div id="wheel"><div class="axis"></div></div>
-          <div id="holes-layer" style="position:absolute;inset:0;pointer-events:none"></div>
+          <canvas id="cyl" class="pix" width="230" height="240"></canvas>
+          <div id="stamp-zone"></div>
+          <div id="toast-zone"></div>
         </div>
-        <div id="banner-zone"></div>
-        <div id="log"></div>
       </div>
 
       <div class="col" id="right-col">
-        <div class="panel">
-          <h3>THE CALL</h3>
+        <div class="ppanel has-tip" data-tip-key="call">
           <div id="call-btns"></div>
-          <button class="btn-pull" id="btn-pull"></button>
+          <button class="pixbtn pull" id="btn-pull"></button>
         </div>
-        <div class="panel">
-          <h3>SLEIGHT OF HAND</h3>
+        <div class="ppanel has-tip" data-tip-key="sleightPanel">
           <div class="sleight-row">
-            <button id="btn-peek"></button>
-            <button id="btn-spin"></button>
-            <button id="btn-eject"></button>
-            <button id="btn-load"></button>
+            <button class="pixbtn sl" id="btn-peek"></button>
+            <button class="pixbtn sl" id="btn-spin"></button>
+            <button class="pixbtn sl" id="btn-eject"></button>
+            <button class="pixbtn sl" id="btn-load"></button>
           </div>
         </div>
       </div>
 
       <div id="bottom-bar">
-        <div class="panel" style="flex:1.4">
-          <h3>SHELL POUCH <span id="p-pouch-count"></span></h3>
+        <div class="ppanel tray has-tip" data-tip-key="pouch" style="flex:1.5">
           <div class="chip-strip" id="p-pouch"></div>
         </div>
-        <div class="panel">
-          <h3>CHARMS</h3>
+        <div class="ppanel tray has-tip" data-tip-key="charms">
           <div class="chip-strip" id="p-charms"></div>
         </div>
       </div>
@@ -171,9 +246,14 @@ const UI = {
     UI.$ = {};
     ['p-debt', 'p-score', 'p-fill', 'p-ghost', 'p-pot', 'p-streak', 'p-chips', 'p-nerve',
       'p-pulls', 'p-sleight', 'btn-bank', 'call-btns', 'btn-pull', 'btn-peek', 'btn-spin',
-      'btn-eject', 'btn-load', 'banner-zone', 'log', 'wheel', 'holes-layer', 'hammer',
-      'p-pouch', 'p-pouch-count', 'p-charms']
+      'btn-eject', 'btn-load', 'stamp-zone', 'toast-zone', 'cyl', 'p-pouch', 'p-charms',
+      'i-debt', 'i-score', 'i-pot', 'i-chips']
       .forEach(id => UI.$[id] = grid.querySelector('#' + id));
+
+    UI.put(UI.$['i-debt'], PIX.el('ic_debt', 2));
+    UI.put(UI.$['i-score'], PIX.el('ic_bank', 2));
+    UI.put(UI.$['i-pot'], PIX.el('ic_pot', 2));
+    UI.put(UI.$['i-chips'], PIX.el('ic_chip', 2));
 
     UI.$['btn-bank'].onclick = () => UI.onBank();
     UI.$['btn-pull'].onclick = () => UI.onPull();
@@ -182,48 +262,127 @@ const UI = {
     UI.$['btn-eject'].onclick = () => UI.onSleight('eject');
     UI.$['btn-load'].onclick = () => UI.onSleight('load');
 
-    UI.renderLog();
+    UI.cyl.rot = -G.ptr * Math.PI / 3;
+    UI.cyl.target = UI.cyl.rot;
+    UI.startCylLoop();
     UI.sync();
   },
 
-  /* ---------- incremental sync of the round screen ---------- */
+  /* ---------- cylinder loop ---------- */
+
+  startCylLoop() {
+    const cv = UI.$['cyl'];
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const loop = () => {
+      if (G.phase !== 'round' || !document.body.contains(cv)) { UI.cyl.raf = null; return; }
+      const c = UI.cyl;
+      const diff = c.target - c.rot;
+      if (Math.abs(diff) > 0.002) c.rot += diff * 0.16;
+      else c.rot = c.target;
+
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      // hammer at top
+      PIX.draw(ctx, 'hammer', cv.width / 2 - 10, 0, 2);
+      const holes = c.snapshot ? c.snapshot.holes : G.holes;
+      const ptr = c.snapshot ? c.snapshot.ptr : G.ptr;
+      SPR.drawCylinder(ctx, {
+        cx: cv.width / 2, cy: 128, r: 92,
+        rot: c.rot,
+        holes, ptr, blind: E.blindRound(),
+      });
+      // flash effect at the hammer position
+      if (c.flash && performance.now() < c.flash.until) {
+        const frames = c.flash.frames;
+        const fi = Math.min(frames.length - 1,
+          Math.floor((performance.now() - c.flash.start) / 70));
+        PIX.draw(ctx, frames[fi], cv.width / 2 - PIX.size(frames[fi]).w, 30, 2);
+      } else c.flash = null;
+
+      UI.cyl.raf = requestAnimationFrame(loop);
+    };
+    if (!UI.cyl.raf) UI.cyl.raf = requestAnimationFrame(loop);
+  },
+
+  stopCylLoop() {
+    if (UI.cyl.raf) { cancelAnimationFrame(UI.cyl.raf); UI.cyl.raf = null; }
+    UI.cyl.snapshot = null; UI.cyl.flash = null;
+  },
+
+  cylRotateToPtr(extraSpin) {
+    // target only ever decreases, so the cylinder always turns the same way
+    const want = -G.ptr * Math.PI / 3;
+    const down = ((UI.cyl.target - want) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    UI.cyl.target -= down + (extraSpin ? Math.PI * 2 : 0);
+  },
+
+  flashAtHammer(type) {
+    const frames = {
+      FIRE: ['flash_1', 'flash_2', 'flash_3'],
+      DUD: ['puff_1', 'puff_2'],
+      JAM: ['spark_1', 'spark_1'],
+      BACKFIRE: ['burst_red', 'flash_2', 'flash_3'],
+    }[type] || ['puff_1'];
+    UI.cyl.flash = { frames, start: performance.now(), until: performance.now() + frames.length * 90 };
+  },
+
+  /* ---------- sync ---------- */
 
   sync() {
     if (G.phase !== 'round' || !UI.$['p-debt']) return;
     const $ = UI.$;
 
-    $['p-debt'].textContent = U.fmt(G.debt);
-    $['p-score'].textContent = U.fmt(G.score);
+    UI.put($['p-debt'], UI.num(G.debt, { scale: 4, color: PIX.PAL.R }));
+    UI.put($['p-score'], UI.num(G.score, { scale: 3, color: PIX.PAL.G }));
     const pct = U.clamp(G.score / G.debt * 100, 0, 100);
     $['p-fill'].style.width = pct + '%';
     const ghostPct = U.clamp((G.pot > 0 ? E.bankAmount() : 0) / G.debt * 100, 0, 100 - pct);
     $['p-ghost'].style.left = pct + '%';
     $['p-ghost'].style.width = ghostPct + '%';
 
-    $['p-pot'].textContent = U.fmt(G.pot);
-    $['p-streak'].textContent = G.streak > 0
-      ? `streak ${G.streak} — payouts ×${E.streakMult(G.streak).toFixed(2).replace(/\.?0+$/, '')}`
-      : 'no streak — first hit pays ×1';
-    const bankable = E.canBank();
-    const bb = $['btn-bank'];
-    bb.disabled = !bankable || UI.busy;
-    if (G.pot <= 0) bb.textContent = 'BANK — pot is empty';
-    else if (E.bossIs('croupier') && G.streak < 2) bb.textContent = `🎩 BANK LOCKED (streak < 2)`;
-    else {
-      const amt = E.bankAmount();
-      bb.textContent = `BANK ${U.fmt(amt)}${amt !== G.pot ? (amt < G.pot ? ' (taxed)' : ' (×2!)') : ''}`;
+    UI.put($['p-pot'], UI.num(G.pot, { scale: 4, color: PIX.PAL.N }));
+    const sm = E.streakMult(Math.max(1, G.streak));
+    const smStr = 'x' + (Math.round(sm * 100) / 100);
+    const streakRow = $['p-streak'];
+    streakRow.innerHTML = '';
+    streakRow.appendChild(UI.txt(smStr, { scale: 2, color: G.streak > 1 ? PIX.PAL.V : PIX.PAL.q }));
+    for (let i = 0; i < Math.min(G.streak, 8); i++) {
+      streakRow.appendChild(PIX.el('spark_1', 1));
     }
 
-    $['p-chips'].textContent = '⛁ ' + U.fmt(G.chips);
-    $['p-nerve'].innerHTML = Array.from({ length: G.nerveMax },
-      (_, i) => `<span class="${i < G.nerve ? '' : 'off'}">🫀</span>`).join('');
-    $['p-pulls'].innerHTML = `${G.pulls} <span style="color:var(--ink-dim)">/ ${G.pullsMax}</span>`;
-    $['p-sleight'].innerHTML = Array.from({ length: Math.max(G.sleightMax, G.sleight) },
-      (_, i) => `<span class="${i < G.sleight ? '' : 'off'}">◆</span>`).join('');
+    const bb = $['btn-bank'];
+    const bankable = E.canBank();
+    bb.disabled = !bankable || UI.busy;
+    bb.innerHTML = '';
+    bb.classList.toggle('locked', E.bossIs('croupier') && G.streak < 2 && G.pot > 0);
+    bb.appendChild(PIX.el('ic_bank', 2));
+    if (G.pot > 0) {
+      const amt = E.bankAmount();
+      bb.appendChild(UI.num(amt, { scale: 2, color: amt < G.pot ? PIX.PAL.R : PIX.PAL.G }));
+    } else {
+      bb.appendChild(UI.txt('BANK', { scale: 2, color: PIX.PAL.q }));
+    }
+
+    // hearts / bullets / sleight pips / chips
+    const nerveRow = $['p-nerve']; nerveRow.innerHTML = '';
+    for (let i = 0; i < G.nerveMax; i++) {
+      const h = PIX.el(i < G.nerve ? 'ic_heart' : 'ic_heart_off', 2);
+      if (i < G.nerve && G.nerve <= 1) h.classList.add('pulse-red');
+      nerveRow.appendChild(h);
+    }
+    const pullsRow = $['p-pulls']; pullsRow.innerHTML = '';
+    const totalPulls = Math.min(Math.max(G.pullsMax, G.pulls), 14);
+    for (let i = 0; i < totalPulls; i++) {
+      pullsRow.appendChild(PIX.el(i < G.pulls ? 'ic_bullet' : 'ic_bullet_off', 2));
+    }
+    const slRow = $['p-sleight']; slRow.innerHTML = '';
+    for (let i = 0; i < Math.max(G.sleightMax, G.sleight); i++) {
+      slRow.appendChild(PIX.el(i < G.sleight ? 'ic_diamond' : 'ic_diamond_off', 2));
+    }
+    UI.put($['p-chips'], UI.num(G.chips, { scale: 3, color: PIX.PAL.G }));
 
     UI.syncCalls();
     UI.syncSleight();
-    UI.syncChamber();
     UI.syncPouch();
     UI.syncCharms();
   },
@@ -233,16 +392,19 @@ const UI = {
     const odds = E.topOdds();
     const box = $['call-btns'];
     box.innerHTML = '';
+    const icons = { FIRE: 'ic_fire', DUD: 'ic_dud', JAM: 'ic_jam', BACKFIRE: 'ic_backfire' };
     OUTCOMES.forEach(o => {
-      const m = OUTCOME_META[o];
       const p = odds.blind ? null : (odds.probs ? odds.probs[o] : null);
       const mult = E.callMult(p);
-      const btn = U.el('button', 'call-btn' + (UI.call === o ? ` sel-${o}` : ''));
-      btn.innerHTML = `
-        <span class="ic">${m.icon}</span>
-        <span>${o}<span class="odds">${odds.blind ? 'odds: ??' : (p === null ? '—' : 'odds: ' + Math.round(p * 100) + '%')}${odds.hidden && !odds.blind ? ' (est.)' : ''}</span></span>
-        <span class="mult mono">×${mult}</span>
-      `;
+      const btn = U.el('button', 'pixbtn call-btn has-tip' + (UI.call === o ? ' sel sel-' + o : ''));
+      btn.dataset.tipCall = o;
+      btn.appendChild(PIX.el(icons[o], 2));
+      const mid = U.el('span', 'call-mid');
+      mid.appendChild(UI.txt(o === 'BACKFIRE' ? 'BACK' : o, { scale: 2, color: PIX.PAL.W }));
+      mid.appendChild(UI.txt(odds.blind ? '??%' : Math.round((p || 0) * 100) + '%' + (odds.hidden ? '?' : ''),
+        { scale: 1, color: PIX.PAL.q, shadow: null }));
+      btn.appendChild(mid);
+      btn.appendChild(UI.txt('x' + mult, { scale: 2, color: PIX.PAL.G }));
       btn.disabled = UI.busy || G.flags.roundWon;
       btn.onclick = () => { SFX.click(); UI.call = o; UI.sync(); };
       box.appendChild(btn);
@@ -250,140 +412,69 @@ const UI = {
 
     const pull = $['btn-pull'];
     pull.disabled = UI.busy || !UI.call || G.flags.roundWon || !E.topHole() || G.pulls <= 0;
-    pull.innerHTML = UI.call
-      ? `PULL THE TRIGGER<span class="est">${OUTCOME_META[UI.call].icon} calling ${UI.call} — a hit pays ≈${U.fmt(E.estPayout(UI.call))}</span>`
-      : `PULL THE TRIGGER<span class="est">choose your call first</span>`;
+    pull.innerHTML = '';
+    pull.appendChild(PIX.el('ic_trigger', 3));
+    const pcol = U.el('span', 'pull-col');
+    pcol.appendChild(UI.txt('PULL', { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
+    if (UI.call) {
+      const est = U.el('span', 'est-row');
+      est.appendChild(PIX.el({ FIRE: 'ic_fire', DUD: 'ic_dud', JAM: 'ic_jam', BACKFIRE: 'ic_backfire' }[UI.call], 1));
+      est.appendChild(UI.txt('+' + U.fmt(E.estPayout(UI.call)), { scale: 1, color: PIX.PAL.N, shadow: null }));
+      pcol.appendChild(est);
+    }
+    pull.appendChild(pcol);
   },
 
   syncSleight() {
     const $ = UI.$;
+    const mk = (btn, iconName, cost, allowed, tip) => {
+      btn.innerHTML = '';
+      btn.appendChild(PIX.el(iconName, 2));
+      const c = U.el('span', 'cost-pips');
+      for (let i = 0; i < cost; i++) c.appendChild(PIX.el('ic_diamond', 1));
+      if (cost === 0) c.appendChild(UI.txt('0', { scale: 1, color: PIX.PAL.N, shadow: null }));
+      btn.appendChild(c);
+      btn.disabled = UI.busy || G.flags.roundWon || !allowed;
+      btn.classList.add('has-tip');
+      btn.dataset.tipText = tip;
+    };
     const caged = E.sleightBlocked();
-    const tag = (cost) => cost === 0 ? '<span class="cost">free</span>' : `<span class="cost">◆${cost}</span>`;
-    const top = E.topHole();
-
-    $['btn-peek'].innerHTML = `👁️ PEEK ${tag(E.peekCost())}`;
-    $['btn-peek'].disabled = UI.busy || G.flags.roundWon || !E.peekAllowed();
-    if (E.blindRound() || E.fateIs('houseEyes')) $['btn-peek'].title = 'Peeking is forbidden this round.';
-    else $['btn-peek'].title = top && top.revealed ? 'The next shell is already revealed.' : 'Reveal the shell under the hammer.';
-
-    $['btn-spin'].innerHTML = `🌀 SPIN ${tag(1)}`;
-    $['btn-spin'].disabled = UI.busy || G.flags.roundWon || !E.spinAllowed();
-    $['btn-spin'].title = 'Shuffle and re-hide the chamber.';
-
-    $['btn-eject'].innerHTML = `⏏️ EJECT ${tag(E.ejectCost())}`;
-    $['btn-eject'].disabled = UI.busy || G.flags.roundWon || !E.ejectAllowed();
-    $['btn-eject'].title = 'Discard the shell under the hammer, sight unseen.';
-
-    $['btn-load'].innerHTML = `🫳 LOAD ${tag(1)}`;
-    $['btn-load'].disabled = UI.busy || G.flags.roundWon || !E.loadAllowed();
-    $['btn-load'].title = 'Swap a shell from your pouch into the top chamber.';
-
-    if (caged) ['btn-peek', 'btn-spin', 'btn-eject', 'btn-load'].forEach(b => {
-      $[b].title = '🔒 The Cage: Sleight is disabled this round.';
-    });
+    mk($['btn-peek'], 'ic_eye', E.peekCost(), E.peekAllowed(),
+      caged ? 'The Cage: sleight is off' : (E.blindRound() || E.fateIs('houseEyes'))
+        ? 'Peeking is forbidden this round' : 'PEEK — reveal the shell under the hammer');
+    mk($['btn-spin'], 'ic_spin', 1, E.spinAllowed(),
+      caged ? 'The Cage: sleight is off' : 'SPIN — shuffle and re-hide the chamber');
+    mk($['btn-eject'], 'ic_eject', E.ejectCost(), E.ejectAllowed(),
+      caged ? 'The Cage: sleight is off' : 'EJECT — discard the top shell unseen');
+    mk($['btn-load'], 'ic_load', 1, E.loadAllowed(),
+      caged ? 'The Cage: sleight is off' : 'LOAD — swap a pouch shell under the hammer');
   },
-
-  /* ---------- chamber wheel ---------- */
-
-  holePos(slotOffset) {
-    // slotOffset 0 = under the hammer (top), increasing clockwise
-    const a = (slotOffset * 60 - 90) * Math.PI / 180;
-    const R = 112;
-    return { x: Math.cos(a) * R, y: Math.sin(a) * R };
-  },
-
-  syncChamber(instant) {
-    const layer = UI.$['holes-layer'];
-    if (!layer) return;
-    const zone = layer.parentElement;
-    const cx = zone.clientWidth / 2, cy = zone.clientHeight / 2;
-
-    // hammer position
-    const hp = UI.holePos(0);
-    UI.$['hammer'].style.top = (cy + hp.y - 68) + 'px';
-
-    const seen = new Set();
-    for (let i = 0; i < 6; i++) {
-      const h = G.holes[i];
-      if (!h) continue;
-      const off = ((i - G.ptr) % 6 + 6) % 6;
-      const p = UI.holePos(off);
-      const uid = h.inst.uid;
-      seen.add(uid);
-      let el = UI.holeEls.get(uid);
-      if (!el) {
-        el = U.el('div', 'hole');
-        el.style.pointerEvents = 'auto';
-        layer.appendChild(el);
-        UI.holeEls.set(uid, el);
-        if (instant) el.style.transition = 'none';
-      }
-      el.className = 'hole' + (off === 0 ? ' top-hole' : '');
-      el.style.transition = instant ? 'none' : 'transform .45s cubic-bezier(.3,1.2,.4,1)';
-      el.style.transform = `translate(${cx + p.x - 42}px, ${cy + p.y - 42}px)`;
-      el.style.left = '0'; el.style.top = '0'; el.style.margin = '0';
-
-      const shell = SHELLS[h.inst.id];
-      const blind = E.blindRound();
-      const show = h.revealed && !blind;
-      el.innerHTML = show
-        ? `<div class="shell-disc has-tip" data-tip-shell="${h.inst.id}"><span class="rim"></span>${shell.icon}</div>`
-        : `<div class="shell-disc hidden-shell has-tip" data-tip-hidden="1"><span class="rim"></span>?</div>`;
-      if (instant) requestAnimationFrame(() => { el.style.transition = ''; });
-    }
-    // drop removed shells
-    for (const [uid, el] of UI.holeEls) {
-      if (!seen.has(uid)) { el.remove(); UI.holeEls.delete(uid); }
-    }
-  },
-
-  wheelPulse(spin) {
-    const w = UI.$['wheel'];
-    if (!w) return;
-    w.classList.add('spinning');
-    const cur = UI._wrot || 0;
-    UI._wrot = cur - (spin ? 420 : 60);
-    w.style.transform = `rotate(${UI._wrot}deg)`;
-    setTimeout(() => w.classList.remove('spinning'), spin ? 1000 : 460);
-  },
-
-  /* ---------- pouch & charms ---------- */
 
   syncPouch() {
-    const $ = UI.$;
-    const box = $['p-pouch'];
+    const box = UI.$['p-pouch'];
     box.innerHTML = '';
-    const inChamber = E.shellsInChamber();
-    $['p-pouch-count'].textContent =
-      ` — ${G.reserve.length} in pouch · ${inChamber} chambered · ${G.spent.length} spent`;
     G.reserve.forEach(inst => {
-      const s = SHELLS[inst.id];
-      const c = U.el('span', 'shell-chip has-tip', s.icon);
+      const c = SPR.shellEl(inst.id, 2, 'has-tip shell-spr wob');
       c.dataset.tipShell = inst.id;
       box.appendChild(c);
     });
     G.spent.forEach(inst => {
-      const s = SHELLS[inst.id];
-      const c = U.el('span', 'shell-chip dim has-tip', s.icon);
+      const c = SPR.shellEl(inst.id, 2, 'has-tip shell-spr dim');
       c.dataset.tipShell = inst.id;
       box.appendChild(c);
     });
-    if (!G.reserve.length && !G.spent.length) {
-      box.innerHTML = '<span style="color:var(--ink-dim);font-size:12px">every shell you own is loaded</span>';
-    }
   },
 
   syncCharms() {
     const box = UI.$['p-charms'];
     box.innerHTML = '';
     G.charms.forEach(id => {
-      const c = CHARMS[id];
-      const el = U.el('span', 'charm-chip has-tip', c.icon);
+      const el = SPR.charmEl(id, 3, 'has-tip wob');
       el.dataset.tipCharm = id;
       box.appendChild(el);
     });
     for (let i = G.charms.length; i < MAX_CHARMS; i++) {
-      box.appendChild(U.el('span', 'charm-slot-empty', '+'));
+      box.appendChild(U.el('span', 'charm-slot-empty'));
     }
   },
 
@@ -396,52 +487,28 @@ const UI = {
     UI.sync();
 
     SFX.chak();
-    UI.wheelPulse(false);
-    await U.sleep(340);
+    // freeze the current chamber view for the strike
+    UI.cyl.snapshot = { holes: G.holes.map(h => h ? { inst: h.inst, revealed: h.revealed } : null), ptr: G.ptr };
+    await U.sleep(180);
 
     const R = E.doPull(UI.call);
-    if (!R) { UI.busy = false; UI.sync(); return; }
+    if (!R) { UI.cyl.snapshot = null; UI.busy = false; UI.sync(); return; }
 
-    // outcome FX
-    const meta = OUTCOME_META[R.outcome];
-    if (R.outcome === 'FIRE') { SFX.shot(); UI.flash('go-fire'); UI.shake(); }
-    else if (R.outcome === 'DUD') { SFX.dud(); }
-    else if (R.outcome === 'JAM') { SFX.jamSfx(); }
-    else { SFX.backfire(); UI.flash('go-back'); UI.shake(); }
+    UI.flashAtHammer(R.outcome);
+    if (R.outcome === 'FIRE') { SFX.shot(); UI.flash('go-fire'); UI.shake(); BG.pulse('#ff9d3c'); }
+    else if (R.outcome === 'DUD') SFX.dud();
+    else if (R.outcome === 'JAM') SFX.jamSfx();
+    else { SFX.backfire(); UI.flash('go-back'); UI.shake(); BG.pulse('#ff2e4d', 500); }
 
-    const forcedTxt = { rabbit: '🐇 rigged', magnet: '🧲 magnetized', web: '🕸️ webbed', echo: '🔁 echoed' }[R.forcedBy];
-    let sub = `${R.shell.name}${R.wasRevealed ? '' : ' (was hidden)'}${forcedTxt ? ' · ' + forcedTxt : ''}`;
-    let payHtml = '';
-    if (R.correct) {
-      payHtml = `<div class="pay">CALLED IT — pot +${U.fmt(R.payout)} <span style="color:var(--ink-dim)">(×${R.mult} call · ×${E.streakMult(G.streak).toFixed(2).replace(/\.?0+$/, '')} streak)</span></div>`;
-      SFX.coin();
-    } else if (R.nerveLost > 0) {
-      payHtml = `<div class="pay" style="color:var(--backfire)">−${R.nerveLost} NERVE ${U.pick(Math.random, FLAVOR.backfireHurt)}</div>`;
-      SFX.hurt();
-    } else {
-      payHtml = `<div class="pay" style="color:var(--ink-dim)">missed the call — the pot burns</div>`;
-    }
-    UI.banner(`<div class="banner">
-      <div class="big" style="color:${meta.color}">${meta.icon} ${R.outcome}</div>
-      <div class="sub">${U.esc(sub)} — ${meta.verb}</div>
-      ${payHtml}</div>`);
+    UI.stamp(R);
+    R.notes.forEach(n => UI.toastNote(n));
+    if (R.correct) { SFX.coin(); if (R.payout >= 150) UI.particles('ic_coin', 12); }
+    else if (R.nerveLost > 0) { SFX.hurt(); UI.particles('ic_heart', 4); }
 
-    UI.log(`${meta.icon} ${R.outcome}${R.correct ? ` · called · +${U.fmt(R.payout)} to pot` : ' · missed'}`,
-      R.correct);
-    R.notes.forEach(n => UI.log(n));
-    if (R.correct && G.pot >= 300) UI.log(U.pick(Math.random, FLAVOR.bigWin), true);
-    else if (R.correct) UI.log(U.pick(Math.random, FLAVOR.hit));
-    else UI.log(U.pick(Math.random, FLAVOR.miss));
-
-    if (R.correct && R.payout >= 150) UI.particles('✨', 14);
-
-    if (R.jammed) await U.sleep(200);
-    if (R.reloaded) {
-      await U.sleep(300);
-      SFX.spin(); UI.wheelPulse(true);
-      UI.log('The cylinder swings open — fresh shells slide home.');
-      UI.syncChamber(true);
-    }
+    await U.sleep(430);
+    UI.cyl.snapshot = null;
+    UI.cylRotateToPtr(false);
+    if (R.reloaded) { SFX.spin(); UI.cylRotateToPtr(true); }
 
     UI.busy = false;
     UI.sync();
@@ -456,8 +523,9 @@ const UI = {
     if (!res) return;
     SFX.bank();
     UI.flash('go-gold');
-    UI.log(`🏦 Banked ${U.fmt(res.amt)}${res.taxed ? ' after the house took its cut' : ''}${res.doubled ? ' — DOUBLED' : ''}. ${U.pick(Math.random, FLAVOR.bank)}`, true);
-    if (res.amt >= 200) UI.particles('🪙', 18);
+    BG.pulse('#ffd75e');
+    UI.stampBank(res);
+    if (res.amt >= 200) UI.particles('ic_coin', 16);
     UI.sync();
     if (res.won) await UI.roundWonFlow();
   },
@@ -467,19 +535,16 @@ const UI = {
     if (kind === 'peek') {
       if (!E.doPeek()) return;
       SFX.click();
-      const top = E.topHole();
-      UI.log(`👁️ Peek: the next shell is a ${SHELLS[top.inst.id].name}.`);
     } else if (kind === 'spin') {
       if (!E.doSpin()) return;
-      SFX.spin(); UI.wheelPulse(true);
-      UI.log('🌀 You spin the cylinder. Everything blurs.');
-      UI.syncChamber(true);
+      SFX.spin();
+      UI.cylRotateToPtr(true);
     } else if (kind === 'eject') {
       const r = E.doEject();
       if (!r) return;
       SFX.chak();
-      UI.log(`⏏️ Ejected: it was a ${SHELLS[r.inst.id].name}.`);
-      if (r.reloaded) { SFX.spin(); UI.wheelPulse(true); UI.syncChamber(true); }
+      UI.toast([SPR.shellEl(r.inst.id, 2)], PIX.el('ic_eject', 2));
+      UI.cylRotateToPtr(!!r.reloaded);
     } else if (kind === 'load') {
       UI.showLoadPicker();
       return;
@@ -490,29 +555,107 @@ const UI = {
   showLoadPicker() {
     if (!E.loadAllowed()) return;
     const m = UI.modal(`
-      <button class="m-close" id="mm-close">✕</button>
-      <h2>🫳 LOAD THE CHAMBER</h2>
-      <div class="m-sub">Pick a shell from your pouch. It goes under the hammer — the shell there now returns to the pouch. Costs ◆1.</div>
-      <div class="chip-strip" id="load-strip" style="gap:10px"></div>
+      <button class="pixbtn m-close" id="mm-close"></button>
+      <div class="m-head" id="lp-head"></div>
+      <div class="chip-strip" id="load-strip"></div>
     `);
+    m.querySelector('#lp-head').appendChild(PIX.el('ic_load', 3));
+    const closeB = m.querySelector('#mm-close');
+    closeB.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W }));
+    closeB.onclick = () => { SFX.click(); UI.closeModal(); };
     const strip = m.querySelector('#load-strip');
     G.reserve.forEach(inst => {
-      const s = SHELLS[inst.id];
-      const c = U.el('button', 'shell-chip selectable has-tip', s.icon);
-      c.dataset.tipShell = inst.id;
-      c.style.width = '52px'; c.style.height = '52px'; c.style.fontSize = '26px';
-      c.onclick = () => {
+      const b = U.el('button', 'pixbtn shell-pick has-tip');
+      b.dataset.tipShell = inst.id;
+      b.appendChild(SPR.shellEl(inst.id, 3));
+      b.onclick = () => {
         const done = E.doLoad(inst.uid);
         if (done) {
           SFX.chak();
-          UI.log(`🫳 Loaded a ${SHELLS[done.id].name} under the hammer.`);
           UI.closeModal();
           UI.sync();
         }
       };
-      strip.appendChild(c);
+      strip.appendChild(b);
     });
-    m.querySelector('#mm-close').onclick = () => { SFX.click(); UI.closeModal(); };
+  },
+
+  /* ================= stamps & toasts (wordless feedback) ================= */
+
+  stamp(R) {
+    const zone = UI.$['stamp-zone'];
+    if (!zone) return;
+    const colors = { FIRE: PIX.PAL.O, DUD: PIX.PAL.w, JAM: PIX.PAL.g, BACKFIRE: PIX.PAL.R };
+    const box = U.el('div', 'stamp pop');
+    const word = R.outcome === 'BACKFIRE' ? 'BACKFIRE' : R.outcome;
+    box.appendChild(UI.txt(word, { scale: 4, color: colors[R.outcome], outline: PIX.PAL.K }));
+    const sub = U.el('div', 'stamp-sub');
+    if (R.correct) {
+      sub.appendChild(UI.txt('+' + U.fmt(R.payout), { scale: 3, color: PIX.PAL.N, outline: PIX.PAL.K }));
+      sub.appendChild(UI.txt('x' + R.mult, { scale: 2, color: PIX.PAL.G }));
+    } else if (R.nerveLost > 0) {
+      for (let i = 0; i < R.nerveLost; i++) sub.appendChild(PIX.el('ic_heart_off', 2));
+    } else if (G.pot === 0 && !R.correct) {
+      sub.appendChild(PIX.el('ic_pot', 2));
+      sub.appendChild(UI.txt('=0', { scale: 2, color: PIX.PAL.R }));
+    }
+    box.appendChild(sub);
+    zone.innerHTML = '';
+    zone.appendChild(box);
+  },
+
+  stampBank(res) {
+    const zone = UI.$['stamp-zone'];
+    if (!zone) return;
+    const box = U.el('div', 'stamp pop');
+    const row = U.el('div', 'stamp-sub');
+    row.appendChild(PIX.el('ic_bank', 3));
+    row.appendChild(UI.txt('+' + U.fmt(res.amt), { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    box.appendChild(row);
+    zone.innerHTML = '';
+    zone.appendChild(box);
+  },
+
+  // map engine note strings (emoji-prefixed) to icon toasts
+  toastNote(note) {
+    const MAP = [
+      ['🐇', 'charm', 'rabbit'], ['🧲', 'shell', 'magnet'], ['🕸', 'shell', 'web'],
+      ['🔁', 'shell', 'echo'], ['👯', 'shell', 'twin'], ['💰', 'shell', 'gilded'],
+      ['🟤', 'shell', 'rust'], ['🔮', 'shell', 'glass'], ['🌫', 'shell', 'smoke'],
+      ['🕷', 'charm', 'spider'], ['💃', 'charm', 'graveDancer'], ['🐍', 'charm', 'snakeCharmer'],
+      ['🚬', 'charm', 'ashtray'], ['🐔', 'shell', 'feather'], ['🫀', 'charm', 'secondWind'],
+      ['💼', 'boss', 'collector'], ['🌀', 'boss', 'spinner'],
+    ];
+    let icon = null;
+    for (const [emo, kind, id] of MAP) {
+      if (note.includes(emo)) {
+        icon = kind === 'shell' ? SPR.shellEl(id, 2)
+          : kind === 'charm' ? SPR.charmEl(id, 2)
+          : SPR.emblemEl('boss', id, 2);
+        break;
+      }
+    }
+    // pull a number out of the note if there is one (+4, ×3, -15…)
+    const numMatch = note.match(/([+\-x×]\s?\d+(?:\.\d+)?|\d+(?:\.\d+)?x|\+\d)/);
+    const parts = [];
+    if (icon) parts.push(icon);
+    if (numMatch) {
+      parts.push(UI.txt(numMatch[0].replace('×', 'x').replace(/\s/g, ''),
+        { scale: 2, color: PIX.PAL.N }));
+    }
+    if (!parts.length) return;
+    UI.toast(parts);
+  },
+
+  toast(parts, extraIcon) {
+    const zone = UI.$['toast-zone'];
+    if (!zone) return;
+    const t = U.el('div', 'toast');
+    if (extraIcon) t.appendChild(extraIcon);
+    parts.forEach(p => t.appendChild(p));
+    zone.appendChild(t);
+    while (zone.children.length > 3) zone.firstChild.remove();
+    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, 1900);
   },
 
   /* ================= round end flows ================= */
@@ -521,25 +664,43 @@ const UI = {
     UI.busy = true;
     SFX.win();
     UI.flash('go-gold');
-    UI.particles('🪙', 26);
-    UI.log(U.pick(Math.random, FLAVOR.roundWin), true);
-    await U.sleep(700);
+    BG.pulse('#ffd75e', 700);
+    UI.particles('ic_coin', 22);
+    await U.sleep(650);
     UI.busy = false;
 
     const r = G.flags.reward;
     const isFinal = G.ante === WIN_ANTE && !G.endlessMode;
-    const m = UI.modal(`
-      <h2 style="color:var(--neon)">DEBT PAID — ANTE ${G.ante} CLEARED</h2>
-      <div class="m-sub">${U.esc(U.pick(Math.random, FLAVOR.roundWin))}</div>
-      <div class="end-stats">
-        <div><div class="es-lab">SCORE</div><div class="es-val mono">${U.fmt(G.score)} / ${U.fmt(G.debt)}</div></div>
-        <div><div class="es-lab">PAYOUT</div><div class="es-val mono">+${U.fmt(r.total)} chips</div></div>
-        <div><div class="es-lab">BASE + PULLS</div><div class="es-val mono">${U.fmt(r.base)}</div></div>
-        <div><div class="es-lab">INTEREST${r.extra ? ' + COUNTERFEIT' : ''}</div><div class="es-val mono">${U.fmt(r.inter + r.extra)}</div></div>
-      </div>
-      <button class="big-btn gold-btn" id="mm-go">${isFinal ? '👁️ FACE THE LEDGER' : '🎰 ONTO THE CASINO FLOOR'}</button>
-    `, true);
-    m.querySelector('#mm-go').onclick = () => {
+    const m = UI.modal('<div class="won-box"></div>', true);
+    const box = m.querySelector('.won-box');
+
+    const head = U.el('div', 'm-head');
+    head.appendChild(PIX.el('ic_crown', 4));
+    head.appendChild(UI.txt('A' + G.ante, { scale: 4, color: PIX.PAL.N, outline: PIX.PAL.K }));
+    box.appendChild(head);
+
+    const rows = U.el('div', 'reward-rows');
+    const addRow = (iconName, canvas) => {
+      const rw = U.el('div', 'reward-row');
+      rw.appendChild(PIX.el(iconName, 2));
+      rw.appendChild(canvas);
+      rows.appendChild(rw);
+    };
+    addRow('ic_bank', UI.num(G.score, { scale: 3, color: PIX.PAL.G }));
+    addRow('ic_chip', UI.num(r.base, { scale: 3, color: PIX.PAL.W }));
+    if (r.inter + r.extra > 0) addRow('ic_coin', UI.num(r.inter + r.extra, { scale: 3, color: PIX.PAL.W }));
+    box.appendChild(rows);
+
+    const total = U.el('div', 'reward-total');
+    total.appendChild(UI.txt('+' + U.fmt(r.total), { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    total.appendChild(PIX.el('ic_chip', 3));
+    box.appendChild(total);
+
+    const go = U.el('button', 'pixbtn gold big-go');
+    go.id = 'mm-go';
+    go.appendChild(UI.txt(isFinal ? 'THE OWNER' : '>', { scale: 4, color: PIX.PAL.K, shadow: null }));
+    box.appendChild(go);
+    go.onclick = () => {
       SFX.click();
       UI.closeModal();
       if (isFinal) { E.winRun(); UI.render(); }
@@ -550,6 +711,7 @@ const UI = {
   async deathFlow() {
     UI.busy = true;
     SFX.lose();
+    BG.pulse('#8c2230', 900);
     await U.sleep(900);
     UI.busy = false;
     UI.render();
@@ -560,71 +722,63 @@ const UI = {
   buildEnd(app, won) {
     const wrap = U.el('div', 'splash');
     const s = G.stats;
-    const reasons = {
-      nerve: ['YOUR NERVE BREAKS', 'The last backfire takes more than skin. The house sweeps your chips into the dark.'],
-      debt: ['THE HOUSE COLLECTS', `The debt stood at ${U.fmt(G.debt)}. You brought ${U.fmt(G.score)}. It is not a negotiation.`],
-      walk: ['YOU WALK AWAY', 'The doorman doesn\'t look at you. Nobody ever looks at the ones who leave.'],
-    };
-    const head = won
-      ? ['<em>THE OWNER FOLDS</em>', 'Eight antes deep, the ledger burns. The eye behind the cage blinks first. The chamber is yours now.']
-      : reasons[G.overReason] || reasons.debt;
 
-    wrap.innerHTML = `
-      <h1 style="font-size:44px">${head[0]}</h1>
-      <div class="tagline">${head[1]}</div>
-      <div class="end-stats">
-        <div><div class="es-lab">ANTES CLEARED</div><div class="es-val mono">${s.antesCleared}${won ? ' — ALL' : ''}</div></div>
-        <div><div class="es-lab">TOTAL SCORE</div><div class="es-val mono">${U.fmt(s.totalScore)}</div></div>
-        <div><div class="es-lab">BEST SINGLE PAYOUT</div><div class="es-val mono">${U.fmt(s.bestPayout)}</div></div>
-        <div><div class="es-lab">BEST BANK</div><div class="es-val mono">${U.fmt(s.bestBank)}</div></div>
-        <div><div class="es-lab">PULLS / HITS</div><div class="es-val mono">${s.pulls} / ${s.hits}</div></div>
-        <div><div class="es-lab">BACKFIRES EATEN</div><div class="es-val mono">${s.backfiresEaten}</div></div>
-        <div><div class="es-lab">CHIP PEAK</div><div class="es-val mono">${U.fmt(s.chipsPeak)}</div></div>
-        <div><div class="es-lab">SEED</div><div class="es-val mono" style="font-size:14px">${U.esc(G.seedStr)}</div></div>
-      </div>
-      ${won ? '<button class="big-btn gold-btn" id="btn-endless">🕳️ KEEP DESCENDING (ENDLESS)</button>' : ''}
-      <button class="big-btn ${won ? '' : 'gold-btn'}" id="btn-again">🎰 ANOTHER RUN</button>
-      <button class="big-btn" id="btn-title">BACK TO THE DOOR</button>
-    `;
+    const art = U.el('div', 'end-art ' + (won ? 'breathe' : 'pulse-red'));
+    art.appendChild(PIX.el(won ? 'ic_crown' : 'ic_skull', 10));
+    wrap.appendChild(art);
+
+    const word = won ? 'THE OWNER FOLDS'
+      : G.overReason === 'nerve' ? 'YOUR NERVE BREAKS'
+      : G.overReason === 'walk' ? 'YOU WALK AWAY'
+      : 'THE HOUSE COLLECTS';
+    wrap.appendChild(UI.txt(word, {
+      scale: 4, color: won ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K,
+    }));
+
+    const grid = U.el('div', 'end-grid');
+    const cell = (iconName, canvas, tip) => {
+      const c = U.el('div', 'end-cell has-tip');
+      c.dataset.tipText = tip;
+      c.appendChild(PIX.el(iconName, 2));
+      c.appendChild(canvas);
+      grid.appendChild(c);
+    };
+    cell('ic_chip', UI.txt('A' + s.antesCleared, { scale: 3, color: PIX.PAL.N }), 'Antes cleared');
+    cell('ic_bank', UI.num(s.totalScore, { scale: 3, color: PIX.PAL.G }), 'Total score banked');
+    cell('ic_pot', UI.num(s.bestPayout, { scale: 3, color: PIX.PAL.W }), 'Best single payout');
+    cell('ic_coin', UI.num(s.chipsPeak, { scale: 3, color: PIX.PAL.W }), 'Chip peak');
+    cell('ic_backfire', UI.num(s.backfiresEaten, { scale: 3, color: PIX.PAL.R }), 'Backfires eaten');
+    cell('ic_bullet', UI.txt(s.hits + '/' + s.pulls, { scale: 3, color: PIX.PAL.W }), 'Hits / pulls');
+    wrap.appendChild(grid);
+
+    const seedLine = UI.txt(G.seedStr, { scale: 1, color: PIX.PAL.q, shadow: null });
+    seedLine.style.opacity = .6;
+    wrap.appendChild(seedLine);
+
+    const btns = U.el('div', 'end-btns');
+    if (won) {
+      const down = U.el('button', 'pixbtn gold');
+      down.id = 'btn-endless';
+      down.append(PIX.el('ic_debt', 2), UI.txt('ENDLESS', { scale: 3, color: PIX.PAL.K, shadow: null }));
+      down.onclick = () => { SFX.chak(); G.endlessMode = true; E.toCasino(); UI.render(); };
+      btns.appendChild(down);
+    }
+    const again = U.el('button', 'pixbtn ' + (won ? '' : 'gold'));
+    again.id = 'btn-again';
+    again.append(PIX.el('ic_trigger', 2), UI.txt('AGAIN', { scale: 3, color: won ? PIX.PAL.W : PIX.PAL.K, shadow: null }));
+    again.onclick = () => { SFX.chak(); UI.call = null; E.newRun(''); UI.render(); };
+    btns.appendChild(again);
+    const door = U.el('button', 'pixbtn');
+    door.id = 'btn-title';
+    door.append(UI.txt('<', { scale: 3, color: PIX.PAL.W }));
+    door.onclick = () => { SFX.click(); G.phase = 'title'; UI.render(); };
+    btns.appendChild(door);
+    wrap.appendChild(btns);
+
     app.appendChild(wrap);
-    const endless = wrap.querySelector('#btn-endless');
-    if (endless) endless.onclick = () => {
-      SFX.chak();
-      G.endlessMode = true;
-      E.toCasino();
-      UI.render();
-    };
-    wrap.querySelector('#btn-again').onclick = () => {
-      SFX.chak();
-      UI.call = null; UI.logLines = [];
-      E.newRun('');
-      UI.render();
-      UI.log(`New marker signed. Seed: ${G.seedStr}`);
-    };
-    wrap.querySelector('#btn-title').onclick = () => { SFX.click(); G.phase = 'title'; UI.render(); };
   },
 
-  /* ================= banner / log / fx ================= */
-
-  banner(html) {
-    const z = UI.$['banner-zone'];
-    if (!z) return;
-    z.innerHTML = html;
-  },
-
-  log(msg, hot) {
-    UI.logLines.unshift({ msg, hot });
-    UI.logLines = UI.logLines.slice(0, 4);
-    UI.renderLog();
-  },
-
-  renderLog() {
-    const el = UI.$['log'] || document.getElementById('log');
-    if (!el) return;
-    el.innerHTML = UI.logLines
-      .map((l, i) => `<div class="${i === 0 ? 'l0' : ''}" ${l.hot && i === 0 ? 'style="color:var(--gold-hi)"' : ''}>${l.msg}</div>`)
-      .join('');
-  },
+  /* ================= fx ================= */
 
   flash(cls) {
     const f = document.getElementById('fx-flash');
@@ -640,16 +794,16 @@ const UI = {
     s.classList.add('shake');
   },
 
-  particles(emoji, n) {
+  particles(spriteName, n) {
     const box = document.getElementById('fx-particles');
     for (let i = 0; i < n; i++) {
-      const p = U.el('span', 'particle', emoji);
-      p.style.left = Math.random() * 100 + 'vw';
-      p.style.animationDuration = (0.9 + Math.random() * 1.3) + 's';
-      p.style.animationDelay = Math.random() * 0.3 + 's';
-      p.style.fontSize = (14 + Math.random() * 16) + 'px';
+      const p = PIX.el(spriteName, Math.random() < 0.5 ? 2 : 3);
+      p.classList.add('particle');
+      p.style.left = (10 + Math.random() * 80) + 'vw';
+      p.style.animationDuration = (0.9 + Math.random() * 1.2) + 's';
+      p.style.animationDelay = Math.random() * 0.25 + 's';
       box.appendChild(p);
-      setTimeout(() => p.remove(), 2600);
+      setTimeout(() => p.remove(), 2500);
     }
   },
 
@@ -661,9 +815,8 @@ const UI = {
     root.innerHTML = '';
     const m = U.el('div', 'modal', html);
     root.appendChild(m);
-    if (!noClose) {
-      root.onclick = (e) => { if (e.target === root) UI.closeModal(); };
-    } else root.onclick = null;
+    if (!noClose) root.onclick = (e) => { if (e.target === root) UI.closeModal(); };
+    else root.onclick = null;
     return m;
   },
 
@@ -677,33 +830,62 @@ const UI = {
     return !document.getElementById('modal-root').classList.contains('hidden');
   },
 
+  PANEL_TIPS: {
+    debt: () => `<b>THE DEBT</b> — bank <b>${U.fmt(G.debt)}</b> score before your pulls run out. Banked: ${U.fmt(G.score)}.`,
+    pot: () => `<b>THE POT</b> — correct calls pile up here. Bank it to make it score; one wrong call burns it. Streak multiplier: ×${Math.round(E.streakMult(Math.max(1, G.streak)) * 100) / 100}.`,
+    nerve: () => `<b>NERVE</b> — an uncalled BACKFIRE costs 1 (cursed shells 2). At zero, the run ends.`,
+    pulls: () => `<b>PULLS</b> — trigger pulls left this round: ${G.pulls}.`,
+    sleight: () => `<b>SLEIGHT</b> — points spent on peeking, spinning, ejecting and loading.`,
+    chips: () => `<b>CHIPS</b> — casino money. Spend it on the floor between antes.`,
+    call: () => `<b>THE CALL</b> — pick what the next shell does. Rarer calls pay bigger multipliers. Hidden shells show the chamber average.`,
+    sleightPanel: () => `<b>SLEIGHT OF HAND</b> — 👁 peek · 🌀 spin · ⏏ eject · load a chosen shell.`,
+    pouch: () => `<b>SHELL POUCH</b> — your collection. ${G.reserve.length} in reserve, ${E.shellsInChamber()} chambered, ${G.spent.length} spent this round.`,
+    charms: () => `<b>CHARMS</b> — passive artifacts. ${G.charms.length}/${MAX_CHARMS} slots used.`,
+  },
+
   tooltipFor(el) {
-    if (el.dataset.tipShell) {
-      const s = SHELLS[el.dataset.tipShell];
-      const w = E.effWeights ? E.effWeights({ id: s.id }) : null;
-      const odds = w ? OUTCOMES.map(o =>
-        `${OUTCOME_META[o].icon}${Math.round(w[o] * 100)}%`).join(' · ') : '';
-      return `<div class="tt-name">${s.icon} ${s.name} <span class="rarity-${s.rarity}">${s.rarity.toUpperCase()}</span></div>
+    const ds = el.dataset;
+    if (ds.tipShell) {
+      const s = SHELLS[ds.tipShell];
+      const w = E.effWeights({ id: s.id });
+      const odds = OUTCOMES.map(o =>
+        `${OUTCOME_META[o].icon}${Math.round(w[o] * 100)}%`).join(' ');
+      return `<div class="tt-name">${s.name} <span class="rar-${s.rarity}">${s.rarity.toUpperCase()}</span></div>
         <div class="tt-desc">${s.desc}</div>
         <div class="tt-odds">${odds} · base ${s.base}</div>`;
     }
-    if (el.dataset.tipCharm) {
-      const c = CHARMS[el.dataset.tipCharm];
-      return `<div class="tt-name">${c.icon} ${c.name} <span class="rarity-${c.rarity}">${c.rarity.toUpperCase()}</span></div>
+    if (ds.tipCharm) {
+      const c = CHARMS[ds.tipCharm];
+      return `<div class="tt-name">${c.name} <span class="rar-${c.rarity}">${c.rarity.toUpperCase()}</span></div>
         <div class="tt-desc">${c.desc}</div>`;
     }
-    if (el.dataset.tipBoss) {
-      const b = BOSSES[el.dataset.tipBoss];
+    if (ds.tipBoss) {
+      const b = BOSSES[ds.tipBoss];
       return `<div class="tt-name">${b.icon} ${b.name}</div><div class="tt-desc">${b.desc}</div>`;
     }
-    if (el.dataset.tipFate) {
-      const f = FATES[el.dataset.tipFate];
-      return `<div class="tt-name">${f.icon} ${f.name}</div><div class="tt-desc">${f.desc.replace('Next round:', 'This round:')}</div>`;
+    if (ds.tipFate) {
+      const f = FATES[ds.tipFate];
+      return `<div class="tt-name">${f.icon} ${f.name}</div>
+        <div class="tt-desc">${f.desc.replace('Next round:', 'This round:')}</div>`;
     }
-    if (el.dataset.tipHidden) {
-      return `<div class="tt-name">❓ UNKNOWN SHELL</div>
-        <div class="tt-desc">One of the shells loaded this cycle. The call odds shown are the average across every hidden shell in the chamber.</div>`;
+    if (ds.tipCall) {
+      const o = ds.tipCall;
+      const blurbs = {
+        FIRE: 'It goes off. The bread and butter of live shells.',
+        DUD: 'A dead click. Blanks and feathers love this call.',
+        JAM: 'The mechanism seizes — the shell stays in the chamber, revealed.',
+        BACKFIRE: 'It bites the hand. Uncalled: −1 Nerve. Called: profit.',
+      };
+      return `<div class="tt-name">${OUTCOME_META[o].icon} ${o}</div><div class="tt-desc">${blurbs[o]}</div>`;
     }
+    if (ds.tipStation) {
+      const s = CASINO.STATION_TIPS[ds.tipStation];
+      return s ? `<div class="tt-name">${s[0]}</div><div class="tt-desc">${s[1]}</div>` : null;
+    }
+    if (ds.tipKey && UI.PANEL_TIPS[ds.tipKey]) {
+      return `<div class="tt-desc">${UI.PANEL_TIPS[ds.tipKey]()}</div>`;
+    }
+    if (ds.tipText) return `<div class="tt-desc">${U.esc(ds.tipText)}</div>`;
     return null;
   },
 
@@ -732,41 +914,39 @@ const UI = {
 
   showHelp() {
     UI.modal(`
-      <button class="m-close" id="mm-close">✕</button>
-      <h2>HOUSE RULES</h2>
-      <div class="m-sub">Read them once. The house won't repeat itself.</div>
+      <button class="pixbtn m-close" id="mm-close"></button>
       <div class="help-cols">
         <div>
           <h4>THE CHAMBER</h4>
-          <p>A cursed cylinder loaded from your <b>shell pouch</b>. Each pull, the shell under the hammer resolves as
-          <b style="color:var(--fire)">FIRE</b>, <b style="color:var(--dud)">DUD</b>,
-          <b style="color:var(--jam)">JAM</b> or <b style="color:var(--backfire)">BACKFIRE</b>.</p>
+          <p>Shells load blind from your pouch. Each pull, the shell under the hammer resolves:
+          🔥 FIRE · ⚪ DUD · ⚙ JAM · 💥 BACKFIRE.</p>
           <h4>THE CALL</h4>
-          <p>Before pulling, <b>call the outcome</b>. Rarer calls pay bigger multipliers.
-          Hidden shells show the average odds of everything hidden in the chamber — peek, load and count shells to beat the average.</p>
-          <h4>POT &amp; STREAK</h4>
-          <p>Correct calls add to the <b>pot</b> and grow your <b>streak multiplier</b>.
-          <b>BANK</b> moves the pot into your score (and resets the streak). A wrong call <b>burns the whole pot</b>. Push or cash — that's the game.</p>
+          <p>Call the outcome before pulling. Rarer calls pay bigger multipliers (the ×numbers).
+          Hidden shells (?) show the average odds of everything hidden in the chamber.</p>
+          <h4>POT & STREAK</h4>
+          <p>Correct calls fill the pot and grow the ×streak. <b>BANK</b> converts pot to score and
+          resets the streak. A wrong call burns the whole pot.</p>
           <h4>THE DEBT</h4>
-          <p>Bank enough score to pay each ante's debt before your pulls run out. Fail, and the run ends.</p>
+          <p>Bank the debt number before your bullets run out, or the run ends.</p>
         </div>
         <div>
-          <h4>NERVE</h4>
-          <p>An <b>uncalled BACKFIRE</b> costs 1 Nerve (cursed shells: 2). At zero, you're done.
-          Call the backfire and you ride the blast for profit instead.</p>
-          <h4>SLEIGHT OF HAND</h4>
-          <p><b>👁️ Peek</b> the top shell · <b>🌀 Spin</b> to reshuffle · <b>⏏️ Eject</b> the top shell ·
-          <b>🫳 Load</b> a chosen shell under the hammer. Limited uses per round.</p>
-          <h4>JAM</h4>
-          <p>A jammed shell <b>stays in the chamber</b> (now revealed) and comes around again. The pull is still spent.</p>
+          <h4>NERVE ❤</h4>
+          <p>Uncalled BACKFIRE: −1 (cursed shells −2). Zero = dead. Called backfires pay instead.</p>
+          <h4>SLEIGHT ◆</h4>
+          <p>👁 peek the top shell · 🌀 spin/re-hide · ⏏ eject unseen · load a chosen shell on top.
+          A JAMmed shell stays chambered, revealed.</p>
           <h4>THE CASINO</h4>
-          <p>Between antes: <b>🎰 slots</b> pay out new shells, <b>🃏 blackjack</b> pays chips (21 exactly wins a shell),
-          <b>🎡 roulette</b> rewrites the next round, <b>🐔 the derby</b> is honest work, and the <b>🏚️ pawn shop</b> sells charms.</p>
+          <p>Between antes: 🎰 slots pay in shells · 🃏 blackjack pays chips (21 exact = shell) ·
+          🎡 the wheel rewrites the next round · 🐔 derby longshots shed feathers ·
+          🏚 the pawn shop sells charms & pouch surgery. Click the door to face the next ante.</p>
           <h4>KEYS</h4>
-          <p><b>1–4</b> choose call · <b>SPACE</b> pull · <b>B</b> bank.</p>
+          <p>1–4 call · SPACE pull · B bank. Hover anything for details.</p>
         </div>
       </div>
-    `).querySelector('#mm-close').onclick = () => UI.closeModal();
+    `);
+    const c = document.querySelector('#mm-close');
+    c.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W, shadow: null }));
+    c.onclick = () => UI.closeModal();
   },
 
   initKeys() {
@@ -779,4 +959,6 @@ const UI = {
       else if (e.key.toLowerCase() === 'b') UI.onBank();
     });
   },
+
+  log() { /* wordless build — kept for compatibility */ },
 };

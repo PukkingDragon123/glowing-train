@@ -6,6 +6,7 @@
 
 window.addEventListener('DOMContentLoaded', () => {
   SFX.loadMutePref();
+  BG.init();
   UI.initTooltip();
   UI.initKeys();
 
