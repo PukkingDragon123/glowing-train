@@ -84,6 +84,8 @@ fs.mkdirSync(SHOTS, { recursive: true });
     }
     await page.waitForTimeout(1200);
     await shot('04-round-won');
+    // jump deep enough that every station is unlocked (?debug exposes G)
+    await page.evaluate(() => { G.ante = 4; });
     await click('#mm-go');
     await page.waitForTimeout(500);
     await shot('05-casino');
@@ -131,13 +133,20 @@ fs.mkdirSync(SHOTS, { recursive: true });
     if (await buy.count() > 0) { await buy.first().click(); await page.waitForTimeout(300); }
     await click('.m-close');
 
+    await page.locator('.station[data-station="guncase"]').click();
+    await page.waitForTimeout(300);
+    const buyGun = page.locator('#btn-buy-gun:not([disabled])');
+    if (await buyGun.count() > 0) { await buyGun.click(); await page.waitForTimeout(500); }
+    await shot('10b-guncase');
+    await click('.m-close');
+
     await click('#btn-next');
     await page.waitForTimeout(700);
     await shot('11-ante2');
 
     const state = await page.evaluate(() => ({
       ante: G.ante, debt: G.debt, chips: G.chips, phase: G.phase,
-      bag: G.bag.length, charms: G.charms.length,
+      bag: G.bag.length, charms: G.charms.length, gun: E.gun().id, plays: G.machinePlays,
     }));
     console.log('final state:', JSON.stringify(state));
   } catch (e) {

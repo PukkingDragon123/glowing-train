@@ -84,17 +84,23 @@ KWWWWWWWK.
 
 const CASINO = {
 
-  LW: 420, LH: 220,
+  LW: 470, LH: 220,
   ambientTimer: null,
   defs: null,
 
   STATION_TIPS: {
     slots: ['🎰 ONE-ARMED BANDIT', 'Feed it chips, it pays in SHELLS. Triples drop good ammo; triple 7s drop a legendary. Three dry spins and the house slips you a blank in sympathy.'],
     bj: ['🃏 BLACKJACK', 'Beat the dealer for chips. Win with exactly 21 and a shell falls off the table. Dealer stands on 17.'],
-    roulette: ['🎡 WHEEL OF FATES', 'One spin a night. Wherever it lands REWRITES the next round. Side-bet a color if you dare — red/black pays 2×, green 7×.'],
+    roulette: ['🎡 WHEEL OF FATES', 'One spin a night. Wherever it lands REWRITES the next round. Side-bet a color if you dare — red/black pays 2×, green 3×.'],
     derby: ['🐔 CHICKEN DERBY', 'Four athletes of questionable provenance. Longshot winners (5:1+) you backed shed a Feather Shell.'],
     pawn: ['🏚 PAWN SHOP', 'Charms and pouch surgery: melt a shell, mirror a shell, mystery jars, stitches for your nerve.'],
+    guncase: ['🔫 THE GUN CASE', 'Bigger iron, stacking perks. The house only arms regulars — each gun needs chips AND total machine plays.'],
     door: ['🚬 THE NEXT TABLE', 'Walk through to face the next ante. The number over the door is the next debt.'],
+  },
+
+  lockedTip(id) {
+    return ['🔒 LOCKED', 'The ' + (CASINO.STATION_TIPS[id] ? CASINO.STATION_TIPS[id][0].slice(2) : 'table') +
+      ' opens at ANTE ' + UNLOCKS[id] + '. Go deeper.'];
   },
 
   /* ================= the floor scene ================= */
@@ -132,15 +138,17 @@ const CASINO = {
 
     // stations: [id, x, y, w, h, drawFn, signSprite, signX]
     const ST = [
-      ['slots', 16, 46, 58, 98, CASINO.drawSlotsCab, 'sign_slots', 34],
-      ['bj', 84, 88, 70, 56, CASINO.drawBJTable, 'sign_bj', 104],
-      ['roulette', 162, 88, 66, 56, CASINO.drawRouletteTable, 'sign_wheel', 182],
-      ['derby', 236, 86, 68, 58, CASINO.drawDerbyPen, 'sign_derby', 258],
-      ['pawn', 312, 42, 62, 102, CASINO.drawPawnBooth, 'sign_pawn', 332],
+      ['slots', 12, 46, 58, 98, CASINO.drawSlotsCab, 'sign_slots', 30],
+      ['bj', 78, 88, 68, 56, CASINO.drawBJTable, 'sign_bj', 100],
+      ['roulette', 152, 88, 64, 56, CASINO.drawRouletteTable, 'sign_wheel', 172],
+      ['derby', 222, 86, 66, 58, CASINO.drawDerbyPen, 'sign_derby', 244],
+      ['pawn', 294, 42, 60, 102, CASINO.drawPawnBooth, 'sign_pawn', 312],
+      ['guncase', 360, 52, 54, 92, CASINO.drawGunCase, null, 0],
     ];
     CASINO.stationCvs = {};
     ST.forEach(([id, x, y, w, h, drawFn, sign, signX]) => {
-      if (sign) {
+      const open = E.unlocked(id);
+      if (sign && open) {
         const sg = PIX.el(sign, 1, 'sc neon-flicker');
         const ss = PIX.size(sign);
         sg.dataset.x = signX; sg.dataset.y = 16; sg.dataset.w = ss.w; sg.dataset.h = ss.h;
@@ -148,18 +156,20 @@ const CASINO = {
       }
       const cv = document.createElement('canvas');
       cv.width = w; cv.height = h;
-      cv.className = 'pix sc station has-tip';
+      cv.className = 'pix sc station has-tip' + (open ? '' : ' locked');
       cv.dataset.station = id;
-      cv.dataset.tipStation = id;
+      cv.dataset.tipStation = open ? id : 'locked-' + id;
       cv.dataset.x = x; cv.dataset.y = y; cv.dataset.w = w; cv.dataset.h = h;
       drawFn(cv.getContext('2d'), w, h, 0);
+      if (!open) CASINO.drawLockOverlay(cv.getContext('2d'), w, h, UNLOCKS[id]);
       cv.onclick = () => {
+        if (!E.unlocked(id)) { SFX.dud(); return; }
         SFX.click();
         ({ slots: CASINO.openSlots, bj: CASINO.openBlackjack, roulette: CASINO.openRoulette,
-           derby: CASINO.openDerby, pawn: CASINO.openPawn })[id]();
+           derby: CASINO.openDerby, pawn: CASINO.openPawn, guncase: CASINO.openGunCase })[id]();
       };
       stage.appendChild(cv);
-      CASINO.stationCvs[id] = { cv, drawFn, w, h };
+      CASINO.stationCvs[id] = { cv, drawFn, w, h, open };
     });
 
     // exit door
@@ -168,7 +178,7 @@ const CASINO = {
     door.className = 'pix sc station has-tip';
     door.id = 'btn-next';
     door.dataset.tipStation = 'door';
-    door.dataset.x = 380; door.dataset.y = 34; door.dataset.w = 34; door.dataset.h = 110;
+    door.dataset.x = 428; door.dataset.y = 34; door.dataset.w = 34; door.dataset.h = 110;
     stage.appendChild(door);
     CASINO.doorCv = door;
     door.onclick = () => {
@@ -222,7 +232,7 @@ const CASINO = {
     }
     // light cones over stations
     ctx.globalAlpha = 0.055;
-    [45, 118, 194, 268, 342].forEach(cx => {
+    [41, 112, 184, 255, 324, 387].forEach(cx => {
       ctx.fillStyle = '#fff3b0';
       for (let y = 12; y < 96; y += 1) {
         const half = 3 + (y - 12) * 0.34;
@@ -230,8 +240,12 @@ const CASINO = {
       }
     });
     ctx.globalAlpha = 1;
+    // a regular, parked at the machines since Tuesday
+    const toad = PIX.make('patron_toad', 1);
+    ctx.drawImage(toad, 74, 128);
+    ctx.drawImage(toad, 240, 158);
     // lamps
-    [45, 118, 194, 268, 342].forEach(cx => {
+    [41, 112, 184, 255, 324, 387].forEach(cx => {
       PIX.rect(ctx, cx, 2, 1, 6, P.K);
       PIX.rect(ctx, cx - 4, 8, 9, 3, P.K);
       PIX.rect(ctx, cx - 3, 9, 7, 2, P.g);
@@ -285,12 +299,10 @@ const CASINO = {
   drawBJTable(ctx, w, h, tick) {
     const P = PIX.PAL;
     ctx.clearRect(0, 0, w, h);
-    // dealer silhouette
+    // the frog dealer, from the waist up behind the table
     const dx = Math.round(w / 2);
-    PIX.disc(ctx, dx, 10, 6, P.k);
-    PIX.rect(ctx, dx - 9, 15, 18, 12, P.k);
-    PIX.rect(ctx, dx - 2, 16, 4, 2, P.r); // bowtie
-    PIX.disc(ctx, dx - 2, 9, 1, P.q); PIX.disc(ctx, dx + 2, 9, 1, P.q); // eyes
+    const dealer = SPR.frogMaster('dealer');
+    ctx.drawImage(dealer, dx - Math.round(dealer.width / 2), -2);
     // half-round table
     for (let y = 0; y < 22; y++) {
       const half = Math.floor(Math.sqrt(1 - Math.pow(y / 22, 2)) * (w / 2 - 2));
@@ -308,7 +320,6 @@ const CASINO = {
     PIX.rect(ctx, dx - 20, 40, 4, 2, P.G); PIX.rect(ctx, dx - 20, 38, 4, 2, P.g);
     // stools
     PIX.rect(ctx, dx - 18, h - 6, 8, 2, P.U); PIX.rect(ctx, dx + 10, h - 6, 8, 2, P.U);
-    if (tick % 6 === 2) { ctx.fillStyle = P.W; ctx.fillRect(dx - 2 + (tick % 2), 9, 1, 1); } // blink
   },
 
   drawRouletteTable(ctx, w, h, tick) {
@@ -427,9 +438,14 @@ const CASINO = {
 
   nextDebt() {
     const nextAnte = G.ante + 1;
-    return (nextAnte <= DEBTS.length)
+    let d = (nextAnte <= DEBTS.length)
       ? DEBTS[nextAnte - 1]
       : Math.round(DEBTS[DEBTS.length - 1] * Math.pow(1.6, nextAnte - DEBTS.length) / 10) * 10;
+    const scheduled = G.bossSchedule[nextAnte] || (nextAnte > WIN_ANTE ? 'random' : null);
+    if (G.nextFate === 'highRoller') d = Math.round(d * 1.25);
+    if (G.nextFate === 'zeroHour') d = Math.round(d * 0.65);
+    if (G.nextFate === 'houseBlinks' && !scheduled) d = Math.round(d * 0.8);
+    return d;
   },
 
   startAmbient() {
@@ -440,9 +456,8 @@ const CASINO = {
         CASINO.stopAmbient(); return;
       }
       tick++;
-      ['slots', 'bj', 'roulette', 'derby', 'pawn'].forEach(id => {
-        const st = CASINO.stationCvs[id];
-        if (st) st.drawFn(st.cv.getContext('2d'), st.w, st.h, tick);
+      Object.values(CASINO.stationCvs).forEach(st => {
+        if (st && st.open) st.drawFn(st.cv.getContext('2d'), st.w, st.h, tick);
       });
     }, 420);
   },
@@ -471,10 +486,49 @@ const CASINO = {
     if (CASINO.doorCv) CASINO.drawDoor(CASINO.doorCv.getContext('2d'));
     // grey out spent stations
     Object.entries(CASINO.stationCvs || {}).forEach(([id, st]) => {
+      if (!st.open) return;
       const left = { slots: G.casino.slotsLeft, bj: G.casino.bjLeft, derby: G.casino.derbyLeft,
         roulette: G.casino.rouletteLeft }[id];
       st.cv.classList.toggle('spent-station', left !== undefined && left <= 0);
     });
+  },
+
+  drawLockOverlay(ctx, w, h, ante) {
+    ctx.fillStyle = 'rgba(6,5,12,.72)';
+    ctx.fillRect(0, 0, w, h);
+    PIX.draw(ctx, 'ic_lock', Math.round(w / 2) - 5, Math.round(h / 2) - 12, 1);
+    const t = PIXFONT.render('A' + ante, { scale: 1, color: PIX.PAL.G, shadow: PIX.PAL.K });
+    ctx.drawImage(t, Math.round((w - t.width) / 2), Math.round(h / 2) + 2);
+  },
+
+  drawGunCase(ctx, w, h, tick) {
+    const P = PIX.PAL;
+    ctx.clearRect(0, 0, w, h);
+    // wooden display case with glass front
+    PIX.rect(ctx, 4, h - 4, w - 8, 3, 'rgba(0,0,0,.5)');
+    PIX.panel(ctx, 2, 6, w - 4, h - 10, P.u, P.K, P.b);
+    PIX.rect(ctx, 4, 8, w - 8, 3, P.B);
+    // glass window
+    PIX.panel(ctx, 7, 14, w - 14, h - 34, P.Z, P.K);
+    // the next gun on display (your own golden gun if the ladder is done)
+    const next = E.nextGun();
+    const shown = next || GUNS[GUNS.length - 1];
+    const m = PIX.make(GUN_SPRITES[shown.id], 1);
+    ctx.drawImage(m, Math.round((w - m.width) / 2), Math.round((h - 20 - m.height) / 2) + 4);
+    // glass shine
+    ctx.fillStyle = 'rgba(127,215,255,.13)';
+    ctx.fillRect(8, 15, Math.round(w / 3), h - 36);
+    if ((tick || 0) % 4 === 2) { ctx.fillStyle = P.Y; ctx.fillRect(w - 14, 18, 1, 1); }
+    // price plaque (the real, discounted price — or a check mark once maxed)
+    PIX.panel(ctx, 10, h - 17, w - 20, 12, P.T, P.K);
+    if (next) {
+      const tag = PIXFONT.render('' + E.price(next.cost), { scale: 1, color: P.G });
+      PIX.draw(ctx, 'ic_coin', 14, h - 14, 1);
+      ctx.drawImage(tag, 24, h - 14);
+    } else {
+      const tag = PIXFONT.render('YOURS', { scale: 1, color: P.N });
+      ctx.drawImage(tag, Math.round((w - tag.width) / 2), h - 14);
+    }
   },
 
   chipsRow() {
@@ -536,7 +590,7 @@ const CASINO = {
 
   /* ================= SLOTS ================= */
 
-  slotCost() { return E.price(E.has('gremlin') ? 3 : 6); },
+  slotCost() { return E.price(6); },
 
   openSlots() {
     const m = UI.modal(`
@@ -613,6 +667,7 @@ const CASINO = {
       if (G.chips < cost || G.casino.slotsLeft <= 0) return;
       G.chips -= cost;
       G.casino.slotsLeft--;
+      E.notePlay();
       CASINO.syncChips();
       spinBtn.disabled = true;
       m.querySelector('#slot-result').innerHTML = '';
@@ -825,13 +880,13 @@ const CASINO = {
       dRow.innerHTML = ''; pRow.innerHTML = '';
       S.p.forEach(c => pRow.appendChild(SPR.cardEl(c.r, c.s, true, 2)));
       S.d.forEach((c, i) => {
-        const up = !(i === 1 && !reveal && !E.has('markedCards'));
+        const up = !(i === 1 && !reveal);
         dRow.appendChild(SPR.cardEl(c.r, c.s, up, 2));
       });
       UI.put($('bj-ptotal'), S.p.length
         ? UI.txt('' + val(S.p), { scale: 3, color: val(S.p) > 21 ? PIX.PAL.R : PIX.PAL.W }) : UI.txt('', { scale: 1 }));
       UI.put($('bj-dtotal'), S.d.length
-        ? ((reveal || E.has('markedCards'))
+        ? (reveal
           ? UI.txt('' + val(S.d), { scale: 3, color: PIX.PAL.W })
           : UI.txt(val([S.d[0]]) + '+?', { scale: 3, color: PIX.PAL.q }))
         : UI.txt('', { scale: 1 }));
@@ -903,6 +958,7 @@ const CASINO = {
       SFX.deal();
       G.chips -= S.bet;
       G.casino.bjLeft--;
+      E.notePlay();
       S.deck = []; S.p = []; S.d = []; S.live = true;
       $('bj-result').innerHTML = '';
       S.p.push(draw(), draw());
@@ -1008,23 +1064,6 @@ const CASINO = {
       const bet = colSel === 'none' ? 0 : CASINO.getBet(m, 'rl');
       if (bet > G.chips) return;
 
-      if (E.has('fateFinger')) {
-        const opts = U.shuffle(G.rng, fateList.slice()).slice(0, 3);
-        const zone = m.querySelector('#r-fate-zone');
-        zone.innerHTML = '';
-        const row = U.el('div', 'fate-pick-row');
-        opts.forEach(f => {
-          const c = U.el('button', 'pixbtn fate-card has-tip');
-          c.dataset.tipFate = f.id;
-          c.appendChild(SPR.emblemEl('fate', f.id, 3));
-          c.appendChild(UI.txt('' + (f.num === 100 ? '00' : f.num),
-            { scale: 2, color: f.color === 'R' ? P.R : f.color === 'G' ? P.F : P.w }));
-          c.onclick = () => { zone.innerHTML = ''; CASINO.spinTo(m, f, bet, colSel, cv, segColors, fateList); };
-          row.appendChild(c);
-        });
-        zone.appendChild(row);
-        return;
-      }
       CASINO.spinTo(m, U.pick(G.rng, fateList), bet, colSel, cv, segColors, fateList);
     };
   },
@@ -1033,6 +1072,7 @@ const CASINO = {
     const P = PIX.PAL;
     const idx = fateList.indexOf(fate);
     G.casino.rouletteLeft = 0;
+    E.notePlay();
     if (bet) { G.chips -= bet; CASINO.syncChips(); }
     m.querySelector('#btn-spin-wheel').disabled = true;
 
@@ -1070,7 +1110,7 @@ const CASINO = {
       { scale: 3, color: fate.color === 'R' ? P.R : fate.color === 'G' ? P.F : P.W }));
     if (bet) {
       if (colSel === fate.color) {
-        const pay = fate.color === 'G' ? bet * 7 : bet * 2;
+        const pay = fate.color === 'G' ? bet * 3 : bet * 2;
         G.chips += pay;
         out.appendChild(UI.txt('+' + pay, { scale: 3, color: P.G }));
         SFX.coin();
@@ -1206,6 +1246,7 @@ const CASINO = {
       S.running = true;
       G.chips -= bet;
       G.casino.derbyLeft--;
+      E.notePlay();
       CASINO.syncChips();
       syncBtn();
       m.querySelector('#derby-result').innerHTML = '';
@@ -1257,6 +1298,79 @@ const CASINO = {
 
     rollField();
     syncBtn();
+  },
+
+  /* ================= THE GUN CASE ================= */
+
+  openGunCase() {
+    const m = UI.modal(`
+      <button class="pixbtn m-close"></button>
+      <div class="mg-wrap">
+        <div class="bet-row" id="gc-ctl"></div>
+        <div id="gun-ladder"></div>
+        <div class="mg-result" id="gc-result"></div>
+      </div>
+    `);
+    CASINO.mkClose(m);
+    m.querySelector('#gc-ctl').appendChild(CASINO.chipsRow());
+
+    const paint = () => {
+      const ladder = m.querySelector('#gun-ladder');
+      ladder.innerHTML = '';
+      GUNS.forEach((g, i) => {
+        const row = U.el('div', 'gun-row has-tip' +
+          (i <= G.gunIdx ? ' owned' : i === G.gunIdx + 1 ? ' next' : ' future'));
+        row.dataset.tipGun = g.id;
+        const spr = PIX.el(GUN_SPRITES[g.id], 2);
+        if (i > G.gunIdx + 1) spr.style.filter = 'brightness(.25)';
+        row.appendChild(spr);
+
+        const mid = U.el('span', 'gun-mid');
+        mid.appendChild(UI.txt(g.name, {
+          scale: 2,
+          color: i <= G.gunIdx ? PIX.PAL.G : i === G.gunIdx + 1 ? PIX.PAL.W : PIX.PAL.q,
+        }));
+        row.appendChild(mid);
+
+        if (i <= G.gunIdx) {
+          row.appendChild(UI.txt('YOURS', { scale: 1, color: PIX.PAL.N, shadow: null }));
+        } else if (i === G.gunIdx + 1) {
+          // plays progress
+          const prog = U.el('span', 'gun-req has-tip');
+          prog.dataset.tipText = 'Machine plays: ' + G.machinePlays + ' of ' + g.req +
+            ' needed. Slots, blackjack, the wheel and the derby all count.';
+          prog.appendChild(PIX.el('ic_dice', 2));
+          prog.appendChild(UI.txt(Math.min(G.machinePlays, g.req) + '/' + g.req, {
+            scale: 2, color: G.machinePlays >= g.req ? PIX.PAL.N : PIX.PAL.R,
+          }));
+          row.appendChild(prog);
+          const btn = U.el('button', 'pixbtn w-buy' + (E.canBuyGun() ? ' gold' : ''));
+          btn.id = 'btn-buy-gun';
+          btn.appendChild(PIX.el('ic_coin', 2));
+          btn.appendChild(UI.txt('' + E.price(g.cost), {
+            scale: 2, color: E.canBuyGun() ? PIX.PAL.K : PIX.PAL.G,
+            shadow: E.canBuyGun() ? null : PIX.PAL.K,
+          }));
+          btn.disabled = !E.canBuyGun();
+          btn.onclick = () => {
+            if (!E.buyGun()) return;
+            SFX.jackpot();
+            UI.flash('go-gold');
+            UI.particles('ic_coin', 14);
+            const out = m.querySelector('#gc-result');
+            out.innerHTML = '';
+            out.appendChild(PIX.el(GUN_SPRITES[E.gun().id], 3, 'pop'));
+            CASINO.syncChips();
+            paint();
+          };
+          row.appendChild(btn);
+        } else {
+          row.appendChild(PIX.el('ic_lock', 2));
+        }
+        ladder.appendChild(row);
+      });
+    };
+    paint();
   },
 
   /* ================= PAWN SHOP ================= */

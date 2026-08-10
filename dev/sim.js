@@ -26,8 +26,10 @@ function driver() {
       let guard = 0;
       while (G.phase === 'round' && guard++ < 3000) {
         if (G.flags.roundWon) {
-          // naive shop: buy charms when affordable, one mystery jar if rich
+          // naive shop: play machines, climb the gun ladder, buy charms
           E.toCasino();
+          G.machinePlays += 3; // stands in for slots/blackjack visits
+          while (E.canBuyGun()) E.buyGun();
           for (const id of G.casino.stock.slice()) {
             if (!id) continue;
             const c = CHARMS[id];
@@ -92,13 +94,14 @@ function driver() {
           if (Math.random() < 0.4) E.addShellById(E.randomShellByRarity(
             ['common', 'uncommon', 'rare', 'legendary'][Math.floor(Math.random() * 4)]));
           if (Math.random() < 0.4) G.nextFate = U.pick(Math.random, Object.keys(FATES));
+          G.machinePlays += Math.floor(Math.random() * 4);
+          if (Math.random() < 0.5) while (E.canBuyGun()) E.buyGun();
           E.nextAnte();
           continue;
         }
         const r = Math.random();
-        if (r < 0.1 && E.peekAllowed()) E.doPeek();
-        else if (r < 0.15 && E.spinAllowed()) E.doSpin();
-        else if (r < 0.2 && E.ejectAllowed()) E.doEject();
+        if (r < 0.12 && E.peekAllowed()) E.doPeek();
+        else if (r < 0.18 && E.spinAllowed()) E.doSpin();
         else if (r < 0.25 && E.loadAllowed() && G.reserve.length) {
           E.doLoad(G.reserve[Math.floor(Math.random() * G.reserve.length)].uid);
         } else {

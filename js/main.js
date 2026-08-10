@@ -38,7 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
       UI.sync();
     });
     mk('shells', () => {
-      ['web', 'echo', 'magnet', 'dead', 'snake', 'buck'].forEach(id => E.addShellById(id));
+      ['web', 'cursed', 'magnet', 'dead', 'glass', 'buck'].forEach(id => E.addShellById(id));
       UI.sync();
     });
     document.body.appendChild(bar);

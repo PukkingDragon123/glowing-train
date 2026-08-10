@@ -190,7 +190,7 @@ button { font-family: inherit; cursor: pointer; border: 0; background: none; col
 .pull-col { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .est-row { display: flex; align-items: center; gap: 4px; }
 
-.sleight-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.sleight-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .pixbtn.sl { flex-direction: column; gap: 3px; padding: 7px 4px; }
 .cost-pips { display: flex; gap: 2px; align-items: center; }
 
@@ -276,8 +276,6 @@ button { font-family: inherit; cursor: pointer; border: 0; background: none; col
 
 /* round-won box */
 .won-box { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 8px 18px; }
-.reward-rows { display: flex; flex-direction: column; gap: 8px; }
-.reward-row { display: flex; align-items: center; gap: 10px; }
 .reward-total { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 3px solid var(--ink); }
 .big-go { padding: 12px 30px; }
 
@@ -343,14 +341,12 @@ button { font-family: inherit; cursor: pointer; border: 0; background: none; col
 .roulette-zone { display: flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap; }
 #rwheel-cv { width: 312px; }
 #r-side { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-.fate-pick-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
 .fate-card {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   background: var(--panel); border: 3px solid var(--violet-dk);
   padding: 12px 16px;
 }
 .fate-card.big { border-color: var(--violet); margin: 10px auto 0; width: fit-content; }
-button.fate-card:hover { border-color: var(--violet); filter: brightness(1.25); }
 .fate-arrow { display: flex; align-items: center; gap: 5px; }
 
 /* derby */
@@ -378,7 +374,6 @@ button.fate-card:hover { border-color: var(--violet); filter: brightness(1.25); 
   gap: 20px; text-align: center; padding: 24px; position: relative; z-index: 1;
 }
 .logo-stack { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.title-cyl { width: 240px; filter: drop-shadow(0 8px 0 rgba(0, 0, 0, .35)); }
 .seed-row input {
   background: rgba(10, 9, 16, .9); border: 3px solid var(--ink); color: var(--bone);
   padding: 9px 14px; font-family: inherit; font-size: 13px; letter-spacing: 3px;
@@ -437,3 +432,36 @@ button.fate-card:hover { border-color: var(--violet); filter: brightness(1.25); 
   .help-cols { grid-template-columns: 1fr; }
   .mg-wrap { min-width: 0; }
 }
+
+/* ============ frogs, guns, locks ============ */
+
+.you-row { display: flex; align-items: flex-start; gap: 10px; }
+.you-stats { flex: 1; }
+#p-portrait canvas { display: block; }
+#p-portrait.hurt canvas, #p-portrait .hurt { animation: none; }
+#p-portrait.hurt { animation: hurt-flash .5s steps(3); }
+@keyframes hurt-flash {
+  0%, 100% { filter: none; }
+  50% { filter: brightness(2.2) sepia(1) hue-rotate(-45deg) saturate(4); }
+}
+#p-gun { justify-content: center; margin-top: 4px; }
+
+#casino-stage canvas.station.locked {
+  cursor: not-allowed;
+}
+#casino-stage canvas.station.locked:hover {
+  filter: brightness(1.12);
+  transform: none;
+}
+
+#gun-ladder { display: flex; flex-direction: column; gap: 8px; min-width: 460px; }
+.gun-row {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--panel); border: 3px solid var(--ink);
+  padding: 8px 14px;
+}
+.gun-row.next { border-color: var(--gold); }
+.gun-row.owned { opacity: .75; }
+.gun-row.future { opacity: .45; }
+.gun-mid { flex: 1; }
+.gun-req { display: inline-flex; align-items: center; gap: 5px; margin-right: 8px; }

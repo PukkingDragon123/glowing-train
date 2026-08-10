@@ -2,10 +2,10 @@
 /* ============================================================
    SHELL & DEBT — engine.js
    Run state + all core rules: the chamber, odds, calls,
-   pot/streak/banking, antes, bosses, fates, economy.
+   pot/streak/banking, guns, antes, the mob, economy.
    ============================================================ */
 
-const DEBTS = [150, 250, 400, 600, 900, 1350, 2000, 3000];
+const DEBTS = [150, 250, 400, 620, 950, 1450, 2200, 3400];
 const WIN_ANTE = 8;
 
 const G = {}; // the run state — rebuilt by E.newRun()
@@ -23,6 +23,8 @@ const E = {
     G.nerveMax = 3;
     G.nerve = 3;
     G.charms = [];
+    G.gunIdx = 0;        // your iron (index into GUNS)
+    G.machinePlays = 0;  // total casino games played this run
 
     // starting bag: instances {uid, id}
     G.bag = [];
@@ -56,31 +58,31 @@ const E = {
       : Math.round(DEBTS[DEBTS.length - 1] * Math.pow(1.6, G.ante - DEBTS.length) / 10) * 10;
     if (E.fateIs('highRoller')) d = Math.round(d * 1.25);
     if (E.fateIs('zeroHour')) d = Math.round(d * 0.65);
-    if (E.fateIs('houseBlinks') && !G.boss) d = Math.round(d * 0.8);
     return d;
   },
 
   startRound() {
-    // boss for this ante (may be cancelled by The House Blinks)
     G.boss = G.bossSchedule[G.ante]
       || (G.ante > WIN_ANTE ? U.pick(G.rng, BOSS_POOL.concat('owner')) : null);
-    if (E.fateIs('houseBlinks') && G.boss) G.boss = null;
+    const blinkSpared = E.fateIs('houseBlinks') && !!G.boss; // the boss stays home
+    if (blinkSpared) G.boss = null;
 
     G.debt = E.currentDebt();
+    if (E.fateIs('houseBlinks') && !blinkSpared) G.debt = Math.round(G.debt * 0.8);
     G.score = 0;
     G.pot = 0;
     G.streak = 0;
 
-    G.pullsMax = 10 + (E.fateIs('longTable') ? 3 : 0);
+    G.pullsMax = 10 + (E.fateIs('longTable') ? 3 : 0) + (G.gunIdx >= 3 ? 2 : 0);
     G.pulls = G.pullsMax;
-    G.sleightMax = 4 + (E.has('monocle') ? 1 : 0);
+    G.sleightMax = 3 + (E.has('monocle') ? 1 : 0);
     G.sleight = G.sleightMax;
 
     G.flags = {
       rabbitUsed: false, ashtrayUsed: false, vampUsed: false,
-      firstBankDone: false, secondWindUsed: G.flags ? G.flags.secondWindUsed : false,
-      forcedNext: null, lastOutcome: null,
-      smokePending: false, spiderArmed: false,
+      secondWindUsed: G.flags ? G.flags.secondWindUsed : false,
+      forcedNext: null,
+      spiderArmed: false,
       roundWon: false, reward: null,
     };
 
@@ -116,7 +118,6 @@ const E = {
       const i = (G.ptr + step) % 6;
       if (G.holes[i]) { G.ptr = i; return step; }
     }
-    // chamber empty — try a reload
     if (E.ensureChamber()) return 'reload';
     return 'empty';
   },
@@ -141,10 +142,27 @@ const E = {
   bossIs(id) { return G.boss === id; },
   blindRound() { return E.bossIs('blindfold') || E.bossIs('owner'); },
 
+  /* guns */
+  gun() { return GUNS[G.gunIdx]; },
+  nextGun() { return GUNS[G.gunIdx + 1] || null; },
+  gunBase() { return G.gunIdx >= 1 ? 6 : 0; },
+  canBuyGun() {
+    const n = E.nextGun();
+    return !!n && G.chips >= E.price(n.cost) && G.machinePlays >= n.req;
+  },
+  buyGun() {
+    if (!E.canBuyGun()) return false;
+    G.chips -= E.price(E.nextGun().cost);
+    G.gunIdx++;
+    return true;
+  },
+  notePlay() { G.machinePlays++; },
+
+  unlocked(station) { return G.ante >= (UNLOCKS[station] || 1); },
+
   effWeights(inst) {
     const w = Object.assign({}, SHELLS[inst.id].w);
     if (E.fateIs('bloodNight')) w.BACKFIRE += 15;
-    if (E.fateIs('grease')) w.JAM += 12;
     const total = OUTCOMES.reduce((s, o) => s + w[o], 0);
     const out = {};
     OUTCOMES.forEach(o => out[o] = w[o] / total);
@@ -157,7 +175,6 @@ const E = {
     const top = E.topHole();
     if (!top) return { blind: false, probs: null, hidden: true };
     if (top.revealed) return { blind: false, probs: E.effWeights(top.inst), hidden: false };
-    // hidden: average over all hidden shells currently in the chamber
     const hidden = G.holes.filter(h => h && !h.revealed);
     const probs = { FIRE: 0, DUD: 0, JAM: 0, BACKFIRE: 0 };
     hidden.forEach(h => {
@@ -177,10 +194,7 @@ const E = {
   streakMult(streak) {
     // chunky linear growth early, compounding growth on deep rides
     const n = Math.max(0, streak - 1);
-    const echo = E.has('echoChamber');
-    const linear = 1 + (echo ? 1.5 : 1.0) * n;
-    const geo = Math.pow(echo ? 1.75 : 1.5, n);
-    return Math.min(echo ? 40 : 30, Math.max(linear, geo));
+    return Math.min(30, Math.max(1 + n, Math.pow(1.5, n)));
   },
 
   // rough preview of what a correct call would pay right now
@@ -198,10 +212,15 @@ const E = {
     } else {
       base = SHELLS[top.inst.id].base;
     }
-    if (E.fateIs('looseChamber')) base += 10;
+    base += E.gunBase();
     const mult = odds.blind ? 3 : E.callMult(odds.probs[call]);
-    const sm = E.streakMult(G.streak + 1);
-    return Math.ceil(base * mult * sm);
+    let gain = 1;
+    if (call === 'FIRE' && G.gunIdx >= 2) gain++;
+    if (call === 'FIRE' && !odds.hidden && top.inst.id === 'buck') gain++;
+    const sm = E.streakMult(G.streak + gain);
+    let est = base * mult * sm;
+    if (G.gunIdx >= 4) est *= 1.5;
+    return Math.ceil(est);
   },
 
   /* ================= THE PULL ================= */
@@ -226,7 +245,7 @@ const E = {
       call, shell, inst, wasRevealed, mult,
       outcome: null, forcedBy: null, correct: false,
       payout: 0, notes: [], nerveLost: 0, dead: false,
-      jammed: false, reloaded: false, roundOver: null, // 'won' | 'lost' | null
+      jammed: false, reloaded: false, roundOver: null,
       streakGain: 0,
     };
 
@@ -237,66 +256,52 @@ const E = {
     } else if (inst.id === 'magnet' && G.rng() < 0.6) {
       R.outcome = call; R.forcedBy = 'magnet';
       R.notes.push('🧲 The Magnet Shell bends to your will.');
-    } else if (G.flags.forcedNext) {
-      R.outcome = G.flags.forcedNext; R.forcedBy = 'web';
+    } else if (G.flags.forcedNext && G.flags.forcedNext.fromUid !== inst.uid) {
+      R.outcome = G.flags.forcedNext.outcome; R.forcedBy = 'web';
       R.notes.push('🕸️ The web holds — the outcome was already decided.');
-    } else if (inst.id === 'echo' && G.flags.lastOutcome) {
-      R.outcome = G.flags.lastOutcome; R.forcedBy = 'echo';
-      R.notes.push('🔁 The Echo Shell repeats history.');
     } else {
       const w = E.effWeights(inst);
       R.outcome = U.wpick(G.rng, OUTCOMES, o => w[o]);
     }
     G.flags.forcedNext = null;
     if (inst.id === 'web') {
-      G.flags.forcedNext = R.outcome;
+      G.flags.forcedNext = { outcome: R.outcome, fromUid: inst.uid };
       R.notes.push('🕸️ Silk threads onto the next shell — it will do the same.');
     }
-    G.flags.lastOutcome = R.outcome;
 
     R.correct = (R.outcome === call);
 
     /* --- scoring / punishment --- */
     if (R.correct) {
       G.stats.hits++;
-      let base = shell.base;
-      if (E.fateIs('looseChamber')) base += 10;
+      let base = shell.base + E.gunBase();
       if (E.has('horseshoe') && R.outcome === 'DUD') base += 12;
 
       let gain = 1;
       if (inst.id === 'buck' && R.outcome === 'FIRE') gain++;
-      if (inst.id === 'twin') gain++;
+      if (G.gunIdx >= 2 && R.outcome === 'FIRE') gain++;   // sawn-off
       G.streak += gain;
       R.streakGain = gain;
 
       const potBefore = G.pot;
       let pay = base * mult * E.streakMult(G.streak);
-      if (inst.id === 'twin') { pay *= 2; R.notes.push('👯 Twin Shell — it counts twice.'); }
 
       if (E.fateIs('fireFever') && R.outcome === 'FIRE') pay *= 2;
       if (E.fateIs('blanksParty') && R.outcome === 'DUD') pay *= 2;
-      if (E.fateIs('grease') && R.outcome === 'JAM') pay *= 3;
       if (E.fateIs('bloodNight') && R.outcome === 'BACKFIRE') pay *= 3;
       if (E.fateIs('zeroHour')) pay *= 1.5;
-      if (E.fateIs('houseEyes')) pay *= 1.25;
 
       if (E.has('graveDancer') && R.outcome === 'BACKFIRE') {
         pay *= 2; R.notes.push('💃 The Grave Dancer approves. ×2.');
       }
-      if (E.has('snakeCharmer') && E.effWeights(inst).BACKFIRE >= 0.4) {
-        pay *= 2; R.notes.push('🐍 Snake Charmer — venom pays. ×2.');
-      }
       if (E.has('allIn') && potBefore >= 200) {
         pay *= 2; R.notes.push('🔮 All-In Amulet burns bright. ×2.');
-      }
-      if (G.flags.smokePending) {
-        pay *= 1.5; G.flags.smokePending = false;
-        R.notes.push('🌫️ You strike from the smoke. ×1.5.');
       }
       if (G.flags.spiderArmed) {
         pay *= 3; G.flags.spiderArmed = false;
         R.notes.push('🕷️ Web of Fate — the trap springs. ×3.');
       }
+      if (G.gunIdx >= 4) pay *= 1.5; // the golden gun
 
       R.payout = Math.ceil(pay);
       G.pot += R.payout;
@@ -304,7 +309,7 @@ const E = {
 
       if (inst.id === 'gilded') { G.chips += 4; R.notes.push('💰 Gilded casing: +4 chips.'); }
       if (inst.id === 'rust' && R.outcome === 'JAM') {
-        G.sleight += 2; R.notes.push('🟤 Rust flakes reveal the trick: +2 Sleight.');
+        G.sleight += 1; R.notes.push('🟤 Rust flakes reveal the trick: +1 Trick.');
       }
     } else {
       G.stats.misses++;
@@ -333,14 +338,10 @@ const E = {
       }
     }
 
-    /* --- post-resolution shell effects --- */
+    /* --- post-resolution effects --- */
     if (G.flags.spiderArmed !== true && E.has('spider') && R.outcome === 'JAM') {
       G.flags.spiderArmed = true;
       R.notes.push('🕷️ The spider stirs. Your next payout ×3.');
-    }
-    if (inst.id === 'smoke') {
-      G.flags.smokePending = true;
-      R.notes.push('🌫️ Smoke floods the table. Next payout ×1.5.');
     }
 
     /* --- disposition --- */
@@ -364,12 +365,12 @@ const E = {
 
     if (E.bossIs('spinner') && E.shellsInChamber() > 0) {
       E.shuffleChamber();
-      R.notes.push('🌀 The Spinner whirls the chamber blind again.');
+      R.notes.push('🌀 Dizzy Sal whirls the chamber blind again.');
     }
     if (E.bossIs('collector') && G.score > 0) {
       const drain = Math.min(15, G.score);
       G.score -= drain;
-      R.notes.push(`💼 The Debt Collector skims ${drain} off your score.`);
+      R.notes.push(`💼 TaxToad Tony skims ${drain} off your score.`);
     }
 
     /* --- end-of-round checks --- */
@@ -385,7 +386,6 @@ const E = {
     const outOfShells = E.shellsInChamber() === 0 && G.reserve.length === 0;
     if (G.pulls <= 0 || outOfShells) {
       if (outOfShells && G.pulls > 0) R.notes.push('The chamber runs dry. Nothing left to fire.');
-      // final forced bank
       if (G.pot > 0) {
         const banked = E.bankAmount();
         G.score += banked;
@@ -413,7 +413,6 @@ const E = {
 
   bankAmount() {
     let amt = G.pot;
-    if (E.fateIs('doubleNothing') && !G.flags.firstBankDone) amt *= 2;
     if (E.bossIs('vig')) amt *= 0.75;
     if (E.bossIs('owner')) amt *= 0.8;
     return Math.floor(amt);
@@ -423,8 +422,6 @@ const E = {
     if (!E.canBank()) return null;
     const amt = E.bankAmount();
     const taxed = amt < G.pot;
-    const doubled = E.fateIs('doubleNothing') && !G.flags.firstBankDone && amt > G.pot;
-    G.flags.firstBankDone = true;
     G.score += amt;
     G.stats.bestBank = Math.max(G.stats.bestBank, amt);
     G.pot = 0;
@@ -432,24 +429,23 @@ const E = {
     if (E.has('vampire') && amt >= 100 && !G.flags.vampUsed && G.nerve < G.nerveMax) {
       G.nerve++; G.flags.vampUsed = true;
     }
-    const res = { amt, taxed, doubled, won: false };
+    const res = { amt, taxed, won: false };
     if (G.score >= G.debt) { E.roundWon(null); res.won = true; }
     return res;
   },
 
-  /* ================= sleight ================= */
+  /* ================= tricks (peek / spin / load) ================= */
 
   sleightBlocked() { return E.bossIs('cage'); },
 
-  peekCost() { return E.has('thumb') ? 0 : 1; },
   peekAllowed() {
-    if (E.sleightBlocked() || E.blindRound() || E.fateIs('houseEyes')) return false;
+    if (E.sleightBlocked() || E.blindRound()) return false;
     const top = E.topHole();
-    return !!(top && !top.revealed) && G.sleight >= E.peekCost();
+    return !!(top && !top.revealed) && G.sleight >= 1;
   },
   doPeek() {
     if (!E.peekAllowed()) return false;
-    G.sleight -= E.peekCost();
+    G.sleight -= 1;
     E.topHole().revealed = true;
     return true;
   },
@@ -462,22 +458,6 @@ const E = {
     G.sleight -= 1;
     E.shuffleChamber();
     return true;
-  },
-
-  ejectCost() { return E.fateIs('looseChamber') ? 0 : 1; },
-  ejectAllowed() {
-    return !E.sleightBlocked() && G.sleight >= E.ejectCost() && !!E.topHole()
-      && (E.shellsInChamber() + G.reserve.length) > 1;
-  },
-  doEject() {
-    if (!E.ejectAllowed()) return false;
-    G.sleight -= E.ejectCost();
-    const top = E.topHole();
-    G.holes[G.ptr] = null;
-    G.spent.push(top.inst);
-    const r = {};
-    E.advancePtrAfter(r);
-    return { inst: top.inst, reloaded: !!r.reloaded };
   },
 
   loadAllowed() {
@@ -498,8 +478,7 @@ const E = {
   /* ================= round end / economy ================= */
 
   interest() {
-    const cap = E.has('greed') ? 40 : 20;
-    return Math.min(cap, Math.floor(G.chips / 10) * 2);
+    return Math.min(20, Math.floor(G.chips / 10) * 2);
   },
 
   roundWon(R) {
@@ -509,10 +488,9 @@ const E = {
 
     let base = 30 + 4 * G.pulls;
     if (E.fateIs('highRoller')) base *= 2;
-    const inter = E.interest();
-    const extra = E.has('counterfeit') ? 8 : 0;
-    G.flags.reward = { base, inter, extra, total: base + inter + extra };
-    G.chips += G.flags.reward.total;
+    const total = base + E.interest();
+    G.flags.reward = { total };
+    G.chips += total;
     G.stats.chipsPeak = Math.max(G.stats.chipsPeak, G.chips);
     if (R) R.roundOver = 'won';
   },
@@ -554,18 +532,10 @@ const E = {
   },
 
   nextAnte() {
-    if (G.ante === WIN_ANTE && G.phase !== 'endless-continue') {
-      // handled by UI: win screen shows first; UI calls E.continueEndless()
-    }
     G.ante++;
     G.fate = G.nextFate;
     G.nextFate = null;
     E.startRound();
-  },
-
-  continueEndless() {
-    G.phase = 'round';
-    E.nextAnte();
   },
 
   upcomingBoss() {
@@ -577,7 +547,7 @@ const E = {
 
   gameOver(reason) {
     G.phase = 'gameover';
-    G.overReason = reason; // 'nerve' | 'debt'
+    G.overReason = reason; // 'nerve' | 'debt' | 'walk'
     E.saveBest();
   },
 

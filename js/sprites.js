@@ -36,12 +36,8 @@ const SHELL_MARKS = {
   buck:   ['.K.K.', 'K.K.K', '.K.K.'],
   rust:   ['K..K.', '..K..', 'K..K.'],
   gilded: ['..YY.', '.YY..', 'YY...'],
-  twin:   ['.W.W.', '.W.W.', '.....'],
   glass:  ['...WW', '..WW.', '.WW..'],
   web:    ['K.K.K', '.KKK.', 'K.K.K'],
-  echo:   ['.K.K.', 'K.K..', '.K.K.'],
-  smoke:  ['.WW..', 'W..W.', '..WW.'],
-  snake:  ['.KKK.', '.K...', '.KKK.', '...K.', '.KKK.'],
   cursed: ['W.W..', '.....', 'WWW..'],
   magnet: ['K...K', 'K...K', '.KKK.'],
   dead:   ['..W..', '.WWW.', '..W..', '..W..'],
@@ -56,12 +52,8 @@ const SHELL_COLORS = {
   buck:    { 1: 'O', 2: 'o', 3: 'Y' },
   rust:    { 1: 'b', 2: 'u', 3: 'B' },
   gilded:  { 1: 'G', 2: 'h', 3: 'Y' },
-  twin:    { 1: 'P', 2: 'p', 3: 'W' },
   glass:   { 1: 'L', 2: 'l', 3: 'W' },
   web:     { 1: 'V', 2: 'v', 3: 'W' },
-  echo:    { 1: 'N', 2: 'n', 3: 'W' },
-  smoke:   { 1: 'S', 2: 't', 3: 'M' },
-  snake:   { 1: 'F', 2: 'e', 3: 'Y' },
   cursed:  { 1: 's', 2: 'T', 3: 'S' },
   magnet:  { 1: 'M', 2: 'm', 3: 'W' },
   dead:    { 1: 'k', 2: 'Z', 3: 't' },
@@ -152,19 +144,6 @@ PIX.def('ic_spin', `
 ..KNNKKKKNNK..
 ...KNNNNNNK...
 ....KKKKKK....`);
-
-PIX.def('ic_eject', `
-......KK......
-.....KNNK.....
-....KNNNNK....
-...KNNNNNNK...
-..KNNKNNKNNK..
-.....KNNK.....
-.....KNNK.....
-..KKKKKKKKKK..
-.KssssssssssK.
-.KsTTTTTTTTsK.
-..KKKKKKKKKK..`);
 
 PIX.def('ic_load', `
 ..KKKKKKKKKK..
@@ -665,18 +644,10 @@ const CHARM_GLYPHS = {
   houseKey:    ['.GGG..', 'G...G.', 'G...G.', '.GGG..', '..G...', '..GG..', '..G...', '..GG..'],
   whisperer:   ['..WW..', '.WWWW.', 'WWWWWO', 'WWWWW.', '.WWWW.', '..WW..', '..gg..', ''],
   vampire:     ['W....W', 'WW..WW', 'WWWWWW', '.WWWW.', '.W..W.', '.W..W.', '', ''],
-  thumb:       ['..WW..', '.WWW..', '.WWWWW', 'WWWWWW', 'WWWWWW', '.WWWW.', '', ''],
   ironNerve:   ['SSSSSS', 'S....S', 'S.RR.S', 'S.RR.S', '.S..S.', '..SS..', '', ''],
-  greed:       ['GG..GG', 'G.GG.G', 'G.GG.G', 'GG..GG', 'G.GG.G', 'GG..GG', '', ''],
-  echoChamber: ['..NN..', '.N..N.', 'N.NN.N', 'N.NN.N', '.N..N.', '..NN..', '', ''],
-  snakeCharmer:['.FFFF.', 'F....F', '.FFF..', '...FF.', 'F...F.', '.FFF..', '', ''],
   ashtray:     ['......', 'W.W.W.', '.W.W..', 'SSSSSS', 'S....S', '.SSSS.', '', ''],
-  markedCards: ['WWWW..', 'W..W..', 'W.KW..', '.WWWWW', '.W...W', '.W.KKW', '.WWWWW', ''],
-  gremlin:     ['R....R', '.R..R.', '.RRRR.', 'RRKKRR', 'RRRRRR', '.R..R.', '', ''],
-  fateFinger:  ['..VV..', '.V..V.', 'V.VV.V', 'V.VV.V', '.V..V.', '..VV..', '..VV..', ''],
   allIn:       ['..LL..', '.LLLL.', 'LLWWLL', 'LLLLLL', '.LLLL.', '..LL..', '', ''],
   secondWind:  ['.R..R.', 'RRRRRR', 'RRRRRR', '.RRRR.', '..RR..', '.R....', 'R.....', ''],
-  counterfeit: ['.GGG..', 'G.K.G.', 'G.KKG.', 'G.K.G.', '.GGG..', '..GGG.', '', ''],
 };
 
 /* ---------------- boss / fate glyphs ---------------- */
@@ -695,12 +666,8 @@ const FATE_GLYPHS = {
   fireFever:    ['...O....', '..OO....', '..OYO...', '.OYYO...', '.OYWYO..', 'OYWWYO..', '.OYYO...', '..OO....'],
   bloodNight:   ['...R....', '...R....', '..RRR...', '.RRRRR..', '.RRRRR..', '.RRRRR..', '..RRR...', ''],
   highRoller:   ['.KKKKK..', '.KKKKK..', 'KKKKKKK.', '.GGGGG..', '..GGG...', '', '', ''],
-  looseChamber: ['S....S..', 'SS..SS..', '.SSSS...', '..SS....', '..SS....', '..SS....', '', ''],
-  doubleNothing:['WWW.....', 'W.W.KKK.', 'WWW.K.K.', '....KKK.', 'WW......', 'WW..WW..', '....WW..', ''],
-  grease:       ['..KKK...', '.KbbbK..', 'KbbbbbK.', 'KbBBbbK.', 'KbbbbbK.', '.KbbbK..', '..KKK...', ''],
   longTable:    ['KKKKKKKK', 'K......K', 'KKKKKKKK', '.K....K.', '.K....K.', '', '', ''],
   coldDeck:     ['...L....', '.L.L.L..', '..LLL...', 'LLLLLLL.', '..LLL...', '.L.L.L..', '...L....', ''],
-  houseEyes:    ['.KK.KK..', 'KWWKWWK.', 'KWKKWKK.', '.KK.KK..', '', '', '', ''],
   blanksParty:  ['..W.....', '.WWW....', 'WWWWW...', '.WWW.G..', '..W.G.G.', '....G...', '', ''],
   zeroHour:     ['..KKK...', '.KVVVK..', 'KV...VK.', 'KV...VK.', 'KV...VK.', '.KVVVK..', '..KKK...', ''],
   houseBlinks:  ['.KK.KK..', 'KWWKKKK.', 'KWKK....', '.KK.KK..', '', '', '', ''],
@@ -1019,3 +986,296 @@ const SPR = {
     }
   },
 };
+
+/* ============================================================
+   THE FROG MOB — procedural portrait builder.
+   One consistent face rig (eye bulbs, heavy lids, wide frown,
+   suit) with per-character skin, weight and accessories, so
+   the whole cast stays on-model. Fat toads get real jowls.
+   ============================================================ */
+
+const FROG_DEFS = {
+  player:    { skin: ['F', 'f', 'e'], fat: false, suit: 'T', shirt: 'W', tie: 'd',
+               hat: 'fedora', hatCol: 'T', band: 'd', cigar: true },
+  blindfold: { skin: ['w', 'q', 'q'], fat: false, suit: 't', shirt: 'w', tie: 't',
+               glasses: 'round' },
+  vig:       { skin: ['B', 'b', 'u'], fat: true, suit: 'k', shirt: 'W', tie: 'G',
+               hat: 'fedora', hatCol: 'U', band: 'G', cigar: true, warts: true },
+  spinner:   { skin: ['N', 'n', 'n'], fat: false, suit: 't', shirt: 'W', bowtie: 'r',
+               spiral: true },
+  croupier:  { skin: ['f', 'e', 'e'], fat: false, suit: 'k', shirt: 'W', bowtie: 'd',
+               visor: true },
+  collector: { skin: ['O', 'o', 'o'], fat: true, suit: 't', shirt: 'w', tie: 'T',
+               glasses: 'square', warts: true },
+  cage:      { skin: ['s', 't', 't'], fat: false, suit: 'stripes', shirt: 'w', tie: null,
+               flatcap: true },
+  owner:     { skin: ['v', 'X', 'X'], fat: true, suit: 'k', shirt: 'W', tie: 'G',
+               hat: 'tophat', hatCol: 'k', band: 'G', goldEyes: true, cigar: true, warts: true },
+  dealer:    { skin: ['F', 'f', 'e'], fat: false, suit: 'W', shirt: 'W', bowtie: 'K',
+               visor: true },
+};
+
+SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
+  ctx.fillStyle = col;
+  for (let y = -ry; y <= ry; y++) {
+    const span = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (y / ry) * (y / ry))));
+    ctx.fillRect(Math.round(cx - span), Math.round(cy + y), span * 2 + 1, 1);
+  }
+};
+
+SPR.frogMaster = function (id) {
+  return SPR.cached('frog_' + id, () => {
+    const d = FROG_DEFS[id] || FROG_DEFS.player;
+    const P = PIX.PAL;
+    const skin = P[d.skin[0]], shade = P[d.skin[1]], dark = P[d.skin[2]];
+    const W = 34, H = 32, cx = 17;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+
+    const rx = d.fat ? 14 : 11;
+    const headY = 17, ry = 9;
+    const ex = d.fat ? 9 : 7, ey = 8;
+
+    /* shoulders / suit first (behind head) */
+    const sw = d.fat ? 15 : 12;
+    PIX.rect(ctx, cx - sw - 1, 25, sw * 2 + 2, H - 25, P.K);
+    if (d.suit === 'stripes') {
+      for (let x = -sw; x <= sw; x++) {
+        ctx.fillStyle = (x + 100) % 4 < 2 ? P.t : P.T;
+        ctx.fillRect(cx + x, 26, 1, H - 26);
+      }
+    } else {
+      PIX.rect(ctx, cx - sw, 26, sw * 2 + 1, H - 26, P[d.suit] || P.T);
+    }
+    // shirt V + tie
+    PIX.rect(ctx, cx - 2, 26, 5, H - 26, P[d.shirt] || P.W);
+    if (d.tie) { PIX.rect(ctx, cx - 1, 27, 3, 4, P[d.tie]); PIX.rect(ctx, cx, 31, 1, 1, P[d.tie]); }
+
+    /* head */
+    SPR.ellipse(ctx, cx, headY, rx + 1, ry + 1, P.K);
+    SPR.ellipse(ctx, cx, headY, rx, ry, skin);
+    SPR.ellipse(ctx, cx, headY - 3, rx - 3, ry - 4, P[d.skin[0]]);
+    // lower face shading
+    SPR.ellipse(ctx, cx, headY + 4, rx - 2, 4, shade);
+    if (d.fat) { // jowls
+      SPR.ellipse(ctx, cx - rx + 4, headY + 5, 5, 4, shade);
+      SPR.ellipse(ctx, cx + rx - 4, headY + 5, 5, 4, shade);
+      PIX.rect(ctx, cx - 6, headY + 8, 13, 1, dark); // chin crease
+    }
+
+    /* eye bulbs */
+    [-ex, ex].forEach(off => {
+      PIX.disc(ctx, cx + off, ey, 5, P.K);
+      PIX.disc(ctx, cx + off, ey, 4, skin);
+      PIX.disc(ctx, cx + off, ey + 1, 3, P.W);
+      if (d.goldEyes) PIX.disc(ctx, cx + off, ey + 1, 2, P.G);
+      // heavy mobster lids
+      PIX.disc(ctx, cx + off, ey - 2, 3, skin);
+      PIX.rect(ctx, cx + off - 3, ey - 1, 7, 1, shade);
+      // pupil
+      if (d.spiral) {
+        ctx.fillStyle = P.K;
+        ctx.fillRect(cx + off - 1, ey, 3, 1); ctx.fillRect(cx + off + 1, ey + 1, 1, 1);
+        ctx.fillRect(cx + off - 1, ey + 2, 2, 1);
+      } else {
+        PIX.rect(ctx, cx + off - 1, ey, 2, 3, P.K);
+      }
+    });
+    if (d.glasses === 'round') {
+      [-ex, ex].forEach(off => {
+        PIX.disc(ctx, cx + off, ey, 4, P.K);
+        PIX.disc(ctx, cx + off, ey, 3, P.T);
+        ctx.fillStyle = P.S; ctx.fillRect(cx + off - 2, ey - 2, 2, 1);
+      });
+      PIX.rect(ctx, cx - ex + 4, ey, ex * 2 - 8, 1, P.K);
+    }
+    if (d.glasses === 'square') {
+      [-ex, ex].forEach(off => {
+        PIX.rect(ctx, cx + off - 4, ey - 3, 8, 7, P.K);
+        PIX.rect(ctx, cx + off - 3, ey - 2, 6, 5, P.L);
+        PIX.rect(ctx, cx + off - 1, ey, 2, 3, P.K);
+      });
+      PIX.rect(ctx, cx - ex + 4, ey - 1, ex * 2 - 8, 1, P.K);
+    }
+
+    /* nostrils + mouth (droopy mobster frown) */
+    PIX.rect(ctx, cx - 3, headY - 3, 1, 1, dark);
+    PIX.rect(ctx, cx + 3, headY - 3, 1, 1, dark);
+    const mw = rx - 3;
+    for (let x = -mw; x <= mw; x++) {
+      const droop = Math.round((Math.abs(x) / mw) * (Math.abs(x) / mw) * 3);
+      ctx.fillStyle = P.K;
+      ctx.fillRect(cx + x, headY + 3 + droop, 1, 1);
+    }
+
+    /* warts */
+    if (d.warts) {
+      [[-rx + 3, headY - 1], [rx - 4, headY + 1], [-5, headY - 5], [6, headY + 6], [-rx + 5, headY + 6]]
+        .forEach(([wx, wy]) => {
+          PIX.rect(ctx, cx + wx, wy, 2, 1, dark);
+          PIX.rect(ctx, cx + wx, wy - 1, 1, 1, P[d.skin[2]]);
+        });
+    }
+
+    /* hats & headgear (over everything) */
+    if (d.hat === 'fedora') {
+      const hc = P[d.hatCol] || P.T;
+      PIX.rect(ctx, cx - 6, 0, 13, 6, P.K);
+      PIX.rect(ctx, cx - 5, 1, 11, 5, hc);
+      PIX.rect(ctx, cx - 5, 4, 11, 2, P[d.band] || P.d);
+      PIX.rect(ctx, cx - 8, 6, 17, 2, P.K);
+      PIX.rect(ctx, cx - 7, 6, 15, 1, hc);
+      PIX.rect(ctx, cx - 3, 1, 4, 1, P.W); ctx.fillStyle = 'rgba(255,255,255,.18)';
+    }
+    if (d.hat === 'tophat') {
+      const hc = P[d.hatCol] || P.k;
+      PIX.rect(ctx, cx - 6, 0, 13, 8, P.K);
+      PIX.rect(ctx, cx - 5, 0, 11, 7, hc);
+      PIX.rect(ctx, cx - 5, 5, 11, 2, P[d.band] || P.G);
+      PIX.rect(ctx, cx - 9, 7, 19, 2, P.K);
+      PIX.rect(ctx, cx - 8, 7, 17, 1, hc);
+    }
+    if (d.flatcap) {
+      PIX.rect(ctx, cx - 7, 2, 15, 4, P.K);
+      PIX.rect(ctx, cx - 6, 3, 13, 3, P.t);
+      PIX.rect(ctx, cx - 8, 5, 8, 2, P.K);
+      PIX.rect(ctx, cx - 7, 5, 6, 1, P.s);
+    }
+    if (d.visor) {
+      PIX.rect(ctx, cx - ex - 3, ey - 3, ex * 2 + 7, 1, P.K);
+      PIX.rect(ctx, cx - ex - 2, ey - 5, ex * 2 + 5, 2, P.n);
+      PIX.rect(ctx, cx - ex - 2, ey - 6, ex * 2 + 5, 1, P.N);
+    }
+
+    /* bowtie / cigar (front-most) */
+    if (d.bowtie) {
+      const bc = P[d.bowtie] || P.d;
+      PIX.rect(ctx, cx - 4, 26, 3, 3, bc); PIX.rect(ctx, cx + 2, 26, 3, 3, bc);
+      PIX.rect(ctx, cx - 1, 27, 3, 2, P.K);
+      PIX.frame(ctx, cx - 5, 25, 11, 5, P.K);
+    }
+    if (d.cigar) {
+      const my = headY + 4;
+      PIX.rect(ctx, cx + mw - 2, my, 7, 3, P.K);
+      PIX.rect(ctx, cx + mw - 1, my + 1, 5, 1, P.b);
+      PIX.rect(ctx, cx + mw + 4, my + 1, 1, 1, P.O);
+      PIX.rect(ctx, cx + mw + 4, my - 2, 1, 1, P.q);
+      PIX.rect(ctx, cx + mw + 5, my - 4, 1, 1, P.q);
+    }
+    return cv;
+  });
+};
+
+SPR.frogEl = function (id, scale, cls) {
+  return SPR.clone(SPR.frogMaster(id), scale, cls);
+};
+
+/* ============================================================
+   THE GUNS — side views, pointing right.
+   ============================================================ */
+
+PIX.def('gun_snub', `
+........................
+....KKKKKKKKKKKK........
+...KSSSSSSSSSSSSK.......
+..KSsKKKKKKsSSSSKKKK....
+..KSsKtttttKsSSSSSSK....
+..KSsKtOtOtKsSKKKKK.....
+..KSsKKKKKKsSK..........
+..KSSSSSSSSSK...........
+...KKKbbKKKK............
+......KbBbK.............
+......KbbbK.............
+.......KbbK.............
+.......KKKK.............`);
+
+PIX.def('gun_colt', `
+................................
+....KKKKKKKKKKKKKKKKKKKKKKK.....
+...KSSSSSSSSSSSSSSSSSSSSSSSK....
+..KSsKKKKKKsSSSSSSSSSSSSSSSKK...
+..KSsKtttttKsSSKKKKKKKKKKKK.....
+..KSsKtOtOtKsSK.................
+..KSsKKKKKKsSK..................
+..KSSSSSSSSSK...................
+...KKKbbKKKK....................
+......KbBbK.....................
+......KbbbK.....................
+.......KbbK.....................
+.......KKKK.....................`);
+
+PIX.def('gun_sawn', `
+..............................
+..KKKKKKKKKKKKKKKKKKKK........
+.KSSSSSSSSSSSSSSSSSSSSK.......
+.KsKKKKKKKKKKKKKKKKKKsK.......
+.KSSSSSSSSSSSSSSSSSSSSK.......
+.KsKKKKKKKKKKKKKKKKKKsK.......
+..KKbbbbbbKKKKKKKKKKKK........
+...KbBBBBbbK..................
+....KbbBBbbK..................
+......KKbbbK..................
+........KKKK..................`);
+
+PIX.def('gun_tommy', `
+..................................
+......KK..........................
+.....KssK.KKKKKKKKKKKKKKKKKKKK....
+....KKssKKSSSSSSSSSSSSSSSSSSSSK...
+...KSSSSSSSSSSSSSSSSSSSSSSSSKKK...
+..KSSSSSSSSSSSSSSSSSSSSSKKKK......
+..KSKKKKKKKbbbKKKKKbbKKK..........
+..KSK....KbBbbK...KbBbK...........
+.KKKK...KbbbbK....KbbbK...........
+.KttK...KKKKK.....KKKK............
+.KttttK...........................
+..KKKKttK.........................
+.....KKKK.........................`);
+
+PIX.def('gun_golden', `
+................................
+....KKKKKKKKKKKKKKKKKKKKKKK.....
+...KGGGGGGGGGGGGGGGGGGGGGGGK....
+..KGgKKKKKKgGGGGGGGGGGGGGGGKK...
+..KGgKhhhhhKgGGKKKKKKKKKKKK.....
+..KGgKhYhYhKgGK.................
+..KGgKKKKKKgGK..................
+..KGGGGGGGGGK...................
+...KKKhhKKKK....................
+......KhGhK.....................
+......KhhhK.....................
+.......KhhK.....................
+.......KKKK.....................`);
+
+const GUN_SPRITES = { snub: 'gun_snub', colt: 'gun_colt', sawn: 'gun_sawn',
+  tommy: 'gun_tommy', golden: 'gun_golden' };
+
+/* padlock for locked stations */
+PIX.def('ic_lock', `
+...KKKK...
+..KssssK..
+.KsK..KsK.
+.KsK..KsK.
+KKKKKKKKKK
+KGGGGGGGGK
+KGGGKKGGGK
+KGGGKKGGGK
+KGGGGKGGGK
+KGGGGGGGGK
+KKKKKKKKKK`);
+
+/* tiny full-body patrons for the casino floor */
+PIX.def('patron_toad', `
+......KKKK......
+..KK.KbBBbK.KK..
+.KbbKKBBBBKKbbK.
+.KbKWKBBBBKWKbK.
+..KKKKbbbbKKKK..
+..KbbbbbbbbbbK..
+.KbbBBBBBBBBbbK.
+.KbBBBBBBBBBBbK.
+.KbBBWWBBWWBBbK.
+.KbbBBBBBBBBbbK.
+..KKbbbbbbbbKK..
+...KuuK..KuuK...`);
