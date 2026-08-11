@@ -12,7 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const jsdir = path.join(__dirname, '..', 'js') + path.sep;
-const src = ['util.js', 'data.js', 'meta.js', 'engine.js']
+const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'engine.js']
   .map(f => fs.readFileSync(jsdir + f, 'utf8')).join('\n;\n');
 
 function driver() {
@@ -73,26 +73,41 @@ function driver() {
     return E.pull('foe');
   }
 
-  const BUY_ORDER = ['totem', 'gator', 'blood', 'scales', 'clover', 'deadeye', 'cig',
-    'glass', 'ring', 'edge', 'cuffs', 'beer', 'mirror', 'shill', 'snake', 'swarm',
-    'feather', 'counter', 'fly', 'marked', 'glove', 'watch', 'dirt', 'rosary'];
+  /* rifle in tell-informed priority, bribe when it's worth it, pay the heat */
+  const POCKET_ORDER = ['holster', 'tooth', 'vest', 'hand', 'hat', 'jacket', 'shirt', 'boot'];
+  const RARITY_VAL = { common: 1, uncommon: 2, rare: 3, legendary: 4 };
 
-  function botShop() {
-    E.openShop();
-    if (G.shop.gun && G.chips >= E.price(G.shop.gun.cost) + 4) E.buyGun();
-    let bought = true;
-    while (bought) {
-      bought = false;
-      const avail = G.shop.stock
-        .map((s, i) => ({ s, i }))
-        .filter(x => !x.s.sold)
-        .sort((a, b) => BUY_ORDER.indexOf(a.s.id) - BUY_ORDER.indexOf(b.s.id));
-      for (const { s, i } of avail) {
-        if (G.trinkets.length >= MAX_TRINKETS) break;
-        if (G.chips >= E.price(TRINKETS[s.id].cost) + 2 && E.buy(i)) { bought = true; break; }
+  function botLoot() {
+    let guard = 0;
+    while (G.phase === 'loot' && guard++ < 40) {
+      if (G.loot.pendingCard) {
+        // swap over the cheapest-rarity card we hold, if the find is better
+        const worst = G.trinkets.reduce((w, t, i) =>
+          RARITY_VAL[TRINKETS[t.id].rarity] < RARITY_VAL[TRINKETS[G.trinkets[w].id].rarity] ? i : w, 0);
+        const found = RARITY_VAL[TRINKETS[G.loot.pendingCard].rarity];
+        E.resolveCard(found > RARITY_VAL[TRINKETS[G.trinkets[worst].id].rarity] ? worst : null);
+        continue;
       }
+      if (E.canRifle()) {
+        const cand = G.loot.pockets
+          .map((p, i) => ({ p, i }))
+          .filter(x => !x.p.taken)
+          .sort((a, b) => (b.p.bulge - a.p.bulge) ||
+            (POCKET_ORDER.indexOf(a.p.id) - POCKET_ORDER.indexOf(b.p.id)));
+        if (!cand.length) break;
+        E.rifle(cand[0].i);
+        continue;
+      }
+      if (E.heatUp()) {
+        const reserve = G.blind === 2 ? HEAT_COST(G.ante) : Math.ceil(HEAT_COST(G.ante) / 2);
+        if (E.lootLeft() >= 2 && G.loot.bribes < 2 && G.chips >= E.bribeCost() + reserve) {
+          if (E.bribe()) continue;
+        }
+      }
+      break;
     }
-    E.nextBlind();
+    const res = E.endLoot();
+    if (res.heatDue !== undefined) E.payHeat(); // busts to 'over' on a short pocket
   }
 
   function playRun(seed, maxAnte) {
@@ -101,7 +116,7 @@ function driver() {
     while (G.phase !== 'over' && guard++ < 6000) {
       if (G.phase === 'won') return { ante: ANTES, won: true };
       if (G.ante > (maxAnte || 12)) return { ante: maxAnte, won: false }; // endless cap for sim
-      if (G.duel.over === 'win') { botShop(); continue; }
+      if (G.phase === 'loot') { botLoot(); continue; }
       if (G.duel.turn === 'you') botTurn();
       else E.pull(E.oppDecide());
     }
@@ -152,13 +167,18 @@ function driver() {
       E.newRun('FUZZ-' + run);
       let guard = 0;
       while (G.phase !== 'over' && G.phase !== 'won' && guard++ < 4000) {
-        if (G.duel.over === 'win') {
-          E.openShop();
-          if (Math.random() < 0.5) E.reroll();
-          if (Math.random() < 0.6) E.buy(Math.floor(Math.random() * 3));
-          if (Math.random() < 0.3) E.buyGun();
-          if (Math.random() < 0.25 && G.trinkets.length) E.sell(Math.floor(Math.random() * G.trinkets.length));
-          E.nextBlind();
+        if (G.phase === 'loot') {
+          const r = Math.random();
+          if (G.loot.pendingCard) {
+            E.resolveCard(Math.random() < 0.5 ? null : Math.floor(Math.random() * G.trinkets.length));
+          } else if (r < 0.55) {
+            E.rifle(Math.floor(Math.random() * G.loot.pockets.length));
+          } else if (r < 0.7) {
+            E.bribe();
+          } else {
+            const res = E.endLoot();
+            if (res.heatDue !== undefined) E.payHeat();
+          }
           continue;
         }
         if (G.duel.turn === 'you') {

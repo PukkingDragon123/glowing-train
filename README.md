@@ -3,7 +3,8 @@
 **Russian roulette with the frog mob, in hand-drawn pixel art.** You are 'Lucky' Verde.
 You owe the Bullfrog everything, and the only way to clear the marker is at the table:
 a revolver, a mix of **LIVE** and **blank** shells, and whoever's sitting across from you.
-Eight antes. Three blinds each. The last chair belongs to the Bullfrog himself.
+Eight antes. Three blinds each. Kill the mark, **loot the corpse before the badges
+arrive** — the last chair belongs to the Bullfrog himself.
 
 ![Title — the frog mob](docs/screen-title.png)
 
@@ -16,9 +17,11 @@ No build, no dependencies, no assets, no network — plain HTML/CSS/JS:
 python3 -m http.server 8080   # then visit http://localhost:8080
 ```
 
-Every sprite is drawn by the game at boot (the whole cast comes from one parameterized
-frog rig); sounds are synthesized with WebAudio. Runs are seeded. Unlocks persist in
-localStorage.
+Every sprite is drawn by the game at boot — the entire cast comes out of one
+parameterized frog rig: big cartoon heads, seven facial expressions (they grin when you
+get hit, sweat when they're losing, and die with their tongue out), fat and thin builds,
+and every tell drawn right on the frog. Sounds are synthesized with WebAudio. Runs are
+seeded. Unlocks persist in localStorage.
 
 ## The duel
 
@@ -27,20 +30,54 @@ localStorage.
 The drum loads with a posted mix — say **2 LIVE, 3 blank** — in an order nobody knows.
 Take turns with the mark across the felt:
 
-- **Aim at him** — live hurts him, blank wastes the pull. Turn passes.
+- **Aim at him** — live hurts him (blood on the felt is yours to keep), blank wastes
+  the pull. Turn passes.
 - **Aim at yourself** — a blank **keeps your turn** (that's the whole game), a live
   costs a heart.
 - Empty drum reloads with a fresh mix. Zero hearts ends somebody. Lose, and the swamp
-  keeps your marker — the run is over.
+  keeps your marker.
 
-Win and you collect the blind's purse **plus 1 chip per heart you kept**, then hit the
-shop. Every ante runs SMALL BLIND → BIG BLIND → **BOSS BLIND**, Balatro-style.
+## Tells & the little black book
+
+Every mook and capo is **procedurally generated** — face, build, suit, and 0–3 **tells**
+you can read across the table:
+
+| Tell | What it means |
+|---|---|
+| 🎩 **TOP HAT** | big hat, deep pockets: +6 corpse chips |
+| 👒 **BOWLER** | a careful frog — slower to shoot you |
+| 🧢 **FLAT CAP** | hungry and mean — quicker to shoot you, lighter pockets |
+| ✨ **GOLD TOOTH** | pliers pay +5 at the loot |
+| 💍 **RINGS** | the HAND pocket always pays |
+| ⚔ **SCAR** | he's done this before: +1 heart |
+| 🏴 **EYE PATCH** | no depth perception, no fear |
+| 💧 **THE SWEATS** | panics — points it at himself more |
+| 🚬 **CIGAR** | cool head, thick skin: +1 heart |
+| 🦺 **FANCY VEST** | the VEST pocket always pays |
+
+You don't start knowing any of this. **Loot a frog that carries a tell and it goes in
+the little black book** (`N`) — forever, across every run.
+
+![The little black book](docs/screen-notebook.png)
+
+## The loot
+
+![Going through his pockets](docs/screen-loot.png)
+
+There is no shop. Kill the mark and **go through his pockets** while the corpse is warm:
+hat, jacket, vest, hand, boot — a bulge means something better than chips. Every rifle
+brings **the badges** closer; three and they're at the door. **Bribe** them to keep
+digging (the price climbs) or walk with what you've got. Trinket cards and guns come out
+of corpses — **boss holsters carry your next iron**.
+
+After every boss, **Swamp PD wants protection money**, scaling with the ante.
+Can't pay? They take your marker. That's the debt now.
 
 ## The mob
 
 ![Boss blind](docs/screen-boss.png)
 
-Eight bosses, one per ante, each with a house rule:
+Eight bosses, one per ante, each with a house rule and signature tells:
 
 | # | Boss | The rule |
 |---|---|---|
@@ -53,36 +90,24 @@ Eight bosses, one per ante, each with a house rule:
 | 7 | **DON BUFO** | nine hearts of blubber, no trick |
 | 8 | **THE BULLFROG** | gets back up once — then hits for 2 |
 
-Small and big blinds are procedural mooks and capos from the same portrait rig — new
-face, new suit, new temper every time.
+## Trinkets & the iron
 
-## Trinkets & the shop
+**24 trinket cards** (5 slots, four rarities) loot out of pockets — passives like BAD
+BLOOD (+1 on full-health marks) and actives on keys **1–5** like the MONOCLE (peek the
+chamber) and the MIRROR SHARD (flip the shell under the hammer). Nine start locked
+behind account-wide feats; the collection screen tracks everything.
 
-![The back room](docs/screen-shop.png)
-
-Between duels: three trinket cards, a reroll that gets greedier, and the next gun on
-the ladder. **24 trinkets** (5 slots) across four rarities — passives like BAD BLOOD
-(+1 damage on full-health marks) and LOADED SCALES (every load gets an extra blank),
-and actives on keys **1–5** like the MONOCLE (peek the chamber), FLAT BEER (rack a
-shell out) and the MIRROR SHARD (flip the shell under the hammer). Interest pays
-+1 chip per 10 held, capped at +5.
-
-The iron ladder stacks as you climb:
+The gun ladder stacks as you take it off boss corpses:
 **SNUB .38 → LONG COLT** (first live hit +1) **→ SAWN-OFF** (Q: next shot ×2)
-**→ TOMMY GUN** (E: double tap) **→ THE GOLDEN GUN** (payouts ×1.5, +1 heart).
-
-## The collection
+**→ TOMMY GUN** (E: double tap) **→ THE GOLDEN GUN** (corpses ×1.5, +1 heart).
 
 ![The collection](docs/screen-collection.png)
-
-Nine trinkets start locked behind account-wide feats — die once, clear ante 5, watch a
-mark shoot himself, win a duel at your last heart. The collection screen tracks every
-card, every gun ever owned, and every boss you've dropped. All of it survives death.
 
 ## Keys
 
 `A` aim at yourself · `D` aim at the mark · `SPACE` fire · `1–5` trinkets ·
-`Q`/`E` gun tricks · `R` reroll · `ENTER` continue · `M` mute · `H` house rules
+`Q`/`E` gun tricks · `R` bribe · `N` the black book · `ENTER` walk out / continue ·
+`M` mute · `H` house rules
 
 ## Project layout
 
@@ -92,14 +117,14 @@ style.css         pixel skin: chunky panels, CRT overlay
 js/util.js        seeded RNG (mulberry32), helpers, procedural WebAudio SFX
 js/pixfont.js     hand-drawn 5×7 typeface (every numeral in the game)
 js/pix.js         pixel engine: palette, sprite compiler, draw helpers
-js/data.js        content: trinkets, guns, the mob, blinds, economy, keybinds
-js/meta.js        persistence: account stats, unlocks, collection (localStorage)
-js/sprites.js     ALL the art: the frog rig, guns, shells, trinket cards, hearts
+js/data.js        content: traits, trinkets, guns, the mob, blinds, loot tuning
+js/meta.js        persistence: stats, unlocks, learned tells (localStorage)
+js/sprites.js     ALL the art: frog rig v2 (expressions, tells, bodies), cards, guns
 js/bg.js          the swirling paint background
-js/engine.js      pure rules: the duel, the mark's brain, payouts, shop (no DOM)
-js/ui.js          screens: title, duel frame, overlays, collection, help, keys
-js/duel.js        the drawn table scene: animations, muzzle flash, the fall
-js/shop.js        the back room
+js/engine.js      pure rules: the duel, the mark's brain, the loot, the heat (no DOM)
+js/ui.js          screens: title, duel frame, notebook, collection, help, keys
+js/duel.js        the drawn table scene: expressions, blood, the fall, the corpse
+js/loot.js        the take: pockets, the badges bar, bribes, Swamp PD
 js/main.js        boot (+ ?debug harness)
 dev/sim.js        headless balance & fuzz harness (node dev/sim.js)
 dev/smoke.js      full browser smoke test (playwright-core)
@@ -107,11 +132,11 @@ dev/smoke.js      full browser smoke test (playwright-core)
 
 ### Tuning knobs (for modders)
 
-- Blind purses, mook hearts, load sizes — top of `js/data.js`
-- Live-shell fraction per ante — `E.reload()` in `js/engine.js`
+- Corpse money, heat, bribes — `BLIND_PURSE` / `HEAT_COST` / `LOOT_TUNING` in `js/data.js`
+- New tell: one `TRAITS` row + a visual flag in the rig (`js/sprites.js` `buildFrog`)
+- New expression: one case in the eye/mouth switches in `buildFrog`
 - The mark's brain — `E.oppDecide()` (aggression per boss in `BOSSES`)
 - New trinket: one entry in `TRINKETS` (glyph included) + one hook in `E.pull()`
-- New boss: a `BOSSES` row + a `FROG_DEFS` portrait + one `bossIs()` check
 
 ### Dev checks
 
@@ -120,9 +145,9 @@ node dev/sim.js      # 500 bot runs + 200 random-action fuzz runs against the re
 node dev/smoke.js    # drives the full UI in headless Chromium, fails on any console error
 ```
 
-Current curve (counting bot): ~84% clear ante 1, ~59% reach the Bullfrog, ~12% walk
-out clean. Humans who can't count blanks do worse. That's the point.
+Current curve (counting bot): ~80% clear ante 1, ~41% reach the Bullfrog, ~10% walk
+out clean. Humans who can't read a top hat do worse. That's the point.
 
 ---
 
-*A blank in your own head is a free turn. The Bullfrog is waiting.* 🐸🔫
+*A blank in your own head is a free turn. Loot fast — the badges are coming.* 🐸🔫

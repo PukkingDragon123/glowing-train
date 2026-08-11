@@ -15,12 +15,12 @@ const UI = {
     const app = document.getElementById('app');
     app.innerHTML = '';
     UI.closeModal();
-    if (G.phase !== 'duel') DUEL.stop();
+    if (G.phase !== 'duel' && G.phase !== 'loot') DUEL.stop();
     switch (G.phase) {
       case 'title':      UI.buildTitle(app); break;
       case 'collection': UI.buildCollection(app); break;
-      case 'duel':       UI.buildDuel(app); DUEL.enter(); break;
-      case 'shop':       SHOP.build(app); break;
+      case 'duel':
+      case 'loot':       UI.buildDuel(app); DUEL.enter(); break;
       case 'over':       UI.buildEnd(app, false); break;
       case 'won':        UI.buildEnd(app, true); break;
     }
@@ -75,6 +75,12 @@ const UI = {
     cnum.appendChild(UI.num(G.chips, { color: PIX.PAL.G }));
     chips.appendChild(cnum);
     R.appendChild(chips);
+
+    const book = U.el('button', 'pixbtn tb-btn has-tip');
+    book.dataset.tipText = 'The little black book — every tell you\'ve learned. [N]';
+    book.appendChild(PIX.el('ic_book', 2));
+    book.onclick = () => UI.showNotebook();
+    R.appendChild(book);
 
     const mute = U.el('button', 'pixbtn tb-btn');
     mute.id = 'btn-mute';
@@ -231,7 +237,7 @@ const UI = {
 
   /* redraw everything data-driven in the duel frame */
   syncDuel() {
-    if (G.phase !== 'duel' && G.phase !== 'won') return;
+    if (G.phase !== 'duel' && G.phase !== 'won' && G.phase !== 'loot') return;
     const d = G.duel;
     if (!d) return;
 
@@ -273,13 +279,12 @@ const UI = {
       }
     }
 
-    /* opp name plate */
+    /* opp name plate — hover for his tells */
     const nm = document.getElementById('opp-name');
     if (nm) {
       nm.innerHTML = '';
       nm.className = d.opp.boss ? 'has-tip bossname' : 'has-tip';
-      if (d.opp.boss) nm.dataset.tipBoss = d.opp.boss;
-      else nm.dataset.tipText = d.opp.name + ' — a nobody with a marker to collect.';
+      nm.dataset.tipOppTells = '1';
       nm.appendChild(UI.txt(d.opp.name, { scale: 2, color: d.opp.boss ? PIX.PAL.R : PIX.PAL.w }));
     }
 
@@ -434,7 +439,7 @@ const UI = {
       o.className = 'boss-in';
       o.innerHTML = '';
       const card = U.el('div', 'boss-card pop');
-      card.appendChild(SPR.frogEl(opp.frog, 5));
+      card.appendChild(SPR.clone(SPR.frogCustom(opp.boss + ':intro', opp.def), 5));
       card.appendChild(UI.txt(opp.name, { scale: 4, color: PIX.PAL.R, outline: PIX.PAL.K }));
       card.appendChild(UI.txt(opp.rule, { scale: 2, color: PIX.PAL.G }));
       const desc = U.el('p', 'boss-desc');
@@ -454,45 +459,43 @@ const UI = {
     });
   },
 
-  /* mark down → count the take → shop */
-  async payoutOverlay(freshUnlocks) {
-    const o = document.getElementById('duel-overlay');
-    if (!o) return;
-    const pay = G.duel.payout;
-    o.className = 'pay-in';
-    o.innerHTML = '';
-    const card = U.el('div', 'pay-card pop');
-    card.appendChild(UI.txt('MARK DOWN', { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    const list = U.el('div', 'pay-rows');
-    card.appendChild(list);
-    const totalRow = U.el('div', 'pay-total');
-    card.appendChild(totalRow);
-    o.appendChild(card);
+  /* a tell goes into the little black book */
+  tellToast(traitId) {
+    const t = TRAITS[traitId];
+    const box = document.getElementById('fx-particles');
+    const el = U.el('div', 'unlock-toast pop');
+    el.appendChild(PIX.el('ic_book', 3));
+    const col = U.el('div');
+    col.appendChild(UI.txt('NEW TELL', { scale: 2, color: PIX.PAL.N }));
+    col.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.W }));
+    el.appendChild(col);
+    box.appendChild(el);
+    SFX.bank();
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 2600);
+  },
 
-    for (const [label, val] of pay.rows) {
-      await U.sleep(240);
-      SFX.coin();
-      const r = U.el('div', 'pay-row pop');
-      const l = U.el('span'); l.appendChild(UI.txt(label, { scale: 2, color: PIX.PAL.w }));
-      const v = U.el('span'); v.appendChild(UI.txt(String(val), { scale: 2, color: PIX.PAL.G }));
-      r.appendChild(l); r.appendChild(v);
-      list.appendChild(r);
-    }
-    await U.sleep(280);
-    SFX.win();
-    totalRow.appendChild(UI.txt('+' + pay.total, { scale: 5, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    totalRow.appendChild(UI.icon('ic_chip', 3));
-    UI.particles('ic_chip', 14);
-    UI.syncChips();
-
-    (freshUnlocks || []).forEach((t, i) => setTimeout(() => UI.unlockToast(t), 400 + i * 600));
-
-    await U.sleep(300);
-    const go = U.el('button', 'pixbtn gold primary big-go');
-    go.appendChild(UI.txt('THE SHOP', { scale: 3, shadow: null, color: PIX.PAL.K }));
-    go.onclick = () => { E.openShop(); UI.render(); };
-    card.appendChild(go);
-    go.focus();
+  /* the little black book — every tell you've learned */
+  showNotebook() {
+    const rows = Object.entries(TRAITS).map(([id, t]) => {
+      const known = META.knowsTell(id);
+      return `<div class="nb-row ${known ? '' : 'nb-unknown'}">
+        <b>${known ? t.name : '???'}</b>
+        <span>${known ? t.desc : 'A tell you haven\'t read yet — loot a frog that carries it.'}</span>
+      </div>`;
+    }).join('');
+    UI.modal(`
+      <button class="pixbtn m-close" id="mm-close"></button>
+      <div class="nb-head"><h3>THE LITTLE BLACK BOOK</h3>
+      <p>What a frog wears tells you how he plays and what he carries.
+      Go through enough pockets and you learn to read a table.</p></div>
+      <div class="nb-list">${rows}</div>
+      <p class="nb-foot">Bribes stall the badges while you loot. After every BOSS,
+      Swamp PD wants protection — <b>${HEAT_COST(G.ante || 1)}⛁ at ante ${G.ante || 1}</b> —
+      or they take your marker.</p>
+    `);
+    const c = document.querySelector('#mm-close');
+    c.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W, shadow: null }));
+    c.onclick = () => UI.closeModal();
   },
 
   unlockToast(t) {
@@ -519,6 +522,10 @@ const UI = {
       wrap.appendChild(f);
       wrap.appendChild(UI.txt('DEBT CLEARED', { scale: 7, color: PIX.PAL.G, outline: PIX.PAL.K }));
       wrap.appendChild(UI.txt('THE BULLFROG IS DOWN. THE SWAMP IS YOURS.', { scale: 2, color: PIX.PAL.w }));
+    } else if (G.busted) {
+      wrap.appendChild(PIX.el('ic_badge', 8));
+      wrap.appendChild(UI.txt('THE BADGES TAKE YOUR MARKER', { scale: 4, color: PIX.PAL.L, outline: PIX.PAL.K }));
+      wrap.appendChild(UI.txt('PROTECTION COMES DUE. IT ALWAYS DOES.', { scale: 2, color: PIX.PAL.q }));
     } else {
       const f = SPR.frogEl(G.duel && G.duel.opp.boss ? G.duel.opp.frog : 'owner', 6);
       f.style.filter = 'grayscale(.4) brightness(.8)';
@@ -700,10 +707,11 @@ const UI = {
   },
 
   PANEL_TIPS: {
-    chips: () => `<b>CHIPS</b> — the only money that matters down here. Spend them in the shop between duels.`,
-    ante: () => `<b>ANTE ${G.ante}</b> of ${ANTES}. Every ante is three blinds: small, big, then one of the Bullfrog's people.`,
-    blind: () => `<b>${E.blindName()}</b> — beat the mark across the table to collect the purse.`,
-    purse: () => `<b>THE PURSE</b> — ${E.purse()} chips for winning this duel, plus 1 per heart you keep.`,
+    chips: () => `<b>CHIPS</b> — the only money down here. It comes out of corpses, and it goes to bribes and Swamp PD protection.`,
+    ante: () => `<b>ANTE ${G.ante}</b> of ${ANTES}. Every ante is three blinds: small, big, then one of the Bullfrog's people. After the boss, Swamp PD wants <b>${HEAT_COST(G.ante)}⛁</b>.`,
+    blind: () => `<b>${E.blindName()}</b> — put the mark across the table down, then go through his pockets.`,
+    purse: () => `<b>THE TAKE</b> — roughly ${E.purse()} chips sewn into this mark, plus 1 per heart you keep, plus whatever his tells promise.`,
+    heat: () => `<b>THE BADGES</b> — every pocket you rifle brings them closer. When they're at the door: bribe (${G.loot ? E.bribeCost() : '?'}⛁) or walk.`,
     counts: () => E.countsHidden()
       ? `<b>THE LOAD</b> — Blind Newt keeps the count to himself.`
       : `<b>THE LOAD</b> — this drum loaded with <b>${G.duel.lives} LIVE</b>, <b>${G.duel.blanks} blank</b>.${E.has('counter') ? ' Your bead counter tracks what\'s left.' : ' What\'s left is on you to count.'}`,
@@ -715,9 +723,24 @@ const UI = {
     if (ds.tipTrinket) {
       const t = TRINKETS[ds.tipTrinket];
       const r = RARITY_META[t.rarity].label;
-      const act = t.active ? `<div class="tt-odds">ACTIVE — once a ${t.active.per === 'duel' ? 'duel' : 'load'} · sells for ${E.sellValue ? E.sellValue(t.id) : Math.floor(t.cost / 2)}⛁</div>` : `<div class="tt-odds">passive · sells for ${Math.max(1, Math.floor(t.cost / 2))}⛁</div>`;
+      const act = t.active
+        ? `<div class="tt-odds">ACTIVE — once a ${t.active.per === 'duel' ? 'duel' : 'load'}</div>`
+        : `<div class="tt-odds">passive</div>`;
       return `<div class="tt-name">${t.name} <span class="rar-${t.rarity}">${r}</span></div>
         <div class="tt-desc">${t.desc}</div>${act}`;
+    }
+    if (ds.tipOppTells) {
+      const opp = G.duel && G.duel.opp;
+      if (!opp) return null;
+      const head = opp.boss
+        ? `<div class="tt-name">${opp.name} <span class="rar-rare">${opp.rule}</span></div><div class="tt-desc">${opp.desc}</div>`
+        : `<div class="tt-name">${opp.name}</div><div class="tt-desc">A nobody with a marker to collect.</div>`;
+      const tells = opp.traits.length
+        ? opp.traits.map(t => META.knowsTell(t)
+            ? `<div class="tt-odds"><b>${TRAITS[t].name}</b> — ${TRAITS[t].desc}</div>`
+            : `<div class="tt-odds"><b>???</b> — ${TRAITS[t].hint}. You haven't read this tell yet.</div>`).join('')
+        : `<div class="tt-odds">No tells. A plain frog.</div>`;
+      return head + tells;
     }
     if (ds.tipGun) {
       const g = GUNS.find(x => x.id === ds.tipGun);
@@ -777,16 +800,18 @@ const UI = {
           people, each with his own house rule. Win a duel: purse + 1 chip per heart kept.</p>
         </div>
         <div>
-          <h4>TRINKETS</h4>
-          <p>Balatro-style cards, 5 slots, bought in the shop between duels. Passives are
-          always on; <b>actives</b> (keys 1–5) burn charges — once a duel or once a load.
-          Sell backs for half.</p>
-          <h4>THE SHOP</h4>
-          <p>After every duel: three cards, a reroll (cost climbs), and the next gun on
-          the ladder. Interest pays +1 chip per 10 held (max +5) — hoarding is a strategy.</p>
-          <h4>THE IRON</h4>
-          <p>SNUB .38 → LONG COLT → SAWN-OFF → TOMMY GUN → GOLDEN GUN. Perks stack;
-          the last two add active tricks on <b>Q</b> and <b>E</b>.</p>
+          <h4>THE LOOT</h4>
+          <p>Kill the mark, go through his pockets. Every rifle brings <b>the badges</b>
+          closer — three and they're at the door. <b>Bribe</b> to keep digging or walk with
+          what you've got. Trinket cards (5 slots, keys 1–5) and guns come out of corpses —
+          boss holsters carry your next iron.</p>
+          <h4>TELLS &amp; THE BOOK</h4>
+          <p>What a frog wears is how he plays: a top hat means money, an eye patch means
+          he shoots first, the sweats mean he'd rather risk his own head. Loot a frog to
+          learn his tells — the <b>little black book</b> (N) remembers forever.</p>
+          <h4>SWAMP PD</h4>
+          <p>After every boss, protection money comes due — it scales with the ante.
+          Can't pay? They take your marker. That's the debt now.</p>
           <h4>KEYS</h4>
           ${binds}
         </div>
@@ -817,6 +842,8 @@ const UI = {
 
       if (G.phase === 'title' && e.key === 'Enter') { document.getElementById('btn-deal').click(); return; }
 
+      if (k === 'n') { UI.modalOpen() ? UI.closeModal() : UI.showNotebook(); return; }
+
       if (G.phase === 'duel') {
         if (k === 'a' || e.key === 'ArrowLeft') DUEL.setAim('self');
         else if (k === 'd' || e.key === 'ArrowRight') DUEL.setAim('foe');
@@ -824,9 +851,9 @@ const UI = {
         else if (k >= '1' && k <= '5') DUEL.useTrinket(+k - 1);
         else if (k === 'q') DUEL.useGunActive('saw');
         else if (k === 'e') DUEL.useGunActive('tommy');
-      } else if (G.phase === 'shop') {
-        if (k === 'r') SHOP.onReroll();
-        else if (e.key === 'Enter') SHOP.onGo();
+      } else if (G.phase === 'loot') {
+        if (k === 'r') LOOT.onBribe();
+        else if (k >= '1' && k <= '9') LOOT.rifleKey(+k);
       }
     });
   },

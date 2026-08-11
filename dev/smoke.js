@@ -55,8 +55,30 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await settle();
       await page.waitForTimeout(250);
     }
-    /* payout overlay → THE SHOP */
-    await page.waitForSelector('#duel-overlay:not(.hidden) .primary', { timeout: 25000 });
+    /* the corpse → the loot panel */
+    await page.waitForSelector('#loot-panel', { timeout: 25000 });
+  }
+
+  /* rifle up to three pockets, then walk out (pays heat if it's a boss) */
+  async function lootAndGo(shotName) {
+    for (let i = 0; i < 3; i++) {
+      const btn = page.locator('.pocket-btn:not(.taken):not(:disabled)');
+      if (await btn.count() === 0) break;
+      await btn.first().click();
+      await page.waitForTimeout(350);
+      /* found a card with a full rack? leave it */
+      const skip = page.locator('#card-swap button.pixbtn');
+      if (await skip.count() > 0) { await skip.last().click(); await page.waitForTimeout(200); }
+    }
+    if (shotName) await shot(shotName);
+    await click('#btn-walk');
+    await page.waitForTimeout(400);
+    const heat = page.locator('#btn-heat');
+    if (await heat.count() > 0) {
+      await shot(shotName ? shotName + '-heat' : 'heat');
+      await heat.click();
+      await page.waitForTimeout(400);
+    }
   }
 
   try {
@@ -96,26 +118,22 @@ fs.mkdirSync(SHOTS, { recursive: true });
     }
     await shot('04-duel-mid');
     await winDuel();
-    await shot('05-payout');
-    await click('#duel-overlay .primary');
-    await page.waitForTimeout(500);
-    await shot('06-shop');
-
-    /* shop: reroll + buy what's affordable */
+    await shot('05-loot');
+    /* give ourselves bribe money and test one bribe if the badges are up */
     await page.locator('button', { hasText: '+20⛁' }).click();
-    await click('#btn-reroll');
-    await page.waitForTimeout(300);
-    const ware = page.locator('#shop-stock .ware-card:not(.sold):not(:disabled)');
-    if (await ware.count() > 0) { await ware.first().click(); await page.waitForTimeout(300); }
-    await shot('07-shop-bought');
-    await click('#btn-go');
+    await lootAndGo('06-loot-done');
+
+    /* the notebook */
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    await page.keyboard.press('n');
+    await page.waitForTimeout(350);
+    await shot('07-notebook');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
 
     /* big blind — finish it */
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
     await winDuel();
-    await click('#duel-overlay .primary');
-    await page.waitForTimeout(400);
-    await click('#btn-go');
+    await lootAndGo(null);
 
     /* boss blind — intro card, then the kill */
     await page.waitForSelector('#duel-overlay:not(.hidden) .primary', { timeout: 25000 });
@@ -124,11 +142,10 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
     await shot('09-boss-duel');
     await winDuel();
-    await click('#duel-overlay .primary');
-    await page.waitForTimeout(400);
-    await click('#btn-go');
+    await page.locator('button', { hasText: '+20⛁' }).click();
+    await lootAndGo('10-boss-loot');
     await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
-    await shot('10-ante2');
+    await shot('11-ante2');
 
     const fin = await state();
     console.log('final state:', JSON.stringify(fin));

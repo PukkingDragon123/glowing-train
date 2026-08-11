@@ -22,11 +22,14 @@ const E = {
       chips: ECON.start, gunIdx: 0,
       trinkets: [],                         // { id, used:{duel,reload} }
       hearts: PLAYER_HP,
-      duel: null, shop: null,
-      endless: false,
+      duel: null, loot: null,
+      endless: false, wonRun: false, busted: false,
       run: { duelsWon: 0, shots: 0, damage: 0 },
     };
     META.bump('runs');
+    /* grandpa's keepsake: one common card so you never walk in empty-handed */
+    const commons = Object.values(TRINKETS).filter(t => t.rarity === 'common');
+    G.trinkets.push({ id: commons[Math.floor(G.rng() * commons.length)].id, used: {} });
     E.startBlind();
     return G;
   },
@@ -58,15 +61,45 @@ const E = {
     const rng = G.rng;
     return {
       skin: U.pick(rng, MOOK_SKINS),
-      fat: rng() < 0.3,
+      fat: rng() < 0.35,
       suit: U.pick(rng, MOOK_SUITS),
       shirt: rng() < 0.5 ? 'W' : 'w',
-      tie: rng() < 0.6 ? U.pick(rng, ['d', 'G', 'T', 'n']) : null,
-      hat: rng() < 0.35 ? 'fedora' : null, hatCol: 'T', band: 'd',
-      flatcap: rng() < 0.25,
-      cigar: rng() < 0.3,
-      warts: rng() < 0.3,
+      tie: rng() < 0.5 ? U.pick(rng, ['d', 'G', 'T', 'n']) : null,
+      bowtie: rng() < 0.15 ? 'r' : null,
+      warts: rng() < 0.25,
+      spots: rng() < 0.3,
+      earring: rng() < 0.12 ? 'G' : null,
     };
+  },
+
+  /* roll tells onto a mook (hats are exclusive); deeper antes wear more */
+  rollTraits() {
+    const rng = G.rng;
+    const r = rng();
+    const cap = G.ante <= 2 ? 1 : G.ante <= 5 ? 2 : 3;
+    const n = Math.min(cap, r < 0.15 ? 0 : r < 0.55 ? 1 : r < 0.87 ? 2 : 3);
+    const hats = ['tophat', 'bowler', 'flatcap'];
+    const out = [];
+    let guard = 0;
+    while (out.length < n && guard++ < 20) {
+      const t = U.pick(rng, MOOK_TRAIT_POOL);
+      if (out.includes(t)) continue;
+      if (hats.includes(t) && out.some(x => hats.includes(x))) continue;
+      out.push(t);
+    }
+    return out;
+  },
+
+  /* paint the tells onto the portrait def */
+  traitsToDef(def, traits) {
+    for (const t of traits) {
+      if (t === 'tophat') def.hat = 'tophat';
+      else if (t === 'bowler') def.hat = 'bowler';
+      else if (t === 'flatcap') def.flatcap = true;
+      else if (t === 'cigar') def.cigar = true;
+      else def[t] = true;   // goldtooth, rings, scar, patch, sweats, vest
+    }
+    return def;
   },
 
   startBlind() {
@@ -74,15 +107,24 @@ const E = {
     if (G.blind === 2) {
       const b = E.bossFor(G.ante);
       const scale = G.ante > ANTES ? Math.floor((G.ante - ANTES + 1) / 2) + 1 : 0;
+      // boss tells are signature: cosmetic + loot, their hp/aggro already priced in
+      const def = E.traitsToDef(Object.assign({}, FROG_DEFS[b.id]), b.traits);
       opp = { boss: b.id, name: b.name, hp: b.hp + scale, aggro: b.aggro,
-              frog: b.id, rule: b.rule, desc: b.desc };
+              frog: b.id, rule: b.rule, desc: b.desc, traits: b.traits.slice(), def };
     } else {
+      const traits = E.rollTraits();
+      const def = E.traitsToDef(E.mookDef(), traits);
+      let hp = MOOK_HP(G.ante, G.blind);
+      let aggro = Math.min(0.78, 0.35 + G.rng() * 0.3 + (G.ante - 1) * 0.028);
+      for (const t of traits) {
+        hp += TRAITS[t].hp || 0;
+        aggro += TRAITS[t].aggro || 0;
+      }
       opp = {
         boss: null,
         name: U.pick(G.rng, G.blind === 0 ? MOOK_NAMES : CAPO_NAMES),
-        hp: MOOK_HP(G.ante, G.blind),
-        aggro: Math.min(0.78, 0.35 + G.rng() * 0.3 + (G.ante - 1) * 0.028),
-        frog: null, def: E.mookDef(),
+        hp, aggro: U.clamp(aggro, 0.18, 0.85),
+        frog: null, def, traits,
       };
     }
     if (E.has('edge')) opp.hp = Math.max(1, opp.hp - 1);
@@ -183,8 +225,10 @@ const E = {
         META.bump('selfBlanks');
         if (E.has('shill')) { G.chips += 2; ev.chips += 2; }
       }
-      if (by === 'you' && target === 'foe' && E.bossIs('croupier') && d.opp.hp < d.opp.maxHP) {
+      if (by === 'you' && target === 'foe' && E.bossIs('croupier') &&
+          d.opp.hp < d.opp.maxHP && (d.croakHeals || 0) < 1) {
         d.opp.hp++; ev.croakHeal = 1;
+        d.croakHeals = (d.croakHeals || 0) + 1;
       }
     }
 
@@ -347,34 +391,23 @@ const E = {
       META.maxStat('bestAnte', G.ante);
     }
 
-    const rows = [];
-    let sub = E.purse();
-    rows.push(['THE PURSE', '+' + sub]);
-    rows.push(['HEARTS LEFT', '+' + G.hearts]);
-    sub += G.hearts;
-    if (E.has('swarm') && d.heartsLost > 0) {
-      const s = 2 * d.heartsLost;
-      sub += s; rows.push(['THE SWARM', '+' + s]);
-    }
+    /* what's sewn into the corpse */
+    let sub = E.purse() + G.hearts;
+    for (const t of d.opp.traits) sub += TRAITS[t].chips || 0;
+    if (E.has('swarm') && d.heartsLost > 0) sub += 2 * d.heartsLost;
     let mult = 1;
-    if (E.has('feather') && d.selfBlanks > 0) {
-      const m = 1 + 0.1 * d.selfBlanks;
-      mult *= m; rows.push(['FEATHER FAN', '×' + m.toFixed(1)]);
-    }
-    if (E.has('ring')) { mult *= 1.5; rows.push(['KINGPIN RING', '×1.5']); }
-    if (G.gunIdx >= 4) { mult *= 1.5; rows.push(['GOLDEN GUN', '×1.5']); }
-    const total = Math.round(sub * mult);
-    G.chips += total;
-    d.payout = { rows, total };
-    META.save();
+    if (E.has('feather') && d.selfBlanks > 0) mult *= 1 + 0.1 * d.selfBlanks;
+    if (E.has('ring')) mult *= 1.5;
+    if (G.gunIdx >= 4) mult *= 1.5;
+    const budget = Math.max(1, Math.round(sub * mult));
 
-    /* cleared the ante-8 boss → the debt is paid */
+    /* cleared the ante-8 boss → the debt is paid (after you loot him) */
     if (G.blind === 2 && G.ante === ANTES && !G.endless) {
       META.bump('wins');
-      META.save();
-      G.phase = 'won';
+      G.wonRun = true;
     }
-    return d.payout;
+    META.save();
+    E.openLoot(budget);
   },
 
   onRunOver() {
@@ -383,81 +416,140 @@ const E = {
     G.phase = 'over';
   },
 
-  /* ================= shop ================= */
+  /* ================= the loot ================= */
 
-  openShop() {
-    const interest = Math.min(ECON.interestCap, Math.floor(G.chips / ECON.interestPer));
-    G.chips += interest;
-    G.shop = {
-      stock: E.rollStock(3),
-      rerolls: 0, interest,
-      gun: G.gunIdx < GUNS.length - 1 ? GUNS[G.gunIdx + 1] : null,
-      gunSold: false,
-    };
-    G.phase = 'shop';
-    return G.shop;
-  },
+  /* build the corpse's pockets from the kill budget + his tells */
+  openLoot(budget) {
+    const rng = G.rng, opp = G.duel.opp, tr = opp.traits;
+    const pockets = [];
+    const hat = tr.find(t => ['tophat', 'bowler', 'flatcap'].includes(t));
+    if (hat) pockets.push({ id: 'hat', label: 'HIS HAT', w: hat === 'tophat' ? 2.4 : 1.2 });
+    pockets.push({ id: 'jacket', label: 'JACKET', w: 1.4 });
+    pockets.push(tr.includes('vest')
+      ? { id: 'vest', label: 'THE VEST', w: 1, min: TRAITS.vest.chips }
+      : { id: 'shirt', label: 'SHIRT', w: 1 });
+    pockets.push(tr.includes('rings')
+      ? { id: 'hand', label: 'HIS HAND', w: 0.8, min: TRAITS.rings.chips }
+      : { id: 'hand', label: 'HIS HAND', w: 0.7 });
+    pockets.push({ id: 'boot', label: 'BOOT', w: 0.6 });
+    if (tr.includes('goldtooth')) pockets.push({ id: 'tooth', label: 'GOLD TOOTH', fixed: 5 });
+    if (opp.boss) pockets.push({ id: 'holster', label: 'HOLSTER',
+      gun: G.gunIdx < GUNS.length - 1, fixed: G.gunIdx < GUNS.length - 1 ? 0 : 8 });
 
-  rollStock(n) {
-    const pool = Object.values(TRINKETS)
-      .filter(t => META.isUnlocked(t.id) && !E.has(t.id));
-    const stock = [];
-    for (let i = 0; i < n; i++) {
-      const cand = pool.filter(t => !stock.some(s => s.id === t.id));
-      if (!cand.length) break;
-      const t = U.wpick(G.rng, cand, x => RARITY_META[x.rarity].w);
-      stock.push({ id: t.id, sold: false });
+    /* split the budget over the weighted pockets */
+    const soft = pockets.filter(p => p.fixed === undefined);
+    const wsum = soft.reduce((s, p) => s + p.w, 0);
+    soft.forEach(p => {
+      p.chips = Math.max(0, Math.round(budget * p.w / wsum) + U.ri(rng, -1, 1));
+      if (p.min) p.chips = Math.max(p.min, p.chips);
+    });
+    /* one pocket is a dud — its chips slide into another (flies included) */
+    const duds = soft.filter(p => !p.min);
+    if (duds.length > 1) {
+      const dud = U.pick(rng, duds);
+      const rich = soft.find(p => p !== dud);
+      rich.chips += dud.chips;
+      dud.chips = 0; dud.lint = true;
     }
-    return stock;
+    pockets.forEach(p => { if (p.fixed !== undefined) p.chips = p.fixed; p.taken = false; });
+
+    /* maybe a trinket card in one of them */
+    if (rng() < LOOT_TUNING.trinketChance[G.blind]) {
+      const RW = [[60, 30, 9, 1], [45, 35, 16, 4], [15, 40, 32, 13]][G.blind];
+      const rar = ['common', 'uncommon', 'rare', 'legendary'];
+      const pool = Object.values(TRINKETS).filter(t => META.isUnlocked(t.id) && !E.has(t.id));
+      if (pool.length) {
+        const card = U.wpick(rng, pool, t => RW[rar.indexOf(t.rarity)]);
+        U.pick(rng, pockets.filter(p => !p.gun)).card = card.id;
+      }
+    }
+    /* something square shows through the cloth */
+    pockets.forEach(p => { p.bulge = !!(p.card || p.gun); });
+
+    G.loot = { pockets, sinceBribe: 0, bribes: 0, pendingCard: null, done: false };
+    G.phase = 'loot';
+    return G.loot;
   },
 
-  price(base) { return E.has('glove') ? Math.max(1, base - 2) : base; },
-  sellValue(tid) { return Math.max(1, Math.floor(TRINKETS[tid].cost / 2)); },
-
-  rerollCost() {
-    if (E.has('marked') && G.shop.rerolls === 0) return 0;
-    return ECON.reroll + G.shop.rerolls;
+  lootLeft() { return G.loot.pockets.filter(p => !p.taken).length; },
+  canRifle() {
+    return G.phase === 'loot' && !G.loot.done && !G.loot.pendingCard &&
+      G.loot.sinceBribe < LOOT_TUNING.freePockets;
+  },
+  heatUp() { // the badges are at the door
+    return G.phase === 'loot' && !G.loot.done &&
+      G.loot.sinceBribe >= LOOT_TUNING.freePockets && E.lootLeft() > 0;
   },
 
-  reroll() {
-    const c = E.rerollCost();
-    if (G.chips < c) return false;
+  rifle(i) {
+    if (!E.canRifle()) return null;
+    const p = G.loot.pockets[i];
+    if (!p || p.taken) return null;
+    p.taken = true;
+    G.loot.sinceBribe++;
+    G.chips += p.chips;
+    META.bump('looted');
+    if (p.gun) { G.gunIdx++; META.ownGun(GUNS[G.gunIdx].id); META.save(); }
+    if (p.card) {
+      if (G.trinkets.length < MAX_TRINKETS) G.trinkets.push({ id: p.card, used: {} });
+      else G.loot.pendingCard = p.card;
+    }
+    return p;
+  },
+
+  /* full trinket rack: swap or leave the found card */
+  resolveCard(replaceIdx) {
+    const card = G.loot.pendingCard;
+    if (!card) return;
+    if (replaceIdx !== null && G.trinkets[replaceIdx]) {
+      G.trinkets[replaceIdx] = { id: card, used: {} };
+    }
+    G.loot.pendingCard = null;
+  },
+
+  bribeCost() {
+    if (E.has('marked') && G.loot.bribes === 0) return 0;
+    let c = LOOT_TUNING.bribeBase + G.ante * LOOT_TUNING.bribePerAnte + G.loot.bribes * LOOT_TUNING.bribeStep;
+    if (E.has('glove')) c = Math.max(1, c - 2);
+    return c;
+  },
+
+  bribe() {
+    const c = E.bribeCost();
+    if (!G.loot || G.loot.done || G.chips < c || E.lootLeft() === 0) return false;
     G.chips -= c;
-    G.shop.rerolls++;
-    G.shop.stock = E.rollStock(3);
+    G.loot.bribes++;
+    G.loot.sinceBribe = 0;
+    META.bump('bribesPaid');
     return true;
   },
 
-  buy(i) {
-    const slot = G.shop.stock[i];
-    if (!slot || slot.sold) return false;
-    const p = E.price(TRINKETS[slot.id].cost);
-    if (G.chips < p || G.trinkets.length >= MAX_TRINKETS) return false;
-    G.chips -= p;
-    slot.sold = true;
-    G.trinkets.push({ id: slot.id, used: {} });
-    return true;
-  },
-
-  buyGun() {
-    const g = G.shop.gun;
-    if (!g || G.shop.gunSold) return false;
-    const p = E.price(g.cost);
-    if (G.chips < p) return false;
-    G.chips -= p;
-    G.gunIdx++;
-    META.ownGun(g.id);
+  /* walk out: learn his tells, then face the badges if it's a boss */
+  endLoot() {
+    if (G.loot.pendingCard) G.loot.pendingCard = null; // left it on the corpse
+    G.loot.done = true;
+    const learned = [];
+    for (const t of G.duel.opp.traits) if (META.learnTrait(t)) learned.push(t);
     META.save();
-    G.shop.gunSold = true;
-    G.shop.gun = null;
-    return true;
+    if (G.wonRun) { G.phase = 'won'; return { learned, won: true }; }
+    if (G.blind === 2) return { learned, heatDue: HEAT_COST(G.ante) };
+    E.nextBlind();
+    return { learned };
   },
 
-  sell(i) {
-    const t = G.trinkets[i];
-    if (!t) return false;
-    G.chips += E.sellValue(t.id);
-    G.trinkets.splice(i, 1);
+  /* protection money after a boss. Can't pay = they take the marker. */
+  payHeat() {
+    const cost = HEAT_COST(G.ante);
+    if (G.chips < cost) {
+      G.busted = true;
+      META.bump('deaths');
+      META.save();
+      G.phase = 'over';
+      return false;
+    }
+    G.chips -= cost;
+    META.bump('heatPaid');
+    E.nextBlind();
     return true;
   },
 
@@ -469,6 +561,7 @@ const E = {
 
   goEndless() {
     G.endless = true;
+    G.wonRun = false;
     META.maxStat('bestAnte', ANTES); // keep collection hints truthful
     E.nextBlind();
   },

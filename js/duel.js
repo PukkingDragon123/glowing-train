@@ -2,8 +2,9 @@
 /* ============================================================
    SHELL & DEBT — duel.js
    The table. A drawn casino scene on one canvas: the mark
-   across the felt, the lamp, the iron, muzzle flash, casings,
-   the fall, the ghost. Plus the async turn loop that drives it.
+   across the felt (with a face that reacts), the lamp, the
+   iron, muzzle flash, casings, blood on the felt, the fall,
+   the ghost — and afterwards, the corpse you go through.
    ============================================================ */
 
 const DUEL = {
@@ -14,7 +15,6 @@ const DUEL = {
 
   aim: 'foe',
   busy: true,          // input lock (intro, animations, his turn)
-  hbTimer: 0,          // heartbeat at 1 heart
 
   /* animated things */
   gun: { x: 178, y: 126, rot: 0, flip: false, sc: 1, tx: 178, ty: 126, trot: 0, tsc: 1 },
@@ -22,11 +22,13 @@ const DUEL = {
   muzzle: null,        // {x, y, ang, t}
   parts: [],           // pixels flying around {x,y,vx,vy,g,col,life,t}
   casings: [],
+  decals: [],          // blood on the felt {x,y,r,col}
   opp: { recoil: 0, flash: 0, fall: -1, gone: false },
   ghost: null,         // {x, y, t}
   youFall: false,
 
-  oppCanvas: null, oppWhite: null, oppKey: '',
+  corpse: false, pool: 0, jiggle: 0,
+  oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
 
   /* ---------------- gun poses ---------------- */
 
@@ -62,11 +64,12 @@ const DUEL = {
     DUEL.stop();
     DUEL.aim = 'foe';
     DUEL.busy = true;
-    DUEL.parts = []; DUEL.casings = [];
+    DUEL.parts = []; DUEL.casings = []; DUEL.decals = [];
     DUEL.muzzle = null; DUEL.ghost = null;
     DUEL.shake = 0; DUEL.redPulse = 0; DUEL.whitePulse = 0;
     DUEL.opp = { recoil: 0, flash: 0, fall: -1, gone: false };
     DUEL.youFall = false;
+    DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.setPose('rest', true);
     DUEL.buildOpp();
 
@@ -74,13 +77,19 @@ const DUEL = {
     DUEL.ctx = DUEL.cv.getContext('2d');
     DUEL.t = 0;
     DUEL.loop();
-    DUEL.intro();
+
+    if (G.phase === 'loot') {           // re-entering mid-loot (fresh render)
+      DUEL.opp.fall = 1; DUEL.opp.gone = true;
+      DUEL.corpse = true; DUEL.pool = 20;
+      LOOT.overlay();
+    } else {
+      DUEL.intro();
+    }
   },
 
   stop() {
     if (DUEL.raf) cancelAnimationFrame(DUEL.raf);
     DUEL.raf = 0;
-    clearTimeout(DUEL.hbTimer);
   },
 
   loop() {
@@ -90,91 +99,54 @@ const DUEL = {
     DUEL.draw();
   },
 
-  /* ================= opp sprite (body + rig head) ================= */
+  /* ============ the mark: body + expressive head ============ */
 
   buildOpp() {
     const opp = G.duel.opp;
     const key = (opp.boss || opp.name) + ':' + G.ante + ':' + G.blind;
-    if (DUEL.oppKey === key && DUEL.oppCanvas) return;
-    DUEL.oppKey = key;
+    if (DUEL.oppKey !== key) { DUEL.oppKey = key; DUEL.oppCache = {}; }
+    DUEL.exprName = DUEL.exprBase();
+    DUEL.exprTimer = 0;
+  },
 
-    const def = opp.boss ? FROG_DEFS[opp.frog] : opp.def;
-    const head = opp.boss
-      ? SPR.frogMaster(opp.frog)
-      : SPR.frogCustom(key, opp.def);
-
-    const P = PIX.PAL;
-    const W = 110, H = 104;
+  /* seated composite (body + head at expr), cached per expression */
+  composite(expr) {
+    if (DUEL.oppCache[expr]) return DUEL.oppCache[expr];
+    const opp = G.duel.opp;
+    const key = DUEL.oppKey;
+    const body = SPR.bodyCustom(key, opp.def);
+    const head = SPR.frogCustom(key, opp.def, expr);
+    const hs = 1.5;
+    const W = 112, H = 110;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
-    const cx = W / 2;
-    const fat = def.fat;
-    const suitCol = def.suit === 'stripes' ? P.t : (P[def.suit] || P.T);
-
-    /* torso — a suit you could hide a body in */
-    const sw = fat ? 40 : 30;                    // shoulder half-width
-    const ty = 52, by = H;                       // torso top / bottom
-    ctx.fillStyle = P.K;
-    ctx.beginPath();
-    ctx.moveTo(cx - sw - 3, by); ctx.lineTo(cx - sw + 4, ty + 6); ctx.lineTo(cx - 12, ty);
-    ctx.lineTo(cx + 12, ty); ctx.lineTo(cx + sw - 4, ty + 6); ctx.lineTo(cx + sw + 3, by);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = suitCol;
-    ctx.beginPath();
-    ctx.moveTo(cx - sw - 1, by); ctx.lineTo(cx - sw + 5, ty + 8); ctx.lineTo(cx - 11, ty + 2);
-    ctx.lineTo(cx + 11, ty + 2); ctx.lineTo(cx + sw - 5, ty + 8); ctx.lineTo(cx + sw + 1, by);
-    ctx.closePath(); ctx.fill();
-    if (def.suit === 'stripes') {
-      ctx.fillStyle = P.T;
-      for (let x = -sw; x <= sw; x += 4) ctx.fillRect(cx + x, ty + 6, 2, by - ty - 6);
-    }
-    /* shirt + lapels */
-    PIX.rect(ctx, cx - 6, ty + 2, 12, 30, P[def.shirt] || P.W);
-    if (def.tie) PIX.rect(ctx, cx - 2, ty + 5, 4, 16, P[def.tie] === undefined ? P.d : P[def.tie]);
-    ctx.fillStyle = P.K;
-    ctx.beginPath(); ctx.moveTo(cx - 10, ty + 2); ctx.lineTo(cx - 2, ty + 16); ctx.lineTo(cx - 12, ty + 20); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(cx + 10, ty + 2); ctx.lineTo(cx + 2, ty + 16); ctx.lineTo(cx + 12, ty + 20); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = suitCol;
-    ctx.beginPath(); ctx.moveTo(cx - 11, ty + 3); ctx.lineTo(cx - 4, ty + 15); ctx.lineTo(cx - 13, ty + 18); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(cx + 11, ty + 3); ctx.lineTo(cx + 4, ty + 15); ctx.lineTo(cx + 13, ty + 18); ctx.closePath(); ctx.fill();
-
-    /* arms resting toward the table */
-    const skin = P[def.skin[0]], shade = P[def.skin[1]];
-    [[-1, 0], [1, 0]].forEach(([s]) => {
-      const ax = cx + s * (sw - 2);
-      ctx.fillStyle = P.K;
-      ctx.beginPath();
-      ctx.moveTo(ax - 6 * s, ty + 12); ctx.lineTo(ax + 5 * s, ty + 18);
-      ctx.lineTo(ax + 2 * s, H - 6); ctx.lineTo(ax - 9 * s, H - 4);
-      ctx.closePath(); ctx.fill();
-      ctx.fillStyle = suitCol;
-      ctx.beginPath();
-      ctx.moveTo(ax - 5 * s, ty + 14); ctx.lineTo(ax + 3 * s, ty + 19);
-      ctx.lineTo(ax + 1 * s, H - 7); ctx.lineTo(ax - 7 * s, H - 5);
-      ctx.closePath(); ctx.fill();
-      // hand
-      PIX.disc(ctx, ax - 3 * s, H - 6, 5, P.K);
-      PIX.disc(ctx, ax - 3 * s, H - 7, 4, skin);
-      PIX.rect(ctx, ax - 5 * s, H - 7, 4, 1, shade);
-    });
-
-    /* the head — the rig, half again as big */
-    const hs = 1.7;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(head, Math.round(cx - head.width * hs / 2), 0, Math.round(head.width * hs), Math.round(head.height * hs));
-
-    DUEL.oppCanvas = cv;
-
-    /* white mask for hit-flash */
-    const wcv = document.createElement('canvas');
-    wcv.width = W; wcv.height = H;
-    const wctx = wcv.getContext('2d');
+    ctx.drawImage(body, (W - body.width) / 2, H - body.height);
+    ctx.drawImage(head, Math.round((W - head.width * hs) / 2), 0,
+      Math.round(head.width * hs), Math.round(head.height * hs));
+    const white = document.createElement('canvas');
+    white.width = W; white.height = H;
+    const wctx = white.getContext('2d');
     wctx.drawImage(cv, 0, 0);
     wctx.globalCompositeOperation = 'source-in';
     wctx.fillStyle = '#fff';
     wctx.fillRect(0, 0, W, H);
-    DUEL.oppWhite = wcv;
+    DUEL.oppCache[expr] = { cv, white };
+    return DUEL.oppCache[expr];
+  },
+
+  exprBase() {
+    const opp = G.duel && G.duel.opp;
+    if (!opp || DUEL.opp.fall >= 0) return 'dead';
+    if (opp.hp > 0 && opp.hp <= Math.ceil(opp.maxHP / 3)) return 'worry';
+    if (opp.def.sweats) return 'worry';
+    return 'neutral';
+  },
+
+  setExpr(name, frames) {
+    DUEL.exprName = name;
+    DUEL.exprTimer = frames || 0;
   },
 
   /* ================= per-frame ================= */
@@ -187,9 +159,12 @@ const DUEL = {
     if (DUEL.shake > 0) DUEL.shake *= 0.86;
     if (DUEL.redPulse > 0) DUEL.redPulse -= 0.03;
     if (DUEL.whitePulse > 0) DUEL.whitePulse -= 0.08;
+    if (DUEL.jiggle > 0) DUEL.jiggle *= 0.85;
     if (DUEL.opp.recoil > 0) DUEL.opp.recoil *= 0.85;
     if (DUEL.opp.flash > 0) DUEL.opp.flash -= 0.07;
     if (DUEL.opp.fall >= 0 && DUEL.opp.fall < 1) DUEL.opp.fall = Math.min(1, DUEL.opp.fall + 0.035);
+    if (DUEL.exprTimer > 0 && --DUEL.exprTimer === 0) DUEL.exprName = DUEL.exprBase();
+    if (DUEL.corpse && DUEL.pool < 24) DUEL.pool += 0.12;
     if (DUEL.muzzle && ++DUEL.muzzle.t > 7) DUEL.muzzle = null;
     if (DUEL.ghost) { DUEL.ghost.y -= 0.55; DUEL.ghost.t++; if (DUEL.ghost.t > 150) DUEL.ghost = null; }
     DUEL.parts = DUEL.parts.filter(p => (p.t++, p.x += p.vx, p.y += p.vy, p.vy += p.g, p.t < p.life));
@@ -210,6 +185,27 @@ const DUEL = {
     }
   },
 
+  /* pixel blood: a burst in the air, stains on the felt */
+  blood(x, y, n) {
+    const P = PIX.PAL;
+    for (let i = 0; i < n; i++) {
+      DUEL.parts.push({
+        x, y, t: 0, life: 18 + Math.random() * 22,
+        vx: (Math.random() - 0.5) * 3.2, vy: -1.6 * Math.random() - 0.4,
+        g: 0.14, col: [P.R, P.r, P.d][(Math.random() * 3) | 0],
+      });
+    }
+    for (let i = 0; i < Math.ceil(n / 4); i++) {
+      DUEL.decals.push({
+        x: x + (Math.random() - 0.5) * 44,
+        y: 128 + Math.random() * 22,
+        r: 1 + Math.random() * 2.2,
+        col: Math.random() < 0.5 ? PIX.PAL.d : PIX.PAL.r,
+      });
+    }
+    if (DUEL.decals.length > 40) DUEL.decals.splice(0, DUEL.decals.length - 40);
+  },
+
   /* ================= drawing ================= */
 
   draw() {
@@ -224,13 +220,10 @@ const DUEL = {
     x.fillStyle = '#0b0916'; x.fillRect(-8, -8, W + 16, H + 16);
     x.fillStyle = '#141024'; x.fillRect(-8, 60, W + 16, 60);
     x.fillStyle = '#0e0b1c'; x.fillRect(-8, 96, W + 16, 110);
-    // wainscot line
     PIX.rect(x, -8, 95, W + 16, 2, '#1c1630');
-    // neon on the back wall
     const flick = (DUEL.t % 180) > 174 ? 0.35 : 1;
     x.globalAlpha = 0.85 * flick; PIX.draw(x, 'sign_bj', 26, 30, 2); x.globalAlpha = 1;
     x.globalAlpha = 0.85; PIX.draw(x, 'sign_slots', 296, 34, 2); x.globalAlpha = 1;
-    // far-off patrons at other tables, just shapes in the dark
     x.globalAlpha = 0.5;
     PIX.draw(x, 'patron_toad', 8, 78, 1);
     PIX.draw(x, 'patron_toad', 330, 80, 1);
@@ -250,12 +243,13 @@ const DUEL = {
     x.closePath(); x.fill();
     x.restore();
 
-    /* --- the mark --- */
+    /* --- the mark, alive or falling --- */
     if (!DUEL.opp.gone) {
       const o = DUEL.opp;
+      const comp = DUEL.composite(o.fall >= 0 ? 'dead' : DUEL.exprName);
       const bob = Math.sin(DUEL.t / 34) * 1.4;
       x.save();
-      x.translate(180, 127);                       // pivot: his seat at the table line
+      x.translate(180, 130);
       if (o.fall >= 0) {
         const f = o.fall, ease = f * f;
         x.translate(0, ease * 26);
@@ -265,20 +259,25 @@ const DUEL = {
         x.translate(0, Math.round(bob) + o.recoil * -4);
         x.rotate(o.recoil * 0.06);
       }
-      x.drawImage(DUEL.oppCanvas, -DUEL.oppCanvas.width / 2, -104);
+      x.drawImage(comp.cv, -comp.cv.width / 2, -comp.cv.height);
       if (o.flash > 0) {
         x.globalAlpha = Math.min(1, o.flash);
-        x.drawImage(DUEL.oppWhite, -DUEL.oppCanvas.width / 2, -104);
+        x.drawImage(comp.white, -comp.cv.width / 2, -comp.cv.height);
         x.globalAlpha = 1;
       }
       x.restore();
-      /* sweat under pressure */
       const opp = G.duel && G.duel.opp;
-      if (opp && opp.hp > 0 && opp.hp <= Math.ceil(opp.maxHP / 3) && o.fall < 0 && DUEL.t % 70 === 0) {
-        DUEL.parts.push({ x: 180 + 24, y: 40, vx: 0.15, vy: 0.7, g: 0.02, t: 0, life: 30, col: P.L });
+      /* flop sweat drips */
+      if (opp && o.fall < 0 && (DUEL.exprName === 'worry') && DUEL.t % 55 === 0) {
+        DUEL.parts.push({ x: 180 + 26, y: 38, vx: 0.15, vy: 0.7, g: 0.02, t: 0, life: 30, col: P.L });
       }
-      /* his hearts */
-      if (opp && o.fall < 0) DUEL.hearts(x, 180 - opp.maxHP * 5, 8, opp.hp, opp.maxHP);
+      if (opp && o.fall < 0) {
+        /* his hearts, stacked in rows of five beside his head */
+        for (let i = 0; i < opp.maxHP; i++) {
+          const row = Math.floor(i / 5), col = i % 5;
+          PIX.draw(x, i < opp.hp ? 'ic_heart' : 'ic_heart_e', 246 + col * 10, 22 + row * 9, 1);
+        }
+      }
     }
 
     /* --- ghost on the way out --- */
@@ -296,16 +295,22 @@ const DUEL = {
     SPR.ellipse(x, 180, 148, 144, 34, P.E);
     SPR.ellipse(x, 180, 146, 138, 30, P.e);
     x.globalAlpha = 0.35;
-    SPR.ellipse(x, 180, 132, 90, 12, P.f);          // lamp pool on the felt
+    SPR.ellipse(x, 180, 132, 90, 12, P.f);
     x.globalAlpha = 1;
-    /* felt decor: chip stacks + ashtray */
+
+    /* --- blood on the felt --- */
+    DUEL.decals.forEach(d => { SPR.ellipse(x, d.x, d.y, d.r * 1.6, d.r * 0.7, d.col); });
+
+    /* felt decor */
     DUEL.chipStack(x, 84, 150, 4, P.r, P.R);
     DUEL.chipStack(x, 96, 154, 2, P.l, P.L);
     DUEL.chipStack(x, 262, 148, 3, P.g, P.G);
     SPR.ellipse(x, 236, 158, 9, 3, P.T); SPR.ellipse(x, 236, 157, 7, 2, P.s);
-    if (E.bossIs('collector')) { PIX.draw(x, 'ic_chip', 150, 154, 1); PIX.draw(x, 'ic_chip', 158, 157, 1); }
 
-    /* --- casings on and above the felt --- */
+    /* --- the corpse, when it's time to go through him --- */
+    if (DUEL.corpse) DUEL.drawCorpse(x);
+
+    /* --- casings --- */
     DUEL.casings.forEach(c => {
       x.save(); x.translate(c.x, c.y); x.rotate(c.rot);
       PIX.rect(x, -2, -1, 5, 2, P.K); PIX.rect(x, -1, -1, 3, 2, P.g);
@@ -313,20 +318,22 @@ const DUEL = {
     });
 
     /* --- the iron --- */
-    const g = DUEL.gun;
-    x.save();
-    SPR.ellipse(x, g.x + 2, 138 + (g.y - 126) * 0.2, 16 * g.sc, 3, 'rgba(0,0,0,.4)');
-    x.translate(Math.round(g.x), Math.round(g.y));
-    x.rotate(g.rot);
-    if (g.flip) x.scale(-1, 1);
-    const gm = PIX.make(GUN_SPRITES[E.gun().id], 1);
-    x.drawImage(gm, -gm.width / 2 * g.sc, -gm.height / 2 * g.sc, gm.width * g.sc, gm.height * g.sc);
-    if (G.duel && G.duel.sawArmed) {                // sawed: the barrel glows mean
-      x.globalAlpha = 0.5 + Math.sin(DUEL.t / 5) * 0.3;
-      PIX.rect(x, gm.width / 2 * g.sc - 10, -gm.height / 2 * g.sc, 10, 4, P.O);
-      x.globalAlpha = 1;
+    if (!DUEL.corpse) {
+      const g = DUEL.gun;
+      x.save();
+      SPR.ellipse(x, g.x + 2, 138 + (g.y - 126) * 0.2, 16 * g.sc, 3, 'rgba(0,0,0,.4)');
+      x.translate(Math.round(g.x), Math.round(g.y));
+      x.rotate(g.rot);
+      if (g.flip) x.scale(-1, 1);
+      const gm = PIX.make(GUN_SPRITES[E.gun().id], 1);
+      x.drawImage(gm, -gm.width / 2 * g.sc, -gm.height / 2 * g.sc, gm.width * g.sc, gm.height * g.sc);
+      if (G.duel && G.duel.sawArmed) {
+        x.globalAlpha = 0.5 + Math.sin(DUEL.t / 5) * 0.3;
+        PIX.rect(x, gm.width / 2 * g.sc - 10, -gm.height / 2 * g.sc, 10, 4, P.O);
+        x.globalAlpha = 1;
+      }
+      x.restore();
     }
-    x.restore();
 
     /* --- muzzle flash --- */
     if (DUEL.muzzle) {
@@ -351,8 +358,6 @@ const DUEL = {
 
     /* --- you, over the shoulder --- */
     DUEL.drawYou(x);
-
-    /* --- your hearts --- */
     DUEL.hearts(x, 8, 101, G.hearts, E.maxHP(), G.hearts === 1 && (DUEL.t % 40 < 20));
 
     /* --- the lamp itself --- */
@@ -381,27 +386,70 @@ const DUEL = {
     x.restore();
   },
 
+  /* belly-up on the felt, flies already gathering */
+  drawCorpse(x) {
+    const P = PIX.PAL;
+    const opp = G.duel.opp;
+    const key = DUEL.oppKey;
+    const body = SPR.bodyCustom(key, opp.def);
+    const head = SPR.frogCustom(key, opp.def, 'dead');
+    const jig = DUEL.jiggle * Math.sin(DUEL.t * 1.7);
+
+    /* the pool first — it keeps spreading */
+    SPR.ellipse(x, 178, 150, DUEL.pool * 2.6, DUEL.pool * 0.62, P.D);
+    SPR.ellipse(x, 174, 149, DUEL.pool * 2.1, DUEL.pool * 0.45, P.d);
+
+    x.save();
+    x.translate(190, 136 + jig);
+    x.rotate(0.06 + jig * 0.01);
+    /* body lying, feet stage-right */
+    x.save();
+    x.rotate(-Math.PI / 2 + 0.18);
+    x.drawImage(body, -body.width / 2 + 24, -20);
+    x.restore();
+    /* dead head lolled at the left end */
+    x.save();
+    x.translate(-52, -2);
+    x.rotate(-0.5);
+    x.drawImage(head, -Math.round(head.width * 1.4 / 2), -Math.round(head.height * 1.4 / 2),
+      Math.round(head.width * 1.4), Math.round(head.height * 1.4));
+    x.restore();
+    x.restore();
+
+    /* his hat, knocked clean off */
+    if (opp.def.hat || opp.def.flatcap) {
+      SPR.ellipse(x, 262, 132, 12, 4, P.K);
+      SPR.ellipse(x, 262, 131, 10, 3, P.T);
+      PIX.disc(x, 262, 127, 6, P.K);
+      PIX.disc(x, 262, 128, 5, P.T);
+    }
+
+    /* flies */
+    for (let i = 0; i < 3; i++) {
+      const a = DUEL.t / (14 + i * 3) + i * 2.1;
+      const fx = 180 + Math.cos(a) * (18 + i * 9) + Math.sin(DUEL.t / 7 + i) * 2;
+      const fy = 116 + Math.sin(a * 1.3) * 8;
+      PIX.rect(x, fx, fy, 2, 2, P.K);
+      if (DUEL.t % 4 < 2) { PIX.rect(x, fx - 1, fy - 1, 1, 1, P.q); PIX.rect(x, fx + 2, fy - 1, 1, 1, P.q); }
+    }
+  },
+
   drawYou(x) {
     const P = PIX.PAL;
-    /* your shoulder + the back of your head, bottom-left */
     const bob = Math.sin(DUEL.t / 40 + 2) * 1;
     const oy = DUEL.youFall ? 26 : 0;
     x.save();
     x.translate(0, Math.round(bob) + oy);
     if (DUEL.youFall) x.rotate(0.12);
-    // shoulders
     x.fillStyle = P.K;
     x.beginPath(); x.moveTo(-6, 206); x.lineTo(2, 168); x.lineTo(52, 158); x.lineTo(108, 172); x.lineTo(116, 206); x.closePath(); x.fill();
     x.fillStyle = P.T;
     x.beginPath(); x.moveTo(-4, 206); x.lineTo(4, 170); x.lineTo(52, 161); x.lineTo(105, 174); x.lineTo(112, 206); x.closePath(); x.fill();
-    // head back
     PIX.disc(x, 50, 148, 21, P.K);
     PIX.disc(x, 50, 148, 19, P.f);
     PIX.disc(x, 44, 142, 8, P.F);
-    // eye bulbs peeking over the skull, from behind
     PIX.disc(x, 34, 132, 7, P.K); PIX.disc(x, 34, 132, 5, P.f);
     PIX.disc(x, 66, 132, 7, P.K); PIX.disc(x, 66, 132, 5, P.f);
-    // fedora
     SPR.ellipse(x, 50, 138, 25, 7, P.K);
     SPR.ellipse(x, 50, 137, 23, 6, P.T);
     PIX.disc(x, 50, 128, 15, P.K);
@@ -455,7 +503,7 @@ const DUEL = {
     DUEL.busy = true;
     DUEL.setPose(DUEL.aim === 'foe' ? 'youFoe' : 'youSelf');
     await U.sleep(220);
-    SFX.chak();                                    // hammer back
+    SFX.chak();
     await U.sleep(190);
     const ev = E.pull(DUEL.aim);
     await DUEL.playShot(ev);
@@ -476,10 +524,14 @@ const DUEL = {
         UI.stampBig('FIZZLE', PIX.PAL.N); SFX.dud();
       } else if (ev.victim === 'foe') {
         DUEL.opp.recoil = 1; DUEL.opp.flash = 1;
+        DUEL.setExpr('pain', 55);
+        DUEL.blood(180, 60, ev.dmg >= 2 ? 22 : 12);
         UI.stampBig(ev.dmg >= 2 ? '-' + ev.dmg + ' CRUNCH' : 'HIT', PIX.PAL.R);
         SFX.hurt();
       } else if (ev.victim === 'you') {
         DUEL.redPulse = 0.9;
+        if (ev.by === 'opp') DUEL.setExpr('grin', 80);
+        DUEL.blood(60, 165, 8);
         UI.flash('go-back');
         UI.stampBig('-' + ev.dmg, PIX.PAL.R);
         SFX.hurt();
@@ -488,7 +540,9 @@ const DUEL = {
       SFX.dud();
       DUEL.puff(tip.x, tip.y, 4, [PIX.PAL.q], 1, -0.4);
       UI.stampBig('click', PIX.PAL.w, true);
-      if (ev.croakHeal) { await U.sleep(240); UI.stampBig('HE SWALLOWS IT', PIX.PAL.F); }
+      if (ev.by === 'opp' && ev.target === 'self') DUEL.setExpr('smug', 60);
+      if (ev.by === 'you' && ev.target === 'foe' && !ev.croakHeal) DUEL.setExpr('smug', 45);
+      if (ev.croakHeal) { DUEL.setExpr('grin', 60); await U.sleep(240); UI.stampBig('HE SWALLOWS IT', PIX.PAL.F); }
     }
     if (ev.rosary) { await U.sleep(300); UI.stampBig('THE ROSARY CRUMBLES', PIX.PAL.G); SFX.bank(); }
     if (ev.chips) UI.chipTick(ev.chips);
@@ -498,13 +552,14 @@ const DUEL = {
   },
 
   async afterPull(ev) {
-    /* the mark goes down */
     if (ev.over === 'win') { await DUEL.killSequence(); return; }
     if (ev.over === 'loss') { await DUEL.deathSequence(); return; }
 
     if (ev.revived) {
       await U.sleep(300);
       DUEL.shake = 12; SFX.backfire();
+      DUEL.oppCache = {}; // phase two: rebuild him angry
+      DUEL.setExpr('angry', 240);
       UI.stampBig('HE GETS BACK UP', PIX.PAL.V);
       await U.sleep(900);
       UI.syncDuel();
@@ -536,14 +591,14 @@ const DUEL = {
       await U.sleep(520 + Math.random() * 480);
       const choice = E.oppDecide();                    // 'foe' = shoot YOU
       DUEL.setPose(choice === 'foe' ? 'oppYou' : 'oppSelf');
+      if (choice === 'self') DUEL.setExpr('worry', 70);
       await U.sleep(420);
       SFX.chak();
       await U.sleep(260 + Math.random() * 300);        // let it hang
       const ev = E.pull(choice);
       await DUEL.playShot(ev);
-      if (ev.over === 'win') { await DUEL.killSequence(); return; }   // he shot himself out
+      if (ev.over === 'win') { await DUEL.killSequence(); return; }
       if (ev.over === 'loss') { await DUEL.deathSequence(); return; }
-      if (ev.revived) { /* unreachable: revive is his, not yours */ }
       if (ev.shuffled) { SFX.spin(); UI.stampSmall('SHUFFLED'); }
       if (ev.reloaded) { SFX.spin(); await UI.loadBanner(); }
       if (ev.extraTurn) { UI.stampSmall('HE GOES AGAIN'); await U.sleep(160); }
@@ -556,20 +611,21 @@ const DUEL = {
     }
   },
 
-  /* the mark dies */
+  /* the mark dies → the corpse is yours */
   async killSequence() {
     DUEL.setPose('rest');
     await U.sleep(350);
     DUEL.opp.fall = 0;
+    DUEL.blood(180, 90, 16);
     SFX.lose(); SFX.cluck();
     await U.sleep(750);
     DUEL.ghost = { x: 168, y: 60, t: 0 };
     SFX.tone && SFX.tone(880, 0.4, 'sine', 0.08, 0, 400);
     DUEL.opp.gone = true;
+    DUEL.corpse = true;
+    DUEL.pool = 4;
     await U.sleep(700);
-    const fresh = META.check();
-    if (G.phase === 'won') UI.render();
-    else await UI.payoutOverlay(fresh);
+    LOOT.overlay();
   },
 
   /* you die */
@@ -585,37 +641,26 @@ const DUEL = {
     UI.render(); // phase is 'over'
   },
 
-  /* ================= actives ================= */
-
-  async useTrinket(i) {
-    if (DUEL.busy || !E.canUseTrinket(i)) return;
-    const ev = E.useTrinket(i);
-    if (!ev) return;
-    switch (ev.type) {
-      case 'heal':
-        SFX.bank(); UI.stampSmall('+1 HEART');
-        DUEL.puff(24, 122, 8, [PIX.PAL.R, PIX.PAL.G], 1.2, -1.2);
-        break;
-      case 'eject': {
-        SFX.jamSfx();
-        UI.stampSmall(ev.live ? 'RACKED — LIVE' : 'RACKED — blank');
-        DUEL.casings.push({ x: 180, y: 118, vx: 1.5, vy: -2.5, vr: 0.3, rot: 0, t: 0 });
-        if (ev.reloaded) { SFX.spin(); await UI.loadBanner(); }
-        break;
-      }
-      case 'peek':
-        SFX.click(); UI.stampSmall(ev.live ? 'CHAMBERED: LIVE' : 'CHAMBERED: blank');
-        break;
-      case 'cuffs':
-        SFX.chak(); UI.stampSmall('CUFFED');
-        break;
-      case 'mirror':
-        SFX.spin(); DUEL.whitePulse = 0.5;
-        UI.stampSmall(ev.live ? 'FLIPPED: LIVE' : 'FLIPPED: blank');
-        break;
+  /* loot fx: the corpse jiggles, the take flies out of it */
+  lootFx(pocket) {
+    DUEL.jiggle = 3;
+    const P = PIX.PAL;
+    if (pocket.id === 'tooth') {
+      DUEL.blood(150, 125, 8);
+      DUEL.parts.push({ x: 150, y: 120, vx: 1.4, vy: -2.6, g: 0.12, t: 0, life: 50, col: P.G });
+      SFX.hurt();
     }
-    UI.syncDuel();
+    for (let i = 0; i < Math.min(10, pocket.chips + 1); i++) {
+      DUEL.parts.push({
+        x: 175 + (Math.random() - 0.5) * 50, y: 128, t: 0, life: 34,
+        vx: (Math.random() - 0.5) * 2, vy: -2.2 - Math.random(), g: 0.11, col: P.G,
+      });
+    }
+    if (pocket.gun) { DUEL.whitePulse = 0.6; SFX.jackpot(); }
+    SFX.coin();
   },
+
+  useTrinket: null, // assigned below (duel actives)
 
   useGunActive(kind) {
     if (DUEL.busy) return;
@@ -635,4 +680,35 @@ const DUEL = {
     if (px > 120 && px < 245 && py < 125) DUEL.setAim('foe');
     else if (px < 118 && py > 118) DUEL.setAim('self');
   },
+};
+
+DUEL.useTrinket = async function (i) {
+  if (DUEL.busy || !E.canUseTrinket(i)) return;
+  const ev = E.useTrinket(i);
+  if (!ev) return;
+  switch (ev.type) {
+    case 'heal':
+      SFX.bank(); UI.stampSmall('+1 HEART');
+      DUEL.puff(24, 122, 8, [PIX.PAL.R, PIX.PAL.G], 1.2, -1.2);
+      break;
+    case 'eject': {
+      SFX.jamSfx();
+      UI.stampSmall(ev.live ? 'RACKED — LIVE' : 'RACKED — blank');
+      DUEL.casings.push({ x: 180, y: 118, vx: 1.5, vy: -2.5, vr: 0.3, rot: 0, t: 0 });
+      if (ev.reloaded) { SFX.spin(); await UI.loadBanner(); }
+      break;
+    }
+    case 'peek':
+      SFX.click(); UI.stampSmall(ev.live ? 'CHAMBERED: LIVE' : 'CHAMBERED: blank');
+      break;
+    case 'cuffs':
+      SFX.chak(); UI.stampSmall('CUFFED');
+      DUEL.setExpr('angry', 90);
+      break;
+    case 'mirror':
+      SFX.spin(); DUEL.whitePulse = 0.5;
+      UI.stampSmall(ev.live ? 'FLIPPED: LIVE' : 'FLIPPED: blank');
+      break;
+  }
+  UI.syncDuel();
 };

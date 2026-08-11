@@ -26,7 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
       b.onclick = fn;
       bar.appendChild(b);
     };
-    mk('+20⛁', () => { G.chips += 20; UI.syncChips(); if (G.phase === 'shop') SHOP.sync(); });
+    mk('+20⛁', () => { G.chips += 20; UI.syncChips(); if (G.phase === 'loot') LOOT.sync(); });
     mk('kill foe', () => {
       if (G.phase !== 'duel' || G.duel.over) return;
       G.duel.opp.hp = 1;
@@ -41,6 +41,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     mk('unlock all', () => { META.unlockAll(); });
     document.body.appendChild(bar);
-    window.G2 = () => G; window.E = E; window.UI = UI; window.DUEL = DUEL; // console access
+    window.G2 = () => G; window.E = E; window.UI = UI; window.DUEL = DUEL; window.LOOT = LOOT; // console access
   }
 });

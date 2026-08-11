@@ -14,16 +14,59 @@ const PLAYER_HP = 5;          // base hearts (totem +1, golden gun +1)
 const MAX_TRINKETS = 5;
 
 const ECON = {
-  start: 4,                   // starting chips
-  interestPer: 10,            // +1 chip per 10 held, on entering the shop
-  interestCap: 5,
-  reroll: 2,                  // base reroll cost, +1 per reroll in a shop
+  start: 6,                   // starting chips
 };
 
-/* purse paid for clearing a blind */
+/* chips sewn into a corpse (before traits and multipliers) */
 function BLIND_PURSE(ante, blind) {
-  return [3 + ante, 5 + 2 * ante, 10 + 3 * ante][blind];
+  return [4 + ante, 6 + 2 * ante, 12 + 3 * ante][blind];
 }
+
+/* ------------------------------------------------------------
+   THE LOOT — no shop. You kill the mark, you go through his
+   pockets. The badges give you so long; bribes buy more time.
+   After every BOSS corpse, Swamp PD wants protection money —
+   can't pay, and they take your marker.
+   ------------------------------------------------------------ */
+
+const LOOT_TUNING = {
+  freePockets: 3,             // rifles before the badges arrive
+  bribeBase: 3, bribePerAnte: 1, bribeStep: 3, // bribe = base + ante + step*bribesPaid
+  trinketChance: [0.5, 0.65, 1.0],             // per blind: odds one pocket hides a card
+};
+
+function HEAT_COST(ante) { return 6 + 6 * ante; } // protection, after each boss
+
+/* ------------------------------------------------------------
+   TRAITS — tells you can read across the table, once you've
+   learned them (loot a frog that has one). The notebook
+   remembers. Rolled onto mooks; bosses have signature sets.
+   fx: hp / aggro / chips (corpse money).
+   ------------------------------------------------------------ */
+
+const TRAITS = {
+  tophat:    { name: 'TOP HAT', hint: 'big hat, deep pockets', chips: 6,
+    desc: 'Big hat, deep pockets: his corpse carries +6 chips.' },
+  bowler:    { name: 'BOWLER', hint: 'a careful frog', aggro: -0.12,
+    desc: 'A careful frog. Slower to point the iron at you.' },
+  flatcap:   { name: 'FLAT CAP', hint: 'hungry and mean', aggro: 0.12, chips: -3,
+    desc: 'Hungry and mean: quicker to shoot you, lighter pockets (−3 chips).' },
+  goldtooth: { name: 'GOLD TOOTH', hint: 'something glints when he grins', chips: 0,
+    desc: 'Something glints when he grins. Pliers pay +5 chips at the loot.' },
+  rings:     { name: 'RINGS', hint: 'heavy hands', chips: 4,
+    desc: 'Heavy hands: the HAND pocket always pays (+4 chips).' },
+  scar:      { name: 'SCAR', hint: 'he has done this before', hp: 1,
+    desc: 'He has done this before: +1 heart.' },
+  patch:     { name: 'EYE PATCH', hint: 'no depth perception, no fear', aggro: 0.15,
+    desc: 'No depth perception, no fear: much quicker to shoot you.' },
+  sweats:    { name: 'THE SWEATS', hint: 'dripping under the lamp', aggro: -0.15,
+    desc: 'Panics under the lamp: would rather point it at himself than at you.' },
+  cigar:     { name: 'CIGAR', hint: 'a calm smoke', hp: 1,
+    desc: 'Cool head, thick skin: +1 heart.' },
+  vest:      { name: 'FANCY VEST', hint: 'buttons and a watch chain', chips: 4,
+    desc: 'Buttons and a watch chain: the VEST pocket always pays (+4 chips).' },
+};
+const MOOK_TRAIT_POOL = Object.keys(TRAITS);
 
 const BLIND_NAMES = ['SMALL BLIND', 'BIG BLIND', 'BOSS BLIND'];
 
@@ -110,13 +153,13 @@ const TRINKETS = {
     desc: 'Swallow the pain, spit it back: after you take a live hit, your next live hit deals +1.',
     glyph: ['.FFFF...', 'F....F..', '......F.', '...FFF..', '..F.....', '.FFFFFF.', '......R.'] },
   marked: { id: 'marked', name: 'MARKED CARD', rarity: 'uncommon', cost: 7,
-    desc: 'You know the dealer: the first shop reroll each night is FREE.',
+    desc: 'You know the badge: the FIRST bribe at every corpse is free.',
     glyph: ['KKKKK...', 'KWWWK...', 'KWGWK...', 'KWWWK...', 'KWGWK...', 'KWWWK...', 'KKKKK...'] },
   glove: { id: 'glove', name: "CROUPIER'S GLOVE", rarity: 'uncommon', cost: 7,
-    desc: 'A firm handshake with the house: everything in the shop costs 2 less.',
+    desc: 'A firm handshake with the law: bribes cost 2 less (min 1).',
     glyph: ['..WWW...', '.WWWWW..', '.WWWWW..', 'WWWWWWW.', '.WWWWW..', '.WWWW...', '..WW....'] },
   feather: { id: 'feather', name: 'FEATHER FAN', rarity: 'uncommon', cost: 7,
-    desc: 'Play it cool: every blank you fire at yourself adds +10% to the duel\'s payout.',
+    desc: 'Play it cool: every self-blank adds +10% to the corpse\'s chips.',
     glyph: ['.....W..', '....WW..', '...WWW..', '..WWW...', '.WWW....', '.WW.....', '.W......'] },
 
   /* ---- rares (7) ---- */
@@ -150,7 +193,7 @@ const TRINKETS = {
 
   /* ---- legendaries (4) ---- */
   ring: { id: 'ring', name: 'KINGPIN RING', rarity: 'legendary', cost: 15,
-    desc: 'Kiss it: every payout ×1.5.',
+    desc: 'Kiss it: every corpse carries ×1.5 chips.',
     unlock: { stat: 'bestAnte', need: 6, hint: 'clear ante 6' },
     glyph: ['G.G.G.G.', 'GGGGGGG.', 'GRGRGRG.', '.GGGGG..', '.GGGGG..'] },
   gator: { id: 'gator', name: 'GATOR TOOTH', rarity: 'legendary', cost: 15,
@@ -162,7 +205,7 @@ const TRINKETS = {
     unlock: { stat: 'flawless', need: 3, hint: 'win 3 duels untouched' },
     glyph: ['RRRRRR..', '....RR..', '...RR...', '..RR....', '..RR....', '..RR....'] },
   swarm: { id: 'swarm', name: 'THE SWARM', rarity: 'legendary', cost: 15,
-    desc: 'They can smell it on you: win a duel and take +2 chips per heart you lost.',
+    desc: 'They can smell it on you: corpses carry +2 chips per heart you lost taking them.',
     unlock: { stat: 'clutchWins', need: 1, hint: 'win a duel at your last heart' },
     glyph: ['K..K....', '.KK...K.', '.....KK.', '..K.....', '.KK..K..', '....KK..', 'K.....K.', '.K...KK.'] },
 };
@@ -173,28 +216,28 @@ const TRINKETS = {
    ------------------------------------------------------------ */
 
 const BOSSES = [
-  { id: 'croupier', name: 'CROAKER', hp: 3, aggro: 0.42,
+  { id: 'croupier', traits: ['bowler'], name: 'CROAKER', hp: 2, aggro: 0.42,
     rule: 'SWALLOWS BLANKS',
     desc: 'House croupier. Blanks you fire at him HEAL him 1 — aim like you mean it.' },
-  { id: 'blindfold', name: 'BLIND NEWT', hp: 5, aggro: 0.5,
+  { id: 'blindfold', traits: ['scar'], name: 'BLIND NEWT', hp: 5, aggro: 0.5,
     rule: 'PLAYS IT BLIND',
     desc: 'He can\'t see the load. Now neither can you: LIVE / BLANK counts stay hidden.' },
-  { id: 'collector', name: 'TAXTOAD TONY', hp: 6, aggro: 0.5,
+  { id: 'collector', traits: ['vest', 'goldtooth'], name: 'TAXTOAD TONY', hp: 6, aggro: 0.5,
     rule: 'CHARGES THE SEAT',
     desc: 'The vig runs while you sit: every trigger pull YOU take costs 1 chip.' },
-  { id: 'spinner', name: 'DIZZY SAL', hp: 6, aggro: null, // null = coin-flip brain
+  { id: 'spinner', traits: ['sweats'], name: 'DIZZY SAL', hp: 6, aggro: null, // null = coin-flip brain
     rule: 'NEVER SITS STILL',
     desc: 'The drum re-shuffles after EVERY shot. Peeks don\'t survive him. Neither does math.' },
-  { id: 'lily', name: 'SLICK LILY', hp: 7, aggro: 0.6,
+  { id: 'lily', traits: ['rings'], name: 'SLICK LILY', hp: 7, aggro: 0.6,
     rule: 'DISARMING',
     desc: 'She already charmed your iron: your GUN tricks are locked this duel.' },
-  { id: 'cage', name: 'WARDEN WART', hp: 7, aggro: 0.55,
+  { id: 'cage', traits: ['patch'], name: 'WARDEN WART', hp: 7, aggro: 0.55,
     rule: 'NO TOYS IN THE YARD',
     desc: 'Everything on the table stays on the table: trinket ACTIVES are locked this duel.' },
-  { id: 'vig', name: 'DON BUFO', hp: 9, aggro: 0.5,
+  { id: 'vig', traits: ['tophat', 'rings', 'cigar'], name: 'DON BUFO', hp: 9, aggro: 0.5,
     rule: 'TOO FAT TO FALL',
     desc: 'Nine hearts of blubber. There is no trick. Start shooting.' },
-  { id: 'owner', name: 'THE BULLFROG', hp: 9, aggro: 0.65,
+  { id: 'owner', traits: ['tophat', 'goldtooth', 'rings', 'scar'], name: 'THE BULLFROG', hp: 9, aggro: 0.65,
     rule: 'THE DEBT HIMSELF',
     desc: 'The first time he dies, he gets back up — and hits for 2 once he\'s angry.' },
 ];
@@ -221,8 +264,9 @@ const BINDS = [
   ['1–5', 'use a trinket'],
   ['Q', 'saw grip (SAWN-OFF)'],
   ['E', 'double tap (TOMMY GUN)'],
-  ['R', 'reroll the shop'],
-  ['ENTER', 'continue / next blind'],
+  ['R', 'bribe the badges (looting)'],
+  ['N', 'the little black book'],
+  ['ENTER', 'walk out / next blind'],
   ['M', 'mute'],
   ['H', 'house rules'],
 ];

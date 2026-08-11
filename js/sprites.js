@@ -1026,188 +1026,394 @@ SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
   }
 };
 
-SPR.buildFrog = function (d) {
-    const P = PIX.PAL;
-    const skin = P[d.skin[0]], shade = P[d.skin[1]], dark = P[d.skin[2]];
-    const W = 34, H = 32, cx = 17;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
+/* ============================================================
+   THE FROG RIG v2 — big cartoon heads, expressions, tells.
+   buildFrog(def, expr) draws a bust portrait; frogBody(def)
+   draws the seated body the duel scene puts under the head.
+   Expressions: neutral · grin · worry · angry · pain · smug · dead
+   Visible tells (goldtooth, scar, patch, rings, vest, hats…)
+   are rolled as TRAITS and drawn right on the frog.
+   ============================================================ */
 
-    const rx = d.fat ? 14 : 11;
-    const headY = 17, ry = 9;
-    const ex = d.fat ? 9 : 7, ey = 8;
+SPR.buildFrog = function (d, expr) {
+  expr = expr || 'neutral';
+  const P = PIX.PAL;
+  const skin = P[d.skin[0]], shade = P[d.skin[1]], dark = P[d.skin[2]];
+  const W = 46, H = 42, cx = 23;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
 
-    /* shoulders / suit first (behind head) */
-    const sw = d.fat ? 15 : 12;
-    PIX.rect(ctx, cx - sw - 1, 25, sw * 2 + 2, H - 25, P.K);
-    if (d.suit === 'stripes') {
-      for (let x = -sw; x <= sw; x++) {
-        ctx.fillStyle = (x + 100) % 4 < 2 ? P.t : P.T;
-        ctx.fillRect(cx + x, 26, 1, H - 26);
-      }
-    } else {
-      PIX.rect(ctx, cx - sw, 26, sw * 2 + 1, H - 26, P[d.suit] || P.T);
-    }
-    // shirt V + tie
-    PIX.rect(ctx, cx - 2, 26, 5, H - 26, P[d.shirt] || P.W);
-    if (d.tie) { PIX.rect(ctx, cx - 1, 27, 3, 4, P[d.tie]); PIX.rect(ctx, cx, 31, 1, 1, P[d.tie]); }
-    if (d.necklace) {
-      for (let x = -4; x <= 4; x += 2) {
-        PIX.rect(ctx, cx + x, 27 + (Math.abs(x) > 2 ? 0 : 1), 1, 1, P[d.necklace] || P.W);
-      }
-    }
+  const fat = !!d.fat;
+  const rx = fat ? 20 : 15;              // BIG cartoon head
+  const ry = fat ? 14 : 12;
+  const headY = 25;
+  const ex = fat ? 12 : 9, ey = 11;      // eye bulbs
+  const er = 6;
 
-    /* head */
-    SPR.ellipse(ctx, cx, headY, rx + 1, ry + 1, P.K);
-    SPR.ellipse(ctx, cx, headY, rx, ry, skin);
-    SPR.ellipse(ctx, cx, headY - 3, rx - 3, ry - 4, P[d.skin[0]]);
-    // lower face shading
-    SPR.ellipse(ctx, cx, headY + 4, rx - 2, 4, shade);
-    if (d.fat) { // jowls
-      SPR.ellipse(ctx, cx - rx + 4, headY + 5, 5, 4, shade);
-      SPR.ellipse(ctx, cx + rx - 4, headY + 5, 5, 4, shade);
-      PIX.rect(ctx, cx - 6, headY + 8, 13, 1, dark); // chin crease
+  /* little shoulders — the head is the point */
+  const sw = fat ? 21 : 14;
+  PIX.rect(ctx, cx - sw - 1, H - 7, sw * 2 + 2, 7, P.K);
+  if (d.suit === 'stripes') {
+    for (let x = -sw; x <= sw; x++) {
+      ctx.fillStyle = (x + 100) % 4 < 2 ? P.t : P.T;
+      ctx.fillRect(cx + x, H - 6, 1, 6);
     }
+  } else {
+    PIX.rect(ctx, cx - sw, H - 6, sw * 2 + 1, 6, P[d.suit] || P.T);
+  }
+  PIX.rect(ctx, cx - 3, H - 6, 7, 6, P[d.shirt] || P.W);
+  if (d.tie) PIX.rect(ctx, cx - 1, H - 5, 3, 5, P[d.tie]);
+  if (d.necklace) {
+    for (let x = -5; x <= 5; x += 2) {
+      PIX.rect(ctx, cx + x, H - 5 + (Math.abs(x) > 3 ? 0 : 1), 1, 1, P[d.necklace] || P.W);
+    }
+  }
 
-    /* eye bulbs */
-    [-ex, ex].forEach(off => {
-      PIX.disc(ctx, cx + off, ey, 5, P.K);
-      PIX.disc(ctx, cx + off, ey, 4, skin);
-      PIX.disc(ctx, cx + off, ey + 1, 3, P.W);
-      if (d.goldEyes) PIX.disc(ctx, cx + off, ey + 1, 2, P.G);
-      // heavy mobster lids
-      PIX.disc(ctx, cx + off, ey - 2, 3, skin);
-      PIX.rect(ctx, cx + off - 3, ey - 1, 7, 1, shade);
-      if (d.lashes) {
-        PIX.rect(ctx, cx + off - 4, ey - 4, 1, 2, P.K);
-        PIX.rect(ctx, cx + off, ey - 6, 1, 2, P.K);
-        PIX.rect(ctx, cx + off + 4, ey - 4, 1, 2, P.K);
-      }
-      // pupil
-      if (d.spiral) {
-        ctx.fillStyle = P.K;
-        ctx.fillRect(cx + off - 1, ey, 3, 1); ctx.fillRect(cx + off + 1, ey + 1, 1, 1);
-        ctx.fillRect(cx + off - 1, ey + 2, 2, 1);
-      } else {
-        PIX.rect(ctx, cx + off - 1, ey, 2, 3, P.K);
-      }
-    });
-    if (d.glasses === 'round') {
-      [-ex, ex].forEach(off => {
-        PIX.disc(ctx, cx + off, ey, 4, P.K);
-        PIX.disc(ctx, cx + off, ey, 3, P.T);
-        ctx.fillStyle = P.S; ctx.fillRect(cx + off - 2, ey - 2, 2, 1);
-      });
-      PIX.rect(ctx, cx - ex + 4, ey, ex * 2 - 8, 1, P.K);
-    }
-    if (d.glasses === 'square') {
-      [-ex, ex].forEach(off => {
-        PIX.rect(ctx, cx + off - 4, ey - 3, 8, 7, P.K);
-        PIX.rect(ctx, cx + off - 3, ey - 2, 6, 5, P.L);
-        PIX.rect(ctx, cx + off - 1, ey, 2, 3, P.K);
-      });
-      PIX.rect(ctx, cx - ex + 4, ey - 1, ex * 2 - 8, 1, P.K);
-    }
+  /* head */
+  SPR.ellipse(ctx, cx, headY, rx + 1, ry + 1, P.K);
+  SPR.ellipse(ctx, cx, headY, rx, ry, skin);
+  SPR.ellipse(ctx, cx, headY + 6, rx - 2, 5, shade);
+  if (fat) {
+    SPR.ellipse(ctx, cx - rx + 5, headY + 6, 6, 5, shade);
+    SPR.ellipse(ctx, cx + rx - 5, headY + 6, 6, 5, shade);
+    PIX.rect(ctx, cx - 7, headY + 11, 15, 1, dark);
+  }
+  if (d.spots) {
+    [[-rx + 5, headY - 2], [rx - 7, headY + 3], [-4, headY + 8], [7, headY - 4]]
+      .forEach(([sx, sy]) => PIX.disc(ctx, cx + sx, sy, 2, shade));
+  }
 
-    /* nostrils + mouth (droopy mobster frown) */
-    PIX.rect(ctx, cx - 3, headY - 3, 1, 1, dark);
-    PIX.rect(ctx, cx + 3, headY - 3, 1, 1, dark);
-    const mw = rx - 3;
-    for (let x = -mw; x <= mw; x++) {
-      const droop = Math.round((Math.abs(x) / mw) * (Math.abs(x) / mw) * 3);
+  /* --- eyes, by expression --- */
+  const drawEye = (off, side) => {
+    PIX.disc(ctx, cx + off, ey, er + 1, P.K);
+    PIX.disc(ctx, cx + off, ey, er, skin);
+    if (expr === 'dead') {                       // X X
       ctx.fillStyle = P.K;
-      ctx.fillRect(cx + x, headY + 3 + droop, 1, 1);
-    }
-    if (d.lips) {
-      ctx.fillStyle = P[d.lips] || P.R;
-      for (let x = -3; x <= 3; x++) {
-        const droop = Math.round((Math.abs(x) / mw) * (Math.abs(x) / mw) * 3);
-        ctx.fillRect(cx + x, headY + 4 + droop, 1, 1);
+      for (let i = -2; i <= 2; i++) {
+        ctx.fillRect(cx + off + i, ey + i, 1, 1);
+        ctx.fillRect(cx + off + i, ey - i, 1, 1);
       }
-      ctx.fillRect(cx - 1, headY + 5, 3, 1);
+      return;
     }
+    if (expr === 'pain') {                       // squeezed shut
+      ctx.fillStyle = P.K;
+      for (let i = 0; i <= 4; i++) {
+        ctx.fillRect(cx + off - 2 + i, ey - 2 + Math.abs(2 - i), 1, 1);
+        ctx.fillRect(cx + off - 2 + i, ey + 2 - Math.abs(2 - i), 1, 1);
+      }
+      return;
+    }
+    PIX.disc(ctx, cx + off, ey + 1, er - 2, P.W);
+    if (d.goldEyes) PIX.disc(ctx, cx + off, ey + 1, er - 3, P.G);
+    ctx.fillStyle = P.K;
+    if (d.spiral) {
+      ctx.fillRect(cx + off - 1, ey, 3, 1); ctx.fillRect(cx + off + 1, ey + 1, 1, 1);
+      ctx.fillRect(cx + off - 1, ey + 2, 2, 1);
+    } else if (expr === 'worry') {
+      ctx.fillRect(cx + off - 1, ey + 1, 2, 2);  // tiny scared pupil
+    } else if (expr === 'smug') {
+      ctx.fillRect(cx + off + (side < 0 ? 1 : -3), ey + 1, 2, 3);
+    } else {
+      ctx.fillRect(cx + off - 1, ey, 3, 4);      // big cartoon pupil
+      ctx.fillStyle = P.W; ctx.fillRect(cx + off, ey + 1, 1, 1);
+      ctx.fillStyle = P.K;
+    }
+    if (expr === 'neutral' || expr === 'smug') { // heavy mobster lids
+      PIX.disc(ctx, cx + off, ey - (expr === 'smug' ? 1 : 3), er - 2, skin);
+      PIX.rect(ctx, cx + off - er + 2, ey - (expr === 'smug' ? 0 : 2), er * 2 - 3, 1, shade);
+    }
+    if (expr === 'angry') {                      // V brows
+      ctx.fillStyle = P.K;
+      for (let i = 0; i < er - 1; i++) {
+        ctx.fillRect(cx + off + (side < 0 ? -er + 2 + i : er - 3 - i), ey - er + 1 + Math.floor(i * 0.8), 2, 1);
+      }
+    }
+    if (expr === 'worry') {                      // brow up, whites wide
+      ctx.fillStyle = dark;
+      ctx.fillRect(cx + off - 3, ey - er - 1, 7, 1);
+    }
+    if (d.lashes && expr !== 'dead') {
+      PIX.rect(ctx, cx + off - er + 1, ey - er + 2, 1, 2, P.K);
+      PIX.rect(ctx, cx + off, ey - er - 1, 1, 2, P.K);
+      PIX.rect(ctx, cx + off + er - 1, ey - er + 2, 1, 2, P.K);
+    }
+  };
+  drawEye(-ex, -1); drawEye(ex, 1);
 
-    /* warts */
-    if (d.warts) {
-      [[-rx + 3, headY - 1], [rx - 4, headY + 1], [-5, headY - 5], [6, headY + 6], [-rx + 5, headY + 6]]
-        .forEach(([wx, wy]) => {
-          PIX.rect(ctx, cx + wx, wy, 2, 1, dark);
-          PIX.rect(ctx, cx + wx, wy - 1, 1, 1, P[d.skin[2]]);
-        });
-    }
-    if (d.earring) {
-      PIX.rect(ctx, cx - rx - 1, headY + 3, 1, 2, P[d.earring] || P.G);
-      PIX.rect(ctx, cx + rx, headY + 3, 1, 2, P[d.earring] || P.G);
-    }
+  if (d.patch) {                                 // eye patch, left eye
+    PIX.disc(ctx, cx - ex, ey, er - 1, P.K);
+    PIX.disc(ctx, cx - ex - 1, ey - 1, 2, P.T);
+    PIX.rect(ctx, cx - ex - er - 2, ey - er + 1, er + 3, 1, P.K);
+    PIX.rect(ctx, cx - ex + 2, ey - er, er + 3, 1, P.K);
+  }
+  if (d.glasses === 'round') {
+    [-ex, ex].forEach(off => {
+      PIX.disc(ctx, cx + off, ey, er - 1, P.K);
+      PIX.disc(ctx, cx + off, ey, er - 2, P.T);
+      ctx.fillStyle = P.S; ctx.fillRect(cx + off - 2, ey - 3, 3, 1);
+    });
+    PIX.rect(ctx, cx - ex + er - 2, ey - 1, (ex - er + 2) * 2, 1, P.K);
+  }
+  if (d.glasses === 'square') {
+    [-ex, ex].forEach(off => {
+      PIX.rect(ctx, cx + off - 5, ey - 4, 10, 9, P.K);
+      PIX.rect(ctx, cx + off - 4, ey - 3, 8, 7, P.L);
+      PIX.rect(ctx, cx + off - 1, ey - 1, 3, 4, P.K);
+    });
+    PIX.rect(ctx, cx - ex + 5, ey - 1, ex * 2 - 10, 1, P.K);
+  }
+  if (d.visor) {
+    PIX.rect(ctx, cx - ex - er, ey - 4, (ex + er) * 2 + 1, 1, P.K);
+    PIX.rect(ctx, cx - ex - er + 1, ey - 6, (ex + er) * 2 - 1, 2, P.n);
+    PIX.rect(ctx, cx - ex - er + 1, ey - 7, (ex + er) * 2 - 1, 1, P.N);
+  }
 
-    /* hats & headgear (over everything) */
-    if (d.hat === 'fedora') {
-      const hc = P[d.hatCol] || P.T;
-      PIX.rect(ctx, cx - 6, 0, 13, 6, P.K);
-      PIX.rect(ctx, cx - 5, 1, 11, 5, hc);
-      PIX.rect(ctx, cx - 5, 4, 11, 2, P[d.band] || P.d);
-      PIX.rect(ctx, cx - 8, 6, 17, 2, P.K);
-      PIX.rect(ctx, cx - 7, 6, 15, 1, hc);
-      PIX.rect(ctx, cx - 3, 1, 4, 1, P.W); ctx.fillStyle = 'rgba(255,255,255,.18)';
-    }
-    if (d.hat === 'tophat') {
-      const hc = P[d.hatCol] || P.k;
-      PIX.rect(ctx, cx - 6, 0, 13, 8, P.K);
-      PIX.rect(ctx, cx - 5, 0, 11, 7, hc);
-      PIX.rect(ctx, cx - 5, 5, 11, 2, P[d.band] || P.G);
-      PIX.rect(ctx, cx - 9, 7, 19, 2, P.K);
-      PIX.rect(ctx, cx - 8, 7, 17, 1, hc);
-    }
-    if (d.flatcap) {
-      PIX.rect(ctx, cx - 7, 2, 15, 4, P.K);
-      PIX.rect(ctx, cx - 6, 3, 13, 3, P.t);
-      PIX.rect(ctx, cx - 8, 5, 8, 2, P.K);
-      PIX.rect(ctx, cx - 7, 5, 6, 1, P.s);
-    }
-    if (d.visor) {
-      PIX.rect(ctx, cx - ex - 3, ey - 3, ex * 2 + 7, 1, P.K);
-      PIX.rect(ctx, cx - ex - 2, ey - 5, ex * 2 + 5, 2, P.n);
-      PIX.rect(ctx, cx - ex - 2, ey - 6, ex * 2 + 5, 1, P.N);
-    }
+  /* nostrils */
+  PIX.rect(ctx, cx - 3, headY - 4, 1, 2, dark);
+  PIX.rect(ctx, cx + 3, headY - 4, 1, 2, dark);
 
-    /* bowtie / cigar (front-most) */
-    if (d.bowtie) {
-      const bc = P[d.bowtie] || P.d;
-      PIX.rect(ctx, cx - 4, 26, 3, 3, bc); PIX.rect(ctx, cx + 2, 26, 3, 3, bc);
-      PIX.rect(ctx, cx - 1, 27, 3, 2, P.K);
-      PIX.frame(ctx, cx - 5, 25, 11, 5, P.K);
+  /* --- mouth, by expression (2px cartoon lines) --- */
+  const mw = rx - 4, my = headY + 4;
+  const curve = (dir, depth) => {
+    ctx.fillStyle = P.K;
+    for (let x = -mw; x <= mw; x++) {
+      const b = Math.round(Math.pow(Math.abs(x) / mw, 2) * depth);
+      ctx.fillRect(cx + x, my + dir * b, 1, 2);
     }
-    if (d.cigar) {
-      const my = headY + 4;
-      PIX.rect(ctx, cx + mw - 2, my, 7, 3, P.K);
-      PIX.rect(ctx, cx + mw - 1, my + 1, 5, 1, P.b);
-      PIX.rect(ctx, cx + mw + 4, my + 1, 1, 1, P.O);
-      PIX.rect(ctx, cx + mw + 4, my - 2, 1, 1, P.q);
-      PIX.rect(ctx, cx + mw + 5, my - 4, 1, 1, P.q);
+  };
+  switch (expr) {
+    case 'grin': {
+      curve(-1, 5);
+      ctx.fillStyle = P.W;
+      for (let x = -mw + 2; x <= mw - 2; x++) {
+        const b = Math.round(Math.pow(Math.abs(x) / mw, 2) * 5);
+        ctx.fillRect(cx + x, my - b + 2, 1, 2);
+      }
+      ctx.fillStyle = P.K;
+      for (let x = -mw + 3; x <= mw - 3; x += 4) ctx.fillRect(cx + x, my, 1, 3);
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 3, my + 1, 2, 2); }
+      break;
     }
-    if (d.cigholder) { // femme fatale issue
-      const my = headY + 4;
-      PIX.rect(ctx, cx + mw - 1, my, 8, 1, P.K);
-      PIX.rect(ctx, cx + mw + 7, my - 1, 2, 2, P.K);
-      PIX.rect(ctx, cx + mw + 7, my - 1, 1, 1, P.O);
-      PIX.rect(ctx, cx + mw + 8, my - 3, 1, 1, P.q);
-      PIX.rect(ctx, cx + mw + 7, my - 5, 1, 1, P.q);
+    case 'smug': {
+      ctx.fillStyle = P.K;
+      for (let x = -mw + 2; x <= mw - 1; x++) {
+        const t = (x + mw) / (2 * mw);
+        ctx.fillRect(cx + x, my + 2 - Math.round(t * t * 4), 1, 2);
+      }
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 4, my - 1, 2, 2); }
+      break;
     }
-    return cv;
+    case 'worry': {
+      ctx.fillStyle = P.K;
+      for (let x = -mw + 2; x <= mw - 2; x++) {
+        ctx.fillRect(cx + x, my + 1 + ((x & 2) ? 1 : 0), 1, 2);
+      }
+      PIX.rect(ctx, cx - rx + 3, ey - 2, 2, 3, P.L);   // flop sweat
+      PIX.rect(ctx, cx - rx + 3, ey - 3, 1, 1, P.L);
+      break;
+    }
+    case 'angry': {
+      PIX.rect(ctx, cx - mw + 1, my, mw * 2 - 1, 4, P.K);
+      ctx.fillStyle = P.W;
+      ctx.fillRect(cx - mw + 2, my + 1, mw * 2 - 3, 2);
+      ctx.fillStyle = P.K;
+      for (let x = -mw + 3; x <= mw - 2; x += 3) ctx.fillRect(cx + x, my + 1, 1, 2);
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 2, my + 1, 2, 2); }
+      break;
+    }
+    case 'pain':
+    case 'dead': {
+      SPR.ellipse(ctx, cx, my + 2, 4, 3, P.K);
+      SPR.ellipse(ctx, cx, my + 2, 2, 1, P.D);
+      if (expr === 'dead') {                      // tongue out
+        PIX.rect(ctx, cx + 3, my + 3, 4, 3, P.K);
+        PIX.rect(ctx, cx + 4, my + 3, 3, 2, P.R);
+      }
+      break;
+    }
+    default: {                                    // neutral droop
+      curve(1, 4);
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 5, my + 3, 2, 1); }
+    }
+  }
+  if (d.lips && expr !== 'dead' && expr !== 'pain') {
+    ctx.fillStyle = P[d.lips] || P.R;
+    for (let x = -4; x <= 4; x++) {
+      const b = Math.round(Math.pow(Math.abs(x) / mw, 2) * 4);
+      ctx.fillRect(cx + x, my + b + 2, 1, 1);
+    }
+    ctx.fillRect(cx - 1, my + 3, 3, 1);
+  }
+
+  /* face furniture */
+  if (d.scar) {
+    ctx.fillStyle = dark;
+    for (let i = 0; i < 6; i++) ctx.fillRect(cx + rx - 10 + i, headY - 3 + i, 1, 1);
+    ctx.fillRect(cx + rx - 9, headY - 2, 1, 1); ctx.fillRect(cx + rx - 7, headY, 1, 1);
+    ctx.fillRect(cx + rx - 10, headY, 2, 1); ctx.fillRect(cx + rx - 7, headY - 3, 2, 1);
+  }
+  if (d.warts) {
+    [[-rx + 4, headY - 1], [rx - 5, headY + 2], [-6, headY - 6], [7, headY + 7], [-rx + 6, headY + 7]]
+      .forEach(([wx, wy]) => {
+        PIX.rect(ctx, cx + wx, wy, 2, 1, dark);
+        PIX.rect(ctx, cx + wx, wy - 1, 1, 1, P[d.skin[2]]);
+      });
+  }
+  if (d.earring) {
+    PIX.rect(ctx, cx - rx - 1, headY + 4, 1, 2, P[d.earring] || P.G);
+    PIX.rect(ctx, cx + rx, headY + 4, 1, 2, P[d.earring] || P.G);
+  }
+
+  /* hats (over everything) — the crown sits between the eye bulbs */
+  const hatTop = 0;
+  if (d.hat === 'fedora') {
+    const hc = P[d.hatCol] || P.T;
+    PIX.rect(ctx, cx - 7, hatTop, 15, 7, P.K);
+    PIX.rect(ctx, cx - 6, hatTop + 1, 13, 6, hc);
+    PIX.rect(ctx, cx - 6, hatTop + 4, 13, 2, P[d.band] || P.d);
+    PIX.rect(ctx, cx - 10, hatTop + 7, 21, 2, P.K);
+    PIX.rect(ctx, cx - 9, hatTop + 7, 19, 1, hc);
+    PIX.rect(ctx, cx - 4, hatTop + 1, 5, 1, P.W);
+  }
+  if (d.hat === 'tophat') {
+    const hc = P[d.hatCol] || P.k;
+    PIX.rect(ctx, cx - 7, hatTop, 15, 9, P.K);
+    PIX.rect(ctx, cx - 6, hatTop, 13, 8, hc);
+    PIX.rect(ctx, cx - 6, hatTop + 6, 13, 2, P[d.band] || P.G);
+    PIX.rect(ctx, cx - 11, hatTop + 8, 23, 2, P.K);
+    PIX.rect(ctx, cx - 10, hatTop + 8, 21, 1, hc);
+  }
+  if (d.hat === 'bowler') {
+    PIX.disc(ctx, cx, hatTop + 6, 7, P.K);
+    PIX.disc(ctx, cx, hatTop + 6, 6, P.u);
+    PIX.rect(ctx, cx - 10, hatTop + 7, 21, 2, P.K);
+    PIX.rect(ctx, cx - 9, hatTop + 7, 19, 1, P.u);
+    PIX.rect(ctx, cx - 5, hatTop + 5, 11, 2, P.U);
+  }
+  if (d.flatcap) {
+    PIX.rect(ctx, cx - 8, hatTop + 2, 17, 5, P.K);
+    PIX.rect(ctx, cx - 7, hatTop + 3, 15, 4, P.t);
+    PIX.rect(ctx, cx - 10, hatTop + 6, 9, 2, P.K);
+    PIX.rect(ctx, cx - 9, hatTop + 6, 7, 1, P.s);
+  }
+
+  /* smokes (front-most) */
+  if (d.cigar && expr !== 'dead') {
+    PIX.rect(ctx, cx + mw - 2, my + 1, 8, 3, P.K);
+    PIX.rect(ctx, cx + mw - 1, my + 2, 6, 1, P.b);
+    PIX.rect(ctx, cx + mw + 5, my + 2, 1, 1, P.O);
+    PIX.rect(ctx, cx + mw + 5, my - 1, 1, 1, P.q);
+    PIX.rect(ctx, cx + mw + 6, my - 3, 1, 1, P.q);
+  }
+  if (d.cigholder && expr !== 'dead') {
+    PIX.rect(ctx, cx + mw - 1, my + 1, 9, 1, P.K);
+    PIX.rect(ctx, cx + mw + 8, my, 2, 2, P.K);
+    PIX.rect(ctx, cx + mw + 8, my, 1, 1, P.O);
+    PIX.rect(ctx, cx + mw + 9, my - 2, 1, 1, P.q);
+    PIX.rect(ctx, cx + mw + 8, my - 4, 1, 1, P.q);
+  }
+  return cv;
 };
 
-SPR.frogMaster = function (id) {
-  return SPR.cached('frog_' + id, () => SPR.buildFrog(FROG_DEFS[id] || FROG_DEFS.player));
+/* seated body for the duel table — outlined, cartoony, fat or thin */
+SPR.buildBody = function (d) {
+  const P = PIX.PAL;
+  const W = 110, H = 56;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  const cx = W / 2;
+  const fat = !!d.fat;
+  const suitCol = d.suit === 'stripes' ? P.t : (P[d.suit] || P.T);
+  const skin = P[d.skin[0]], shade = P[d.skin[1]];
+  const sw = fat ? 42 : 30;
+
+  /* torso */
+  ctx.fillStyle = P.K;
+  ctx.beginPath();
+  ctx.moveTo(cx - sw - 3, H); ctx.lineTo(cx - sw + 5, 7); ctx.lineTo(cx - 13, 0);
+  ctx.lineTo(cx + 13, 0); ctx.lineTo(cx + sw - 5, 7); ctx.lineTo(cx + sw + 3, H);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = suitCol;
+  ctx.beginPath();
+  ctx.moveTo(cx - sw - 1, H); ctx.lineTo(cx - sw + 6, 9); ctx.lineTo(cx - 12, 2);
+  ctx.lineTo(cx + 12, 2); ctx.lineTo(cx + sw - 6, 9); ctx.lineTo(cx + sw + 1, H);
+  ctx.closePath(); ctx.fill();
+  if (d.suit === 'stripes') {
+    ctx.fillStyle = P.T;
+    for (let x = -sw; x <= sw; x += 4) ctx.fillRect(cx + x, 8, 2, H - 8);
+  }
+  /* belly rolls for the big boys */
+  if (fat) {
+    SPR.ellipse(ctx, cx, H - 4, sw - 4, 10, P.K);
+    SPR.ellipse(ctx, cx, H - 5, sw - 6, 9, suitCol);
+    PIX.rect(ctx, cx - sw + 12, H - 9, sw * 2 - 24, 1, 'rgba(0,0,0,.35)');
+  }
+  /* shirt + vest + tie */
+  PIX.rect(ctx, cx - 6, 2, 12, 32, P[d.shirt] || P.W);
+  if (d.vest) {
+    PIX.rect(ctx, cx - 9, 4, 4, 32, P.d); PIX.rect(ctx, cx + 5, 4, 4, 32, P.d);
+    PIX.rect(ctx, cx - 9, 4, 1, 32, P.K); PIX.rect(ctx, cx + 8, 4, 1, 32, P.K);
+    PIX.rect(ctx, cx - 1, 10, 2, 2, P.G); PIX.rect(ctx, cx - 1, 18, 2, 2, P.G);
+    // watch chain
+    for (let i = 0; i < 7; i++) PIX.rect(ctx, cx + 5 + i, 24 + Math.round(Math.sin(i) * 2) + i, 1, 1, P.G);
+  }
+  if (d.tie) PIX.rect(ctx, cx - 2, 4, 4, 18, P[d.tie] === undefined ? P.d : P[d.tie]);
+  if (d.bowtie) {
+    const bc = P[d.bowtie] || P.d;
+    PIX.rect(ctx, cx - 6, 2, 5, 4, bc); PIX.rect(ctx, cx + 2, 2, 5, 4, bc);
+    PIX.rect(ctx, cx - 2, 3, 4, 3, P.K);
+  }
+  /* lapels */
+  ctx.fillStyle = P.K;
+  ctx.beginPath(); ctx.moveTo(cx - 11, 2); ctx.lineTo(cx - 2, 18); ctx.lineTo(cx - 14, 22); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 11, 2); ctx.lineTo(cx + 2, 18); ctx.lineTo(cx + 14, 22); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = suitCol;
+  ctx.beginPath(); ctx.moveTo(cx - 12, 3); ctx.lineTo(cx - 4, 17); ctx.lineTo(cx - 15, 20); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 12, 3); ctx.lineTo(cx + 4, 17); ctx.lineTo(cx + 15, 20); ctx.closePath(); ctx.fill();
+
+  /* arms on the felt, hands with rings */
+  [[-1], [1]].forEach(([s]) => {
+    const ax = cx + s * (sw - 2);
+    ctx.fillStyle = P.K;
+    ctx.beginPath();
+    ctx.moveTo(ax - 6 * s, 14); ctx.lineTo(ax + 5 * s, 20);
+    ctx.lineTo(ax + 2 * s, H - 6); ctx.lineTo(ax - 9 * s, H - 4);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = suitCol;
+    ctx.beginPath();
+    ctx.moveTo(ax - 5 * s, 16); ctx.lineTo(ax + 3 * s, 21);
+    ctx.lineTo(ax + 1 * s, H - 7); ctx.lineTo(ax - 7 * s, H - 5);
+    ctx.closePath(); ctx.fill();
+    PIX.disc(ctx, ax - 3 * s, H - 6, 5, P.K);
+    PIX.disc(ctx, ax - 3 * s, H - 7, 4, skin);
+    PIX.rect(ctx, ax - 5 * s, H - 7, 4, 1, shade);
+    if (d.rings) {
+      PIX.rect(ctx, ax - 5 * s, H - 9, 2, 2, P.G);
+      PIX.rect(ctx, ax - 1 * s, H - 10, 2, 2, P.G);
+    }
+  });
+  return cv;
+};
+
+SPR.frogMaster = function (id, expr) {
+  return SPR.cached('frog_' + id + '_' + (expr || 'neutral'),
+    () => SPR.buildFrog(FROG_DEFS[id] || FROG_DEFS.player, expr));
 };
 
 /* mooks: same rig, any def */
-SPR.frogCustom = function (key, def) {
-  return SPR.cached('frogc_' + key, () => SPR.buildFrog(def));
+SPR.frogCustom = function (key, def, expr) {
+  return SPR.cached('frogc_' + key + '_' + (expr || 'neutral'),
+    () => SPR.buildFrog(def, expr));
 };
 
-SPR.frogEl = function (id, scale, cls) {
-  return SPR.clone(SPR.frogMaster(id), scale, cls);
+SPR.bodyCustom = function (key, def) {
+  return SPR.cached('body_' + key, () => SPR.buildBody(def));
+};
+
+SPR.frogEl = function (id, scale, cls, expr) {
+  return SPR.clone(SPR.frogMaster(id, expr), scale, cls);
 };
 
 /* ============================================================
@@ -1448,3 +1654,29 @@ SPR.cardBack = function () {
     return cv;
   });
 };
+
+/* swamp pd badge */
+PIX.def('ic_badge', `
+....KK....
+...KLLK...
+.KKLLLLKK.
+KLLLLLLLLK
+.KLLLLLLK.
+..KLLLLK..
+..KLLLLK..
+.KLLKKLLK.
+.KLK..KLK.
+..K....K..`);
+
+/* the little black book */
+PIX.def('ic_book', `
+.KKKKKKKK.
+KTTTTTTTTK
+KTWWWWWWTK
+KTWqqqWWTK
+KTWWWWWWTK
+KTWqqqqWTK
+KTWWWWWWTK
+KTWqqWWWTK
+KTWWWWWWTK
+.KKKKKKKK.`);

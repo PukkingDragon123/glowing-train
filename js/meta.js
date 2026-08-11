@@ -16,11 +16,12 @@ const META = {
         runs: 0, wins: 0, deaths: 0, duelsWon: 0, shots: 0,
         selfBlanks: 0, liveTaken: 0, activesUsed: 0, flawless: 0,
         clutchWins: 0, oppSelfKills: 0, maxDmgOneDuel: 0,
-        bestAnte: 0, bossKills: 0,
+        bestAnte: 0, bossKills: 0, looted: 0, bribesPaid: 0, heatPaid: 0,
       },
       bossSeen: {},   // boss id -> kills
       gunsOwned: { snub: true },
       unlocked: {},   // trinket id -> true (only gated ones live here)
+      tells: {},      // trait id -> true, once you've looted a frog that had it
     };
   },
 
@@ -35,6 +36,7 @@ const META = {
         Object.assign(META.d.bossSeen, saved.bossSeen || {});
         Object.assign(META.d.gunsOwned, saved.gunsOwned || {});
         Object.assign(META.d.unlocked, saved.unlocked || {});
+        Object.assign(META.d.tells, saved.tells || {});
       }
     } catch (e) { /* node / private mode: memory only */ }
     return META.d;
@@ -62,6 +64,15 @@ const META = {
   },
 
   ownGun(id) { META.load().gunsOwned[id] = true; },
+
+  /* the notebook: a tell is learned by looting a frog that had it */
+  knowsTell(id) { return !!META.load().tells[id]; },
+  learnTrait(id) {
+    const d = META.load();
+    if (d.tells[id]) return false;
+    d.tells[id] = true;
+    return true;
+  },
 
   /* ---------- unlocks ---------- */
 

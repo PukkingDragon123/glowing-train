@@ -437,3 +437,70 @@ button { font-family: inherit; cursor: pointer; border: 0; background: none; col
   .help-cols { grid-template-columns: 1fr; }
   .end-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ============ the loot ============ */
+
+#duel-overlay.loot-in {
+  background: rgba(4, 3, 8, .38);
+  align-items: center; justify-content: flex-end;
+  padding-right: 3%;
+}
+.loot-panel {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--panel-2); border: 3px solid var(--gold);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .55), 0 0 60px rgba(224, 166, 60, .18);
+  padding: 14px 18px; min-width: 310px; max-width: 380px;
+}
+.loot-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+
+.heat-wrap { display: flex; flex-direction: column; gap: 4px; }
+.heat-bar { height: 10px; border: 3px solid var(--ink); background: #0a0912; overflow: hidden; }
+.heat-fill {
+  height: 100%; width: 0;
+  background: repeating-linear-gradient(90deg, var(--red) 0 6px, #7fd7ff 6px 12px);
+  transition: width .3s steps(6);
+}
+.heat-fill.hot { animation: siren .5s steps(2) infinite; }
+@keyframes siren {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.9); }
+}
+
+#pocket-list { display: flex; flex-direction: column; gap: 6px; }
+.pocket-btn {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  background: var(--steel-dk); border: 3px solid var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
+  padding: 6px 10px; position: relative; min-height: 34px;
+}
+.pocket-btn:hover:not(:disabled):not(.taken) { filter: brightness(1.28); }
+.pocket-btn:disabled { opacity: .45; cursor: not-allowed; }
+.pocket-btn.taken { opacity: .6; background: transparent; box-shadow: none; cursor: default; }
+.pocket-btn .key-hint.tk { top: -8px; bottom: auto; left: -6px; right: auto; }
+.pocket-val { display: inline-flex; gap: 5px; align-items: center; }
+
+#loot-actions { display: flex; gap: 10px; justify-content: space-between; margin-top: 2px; }
+#card-swap { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 3px dashed rgba(224, 166, 60, .4); }
+.swap-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+#duel-overlay.heat-in { background: rgba(8, 10, 26, .85); }
+.heat-card {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  background: var(--panel-2); border: 3px solid #7fd7ff;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .55), 0 0 70px rgba(127, 215, 255, .25);
+  padding: 22px 34px; text-align: center;
+}
+
+/* ============ the little black book ============ */
+
+.nb-head h3 { color: var(--gold-hi); letter-spacing: 2px; margin-bottom: 6px; }
+.nb-head p, .nb-foot { color: #b9b2a0; font-size: 12.5px; max-width: 470px; line-height: 1.5; }
+.nb-list { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; max-width: 500px; }
+.nb-row {
+  display: grid; grid-template-columns: 116px 1fr; gap: 10px;
+  font-size: 12.5px; line-height: 1.45; padding: 6px 9px;
+  background: var(--panel); border: 2px solid var(--ink);
+}
+.nb-row b { color: var(--gold-hi); letter-spacing: 1px; }
+.nb-unknown { opacity: .55; }
+.nb-unknown b { color: var(--dust); }
