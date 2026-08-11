@@ -1,56 +1,29 @@
 'use strict';
 /* ============================================================
    SHELL & DEBT — ui.js
-   All presentation: pixel HUD, the living cylinder, stamps,
-   toasts, tooltips, title & end screens. Nearly wordless —
-   icons and numbers on screen, prose only in hover tooltips.
+   Screens & chrome: title, the duel frame (strip, cards,
+   controls), overlays (boss intro, payout), collection,
+   end screens, tooltips, help, keybinds.
+   Mostly wordless: icons + pixel numerals, hover for truth.
    ============================================================ */
 
-/* a couple of UI-only sprites */
-PIX.def('ic_trigger', `
-....KKKKKK....
-..KKRRRRRRKK..
-.KRRRYYRRRRRK.
-.KRRYWWYRRRRK.
-KRRRYWWYRRRRrK
-KRRRRYYRRRRrrK
-KRRRRRRRRRrrdK
-KrRRRRRRRrrddK
-.KrrRRRrrrddK.
-.KdrrrrrdddK..
-..KKddddddKK..
-....KKKKKK....`);
-
-PIX.def('ic_arrow_r', `
-K....
-KK...
-KKK..
-KKKK.
-KKKKK
-KKKK.
-KKK..
-KK...
-K....`.replace(/K/g, 'W'));
-
 const UI = {
-  call: null,
-  busy: false,
-  $: {},
-  cyl: { rot: 0, target: 0, flash: null, snapshot: null, raf: null },
-  toasts: [],
 
   /* ================= router ================= */
 
   render() {
     const app = document.getElementById('app');
     app.innerHTML = '';
-    UI.stopCylLoop();
-    app.appendChild(UI.buildTopbar());
-    if (G.phase === 'round') { BG.set(G.boss ? 'boss' : 'round'); UI.buildRound(app); }
-    else if (G.phase === 'casino') { BG.set('casino'); CASINO.buildFloor(app); }
-    else if (G.phase === 'gameover') { BG.set('dead'); UI.buildEnd(app, false); }
-    else if (G.phase === 'win') { BG.set('win'); UI.buildEnd(app, true); }
-    else { BG.set('title'); UI.buildTitle(app); }
+    UI.closeModal();
+    if (G.phase !== 'duel') DUEL.stop();
+    switch (G.phase) {
+      case 'title':      UI.buildTitle(app); break;
+      case 'collection': UI.buildCollection(app); break;
+      case 'duel':       UI.buildDuel(app); DUEL.enter(); break;
+      case 'shop':       SHOP.build(app); break;
+      case 'over':       UI.buildEnd(app, false); break;
+      case 'won':        UI.buildEnd(app, true); break;
+    }
   },
 
   /* small builders */
@@ -58,720 +31,623 @@ const UI = {
   num(n, opts) { return UI.txt(U.fmt(Math.round(n)), opts); },
   put(holder, canvas) { if (!holder) return; holder.innerHTML = ''; holder.appendChild(canvas); },
   icon(name, scale, tipKey, tipVal) {
-    const c = PIX.el(name, scale || 2);
-    if (tipKey) { c.classList.add('has-tip'); c.dataset[tipKey] = tipVal || '1'; }
-    return c;
+    const w = U.el('span', 'picon' + (tipKey ? ' has-tip' : ''));
+    if (tipKey) w.dataset[tipKey] = tipVal || '1';
+    w.appendChild(PIX.el(name, scale));
+    return w;
   },
 
-  buildTopbar() {
-    const bar = U.el('div');
+  /* ================= topbar ================= */
+
+  buildTopbar(bar) {
     bar.id = 'topbar';
-    const inRun = ['round', 'casino'].includes(G.phase);
+    const L = U.el('div', 'tb-side'), C = U.el('div', 'tb-side'), R = U.el('div', 'tb-side');
 
-    const left = U.el('div', 'tb-side');
-    const logo = UI.txt('SHELL&DEBT', { scale: 2, color: PIX.PAL.G, outline: PIX.PAL.K });
-    logo.classList.add('breathe');
-    left.appendChild(logo);
-    if (inRun) {
-      const seed = UI.txt(G.seedStr, { scale: 1, color: PIX.PAL.q, shadow: null });
-      seed.style.opacity = .6;
-      left.appendChild(seed);
-    }
-    bar.appendChild(left);
+    const logo = U.el('span', 'has-tip');
+    logo.dataset.tipText = 'SHELL & DEBT — seed ' + G.seedStr;
+    logo.appendChild(UI.txt('S&D', { scale: 2, color: PIX.PAL.g }));
+    L.appendChild(logo);
 
-    const right = U.el('div', 'tb-side');
-    if (inRun) {
-      const ante = U.el('span', 'tb-chip has-tip');
-      ante.dataset.tipText = 'ANTE ' + G.ante + (G.ante > WIN_ANTE ? ' — ENDLESS' : '') +
-        ' — debt: ' + U.fmt(G.debt || 0);
-      ante.appendChild(UI.icon('ic_chip', 2));
-      ante.appendChild(UI.txt('A' + G.ante, { scale: 2, color: PIX.PAL.N }));
-      right.appendChild(ante);
-      if (G.phase === 'round' && G.boss) {
-        const b = SPR.frogEl(G.boss, 2, 'has-tip pulse-red');
-        b.dataset.tipBoss = G.boss;
-        right.appendChild(b);
-      }
-      if (G.phase === 'round' && G.fate) {
-        const f = SPR.emblemEl('fate', G.fate, 2, 'has-tip');
-        f.dataset.tipFate = G.fate;
-        right.appendChild(f);
-      }
+    /* ante + blind pips */
+    const ante = U.el('span', 'has-tip tb-chip');
+    ante.dataset.tipKey = 'ante';
+    ante.appendChild(UI.txt('ANTE ' + G.ante, { scale: 2, color: PIX.PAL.W }));
+    C.appendChild(ante);
+    const pips = U.el('span', 'blind-pips has-tip');
+    pips.dataset.tipKey = 'blind';
+    for (let i = 0; i < 3; i++) {
+      const p = U.el('span', 'bpip' + (i < G.blind ? ' done' : i === G.blind ? ' now' : '') + (i === 2 ? ' boss' : ''));
+      pips.appendChild(p);
     }
-    const mkBtn = (id, iconName, tip, fn) => {
-      const b = U.el('button', 'pixbtn tb-btn has-tip');
-      b.id = id;
-      b.dataset.tipText = tip;
-      b.appendChild(PIX.el(iconName, 2));
-      b.onclick = fn;
-      return b;
-    };
-    right.appendChild(mkBtn('btn-help', 'ic_help', 'House rules', () => { SFX.click(); UI.showHelp(); }));
-    right.appendChild(mkBtn('btn-mute', SFX.muted ? 'ic_sound_off' : 'ic_sound_on', 'Sound', (e) => {
-      SFX.init(); const m = SFX.toggleMute();
-      const btn = e.currentTarget; btn.innerHTML = '';
-      btn.appendChild(PIX.el(m ? 'ic_sound_off' : 'ic_sound_on', 2));
-      if (!m) SFX.click();
-    }));
-    if (inRun) right.appendChild(mkBtn('btn-abandon', 'ic_flag', 'Abandon the run', () => {
-      if (confirm('Walk away from the table? The run ends here.')) {
-        E.gameOver('walk'); UI.render();
-      }
-    }));
-    bar.appendChild(right);
-    return bar;
+    C.appendChild(pips);
+    const purse = U.el('span', 'tb-chip has-tip');
+    purse.dataset.tipKey = 'purse';
+    purse.appendChild(UI.txt(String(E.purse()), { scale: 2, color: PIX.PAL.G }));
+    purse.appendChild(UI.icon('ic_chip', 2));
+    C.appendChild(purse);
+
+    /* chips */
+    const chips = U.el('span', 'tb-chip has-tip');
+    chips.id = 'tb-chips';
+    chips.dataset.tipKey = 'chips';
+    chips.appendChild(UI.icon('ic_chip', 2));
+    const cnum = U.el('span'); cnum.id = 'tb-chip-num';
+    cnum.appendChild(UI.num(G.chips, { color: PIX.PAL.G }));
+    chips.appendChild(cnum);
+    R.appendChild(chips);
+
+    const mute = U.el('button', 'pixbtn tb-btn');
+    mute.id = 'btn-mute';
+    mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: 2, shadow: null, color: PIX.PAL.w }));
+    mute.onclick = () => { SFX.toggleMute(); UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: 2, shadow: null, color: PIX.PAL.w })); };
+    R.appendChild(mute);
+    const help = U.el('button', 'pixbtn tb-btn');
+    help.appendChild(UI.txt('?', { scale: 2, shadow: null, color: PIX.PAL.G }));
+    help.onclick = () => UI.showHelp();
+    R.appendChild(help);
+
+    bar.appendChild(L); bar.appendChild(C); bar.appendChild(R);
+  },
+
+  syncChips() {
+    const n = document.getElementById('tb-chip-num');
+    if (n) UI.put(n, UI.num(G.chips, { color: PIX.PAL.G }));
+  },
+
+  chipTick(delta) {
+    UI.syncChips();
+    const chips = document.getElementById('tb-chips');
+    if (!chips) return;
+    const f = U.el('span', 'chip-float');
+    f.appendChild(UI.txt((delta > 0 ? '+' : '') + delta, { scale: 2, color: delta > 0 ? PIX.PAL.G : PIX.PAL.R }));
+    chips.appendChild(f);
+    setTimeout(() => f.remove(), 900);
+    if (delta > 0) SFX.coin();
   },
 
   /* ================= title ================= */
 
   buildTitle(app) {
-    const best = E.loadBest();
+    const s = META.stats();
     const wrap = U.el('div', 'splash');
 
-    const you = SPR.frogEl('player', 5, 'breathe');
-    wrap.appendChild(you);
+    const frogs = U.el('div', 'title-frogs');
+    ['vig', 'croupier', 'player', 'owner', 'lily'].forEach((id, i) => {
+      const f = SPR.frogEl(id, id === 'player' ? 5 : 4, i % 2 ? 'breathe2' : 'breathe');
+      if (id !== 'player') f.style.filter = 'brightness(.62)';
+      frogs.appendChild(f);
+    });
+    wrap.appendChild(frogs);
 
-    const logoBox = U.el('div', 'logo-stack');
-    const l1 = UI.txt('SHELL', { scale: 9, color: PIX.PAL.G, outline: PIX.PAL.K, shadow: PIX.PAL.H });
-    const amp = UI.txt('&', { scale: 6, color: PIX.PAL.r, outline: PIX.PAL.K });
-    const l2 = UI.txt('DEBT', { scale: 9, color: PIX.PAL.r, outline: PIX.PAL.K, shadow: PIX.PAL.D });
-    l1.classList.add('breathe'); l2.classList.add('breathe2'); amp.classList.add('breathe');
-    logoBox.append(l1, amp, l2);
-    wrap.appendChild(logoBox);
+    const logo = U.el('div', 'logo-stack');
+    logo.appendChild(UI.txt('SHELL & DEBT', { scale: 6, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    logo.appendChild(UI.txt('RUSSIAN ROULETTE WITH THE FROG MOB', { scale: 2, color: PIX.PAL.w }));
+    wrap.appendChild(logo);
 
-    const row = U.el('div', 'seed-row');
-    const input = U.el('input');
-    input.id = 'seed-in';
-    input.maxLength = 24;
-    input.placeholder = 'CURSED SEED';
-    input.spellcheck = false;
-    row.appendChild(input);
-    wrap.appendChild(row);
+    const seedRow = U.el('div', 'seed-row');
+    const inp = U.el('input');
+    inp.id = 'seed-input';
+    inp.maxLength = 24;
+    inp.placeholder = U.randSeedStr();
+    inp.spellcheck = false;
+    seedRow.appendChild(inp);
+    wrap.appendChild(seedRow);
 
     const deal = U.el('button', 'pixbtn gold big-deal');
     deal.id = 'btn-deal';
-    deal.append(PIX.el('ic_trigger', 3), UI.txt('DEAL', { scale: 4, color: PIX.PAL.K, shadow: null }));
+    deal.appendChild(PIX.el('gun_snub', 2));
+    deal.appendChild(UI.txt('SIT DOWN', { scale: 3, shadow: null, color: PIX.PAL.K }));
+    deal.onclick = () => { SFX.chak(); E.newRun(inp.value); UI.render(); };
     wrap.appendChild(deal);
-    deal.onclick = () => {
-      SFX.init(); SFX.chak();
-      UI.call = null;
-      E.newRun(input.value);
-      UI.render();
-    };
 
-    if (best) {
-      const b = U.el('div', 'best-line has-tip');
-      b.dataset.tipText = 'Deepest run — seed ' + best.seed;
-      b.append(UI.icon('ic_crown', 2), UI.txt('A' + best.ante, { scale: 2, color: PIX.PAL.G }),
-        UI.icon('ic_bank', 2), UI.num(best.score, { scale: 2, color: PIX.PAL.w }));
-      wrap.appendChild(b);
+    const row2 = U.el('div', 'end-btns');
+    const coll = U.el('button', 'pixbtn');
+    coll.id = 'btn-collection';
+    coll.appendChild(UI.txt('COLLECTION', { scale: 2, shadow: null }));
+    coll.onclick = () => { G.phase = 'collection'; UI.render(); };
+    row2.appendChild(coll);
+    const hlp = U.el('button', 'pixbtn');
+    hlp.appendChild(UI.txt('HOUSE RULES', { scale: 2, shadow: null }));
+    hlp.onclick = () => UI.showHelp();
+    row2.appendChild(hlp);
+    wrap.appendChild(row2);
+
+    if (s.runs > 0) {
+      const best = U.el('div', 'best-line');
+      best.appendChild(UI.txt(
+        'BEST ANTE ' + s.bestAnte + '   WINS ' + s.wins + '   MARKERS LOST ' + s.deaths,
+        { scale: 2, color: PIX.PAL.q }));
+      wrap.appendChild(best);
     }
     app.appendChild(wrap);
   },
 
-  /* ================= round screen ================= */
+  /* ================= the duel frame ================= */
 
-  buildRound(app) {
-    const grid = U.el('div');
-    grid.id = 'round-grid';
-    grid.innerHTML = `
-      <div class="col" id="left-col">
-        <div class="ppanel has-tip" data-tip-key="debt">
-          <div class="prow"><span class="picon" id="i-debt"></span><span id="p-debt"></span></div>
-          <div class="prow"><span class="picon" id="i-score"></span><span id="p-score"></span></div>
-          <div class="pixbar"><div class="ghost" id="p-ghost"></div><div class="fill" id="p-fill"></div></div>
-        </div>
-        <div class="ppanel has-tip" data-tip-key="pot">
-          <div class="prow"><span class="picon" id="i-pot"></span><span id="p-pot"></span></div>
-          <div class="prow" id="p-streak"></div>
-          <button class="pixbtn bank" id="btn-bank"></button>
-        </div>
-        <div class="ppanel you-panel">
-          <div class="you-row">
-            <span id="p-portrait" class="has-tip" data-tip-key="you"></span>
-            <div class="you-stats">
-              <div class="prow has-tip" data-tip-key="nerve" id="p-nerve"></div>
-              <div class="prow has-tip" data-tip-key="pulls" id="p-pulls"></div>
-              <div class="prow has-tip" data-tip-key="sleight" id="p-sleight"></div>
-              <div class="prow has-tip" data-tip-key="chips"><span class="picon" id="i-chips"></span><span id="p-chips"></span></div>
-            </div>
-          </div>
-          <div class="prow" id="p-gun"></div>
-        </div>
-      </div>
+  buildDuel(app) {
+    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
 
-      <div id="center-col">
-        <div id="chamber-zone">
-          <canvas id="cyl" class="pix" width="230" height="240"></canvas>
-          <div id="stamp-zone"></div>
-          <div id="toast-zone"></div>
-        </div>
-      </div>
+    const wrap = U.el('div'); wrap.id = 'duel-wrap';
 
-      <div class="col" id="right-col">
-        <div class="ppanel has-tip" data-tip-key="call">
-          <div id="call-btns"></div>
-          <button class="pixbtn pull" id="btn-pull"></button>
-        </div>
-        <div class="ppanel has-tip" data-tip-key="sleightPanel">
-          <div class="sleight-row">
-            <button class="pixbtn sl" id="btn-peek"></button>
-            <button class="pixbtn sl" id="btn-spin"></button>
-            <button class="pixbtn sl" id="btn-load"></button>
-          </div>
-        </div>
-      </div>
+    /* cylinder strip */
+    const stripRow = U.el('div'); stripRow.id = 'strip-row';
+    const counts = U.el('span'); counts.id = 'strip-counts'; counts.className = 'has-tip';
+    counts.dataset.tipKey = 'counts';
+    stripRow.appendChild(counts);
+    const strip = U.el('span'); strip.id = 'shell-strip'; strip.className = 'has-tip';
+    strip.dataset.tipKey = 'strip';
+    stripRow.appendChild(strip);
+    const oppName = U.el('span'); oppName.id = 'opp-name';
+    stripRow.appendChild(oppName);
+    wrap.appendChild(stripRow);
 
-      <div id="bottom-bar">
-        <div class="ppanel tray has-tip" data-tip-key="pouch" style="flex:1.5">
-          <div class="chip-strip" id="p-pouch"></div>
-        </div>
-        <div class="ppanel tray has-tip" data-tip-key="charms">
-          <div class="chip-strip" id="p-charms"></div>
-        </div>
-      </div>
-    `;
-    app.appendChild(grid);
+    /* the scene */
+    const holder = U.el('div'); holder.id = 'scene-holder';
+    const cv = U.el('canvas'); cv.id = 'scene'; cv.className = 'pix';
+    cv.width = DUEL.W; cv.height = DUEL.H;
+    cv.onclick = (e) => DUEL.sceneClick(e);
+    holder.appendChild(cv);
 
-    UI.$ = {};
-    ['p-debt', 'p-score', 'p-fill', 'p-ghost', 'p-pot', 'p-streak', 'p-chips', 'p-nerve',
-      'p-pulls', 'p-sleight', 'btn-bank', 'call-btns', 'btn-pull', 'btn-peek', 'btn-spin',
-      'btn-load', 'stamp-zone', 'toast-zone', 'cyl', 'p-pouch', 'p-charms',
-      'i-debt', 'i-score', 'i-pot', 'i-chips', 'p-portrait', 'p-gun']
-      .forEach(id => UI.$[id] = grid.querySelector('#' + id));
+    const stampB = U.el('div'); stampB.id = 'stamp-big'; holder.appendChild(stampB);
+    const stampS = U.el('div'); stampS.id = 'stamp-small'; holder.appendChild(stampS);
+    const turn = U.el('div'); turn.id = 'turn-stamp'; holder.appendChild(turn);
+    const banner = U.el('div'); banner.id = 'load-banner'; banner.className = 'hidden'; holder.appendChild(banner);
+    const overlay = U.el('div'); overlay.id = 'duel-overlay'; overlay.className = 'hidden'; holder.appendChild(overlay);
+    wrap.appendChild(holder);
+    app.appendChild(wrap);
 
-    UI.put(UI.$['p-portrait'], SPR.frogEl('player', 3, 'breathe'));
+    /* bottom: trinkets + gun + controls */
+    const bottom = U.el('div'); bottom.id = 'duel-bottom';
+    const tr = U.el('div'); tr.id = 'trinket-row'; bottom.appendChild(tr);
+    const controls = U.el('div'); controls.id = 'aim-controls';
 
-    UI.put(UI.$['i-debt'], PIX.el('ic_debt', 2));
-    UI.put(UI.$['i-score'], PIX.el('ic_bank', 2));
-    UI.put(UI.$['i-pot'], PIX.el('ic_pot', 2));
-    UI.put(UI.$['i-chips'], PIX.el('ic_chip', 2));
-
-    UI.$['btn-bank'].onclick = () => UI.onBank();
-    UI.$['btn-pull'].onclick = () => UI.onPull();
-    UI.$['btn-peek'].onclick = () => UI.onSleight('peek');
-    UI.$['btn-spin'].onclick = () => UI.onSleight('spin');
-    UI.$['btn-load'].onclick = () => UI.onSleight('load');
-
-    UI.cyl.rot = -G.ptr * Math.PI / 3;
-    UI.cyl.target = UI.cyl.rot;
-    UI.startCylLoop();
-    UI.sync();
-
-    if (G.boss) {
-      const b = BOSSES[G.boss];
-      const box = U.el('div', 'stamp pop');
-      const row = U.el('div', 'stamp-sub');
-      row.appendChild(SPR.frogEl(G.boss, 3, 'has-tip'));
-      row.lastChild.dataset.tipBoss = G.boss;
-      box.appendChild(row);
-      box.appendChild(UI.txt(b.name, { scale: 2, color: PIX.PAL.R, outline: PIX.PAL.K }));
-      UI.$['stamp-zone'].appendChild(box);
-      SFX.hurt();
-    }
-  },
-
-  /* ---------- cylinder loop ---------- */
-
-  startCylLoop() {
-    const cv = UI.$['cyl'];
-    if (!cv) return;
-    const ctx = cv.getContext('2d');
-    const loop = () => {
-      if (G.phase !== 'round' || !document.body.contains(cv)) { UI.cyl.raf = null; return; }
-      const c = UI.cyl;
-      const diff = c.target - c.rot;
-      if (Math.abs(diff) > 0.002) c.rot += diff * 0.16;
-      else c.rot = c.target;
-
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      // hammer at top
-      PIX.draw(ctx, 'hammer', cv.width / 2 - 10, 0, 2);
-      const holes = c.snapshot ? c.snapshot.holes : G.holes;
-      const ptr = c.snapshot ? c.snapshot.ptr : G.ptr;
-      SPR.drawCylinder(ctx, {
-        cx: cv.width / 2, cy: 128, r: 92,
-        rot: c.rot,
-        holes, ptr, blind: E.blindRound(),
-      });
-      // flash effect at the hammer position
-      if (c.flash && performance.now() < c.flash.until) {
-        const frames = c.flash.frames;
-        const fi = Math.min(frames.length - 1,
-          Math.floor((performance.now() - c.flash.start) / 70));
-        PIX.draw(ctx, frames[fi], cv.width / 2 - PIX.size(frames[fi]).w, 30, 2);
-      } else c.flash = null;
-
-      UI.cyl.raf = requestAnimationFrame(loop);
+    const mkAim = (label, key, aim) => {
+      const b = U.el('button', 'pixbtn aim-btn');
+      b.id = 'aim-' + aim;
+      b.appendChild(UI.txt(label, { scale: 2, shadow: null }));
+      const k = U.el('span', 'key-hint'); k.textContent = key;
+      b.appendChild(k);
+      b.onclick = () => DUEL.setAim(aim);
+      return b;
     };
-    if (!UI.cyl.raf) UI.cyl.raf = requestAnimationFrame(loop);
+    controls.appendChild(mkAim('AT YOU', 'A', 'self'));
+
+    const fire = U.el('button', 'pixbtn fire-btn');
+    fire.id = 'btn-fire';
+    fire.appendChild(UI.txt('FIRE', { scale: 3, shadow: null, color: PIX.PAL.W }));
+    const fk = U.el('span', 'key-hint'); fk.textContent = 'SPACE';
+    fire.appendChild(fk);
+    fire.onclick = () => DUEL.onFire();
+    controls.appendChild(fire);
+
+    controls.appendChild(mkAim('AT HIM', 'D', 'foe'));
+    bottom.appendChild(controls);
+
+    const gunP = U.el('div'); gunP.id = 'gun-panel'; bottom.appendChild(gunP);
+    app.appendChild(bottom);
+
+    UI.syncDuel();
   },
 
-  stopCylLoop() {
-    if (UI.cyl.raf) { cancelAnimationFrame(UI.cyl.raf); UI.cyl.raf = null; }
-    UI.cyl.snapshot = null; UI.cyl.flash = null;
-  },
+  /* redraw everything data-driven in the duel frame */
+  syncDuel() {
+    if (G.phase !== 'duel' && G.phase !== 'won') return;
+    const d = G.duel;
+    if (!d) return;
 
-  cylRotateToPtr(extraSpin) {
-    // target only ever decreases, so the cylinder always turns the same way
-    const want = -G.ptr * Math.PI / 3;
-    const down = ((UI.cyl.target - want) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-    UI.cyl.target -= down + (extraSpin ? Math.PI * 2 : 0);
-  },
+    UI.syncChips();
 
-  flashAtHammer(type) {
-    const frames = {
-      FIRE: ['flash_1', 'flash_2', 'flash_3'],
-      DUD: ['puff_1', 'puff_2'],
-      JAM: ['spark_1', 'spark_1'],
-      BACKFIRE: ['burst_red', 'flash_2', 'flash_3'],
-    }[type] || ['puff_1'];
-    UI.cyl.flash = { frames, start: performance.now(), until: performance.now() + frames.length * 90 };
-  },
-
-  /* ---------- sync ---------- */
-
-  sync() {
-    if (G.phase !== 'round' || !UI.$['p-debt']) return;
-    const $ = UI.$;
-
-    UI.put($['p-debt'], UI.num(G.debt, { scale: 4, color: PIX.PAL.R }));
-    UI.put($['p-score'], UI.num(G.score, { scale: 3, color: PIX.PAL.G }));
-    const pct = U.clamp(G.score / G.debt * 100, 0, 100);
-    $['p-fill'].style.width = pct + '%';
-    const ghostPct = U.clamp((G.pot > 0 ? E.bankAmount() : 0) / G.debt * 100, 0, 100 - pct);
-    $['p-ghost'].style.left = pct + '%';
-    $['p-ghost'].style.width = ghostPct + '%';
-
-    UI.put($['p-pot'], UI.num(G.pot, { scale: 4, color: PIX.PAL.N }));
-    const sm = E.streakMult(Math.max(1, G.streak));
-    const smStr = 'x' + (Math.round(sm * 100) / 100);
-    const streakRow = $['p-streak'];
-    streakRow.innerHTML = '';
-    streakRow.appendChild(UI.txt(smStr, { scale: 2, color: G.streak > 1 ? PIX.PAL.V : PIX.PAL.q }));
-    for (let i = 0; i < Math.min(G.streak, 8); i++) {
-      streakRow.appendChild(PIX.el('spark_1', 1));
-    }
-
-    const bb = $['btn-bank'];
-    const bankable = E.canBank();
-    bb.disabled = !bankable || UI.busy;
-    bb.innerHTML = '';
-    bb.classList.toggle('locked', E.bossIs('croupier') && G.streak < 2 && G.pot > 0);
-    bb.appendChild(PIX.el('ic_bank', 2));
-    if (G.pot > 0) {
-      const amt = E.bankAmount();
-      bb.appendChild(UI.num(amt, { scale: 2, color: amt < G.pot ? PIX.PAL.R : PIX.PAL.G }));
-    } else {
-      bb.appendChild(UI.txt('BANK', { scale: 2, color: PIX.PAL.q }));
-    }
-
-    // hearts / bullets / sleight pips / chips
-    const nerveRow = $['p-nerve']; nerveRow.innerHTML = '';
-    for (let i = 0; i < G.nerveMax; i++) {
-      const h = PIX.el(i < G.nerve ? 'ic_heart' : 'ic_heart_off', 2);
-      if (i < G.nerve && G.nerve <= 1) h.classList.add('pulse-red');
-      nerveRow.appendChild(h);
-    }
-    const pullsRow = $['p-pulls']; pullsRow.innerHTML = '';
-    const totalPulls = Math.min(Math.max(G.pullsMax, G.pulls), 15);
-    for (let i = 0; i < totalPulls; i++) {
-      pullsRow.appendChild(PIX.el(i < G.pulls ? 'ic_bullet' : 'ic_bullet_off', 2));
-    }
-    const slRow = $['p-sleight']; slRow.innerHTML = '';
-    for (let i = 0; i < Math.max(G.sleightMax, G.sleight); i++) {
-      slRow.appendChild(PIX.el(i < G.sleight ? 'ic_diamond' : 'ic_diamond_off', 2));
-    }
-    UI.put($['p-chips'], UI.num(G.chips, { scale: 3, color: PIX.PAL.G }));
-
-    const gunRow = $['p-gun'];
-    gunRow.innerHTML = '';
-    const gunSpr = PIX.el(GUN_SPRITES[E.gun().id], 2, 'has-tip');
-    gunSpr.dataset.tipGun = E.gun().id;
-    gunRow.appendChild(gunSpr);
-
-    UI.syncCalls();
-    UI.syncSleight();
-    UI.syncPouch();
-    UI.syncCharms();
-  },
-
-  syncCalls() {
-    const $ = UI.$;
-    const odds = E.topOdds();
-    const box = $['call-btns'];
-    box.innerHTML = '';
-    const icons = { FIRE: 'ic_fire', DUD: 'ic_dud', JAM: 'ic_jam', BACKFIRE: 'ic_backfire' };
-    OUTCOMES.forEach(o => {
-      const p = odds.blind ? null : (odds.probs ? odds.probs[o] : null);
-      const mult = E.callMult(p);
-      const btn = U.el('button', 'pixbtn call-btn has-tip' + (UI.call === o ? ' sel sel-' + o : ''));
-      btn.dataset.tipCall = o;
-      btn.appendChild(PIX.el(icons[o], 2));
-      const mid = U.el('span', 'call-mid');
-      mid.appendChild(UI.txt(o === 'BACKFIRE' ? 'BACK' : o, { scale: 2, color: PIX.PAL.W }));
-      mid.appendChild(UI.txt(odds.blind ? '??%' : Math.round((p || 0) * 100) + '%' + (odds.hidden ? '?' : ''),
-        { scale: 1, color: PIX.PAL.q, shadow: null }));
-      btn.appendChild(mid);
-      btn.appendChild(UI.txt('x' + mult, { scale: 2, color: PIX.PAL.G }));
-      btn.disabled = UI.busy || G.flags.roundWon;
-      btn.onclick = () => { SFX.click(); UI.call = o; UI.sync(); };
-      box.appendChild(btn);
-    });
-
-    const pull = $['btn-pull'];
-    pull.disabled = UI.busy || !UI.call || G.flags.roundWon || !E.topHole() || G.pulls <= 0;
-    pull.innerHTML = '';
-    pull.appendChild(PIX.el('ic_trigger', 3));
-    const pcol = U.el('span', 'pull-col');
-    pcol.appendChild(UI.txt('PULL', { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
-    if (UI.call) {
-      const est = U.el('span', 'est-row');
-      est.appendChild(PIX.el({ FIRE: 'ic_fire', DUD: 'ic_dud', JAM: 'ic_jam', BACKFIRE: 'ic_backfire' }[UI.call], 1));
-      est.appendChild(UI.txt('+' + U.fmt(E.estPayout(UI.call)), { scale: 1, color: PIX.PAL.N, shadow: null }));
-      pcol.appendChild(est);
-    }
-    pull.appendChild(pcol);
-  },
-
-  syncSleight() {
-    const $ = UI.$;
-    const mk = (btn, iconName, cost, allowed, tip) => {
-      btn.innerHTML = '';
-      btn.appendChild(PIX.el(iconName, 2));
-      const c = U.el('span', 'cost-pips');
-      for (let i = 0; i < cost; i++) c.appendChild(PIX.el('ic_diamond', 1));
-      if (cost === 0) c.appendChild(UI.txt('0', { scale: 1, color: PIX.PAL.N, shadow: null }));
-      btn.appendChild(c);
-      btn.disabled = UI.busy || G.flags.roundWon || !allowed;
-      btn.classList.add('has-tip');
-      btn.dataset.tipText = tip;
-    };
-    const caged = E.sleightBlocked();
-    mk($['btn-peek'], 'ic_eye', 1, E.peekAllowed(),
-      caged ? 'Warden Wart: no tricks this round' : E.blindRound()
-        ? 'Peeking is impossible — all odds are hidden' : 'PEEK — reveal the shell under the hammer');
-    mk($['btn-spin'], 'ic_spin', 1, E.spinAllowed(),
-      caged ? 'Warden Wart: no tricks this round' : 'SPIN — shuffle and re-hide the chamber');
-    mk($['btn-load'], 'ic_load', 1, E.loadAllowed(),
-      caged ? 'Warden Wart: no tricks this round' : 'LOAD — swap a pouch shell under the hammer');
-  },
-
-  syncPouch() {
-    const box = UI.$['p-pouch'];
-    box.innerHTML = '';
-    G.reserve.forEach(inst => {
-      const c = SPR.shellEl(inst.id, 2, 'has-tip shell-spr wob');
-      c.dataset.tipShell = inst.id;
-      box.appendChild(c);
-    });
-    G.spent.forEach(inst => {
-      const c = SPR.shellEl(inst.id, 2, 'has-tip shell-spr dim');
-      c.dataset.tipShell = inst.id;
-      box.appendChild(c);
-    });
-  },
-
-  syncCharms() {
-    const box = UI.$['p-charms'];
-    box.innerHTML = '';
-    G.charms.forEach(id => {
-      const el = SPR.charmEl(id, 3, 'has-tip wob');
-      el.dataset.tipCharm = id;
-      box.appendChild(el);
-    });
-    for (let i = G.charms.length; i < MAX_CHARMS; i++) {
-      box.appendChild(U.el('span', 'charm-slot-empty'));
-    }
-  },
-
-  /* ================= actions ================= */
-
-  async onPull() {
-    if (UI.busy || !UI.call) return;
-    if (G.phase !== 'round' || G.flags.roundWon) return;
-    UI.busy = true;
-    UI.sync();
-
-    SFX.chak();
-    // freeze the current chamber view for the strike
-    UI.cyl.snapshot = { holes: G.holes.map(h => h ? { inst: h.inst, revealed: h.revealed } : null), ptr: G.ptr };
-    await U.sleep(180);
-
-    const R = E.doPull(UI.call);
-    if (!R) { UI.cyl.snapshot = null; UI.busy = false; UI.sync(); return; }
-
-    UI.flashAtHammer(R.outcome);
-    if (R.outcome === 'FIRE') { SFX.shot(); UI.flash('go-fire'); UI.shake(); BG.pulse('#ff9d3c'); }
-    else if (R.outcome === 'DUD') SFX.dud();
-    else if (R.outcome === 'JAM') SFX.jamSfx();
-    else { SFX.backfire(); UI.flash('go-back'); UI.shake(); BG.pulse('#ff2e4d', 500); }
-
-    UI.stamp(R);
-    R.notes.forEach(n => UI.toastNote(n));
-    if (R.correct) { SFX.coin(); if (R.payout >= 150) UI.particles('ic_coin', 12); }
-    else if (R.nerveLost > 0) {
-      SFX.hurt(); UI.particles('ic_heart', 4);
-      const port = UI.$['p-portrait'];
-      if (port) { port.classList.remove('hurt'); void port.offsetWidth; port.classList.add('hurt'); }
-    }
-
-    await U.sleep(430);
-    UI.cyl.snapshot = null;
-    UI.cylRotateToPtr(false);
-    if (R.reloaded) { SFX.spin(); UI.cylRotateToPtr(true); }
-
-    UI.busy = false;
-    UI.sync();
-
-    if (R.roundOver === 'won') await UI.roundWonFlow();
-    else if (R.roundOver === 'dead' || R.roundOver === 'lost') await UI.deathFlow();
-  },
-
-  async onBank() {
-    if (UI.busy || !E.canBank()) return;
-    const res = E.doBank();
-    if (!res) return;
-    SFX.bank();
-    UI.flash('go-gold');
-    BG.pulse('#ffd75e');
-    UI.stampBank(res);
-    if (res.amt >= 200) UI.particles('ic_coin', 16);
-    UI.sync();
-    if (res.won) await UI.roundWonFlow();
-  },
-
-  async onSleight(kind) {
-    if (UI.busy || G.phase !== 'round' || G.flags.roundWon) return;
-    if (kind === 'peek') {
-      if (!E.doPeek()) return;
-      SFX.click();
-    } else if (kind === 'spin') {
-      if (!E.doSpin()) return;
-      SFX.spin();
-      UI.cylRotateToPtr(true);
-    } else if (kind === 'load') {
-      UI.showLoadPicker();
-      return;
-    }
-    UI.sync();
-  },
-
-  showLoadPicker() {
-    if (!E.loadAllowed()) return;
-    const m = UI.modal(`
-      <button class="pixbtn m-close" id="mm-close"></button>
-      <div class="m-head" id="lp-head"></div>
-      <div class="chip-strip" id="load-strip"></div>
-    `);
-    m.querySelector('#lp-head').appendChild(PIX.el('ic_load', 3));
-    const closeB = m.querySelector('#mm-close');
-    closeB.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W }));
-    closeB.onclick = () => { SFX.click(); UI.closeModal(); };
-    const strip = m.querySelector('#load-strip');
-    G.reserve.forEach(inst => {
-      const b = U.el('button', 'pixbtn shell-pick has-tip');
-      b.dataset.tipShell = inst.id;
-      b.appendChild(SPR.shellEl(inst.id, 3));
-      b.onclick = () => {
-        const done = E.doLoad(inst.uid);
-        if (done) {
-          SFX.chak();
-          UI.closeModal();
-          UI.sync();
+    /* strip */
+    const strip = document.getElementById('shell-strip');
+    if (strip) {
+      strip.innerHTML = '';
+      for (let i = d.ptr; i < d.shells.length; i++) {
+        const cell = U.el('span', 'strip-cell' + (i === d.ptr ? ' under-hammer' : ''));
+        if (i === d.ptr) {
+          const ptr = PIX.el('ic_ptr', 2); ptr.className = 'pix strip-ptr';
+          cell.appendChild(ptr);
         }
-      };
-      strip.appendChild(b);
-    });
-  },
-
-  /* ================= stamps & toasts (wordless feedback) ================= */
-
-  stamp(R) {
-    const zone = UI.$['stamp-zone'];
-    if (!zone) return;
-    const colors = { FIRE: PIX.PAL.O, DUD: PIX.PAL.w, JAM: PIX.PAL.g, BACKFIRE: PIX.PAL.R };
-    const box = U.el('div', 'stamp pop');
-    const word = R.outcome === 'BACKFIRE' ? 'BACKFIRE' : R.outcome;
-    box.appendChild(UI.txt(word, { scale: 4, color: colors[R.outcome], outline: PIX.PAL.K }));
-    const sub = U.el('div', 'stamp-sub');
-    if (R.correct) {
-      sub.appendChild(UI.txt('+' + U.fmt(R.payout), { scale: 3, color: PIX.PAL.N, outline: PIX.PAL.K }));
-      sub.appendChild(UI.txt('x' + R.mult, { scale: 2, color: PIX.PAL.G }));
-    } else if (R.nerveLost > 0) {
-      for (let i = 0; i < R.nerveLost; i++) sub.appendChild(PIX.el('ic_heart_off', 2));
-    } else if (G.pot === 0 && !R.correct) {
-      sub.appendChild(PIX.el('ic_pot', 2));
-      sub.appendChild(UI.txt('=0', { scale: 2, color: PIX.PAL.R }));
-    }
-    box.appendChild(sub);
-    zone.innerHTML = '';
-    zone.appendChild(box);
-  },
-
-  stampBank(res) {
-    const zone = UI.$['stamp-zone'];
-    if (!zone) return;
-    const box = U.el('div', 'stamp pop');
-    const row = U.el('div', 'stamp-sub');
-    row.appendChild(PIX.el('ic_bank', 3));
-    row.appendChild(UI.txt('+' + U.fmt(res.amt), { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    box.appendChild(row);
-    zone.innerHTML = '';
-    zone.appendChild(box);
-  },
-
-  // map engine note strings (emoji-prefixed) to icon toasts
-  toastNote(note) {
-    const MAP = [
-      ['🐇', 'charm', 'rabbit'], ['🧲', 'shell', 'magnet'], ['🕸️ Silk', 'shell', 'web'],
-      ['🕸️ The web', 'shell', 'web'], ['💰', 'shell', 'gilded'],
-      ['🟤', 'shell', 'rust'], ['🔮 The Glass', 'shell', 'glass'],
-      ['🕷', 'charm', 'spider'], ['💃', 'charm', 'graveDancer'], ['🔮 All-In', 'charm', 'allIn'],
-      ['🚬', 'charm', 'ashtray'], ['🐔', 'shell', 'feather'], ['🫀', 'charm', 'secondWind'],
-      ['💼', 'boss', 'collector'], ['🌀', 'boss', 'spinner'],
-    ];
-    let icon = null;
-    for (const [emo, kind, id] of MAP) {
-      if (note.includes(emo)) {
-        icon = kind === 'shell' ? SPR.shellEl(id, 2)
-          : kind === 'charm' ? SPR.charmEl(id, 2)
-          : SPR.frogEl(id, 2);
-        break;
+        const known = d.known[i];
+        const master = known === null ? SPR.hiddenMaster() : SPR.backMaster(known ? 'live' : 'blank');
+        cell.appendChild(SPR.clone(master, 2));
+        strip.appendChild(cell);
       }
     }
-    // pull a number out of the note if there is one (+4, ×3, -15…)
-    const numMatch = note.match(/([+\-x×]\s?\d+(?:\.\d+)?|\d+(?:\.\d+)?x|\+\d)/);
-    const parts = [];
-    if (icon) parts.push(icon);
-    if (numMatch) {
-      parts.push(UI.txt(numMatch[0].replace('×', 'x').replace(/\s/g, ''),
-        { scale: 2, color: PIX.PAL.N }));
+
+    /* counts: banner numbers live only with the bead counter */
+    const counts = document.getElementById('strip-counts');
+    if (counts) {
+      counts.innerHTML = '';
+      if (E.countsHidden()) {
+        counts.appendChild(UI.txt('? / ?', { scale: 2, color: PIX.PAL.q }));
+      } else if (E.has('counter')) {
+        const { l, b } = E.remaining();
+        counts.appendChild(UI.txt(l + '', { scale: 2, color: PIX.PAL.R }));
+        counts.appendChild(UI.txt('/', { scale: 2, color: PIX.PAL.q }));
+        counts.appendChild(UI.txt(b + '', { scale: 2, color: PIX.PAL.w }));
+      } else {
+        counts.appendChild(UI.txt(d.lives + '', { scale: 2, color: PIX.PAL.R }));
+        counts.appendChild(UI.txt('/', { scale: 2, color: PIX.PAL.q }));
+        counts.appendChild(UI.txt(d.blanks + '', { scale: 2, color: PIX.PAL.w }));
+        counts.title = '';
+      }
     }
-    if (!parts.length) return;
-    UI.toast(parts);
+
+    /* opp name plate */
+    const nm = document.getElementById('opp-name');
+    if (nm) {
+      nm.innerHTML = '';
+      nm.className = d.opp.boss ? 'has-tip bossname' : 'has-tip';
+      if (d.opp.boss) nm.dataset.tipBoss = d.opp.boss;
+      else nm.dataset.tipText = d.opp.name + ' — a nobody with a marker to collect.';
+      nm.appendChild(UI.txt(d.opp.name, { scale: 2, color: d.opp.boss ? PIX.PAL.R : PIX.PAL.w }));
+    }
+
+    /* turn stamp */
+    const turn = document.getElementById('turn-stamp');
+    if (turn) {
+      turn.innerHTML = '';
+      if (!d.over) {
+        turn.appendChild(UI.txt(d.turn === 'you' ? 'YOUR PULL' : d.opp.name + ' HOLDS IT',
+          { scale: 2, color: d.turn === 'you' ? PIX.PAL.G : PIX.PAL.R }));
+      }
+    }
+
+    /* aim + fire buttons */
+    const aimS = document.getElementById('aim-self'), aimF = document.getElementById('aim-foe');
+    const fire = document.getElementById('btn-fire');
+    const canAct = !DUEL.busy && !d.over && d.turn === 'you';
+    if (aimS) { aimS.classList.toggle('sel', DUEL.aim === 'self'); aimS.disabled = !canAct; }
+    if (aimF) { aimF.classList.toggle('sel', DUEL.aim === 'foe'); aimF.disabled = !canAct; }
+    if (fire) fire.disabled = !canAct;
+
+    UI.syncTrinkets();
+    UI.syncGunPanel();
   },
 
-  toast(parts, extraIcon) {
-    const zone = UI.$['toast-zone'];
-    if (!zone) return;
-    const t = U.el('div', 'toast');
-    if (extraIcon) t.appendChild(extraIcon);
-    parts.forEach(p => t.appendChild(p));
-    zone.appendChild(t);
-    while (zone.children.length > 3) zone.firstChild.remove();
-    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, 1900);
+  syncTrinkets() {
+    const tr = document.getElementById('trinket-row');
+    if (!tr) return;
+    tr.innerHTML = '';
+    for (let i = 0; i < MAX_TRINKETS; i++) {
+      const t = G.trinkets[i];
+      if (!t) { tr.appendChild(U.el('span', 'tslot-empty')); continue; }
+      const def = TRINKETS[t.id];
+      const card = U.el('button', 'tcard has-tip');
+      card.dataset.tipTrinket = t.id;
+      card.appendChild(SPR.trinketCardEl(t.id, 3));
+      if (def.active) {
+        const key = U.el('span', 'key-hint tk'); key.textContent = i + 1;
+        card.appendChild(key);
+        const pips = U.el('span', 'charge-pips');
+        const left = E.chargesLeft(t);
+        const max = def.active.per === 'reload' ? (E.has('watch') ? 2 : 1) : 1;
+        for (let c = 0; c < max; c++) pips.appendChild(U.el('i', 'cpip' + (c < left ? ' on' : '')));
+        card.appendChild(pips);
+        card.disabled = !E.canUseTrinket(i) || DUEL.busy;
+        card.onclick = () => DUEL.useTrinket(i);
+      } else {
+        card.disabled = false;
+        card.classList.add('passive');
+      }
+      if (G.phase === 'duel' && E.trinketsLocked() && def.active) card.classList.add('locked');
+      tr.appendChild(card);
+    }
   },
 
-  /* ================= round end flows ================= */
-
-  async roundWonFlow() {
-    UI.busy = true;
-    SFX.win();
-    UI.flash('go-gold');
-    BG.pulse('#ffd75e', 700);
-    UI.particles('ic_coin', 22);
-    await U.sleep(650);
-    UI.busy = false;
-
-    const r = G.flags.reward;
-    const isFinal = G.ante === WIN_ANTE && !G.endlessMode;
-    const m = UI.modal('<div class="won-box"></div>', true);
-    const box = m.querySelector('.won-box');
-
-    const head = U.el('div', 'm-head');
-    head.appendChild(PIX.el('ic_crown', 4));
-    head.appendChild(UI.txt('A' + G.ante, { scale: 4, color: PIX.PAL.N, outline: PIX.PAL.K }));
-    box.appendChild(head);
-
-    const total = U.el('div', 'reward-total');
-    total.appendChild(UI.txt('+' + U.fmt(r.total), { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    total.appendChild(PIX.el('ic_chip', 3));
-    box.appendChild(total);
-
-    const go = U.el('button', 'pixbtn gold big-go');
-    go.id = 'mm-go';
-    go.appendChild(UI.txt(isFinal ? 'THE OWNER' : '>', { scale: 4, color: PIX.PAL.K, shadow: null }));
-    box.appendChild(go);
-    go.onclick = () => {
-      SFX.click();
-      UI.closeModal();
-      if (isFinal) { E.winRun(); UI.render(); }
-      else { E.toCasino(); UI.render(); }
+  syncGunPanel() {
+    const p = document.getElementById('gun-panel');
+    if (!p) return;
+    p.innerHTML = '';
+    const g = E.gun();
+    const spr = U.el('span', 'has-tip gun-spr');
+    spr.dataset.tipGun = g.id;
+    spr.appendChild(PIX.el(GUN_SPRITES[g.id], 2));
+    p.appendChild(spr);
+    const mk = (kind, key, label, need) => {
+      if (G.gunIdx < need) return;
+      const b = U.el('button', 'pixbtn gun-act has-tip');
+      b.dataset.tipText = label;
+      b.appendChild(UI.txt(key, { scale: 2, shadow: null, color: PIX.PAL.G }));
+      b.disabled = !E.canUseGun(kind) || DUEL.busy;
+      const d = G.duel;
+      if (kind === 'saw' && d && d.sawArmed) b.classList.add('sel');
+      b.onclick = () => DUEL.useGunActive(kind);
+      p.appendChild(b);
     };
+    mk('saw', 'Q', 'SAW GRIP — once a duel, your next shot deals DOUBLE.', GUN_ACTIVES.sawn);
+    mk('tommy', 'E', 'DOUBLE TAP — once a duel, fire twice before the turn passes.', GUN_ACTIVES.tommy);
   },
 
-  async deathFlow() {
-    UI.busy = true;
-    SFX.lose();
-    BG.pulse('#8c2230', 900);
-    await U.sleep(900);
-    UI.busy = false;
-    UI.render();
+  /* ================= stamps & banners ================= */
+
+  stampBig(text, color, small) {
+    const z = document.getElementById('stamp-big');
+    if (!z) return;
+    z.innerHTML = '';
+    const c = UI.txt(text, { scale: small ? 3 : 5, color: color || PIX.PAL.W, outline: PIX.PAL.K });
+    c.className = 'pix pop';
+    z.appendChild(c);
+    clearTimeout(UI._sbTo);
+    UI._sbTo = setTimeout(() => { z.innerHTML = ''; }, 950);
+  },
+
+  stampSmall(text) {
+    const z = document.getElementById('stamp-small');
+    if (!z) return;
+    const t = U.el('span', 'toast pop');
+    t.appendChild(UI.txt(text, { scale: 2, color: PIX.PAL.W }));
+    z.appendChild(t);
+    while (z.children.length > 2) z.firstChild.remove();
+    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, 1400);
+  },
+
+  blindBanner() {
+    const d = G.duel;
+    UI.stampBig(E.blindName(), G.blind === 2 ? PIX.PAL.R : PIX.PAL.G, true);
+    UI.stampSmall(d.opp.name + ' - PURSE ' + E.purse());
+  },
+
+  async loadBanner() {
+    const b = document.getElementById('load-banner');
+    if (!b) return;
+    const d = G.duel;
+    b.className = '';
+    b.innerHTML = '';
+    const box = U.el('div', 'load-box pop');
+    const hid = E.countsHidden();
+    const row = U.el('div', 'load-row');
+    row.appendChild(UI.txt(hid ? '?' : String(d.lives), { scale: 4, color: PIX.PAL.R }));
+    row.appendChild(UI.txt('LIVE', { scale: 2, color: PIX.PAL.R }));
+    row.appendChild(UI.txt('-', { scale: 3, color: PIX.PAL.q }));
+    row.appendChild(UI.txt(hid ? '?' : String(d.blanks), { scale: 4, color: PIX.PAL.W }));
+    row.appendChild(UI.txt('BLANK', { scale: 2, color: PIX.PAL.w }));
+    box.appendChild(row);
+    const shells = U.el('div', 'load-shells');
+    box.appendChild(shells);
+    b.appendChild(box);
+    /* shells drop in one by one — the mix, then hidden */
+    const total = d.shells.length;
+    for (let i = 0; i < total; i++) {
+      await U.sleep(90);
+      SFX.tick();
+      const s = hid ? SPR.clone(SPR.hiddenMaster(), 2)
+        : SPR.clone(SPR.backMaster(i < d.lives ? 'live' : 'blank'), 2);
+      s.classList.add('pop');
+      shells.appendChild(s);
+    }
+    await U.sleep(420);
+    SFX.spin();
+    shells.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+      const s = SPR.clone(SPR.hiddenMaster(), 2);
+      shells.appendChild(s);
+    }
+    await U.sleep(400);
+    b.className = 'hidden';
+    UI.syncDuel();
+  },
+
+  bossIntro(opp) {
+    return new Promise(res => {
+      const o = document.getElementById('duel-overlay');
+      o.className = 'boss-in';
+      o.innerHTML = '';
+      const card = U.el('div', 'boss-card pop');
+      card.appendChild(SPR.frogEl(opp.frog, 5));
+      card.appendChild(UI.txt(opp.name, { scale: 4, color: PIX.PAL.R, outline: PIX.PAL.K }));
+      card.appendChild(UI.txt(opp.rule, { scale: 2, color: PIX.PAL.G }));
+      const desc = U.el('p', 'boss-desc');
+      desc.textContent = opp.desc;
+      card.appendChild(desc);
+      const purse = U.el('div', 'load-row');
+      purse.appendChild(UI.txt('PURSE ' + E.purse(), { scale: 2, color: PIX.PAL.G }));
+      purse.appendChild(UI.icon('ic_chip', 2));
+      card.appendChild(purse);
+      const go = U.el('button', 'pixbtn gold primary');
+      go.appendChild(UI.txt('SIT DOWN', { scale: 3, shadow: null, color: PIX.PAL.K }));
+      go.onclick = () => { o.className = 'hidden'; o.innerHTML = ''; res(); };
+      card.appendChild(go);
+      o.appendChild(card);
+      UI.shake();
+      SFX.lose();
+    });
+  },
+
+  /* mark down → count the take → shop */
+  async payoutOverlay(freshUnlocks) {
+    const o = document.getElementById('duel-overlay');
+    if (!o) return;
+    const pay = G.duel.payout;
+    o.className = 'pay-in';
+    o.innerHTML = '';
+    const card = U.el('div', 'pay-card pop');
+    card.appendChild(UI.txt('MARK DOWN', { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    const list = U.el('div', 'pay-rows');
+    card.appendChild(list);
+    const totalRow = U.el('div', 'pay-total');
+    card.appendChild(totalRow);
+    o.appendChild(card);
+
+    for (const [label, val] of pay.rows) {
+      await U.sleep(240);
+      SFX.coin();
+      const r = U.el('div', 'pay-row pop');
+      const l = U.el('span'); l.appendChild(UI.txt(label, { scale: 2, color: PIX.PAL.w }));
+      const v = U.el('span'); v.appendChild(UI.txt(String(val), { scale: 2, color: PIX.PAL.G }));
+      r.appendChild(l); r.appendChild(v);
+      list.appendChild(r);
+    }
+    await U.sleep(280);
+    SFX.win();
+    totalRow.appendChild(UI.txt('+' + pay.total, { scale: 5, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    totalRow.appendChild(UI.icon('ic_chip', 3));
+    UI.particles('ic_chip', 14);
+    UI.syncChips();
+
+    (freshUnlocks || []).forEach((t, i) => setTimeout(() => UI.unlockToast(t), 400 + i * 600));
+
+    await U.sleep(300);
+    const go = U.el('button', 'pixbtn gold primary big-go');
+    go.appendChild(UI.txt('THE SHOP', { scale: 3, shadow: null, color: PIX.PAL.K }));
+    go.onclick = () => { E.openShop(); UI.render(); };
+    card.appendChild(go);
+    go.focus();
+  },
+
+  unlockToast(t) {
+    const box = document.getElementById('fx-particles');
+    const el = U.el('div', 'unlock-toast pop');
+    el.appendChild(SPR.trinketCardEl(t.id, 2));
+    const col = U.el('div');
+    col.appendChild(UI.txt('NEW TRINKET', { scale: 2, color: PIX.PAL.G }));
+    col.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.W }));
+    el.appendChild(col);
+    box.appendChild(el);
+    SFX.jackpot();
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 2600);
   },
 
   /* ================= end screens ================= */
 
   buildEnd(app, won) {
     const wrap = U.el('div', 'splash');
-    const s = G.stats;
+    const s = META.stats();
 
-    const art = U.el('div', 'end-art ' + (won ? 'breathe' : 'pulse-red'));
-    art.appendChild(PIX.el(won ? 'ic_crown' : 'ic_skull', 10));
-    wrap.appendChild(art);
-
-    const word = won ? 'THE OWNER FOLDS'
-      : G.overReason === 'nerve' ? 'YOUR NERVE BREAKS'
-      : G.overReason === 'walk' ? 'YOU WALK AWAY'
-      : 'THE HOUSE COLLECTS';
-    wrap.appendChild(UI.txt(word, {
-      scale: 4, color: won ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K,
-    }));
+    if (won) {
+      const f = SPR.frogEl('player', 6, 'breathe');
+      wrap.appendChild(f);
+      wrap.appendChild(UI.txt('DEBT CLEARED', { scale: 7, color: PIX.PAL.G, outline: PIX.PAL.K }));
+      wrap.appendChild(UI.txt('THE BULLFROG IS DOWN. THE SWAMP IS YOURS.', { scale: 2, color: PIX.PAL.w }));
+    } else {
+      const f = SPR.frogEl(G.duel && G.duel.opp.boss ? G.duel.opp.frog : 'owner', 6);
+      f.style.filter = 'grayscale(.4) brightness(.8)';
+      wrap.appendChild(f);
+      wrap.appendChild(UI.txt('THE SWAMP KEEPS YOUR MARKER', { scale: 4, color: PIX.PAL.R, outline: PIX.PAL.K }));
+    }
 
     const grid = U.el('div', 'end-grid');
-    const cell = (iconName, canvas, tip) => {
-      const c = U.el('div', 'end-cell has-tip');
-      c.dataset.tipText = tip;
-      c.appendChild(PIX.el(iconName, 2));
-      c.appendChild(canvas);
+    const cell = (label, v, col) => {
+      const c = U.el('div', 'end-cell');
+      c.appendChild(UI.txt(label, { scale: 2, color: PIX.PAL.q }));
+      c.appendChild(UI.txt(String(v), { scale: 3, color: col || PIX.PAL.W }));
       grid.appendChild(c);
     };
-    cell('ic_chip', UI.txt('A' + s.antesCleared, { scale: 3, color: PIX.PAL.N }), 'Antes cleared');
-    cell('ic_bank', UI.num(s.totalScore, { scale: 3, color: PIX.PAL.G }), 'Total score banked');
-    cell('ic_pot', UI.num(s.bestPayout, { scale: 3, color: PIX.PAL.W }), 'Best single payout');
-    cell('ic_coin', UI.num(s.chipsPeak, { scale: 3, color: PIX.PAL.W }), 'Chip peak');
-    cell('ic_backfire', UI.num(s.backfiresEaten, { scale: 3, color: PIX.PAL.R }), 'Backfires eaten');
-    cell('ic_bullet', UI.txt(s.hits + '/' + s.pulls, { scale: 3, color: PIX.PAL.W }), 'Hits / pulls');
+    cell('ANTE', G.ante, PIX.PAL.G);
+    cell('MARKS DOWN', G.run.duelsWon);
+    cell('SHOTS', G.run.shots);
+    cell('DAMAGE', G.run.damage, PIX.PAL.R);
+    cell('CHIPS', G.chips, PIX.PAL.G);
+    cell('SEED', G.seedStr);
     wrap.appendChild(grid);
-
-    const seedLine = UI.txt(G.seedStr, { scale: 1, color: PIX.PAL.q, shadow: null });
-    seedLine.style.opacity = .6;
-    wrap.appendChild(seedLine);
 
     const btns = U.el('div', 'end-btns');
     if (won) {
-      const down = U.el('button', 'pixbtn gold');
-      down.id = 'btn-endless';
-      down.append(PIX.el('ic_debt', 2), UI.txt('ENDLESS', { scale: 3, color: PIX.PAL.K, shadow: null }));
-      down.onclick = () => { SFX.chak(); G.endlessMode = true; E.toCasino(); UI.render(); };
-      btns.appendChild(down);
+      const endless = U.el('button', 'pixbtn gold primary');
+      endless.appendChild(UI.txt('KEEP PLAYING — ENDLESS', { scale: 2, shadow: null, color: PIX.PAL.K }));
+      endless.onclick = () => { E.goEndless(); UI.render(); };
+      btns.appendChild(endless);
     }
-    const again = U.el('button', 'pixbtn ' + (won ? '' : 'gold'));
-    again.id = 'btn-again';
-    again.append(PIX.el('ic_trigger', 2), UI.txt('AGAIN', { scale: 3, color: won ? PIX.PAL.W : PIX.PAL.K, shadow: null }));
-    again.onclick = () => { SFX.chak(); UI.call = null; E.newRun(''); UI.render(); };
+    const again = U.el('button', 'pixbtn' + (won ? '' : ' gold primary'));
+    again.appendChild(UI.txt('AGAIN', { scale: 2, shadow: null, color: won ? PIX.PAL.W : PIX.PAL.K }));
+    again.onclick = () => { E.newRun(''); UI.render(); };
     btns.appendChild(again);
-    const door = U.el('button', 'pixbtn');
-    door.id = 'btn-title';
-    door.append(UI.txt('<', { scale: 3, color: PIX.PAL.W }));
-    door.onclick = () => { SFX.click(); G.phase = 'title'; UI.render(); };
-    btns.appendChild(door);
+    const title = U.el('button', 'pixbtn');
+    title.appendChild(UI.txt('TITLE', { scale: 2, shadow: null }));
+    title.onclick = () => { G.phase = 'title'; UI.render(); };
+    btns.appendChild(title);
     wrap.appendChild(btns);
+
+    app.appendChild(wrap);
+    if (won) { SFX.jackpot(); UI.particles('ic_chip', 22); UI.flash('go-gold'); }
+    else SFX.lose();
+  },
+
+  /* ================= collection ================= */
+
+  buildCollection(app) {
+    const meta = META.load();
+    const wrap = U.el('div', 'coll-wrap');
+
+    const head = U.el('div', 'coll-head');
+    head.appendChild(UI.txt('THE COLLECTION', { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    const back = U.el('button', 'pixbtn primary');
+    back.id = 'btn-back';
+    back.appendChild(UI.txt('BACK', { scale: 2, shadow: null }));
+    back.onclick = () => { G.phase = 'title'; UI.render(); };
+    head.appendChild(back);
+    wrap.appendChild(head);
+
+    /* trinkets */
+    const t1 = U.el('div', 'coll-sec');
+    t1.appendChild(UI.txt('TRINKETS', { scale: 2, color: PIX.PAL.w }));
+    const tg = U.el('div', 'coll-grid');
+    Object.values(TRINKETS).forEach(t => {
+      const open = META.isUnlocked(t.id);
+      const cardw = U.el('span', 'has-tip coll-card');
+      if (open) {
+        cardw.dataset.tipTrinket = t.id;
+        cardw.appendChild(SPR.trinketCardEl(t.id, 3));
+      } else {
+        cardw.dataset.tipText = 'LOCKED — ' + t.unlock.hint + '.';
+        cardw.appendChild(SPR.clone(SPR.cardBack(), 3));
+      }
+      tg.appendChild(cardw);
+    });
+    t1.appendChild(tg);
+    wrap.appendChild(t1);
+
+    /* guns */
+    const t2 = U.el('div', 'coll-sec');
+    t2.appendChild(UI.txt('THE IRON', { scale: 2, color: PIX.PAL.w }));
+    const gg = U.el('div', 'coll-grid');
+    GUNS.forEach(g => {
+      const owned = meta.gunsOwned[g.id];
+      const w = U.el('span', 'has-tip coll-gun');
+      w.dataset.tipGun = g.id;
+      const el = PIX.el(GUN_SPRITES[g.id], 3);
+      if (!owned) el.style.filter = 'brightness(0) opacity(.45)';
+      w.appendChild(el);
+      gg.appendChild(w);
+    });
+    t2.appendChild(gg);
+    wrap.appendChild(t2);
+
+    /* the mob */
+    const t3 = U.el('div', 'coll-sec');
+    t3.appendChild(UI.txt('THE MOB', { scale: 2, color: PIX.PAL.w }));
+    const bg2 = U.el('div', 'coll-grid');
+    BOSSES.forEach(b => {
+      const kills = meta.bossSeen[b.id] || 0;
+      const w = U.el('span', 'has-tip coll-boss');
+      const el = SPR.frogEl(b.id, 3);
+      if (kills) {
+        w.dataset.tipBoss = b.id;
+        const k = U.el('div', 'boss-kills');
+        k.appendChild(UI.txt('×' + kills, { scale: 2, color: PIX.PAL.G }));
+        w.appendChild(el); w.appendChild(k);
+      } else {
+        w.dataset.tipText = '??? — nobody\'s collected on him yet.';
+        el.style.filter = 'brightness(0) opacity(.55)';
+        w.appendChild(el);
+      }
+      bg2.appendChild(w);
+    });
+    t3.appendChild(bg2);
+    wrap.appendChild(t3);
+
+    /* account line */
+    const s = meta.stats;
+    const line = U.el('div', 'best-line');
+    line.appendChild(UI.txt(
+      'RUNS ' + s.runs + '   SHOTS ' + s.shots + '   SELF-BLANKS ' + s.selfBlanks +
+      '   BOSSES DROPPED ' + s.bossKills, { scale: 2, color: PIX.PAL.q }));
+    wrap.appendChild(line);
 
     app.appendChild(wrap);
   },
 
-  /* ================= fx ================= */
+  /* ================= fx (dom layer) ================= */
 
   flash(cls) {
     const f = document.getElementById('fx-flash');
@@ -824,64 +700,32 @@ const UI = {
   },
 
   PANEL_TIPS: {
-    debt: () => `<b>THE DEBT</b> — bank <b>${U.fmt(G.debt)}</b> score before your pulls run out. Banked: ${U.fmt(G.score)}.`,
-    pot: () => `<b>THE POT</b> — correct calls pile up here. Bank it to make it score; one wrong call burns it. Streak multiplier: ×${Math.round(E.streakMult(Math.max(1, G.streak)) * 100) / 100}.`,
-    you: () => `<b>YOU</b> — 'Lucky' Verde. Owes the Bullfrog everything. Currently armed with the ${E.gun().name}.`,
-    nerve: () => `<b>NERVE</b> — an uncalled BACKFIRE costs 1 (cursed shells 2). At zero, the run ends.`,
-    pulls: () => `<b>PULLS</b> — trigger pulls left this round: ${G.pulls}.`,
-    sleight: () => `<b>TRICKS</b> — spent on peeking, spinning and loading. ${G.sleight} left.`,
-    chips: () => `<b>CHIPS</b> — casino money. Spend it on the floor between antes.`,
-    call: () => `<b>THE CALL</b> — pick what the next shell does. Rarer calls pay bigger multipliers. Hidden shells show the chamber average.`,
-    sleightPanel: () => `<b>TRICKS</b> — 👁 peek the top shell · 🌀 spin the chamber · 🫳 load a chosen shell. One point each.`,
-    pouch: () => `<b>SHELL POUCH</b> — your collection. ${G.reserve.length} in reserve, ${E.shellsInChamber()} chambered, ${G.spent.length} spent this round.`,
-    charms: () => `<b>CHARMS</b> — passive artifacts. ${G.charms.length}/${MAX_CHARMS} slots used.`,
+    chips: () => `<b>CHIPS</b> — the only money that matters down here. Spend them in the shop between duels.`,
+    ante: () => `<b>ANTE ${G.ante}</b> of ${ANTES}. Every ante is three blinds: small, big, then one of the Bullfrog's people.`,
+    blind: () => `<b>${E.blindName()}</b> — beat the mark across the table to collect the purse.`,
+    purse: () => `<b>THE PURSE</b> — ${E.purse()} chips for winning this duel, plus 1 per heart you keep.`,
+    counts: () => E.countsHidden()
+      ? `<b>THE LOAD</b> — Blind Newt keeps the count to himself.`
+      : `<b>THE LOAD</b> — this drum loaded with <b>${G.duel.lives} LIVE</b>, <b>${G.duel.blanks} blank</b>.${E.has('counter') ? ' Your bead counter tracks what\'s left.' : ' What\'s left is on you to count.'}`,
+    strip: () => `<b>THE DRUM</b> — shells in firing order. The one under the ${'▲'} hammer goes next. Blank on yourself = you keep the turn.`,
   },
 
   tooltipFor(el) {
     const ds = el.dataset;
-    if (ds.tipShell) {
-      const s = SHELLS[ds.tipShell];
-      const w = E.effWeights({ id: s.id });
-      const odds = OUTCOMES.map(o =>
-        `${OUTCOME_META[o].icon}${Math.round(w[o] * 100)}%`).join(' ');
-      return `<div class="tt-name">${s.name} <span class="rar-${s.rarity}">${s.rarity.toUpperCase()}</span></div>
-        <div class="tt-desc">${s.desc}</div>
-        <div class="tt-odds">${odds} · base ${s.base}</div>`;
+    if (ds.tipTrinket) {
+      const t = TRINKETS[ds.tipTrinket];
+      const r = RARITY_META[t.rarity].label;
+      const act = t.active ? `<div class="tt-odds">ACTIVE — once a ${t.active.per === 'duel' ? 'duel' : 'load'} · sells for ${E.sellValue ? E.sellValue(t.id) : Math.floor(t.cost / 2)}⛁</div>` : `<div class="tt-odds">passive · sells for ${Math.max(1, Math.floor(t.cost / 2))}⛁</div>`;
+      return `<div class="tt-name">${t.name} <span class="rar-${t.rarity}">${r}</span></div>
+        <div class="tt-desc">${t.desc}</div>${act}`;
     }
     if (ds.tipGun) {
       const g = GUNS.find(x => x.id === ds.tipGun);
       return `<div class="tt-name">${g.name}</div><div class="tt-desc">${g.desc}</div>`;
     }
-    if (ds.tipCharm) {
-      const c = CHARMS[ds.tipCharm];
-      return `<div class="tt-name">${c.name} <span class="rar-${c.rarity}">${c.rarity.toUpperCase()}</span></div>
-        <div class="tt-desc">${c.desc}</div>`;
-    }
     if (ds.tipBoss) {
-      const b = BOSSES[ds.tipBoss];
-      return `<div class="tt-name">${b.icon} ${b.name}</div><div class="tt-desc">${b.desc}</div>`;
-    }
-    if (ds.tipFate) {
-      const f = FATES[ds.tipFate];
-      return `<div class="tt-name">${f.icon} ${f.name}</div>
-        <div class="tt-desc">${f.desc.replace('Next round:', 'This round:')}</div>`;
-    }
-    if (ds.tipCall) {
-      const o = ds.tipCall;
-      const blurbs = {
-        FIRE: 'It goes off. The bread and butter of live shells.',
-        DUD: 'A dead click. Blanks and feathers love this call.',
-        JAM: 'The mechanism seizes — the shell stays in the chamber, revealed.',
-        BACKFIRE: 'It bites the hand. Uncalled: −1 Nerve. Called: profit.',
-      };
-      return `<div class="tt-name">${OUTCOME_META[o].icon} ${o}</div><div class="tt-desc">${blurbs[o]}</div>`;
-    }
-    if (ds.tipStation) {
-      const key = ds.tipStation;
-      const s = key.startsWith('locked-')
-        ? CASINO.lockedTip(key.slice(7))
-        : CASINO.STATION_TIPS[key];
-      return s ? `<div class="tt-name">${s[0]}</div><div class="tt-desc">${s[1]}</div>` : null;
+      const b = BOSSES.find(x => x.id === ds.tipBoss);
+      return `<div class="tt-name">${b.name} <span class="rar-rare">${b.rule}</span></div><div class="tt-desc">${b.desc}</div>`;
     }
     if (ds.tipKey && UI.PANEL_TIPS[ds.tipKey]) {
       return `<div class="tt-desc">${UI.PANEL_TIPS[ds.tipKey]()}</div>`;
@@ -914,35 +758,37 @@ const UI = {
   /* ================= help ================= */
 
   showHelp() {
+    const binds = BINDS.map(([k, v]) => `<p><b>${k}</b> — ${v}</p>`).join('');
     UI.modal(`
       <button class="pixbtn m-close" id="mm-close"></button>
       <div class="help-cols">
         <div>
-          <h4>THE CHAMBER</h4>
-          <p>Shells load blind from your pouch. Each pull, the shell under the hammer resolves:
-          🔥 FIRE · ⚪ DUD · ⚙ JAM · 💥 BACKFIRE.</p>
-          <h4>THE CALL</h4>
-          <p>Call the outcome before pulling. Rarer calls pay bigger ×multipliers.
-          Hidden shells (?) show the average odds of the chamber.</p>
-          <h4>POT &amp; STREAK</h4>
-          <p>Correct calls fill the pot and grow the ×streak. <b>BANK</b> converts pot to score and
-          resets the streak. A wrong call burns the whole pot. Bank the debt number to survive the ante.</p>
-          <h4>NERVE ❤</h4>
-          <p>Uncalled BACKFIRE: −1 (cursed shells −2). Zero = dead. Called backfires pay instead.</p>
+          <h4>THE DUEL</h4>
+          <p>A drum loads with <b>LIVE</b> 🔴 and <b>blank</b> ⚪ shells — you see the mix, not the order.
+          Take turns. Aim at <b>the mark</b> or at <b>yourself</b>, then pull.</p>
+          <h4>THE ONLY RULE THAT MATTERS</h4>
+          <p>A <b>blank into your own head keeps your turn</b>. A live one costs a heart.
+          Live into the mark hurts him; blank into him wastes the pull. Empty drum reloads.</p>
+          <h4>HEARTS ❤</h4>
+          <p>Zero hearts, and the duel — and whoever ran out — is over. Lose and the swamp
+          keeps your marker. Hearts refill each duel.</p>
+          <h4>THE NIGHT</h4>
+          <p>8 antes, 3 blinds each: SMALL, BIG, then a <b>BOSS</b> — one of the Bullfrog's
+          people, each with his own house rule. Win a duel: purse + 1 chip per heart kept.</p>
         </div>
         <div>
-          <h4>TRICKS ◆</h4>
-          <p>Three a round: 👁 peek the top shell · 🌀 spin/re-hide · 🫳 load a chosen shell on top.
-          A JAMmed shell stays chambered, revealed.</p>
-          <h4>THE CASINO</h4>
-          <p>Between antes: 🎰 slots pay in shells · 🃏 blackjack pays chips (21 exact = shell) ·
-          🎡 the wheel rewrites the next round · 🐔 derby longshots shed feathers ·
-          🏚 the pawn shop sells charms. New tables unlock as you go deeper.</p>
-          <h4>YOUR IRON 🔫</h4>
-          <p>The gun case sells bigger guns — but the house only arms regulars: each gun needs
-          chips AND total machine plays. Perks stack as you climb.</p>
+          <h4>TRINKETS</h4>
+          <p>Balatro-style cards, 5 slots, bought in the shop between duels. Passives are
+          always on; <b>actives</b> (keys 1–5) burn charges — once a duel or once a load.
+          Sell backs for half.</p>
+          <h4>THE SHOP</h4>
+          <p>After every duel: three cards, a reroll (cost climbs), and the next gun on
+          the ladder. Interest pays +1 chip per 10 held (max +5) — hoarding is a strategy.</p>
+          <h4>THE IRON</h4>
+          <p>SNUB .38 → LONG COLT → SAWN-OFF → TOMMY GUN → GOLDEN GUN. Perks stack;
+          the last two add active tricks on <b>Q</b> and <b>E</b>.</p>
           <h4>KEYS</h4>
-          <p>1–4 call · SPACE pull · B bank. Hover anything for details.</p>
+          ${binds}
         </div>
       </div>
     `);
@@ -951,16 +797,37 @@ const UI = {
     c.onclick = () => UI.closeModal();
   },
 
+  /* ================= keys ================= */
+
   initKeys() {
     document.addEventListener('keydown', (e) => {
-      if (G.phase !== 'round' || UI.modalOpen() || UI.busy) return;
-      if (e.target.tagName === 'INPUT') return;
-      const map = { '1': 'FIRE', '2': 'DUD', '3': 'JAM', '4': 'BACKFIRE' };
-      if (map[e.key]) { UI.call = map[e.key]; SFX.click(); UI.sync(); }
-      else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); UI.onPull(); }
-      else if (e.key.toLowerCase() === 'b') UI.onBank();
+      if (e.target.tagName === 'INPUT') {
+        if (e.key === 'Enter' && G.phase === 'title') document.getElementById('btn-deal').click();
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === 'm') { document.getElementById('btn-mute') ? document.getElementById('btn-mute').click() : SFX.toggleMute(); return; }
+      if (k === 'h' || e.key === '?') { UI.modalOpen() ? UI.closeModal() : UI.showHelp(); return; }
+      if (e.key === 'Escape') { UI.closeModal(); return; }
+      if (UI.modalOpen()) return;
+
+      /* overlay primary button eats Enter/Space */
+      const prim = document.querySelector('#duel-overlay:not(.hidden) .primary, .splash .primary');
+      if (prim && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); prim.click(); return; }
+
+      if (G.phase === 'title' && e.key === 'Enter') { document.getElementById('btn-deal').click(); return; }
+
+      if (G.phase === 'duel') {
+        if (k === 'a' || e.key === 'ArrowLeft') DUEL.setAim('self');
+        else if (k === 'd' || e.key === 'ArrowRight') DUEL.setAim('foe');
+        else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); DUEL.onFire(); }
+        else if (k >= '1' && k <= '5') DUEL.useTrinket(+k - 1);
+        else if (k === 'q') DUEL.useGunActive('saw');
+        else if (k === 'e') DUEL.useGunActive('tommy');
+      } else if (G.phase === 'shop') {
+        if (k === 'r') SHOP.onReroll();
+        else if (e.key === 'Enter') SHOP.onGo();
+      }
     });
   },
-
-  log() { /* wordless build — kept for compatibility */ },
 };

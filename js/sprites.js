@@ -659,6 +659,7 @@ const BOSS_GLYPHS = {
   croupier:  ['.KKKKK..', '.KKKKK..', 'KKKKKKK.', '.WWWWW..', '..WWW...', '', '', ''],
   collector: ['.bbbbbb.', 'b......b', 'bbbbbbbb', 'b.KGGK.b', 'b.KGGK.b', 'bbbbbbbb', '', ''],
   cage:      ['KKKKKKK.', 'K.K.K.K.', 'K.K.K.K.', 'K.K.K.K.', 'K.K.K.K.', 'KKKKKKK.', '', ''],
+  lily:      ['........', 'RR...RR.', 'RRRRRRR.', '.RRRRR..', '..RRR...', '', '', ''],
   owner:     ['..VVVV..', '.VWWWWV.', 'VWWKKWWV', 'VWKKKKWV', '.VWKKWV.', '..VVVV..', '', ''],
 };
 
@@ -1009,6 +1010,8 @@ const FROG_DEFS = {
                glasses: 'square', warts: true },
   cage:      { skin: ['s', 't', 't'], fat: false, suit: 'stripes', shirt: 'w', tie: null,
                flatcap: true },
+  lily:      { skin: ['P', 'p', 'X'], fat: false, suit: 'd', shirt: 'P', tie: null,
+               lips: 'R', lashes: true, necklace: 'W', earring: 'G', cigholder: true },
   owner:     { skin: ['v', 'X', 'X'], fat: true, suit: 'k', shirt: 'W', tie: 'G',
                hat: 'tophat', hatCol: 'k', band: 'G', goldEyes: true, cigar: true, warts: true },
   dealer:    { skin: ['F', 'f', 'e'], fat: false, suit: 'W', shirt: 'W', bowtie: 'K',
@@ -1023,9 +1026,7 @@ SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
   }
 };
 
-SPR.frogMaster = function (id) {
-  return SPR.cached('frog_' + id, () => {
-    const d = FROG_DEFS[id] || FROG_DEFS.player;
+SPR.buildFrog = function (d) {
     const P = PIX.PAL;
     const skin = P[d.skin[0]], shade = P[d.skin[1]], dark = P[d.skin[2]];
     const W = 34, H = 32, cx = 17;
@@ -1051,6 +1052,11 @@ SPR.frogMaster = function (id) {
     // shirt V + tie
     PIX.rect(ctx, cx - 2, 26, 5, H - 26, P[d.shirt] || P.W);
     if (d.tie) { PIX.rect(ctx, cx - 1, 27, 3, 4, P[d.tie]); PIX.rect(ctx, cx, 31, 1, 1, P[d.tie]); }
+    if (d.necklace) {
+      for (let x = -4; x <= 4; x += 2) {
+        PIX.rect(ctx, cx + x, 27 + (Math.abs(x) > 2 ? 0 : 1), 1, 1, P[d.necklace] || P.W);
+      }
+    }
 
     /* head */
     SPR.ellipse(ctx, cx, headY, rx + 1, ry + 1, P.K);
@@ -1073,6 +1079,11 @@ SPR.frogMaster = function (id) {
       // heavy mobster lids
       PIX.disc(ctx, cx + off, ey - 2, 3, skin);
       PIX.rect(ctx, cx + off - 3, ey - 1, 7, 1, shade);
+      if (d.lashes) {
+        PIX.rect(ctx, cx + off - 4, ey - 4, 1, 2, P.K);
+        PIX.rect(ctx, cx + off, ey - 6, 1, 2, P.K);
+        PIX.rect(ctx, cx + off + 4, ey - 4, 1, 2, P.K);
+      }
       // pupil
       if (d.spiral) {
         ctx.fillStyle = P.K;
@@ -1108,6 +1119,14 @@ SPR.frogMaster = function (id) {
       ctx.fillStyle = P.K;
       ctx.fillRect(cx + x, headY + 3 + droop, 1, 1);
     }
+    if (d.lips) {
+      ctx.fillStyle = P[d.lips] || P.R;
+      for (let x = -3; x <= 3; x++) {
+        const droop = Math.round((Math.abs(x) / mw) * (Math.abs(x) / mw) * 3);
+        ctx.fillRect(cx + x, headY + 4 + droop, 1, 1);
+      }
+      ctx.fillRect(cx - 1, headY + 5, 3, 1);
+    }
 
     /* warts */
     if (d.warts) {
@@ -1116,6 +1135,10 @@ SPR.frogMaster = function (id) {
           PIX.rect(ctx, cx + wx, wy, 2, 1, dark);
           PIX.rect(ctx, cx + wx, wy - 1, 1, 1, P[d.skin[2]]);
         });
+    }
+    if (d.earring) {
+      PIX.rect(ctx, cx - rx - 1, headY + 3, 1, 2, P[d.earring] || P.G);
+      PIX.rect(ctx, cx + rx, headY + 3, 1, 2, P[d.earring] || P.G);
     }
 
     /* hats & headgear (over everything) */
@@ -1163,8 +1186,24 @@ SPR.frogMaster = function (id) {
       PIX.rect(ctx, cx + mw + 4, my - 2, 1, 1, P.q);
       PIX.rect(ctx, cx + mw + 5, my - 4, 1, 1, P.q);
     }
+    if (d.cigholder) { // femme fatale issue
+      const my = headY + 4;
+      PIX.rect(ctx, cx + mw - 1, my, 8, 1, P.K);
+      PIX.rect(ctx, cx + mw + 7, my - 1, 2, 2, P.K);
+      PIX.rect(ctx, cx + mw + 7, my - 1, 1, 1, P.O);
+      PIX.rect(ctx, cx + mw + 8, my - 3, 1, 1, P.q);
+      PIX.rect(ctx, cx + mw + 7, my - 5, 1, 1, P.q);
+    }
     return cv;
-  });
+};
+
+SPR.frogMaster = function (id) {
+  return SPR.cached('frog_' + id, () => SPR.buildFrog(FROG_DEFS[id] || FROG_DEFS.player));
+};
+
+/* mooks: same rig, any def */
+SPR.frogCustom = function (key, def) {
+  return SPR.cached('frogc_' + key, () => SPR.buildFrog(def));
 };
 
 SPR.frogEl = function (id, scale, cls) {
@@ -1279,3 +1318,133 @@ PIX.def('patron_toad', `
 .KbbBBBBBBBBbbK.
 ..KKbbbbbbbbKK..
 ...KuuK..KuuK...`);
+
+/* ============================================================
+   DUEL-ERA SPRITES — hearts, chips, the ghost, trinket cards.
+   ============================================================ */
+
+PIX.def('ic_heart', `
+.KK..KK.
+KRRKKRRK
+KRWRRRRK
+KRRRRRRK
+.KRRRRK.
+..KRRK..
+...KK...`);
+
+PIX.def('ic_heart_e', `
+.KK..KK.
+KTTKKTTK
+KTtTTTTK
+KTTTTTTK
+.KTTTTK.
+..KTTK..
+...KK...`);
+
+PIX.def('ic_chip', `
+...KKKK...
+..KRRWRK..
+.KWRRRRWK.
+.KRRWWRRK.
+.KRRWWRRK.
+.KWRRRRWK.
+..KRWRRK..
+...KKKK...`);
+
+PIX.def('ic_ptr', `
+GGGGG
+.GGG.
+..G..`);
+
+PIX.def('ghost_frog', `
+..W....W..
+.WWW..WWW.
+.WKW..WKW.
+..WWWWWW..
+.WWWWWWWW.
+.WWwWWwWW.
+.WWWWWWWW.
+..WWWWWW..
+..W.WW.W..`);
+
+/* ---------------- trinket cards (balatro-style) ---------------- */
+
+const TRINKET_RAR = {
+  common:    ['s', 'T'],
+  uncommon:  ['n', 'E'],
+  rare:      ['v', 'X'],
+  legendary: ['g', 'H'],
+};
+
+SPR.trinketCard = function (id) {
+  return SPR.cached('tcard_' + id, () => {
+    const t = TRINKETS[id];
+    const P = PIX.PAL;
+    const rc = TRINKET_RAR[t.rarity];
+    const W = 22, H = 28;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    // chunky card: ink border, rarity frame, dark face
+    PIX.rect(ctx, 1, 0, W - 2, H, P.K); PIX.rect(ctx, 0, 1, W, H - 2, P.K);
+    PIX.rect(ctx, 2, 1, W - 4, H - 2, P[rc[0]]);
+    PIX.rect(ctx, 1, 2, W - 2, H - 4, P[rc[0]]);
+    PIX.rect(ctx, 3, 3, W - 6, H - 6, P[rc[1]]);
+    PIX.rect(ctx, 3, 3, W - 6, 1, P.k);
+    // face texture
+    for (let y = 5; y < H - 5; y += 2) PIX.rect(ctx, 4, y, W - 8, 1, 'rgba(0,0,0,.18)');
+    // glyph, centered in the upper area
+    const rows = (t.glyph || []).filter(r => r && r.length);
+    const gw = Math.max(...rows.map(r => r.length), 1);
+    const ox = Math.floor((W - gw) / 2), oy = Math.floor((H - 8 - rows.length) / 2) + 1;
+    rows.forEach((row, j) => {
+      for (let i = 0; i < row.length; i++) {
+        const c = row[i];
+        if (c !== '.' && c !== ' ') {
+          ctx.fillStyle = P[c] || P.W;
+          ctx.fillRect(ox + i, oy + j, 1, 1);
+        }
+      }
+    });
+    // rarity gem at the bottom
+    PIX.rect(ctx, W / 2 - 2, H - 7, 4, 3, P.K);
+    PIX.rect(ctx, W / 2 - 1, H - 6, 2, 1, P[rc[0]]);
+    if (t.rarity === 'legendary') { // gold corner sparks
+      PIX.rect(ctx, 3, 3, 2, 2, P.G); PIX.rect(ctx, W - 5, 3, 2, 2, P.G);
+      PIX.rect(ctx, 3, H - 5, 2, 2, P.G); PIX.rect(ctx, W - 5, H - 5, 2, 2, P.G);
+    }
+    return cv;
+  });
+};
+
+SPR.trinketCardEl = function (id, scale, cls) {
+  return SPR.clone(SPR.trinketCard(id), scale, cls);
+};
+
+/* face-down card for locked collection slots */
+SPR.cardBack = function () {
+  return SPR.cached('tcard_back', () => {
+    const P = PIX.PAL;
+    const W = 22, H = 28;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    PIX.rect(ctx, 1, 0, W - 2, H, P.K); PIX.rect(ctx, 0, 1, W, H - 2, P.K);
+    PIX.rect(ctx, 2, 1, W - 4, H - 2, P.t);
+    PIX.rect(ctx, 1, 2, W - 2, H - 4, P.t);
+    PIX.rect(ctx, 3, 3, W - 6, H - 6, P.T);
+    for (let y = 4; y < H - 4; y += 3) {
+      for (let x = 4 + (y % 2); x < W - 4; x += 3) {
+        PIX.rect(ctx, x, y, 1, 1, P.t);
+      }
+    }
+    // big ? in the middle
+    const q = ['.WWW.', 'W...W', '...W.', '..W..', '.....', '..W..'];
+    q.forEach((row, j) => {
+      for (let i = 0; i < row.length; i++) {
+        if (row[i] === 'W') { ctx.fillStyle = P.q; ctx.fillRect(8 + i, 10 + j, 1, 1); }
+      }
+    });
+    return cv;
+  });
+};

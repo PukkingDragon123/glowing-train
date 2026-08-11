@@ -1,215 +1,228 @@
 'use strict';
 /* ============================================================
    SHELL & DEBT — data.js
-   All content: shells, charms, the frog mob, guns, fates.
-   Trimmed to the good stuff — fewer, more distinct pieces.
+   All content: trinkets, guns, the mob, blinds, economy.
+   The game is a duel now — everything here feeds it.
    ============================================================ */
 
-const OUTCOMES = ['FIRE', 'DUD', 'JAM', 'BACKFIRE'];
-
-const OUTCOME_META = {
-  FIRE:     { icon: '🔥', verb: 'It fires.' },
-  DUD:      { icon: '⚪', verb: 'A dull click. Nothing.' },
-  JAM:      { icon: '⚙️', verb: 'The mechanism seizes.' },
-  BACKFIRE: { icon: '💥', verb: 'It kicks back at YOU.' },
-};
-
 /* ------------------------------------------------------------
-   SHELLS — 11 types, each with one clear job.
-   w: outcome weights. base: payout value.
+   ECONOMY / RUN SHAPE
    ------------------------------------------------------------ */
 
-const SHELLS = {
-  live: {
-    id: 'live', name: 'Live Shell', icon: '🔴', rarity: 'common', base: 18,
-    w: { FIRE: 70, DUD: 18, JAM: 8, BACKFIRE: 4 },
-    desc: 'Standard issue. Mostly does what it says on the brass.',
-  },
-  blank: {
-    id: 'blank', name: 'Blank Shell', icon: '⚪', rarity: 'common', base: 15,
-    w: { FIRE: 6, DUD: 80, JAM: 12, BACKFIRE: 2 },
-    desc: 'All bark, no bite. Reliable streak fuel for DUD callers.',
-  },
-  feather: {
-    id: 'feather', name: 'Feather Shell', icon: '🐔', rarity: 'common', base: 16,
-    w: { FIRE: 10, DUD: 70, JAM: 15, BACKFIRE: 5 },
-    desc: 'Packed with down. When it resolves: +1 pull this round.',
-  },
-  buck: {
-    id: 'buck', name: 'Shotgun Shell', icon: '🟠', rarity: 'uncommon', base: 34,
-    w: { FIRE: 78, DUD: 6, JAM: 10, BACKFIRE: 6 },
-    desc: 'A fistful of thunder. Called FIRE grows your streak by 2.',
-  },
-  rust: {
-    id: 'rust', name: 'Rust Shell', icon: '🟤', rarity: 'uncommon', base: 24,
-    w: { FIRE: 20, DUD: 20, JAM: 55, BACKFIRE: 5 },
-    desc: 'Corroded to the core. Called JAM: +1 Trick.',
-  },
-  gilded: {
-    id: 'gilded', name: 'Gilded Shell', icon: '💰', rarity: 'uncommon', base: 20,
-    w: { FIRE: 55, DUD: 25, JAM: 15, BACKFIRE: 5 },
-    desc: 'Casing of casino gold. Any correct call on it: +4 chips.',
-  },
-  glass: {
-    id: 'glass', name: 'Glass Shell', icon: '🔮', rarity: 'uncommon', base: 30,
-    w: { FIRE: 45, DUD: 35, JAM: 10, BACKFIRE: 10 },
-    desc: 'Transparent — always revealed in the chamber. Shatters forever after resolving.',
-  },
-  web: {
-    id: 'web', name: 'Web Shell', icon: '🕸️', rarity: 'rare', base: 28,
-    w: { FIRE: 25, DUD: 25, JAM: 25, BACKFIRE: 25 },
-    desc: 'Spun by something patient. The NEXT shell copies whatever this one does.',
-  },
-  cursed: {
-    id: 'cursed', name: 'Cursed Shell', icon: '💀', rarity: 'rare', base: 44,
-    w: { FIRE: 10, DUD: 10, JAM: 10, BACKFIRE: 70 },
-    desc: 'It hums when you hold it. Uncalled BACKFIRE from this shell costs 2 Nerve.',
-  },
-  magnet: {
-    id: 'magnet', name: 'Magnet Shell', icon: '🧲', rarity: 'legendary', base: 22,
-    w: { FIRE: 25, DUD: 25, JAM: 25, BACKFIRE: 25 },
-    desc: 'It wants to be wanted. 60% chance to become exactly what you called.',
-  },
-  dead: {
-    id: 'dead', name: "Dead Man's Shell", icon: '⚰️', rarity: 'legendary', base: 70,
-    w: { FIRE: 2, DUD: 2, JAM: 2, BACKFIRE: 94 },
-    desc: 'It knows your name. Call the BACKFIRE and get rich — or don\'t, and get buried.',
-  },
+const ANTES = 8;              // beat the ante-8 boss to clear your marker
+const PLAYER_HP = 5;          // base hearts (totem +1, golden gun +1)
+const MAX_TRINKETS = 5;
+
+const ECON = {
+  start: 4,                   // starting chips
+  interestPer: 10,            // +1 chip per 10 held, on entering the shop
+  interestCap: 5,
+  reroll: 2,                  // base reroll cost, +1 per reroll in a shop
 };
 
-const SHELL_POOLS = {
-  common:    ['live', 'blank', 'feather'],
-  uncommon:  ['buck', 'rust', 'gilded', 'glass'],
-  rare:      ['web', 'cursed'],
-  legendary: ['magnet', 'dead'],
-};
+/* purse paid for clearing a blind */
+function BLIND_PURSE(ante, blind) {
+  return [3 + ante, 5 + 2 * ante, 10 + 3 * ante][blind];
+}
+
+const BLIND_NAMES = ['SMALL BLIND', 'BIG BLIND', 'BOSS BLIND'];
+
+/* mook hearts: small blind / big blind opponents */
+const MOOK_STEP = [0, 1, 1, 2, 3, 3, 4, 4];
+function MOOK_HP(ante, blind) {
+  const step = ante <= 8 ? MOOK_STEP[ante - 1] : 3 + (ante - 8);
+  return (blind === 0 ? 2 : 3) + step;
+}
+
+/* shells per load (before Loaded Scales) */
+function LOAD_SIZE(ante, rng) {
+  return 3 + (ante >= 3 ? 1 : 0) + (ante >= 6 ? 1 : 0) + U.ri(rng, 0, 1);
+}
 
 /* ------------------------------------------------------------
-   GUNS — your iron. Bought at the gun case; the house only
-   arms regulars, so each one needs total machine plays.
-   Perks stack as you climb the ladder.
+   GUNS — the iron ladder. Bought in the shop, perks stack.
    ------------------------------------------------------------ */
 
 const GUNS = [
-  { id: 'snub', name: 'SNUB .38', cost: 0, req: 0,
+  { id: 'snub', name: 'SNUB .38', cost: 0,
     desc: 'Grandpa\'s revolver. It has seen things.' },
-  { id: 'colt', name: 'LONG COLT', cost: 30, req: 3,
-    desc: 'A longer barrel, a longer reach: all base payouts +6.' },
-  { id: 'sawn', name: 'SAWN-OFF', cost: 55, req: 7,
-    desc: 'Subtlety is for banks. Called FIRE grows your streak by 1 extra.' },
-  { id: 'tommy', name: 'TOMMY GUN', cost: 85, req: 12,
-    desc: 'Chicago typewriter. +2 pulls every round.' },
-  { id: 'golden', name: 'THE GOLDEN GUN', cost: 130, req: 18,
-    desc: 'The Bullfrog\'s own. Every payout ×1.5.' },
+  { id: 'colt', name: 'LONG COLT', cost: 12,
+    desc: 'A longer barrel finds the gap: your FIRST live hit each duel deals +1.' },
+  { id: 'sawn', name: 'SAWN-OFF', cost: 20,
+    desc: 'Once a duel [Q]: choke the grip — your next shot deals DOUBLE damage.' },
+  { id: 'tommy', name: 'TOMMY GUN', cost: 32,
+    desc: 'Once a duel [E]: double tap — your turn doesn\'t pass for one extra shot.' },
+  { id: 'golden', name: 'THE GOLDEN GUN', cost: 48,
+    desc: 'The Bullfrog\'s own. Payouts ×1.5 and +1 max heart.' },
+];
+const GUN_ACTIVES = { sawn: 2, tommy: 3 }; // gunIdx needed
+
+/* ------------------------------------------------------------
+   TRINKETS — 24 cards, 5 slots. Passives always on;
+   actives show a key hint and burn charges.
+   active.per: 'duel' | 'reload'
+   unlock: { stat, need, hint } — locked until the account stat hits it.
+   ------------------------------------------------------------ */
+
+const RARITY_META = {
+  common:    { w: 55, label: 'COMMON' },
+  uncommon:  { w: 30, label: 'UNCOMMON' },
+  rare:      { w: 12, label: 'RARE' },
+  legendary: { w: 3,  label: 'LEGENDARY' },
+};
+
+const TRINKETS = {
+  /* ---- commons (4) ---- */
+  cig: { id: 'cig', name: 'CIGARILLO', rarity: 'common', cost: 4,
+    active: { per: 'duel' },
+    desc: 'Once a duel: a long drag steadies you. Heal 1 heart.',
+    glyph: ['.....q..', '....q...', '........', 'uuuuuubO', 'uuuuuubO'] },
+  beer: { id: 'beer', name: 'FLAT BEER', rarity: 'common', cost: 4,
+    active: { per: 'reload' },
+    desc: 'Once a load: rack the chambered shell out, sight unseen.',
+    glyph: ['WWWWW...', 'GGGGGSS.', 'GGGGG.S.', 'GGGGG.S.', 'GGGGGSS.', 'KKKKK...'] },
+  glass: { id: 'glass', name: 'MONOCLE', rarity: 'common', cost: 4,
+    active: { per: 'reload' },
+    desc: 'Once a load: peek the shell under the hammer.',
+    glyph: ['.KKKK...', 'KGGGGK..', 'KGWWGK..', 'KGGGGK..', '.KKKK.G.', '.....G..'] },
+  shill: { id: 'shill', name: 'SHILL CHIP', rarity: 'common', cost: 4,
+    desc: 'The house loves a showman: +2 chips every blank you fire at yourself.',
+    glyph: ['..RRR...', '.RWWWR..', 'RWRRRWR.', 'RWRWRWR.', 'RWRRRWR.', '.RWWWR..', '..RRR...'] },
+  counter: { id: 'counter', name: 'BEAD COUNTER', rarity: 'common', cost: 4,
+    desc: 'Keeps the count for you: the LIVE / BLANK tally stays pinned up.',
+    glyph: ['KKKKKKK.', 'K.R.R.K.', 'KKKKKKK.', 'K.G.G.K.', 'KKKKKKK.', 'K.W.W.K.', 'KKKKKKK.'] },
+  fly: { id: 'fly', name: 'FLY PAPER', rarity: 'common', cost: 4,
+    desc: 'Something lands on every dud: +1 chip whenever ANY blank is fired.',
+    glyph: ['.WW..WW.', 'WWWKKWWW', '.WKKKKW.', '..KKKK..', '..KKKK..', '...KK...'] },
+
+  /* ---- uncommons (7) ---- */
+  cuffs: { id: 'cuffs', name: 'RUSTY CUFFS', rarity: 'uncommon', cost: 7,
+    active: { per: 'duel' },
+    desc: 'Once a duel: cuff the mark to the chair. He skips his next turn.',
+    glyph: ['.SS..SS.', 'S..SS..S', 'S..SS..S', 'S..SS..S', '.SS..SS.'] },
+  deadeye: { id: 'deadeye', name: 'DEAD EYE', rarity: 'uncommon', cost: 7,
+    desc: 'You see the FIRST shell of every load for what it is.',
+    glyph: ['..RRR...', '.R...R..', 'R..W..R.', 'R.WWW.R.', 'R..W..R.', '.R...R..', '..RRR...'] },
+  blood: { id: 'blood', name: 'BAD BLOOD', rarity: 'uncommon', cost: 7,
+    desc: 'First impressions: your live hits deal +1 while the mark is at full hearts.',
+    glyph: ['...R....', '...R....', '..RRR...', '.RRRRR..', '.RRRRR..', '.RRRRR..', '..RRR...'] },
+  snake: { id: 'snake', name: 'SNAKE OIL', rarity: 'uncommon', cost: 7,
+    desc: 'Swallow the pain, spit it back: after you take a live hit, your next live hit deals +1.',
+    glyph: ['.FFFF...', 'F....F..', '......F.', '...FFF..', '..F.....', '.FFFFFF.', '......R.'] },
+  marked: { id: 'marked', name: 'MARKED CARD', rarity: 'uncommon', cost: 7,
+    desc: 'You know the dealer: the first shop reroll each night is FREE.',
+    glyph: ['KKKKK...', 'KWWWK...', 'KWGWK...', 'KWWWK...', 'KWGWK...', 'KWWWK...', 'KKKKK...'] },
+  glove: { id: 'glove', name: "CROUPIER'S GLOVE", rarity: 'uncommon', cost: 7,
+    desc: 'A firm handshake with the house: everything in the shop costs 2 less.',
+    glyph: ['..WWW...', '.WWWWW..', '.WWWWW..', 'WWWWWWW.', '.WWWWW..', '.WWWW...', '..WW....'] },
+  feather: { id: 'feather', name: 'FEATHER FAN', rarity: 'uncommon', cost: 7,
+    desc: 'Play it cool: every blank you fire at yourself adds +10% to the duel\'s payout.',
+    glyph: ['.....W..', '....WW..', '...WWW..', '..WWW...', '.WWW....', '.WW.....', '.W......'] },
+
+  /* ---- rares (7) ---- */
+  rosary: { id: 'rosary', name: 'ROSARY', rarity: 'rare', cost: 10,
+    desc: 'Once a run, the killing shot leaves you at 1 heart instead. Then it crumbles.',
+    unlock: { stat: 'deaths', need: 1, hint: 'die at the table once' },
+    glyph: ['..GGG...', '.G...G..', '.G...G..', '..GGG...', '...W....', '..WWW...', '...W....', '...W....'] },
+  scales: { id: 'scales', name: 'LOADED SCALES', rarity: 'rare', cost: 10,
+    desc: 'A thumb on the balance: every load gets ONE extra blank.',
+    glyph: ['...S....', '.SSSSS..', 'S..S..S.', 'SS.S.SS.', '...S....', '...S....', '..SSS...'] },
+  mirror: { id: 'mirror', name: 'MIRROR SHARD', rarity: 'rare', cost: 10,
+    active: { per: 'duel' },
+    desc: 'Once a duel: hold it to the chamber — the shell under the hammer FLIPS.',
+    unlock: { stat: 'bestAnte', need: 3, hint: 'clear ante 3' },
+    glyph: ['L.......', 'LL......', 'LWL.....', 'LWLL....', 'LLLLL...', 'LLLLLL..'] },
+  totem: { id: 'totem', name: 'TOAD TOTEM', rarity: 'rare', cost: 10,
+    desc: 'An old god with your face: +1 max heart.',
+    glyph: ['.F...F..', 'FFF.FFF.', 'FKF.FKF.', 'FFFFFFF.', 'FFFFFFF.', '.FFFFF..', '.F...F..'] },
+  watch: { id: 'watch', name: 'POCKET WATCH', rarity: 'rare', cost: 10,
+    desc: 'Time is a flat cylinder: your once-a-load trinkets work TWICE a load.',
+    unlock: { stat: 'activesUsed', need: 15, hint: 'use 15 trinket actives' },
+    glyph: ['..GGG...', '.G...G..', 'G..W..G.', 'G..WW.G.', 'G.....G.', '.G...G..', '..GGG...', '...G....'] },
+  dirt: { id: 'dirt', name: 'GRAVE DIRT', rarity: 'rare', cost: 10,
+    desc: 'You salted the seat: live shells the mark fires at HIMSELF deal +1.',
+    unlock: { stat: 'oppSelfKills', need: 1, hint: 'watch a mark do it to himself' },
+    glyph: ['.WWWWW..', 'WWWWWWW.', 'WKWWWKW.', 'WWWWWWW.', '.WWKWW..', '.W.W.W..'] },
+  clover: { id: 'clover', name: 'SWAMP CLOVER', rarity: 'rare', cost: 10,
+    desc: 'Four leaves, one favor: live shells fired AT YOU fizzle to blanks 1 time in 6.',
+    unlock: { stat: 'bestAnte', need: 5, hint: 'clear ante 5' },
+    glyph: ['.FF.FF..', 'FFFFFFF.', '.FFFFF..', 'FFFFFFF.', 'FF.F.FF.', '...F....', '..F.....'] },
+
+  /* ---- legendaries (4) ---- */
+  ring: { id: 'ring', name: 'KINGPIN RING', rarity: 'legendary', cost: 15,
+    desc: 'Kiss it: every payout ×1.5.',
+    unlock: { stat: 'bestAnte', need: 6, hint: 'clear ante 6' },
+    glyph: ['G.G.G.G.', 'GGGGGGG.', 'GRGRGRG.', '.GGGGG..', '.GGGGG..'] },
+  gator: { id: 'gator', name: 'GATOR TOOTH', rarity: 'legendary', cost: 15,
+    desc: 'Something older than the swamp: your live hits deal +1.',
+    unlock: { stat: 'maxDmgOneDuel', need: 6, hint: 'deal 6 damage in a single duel' },
+    glyph: ['.WW.....', '.WWW....', '..WWW...', '..WWWW..', '...WWW..', '...WW...', '....W...'] },
+  edge: { id: 'edge', name: 'HOUSE EDGE', rarity: 'legendary', cost: 15,
+    desc: 'The odds were never fair: every mark sits down with −1 heart.',
+    unlock: { stat: 'flawless', need: 3, hint: 'win 3 duels untouched' },
+    glyph: ['RRRRRR..', '....RR..', '...RR...', '..RR....', '..RR....', '..RR....'] },
+  swarm: { id: 'swarm', name: 'THE SWARM', rarity: 'legendary', cost: 15,
+    desc: 'They can smell it on you: win a duel and take +2 chips per heart you lost.',
+    unlock: { stat: 'clutchWins', need: 1, hint: 'win a duel at your last heart' },
+    glyph: ['K..K....', '.KK...K.', '.....KK.', '..K.....', '.KK..K..', '....KK..', 'K.....K.', '.K...KK.'] },
+};
+
+/* ------------------------------------------------------------
+   THE MOB — one boss per ante, in a fixed order. Each twists
+   the duel. id doubles as the FROG_DEFS portrait key.
+   ------------------------------------------------------------ */
+
+const BOSSES = [
+  { id: 'croupier', name: 'CROAKER', hp: 3, aggro: 0.42,
+    rule: 'SWALLOWS BLANKS',
+    desc: 'House croupier. Blanks you fire at him HEAL him 1 — aim like you mean it.' },
+  { id: 'blindfold', name: 'BLIND NEWT', hp: 5, aggro: 0.5,
+    rule: 'PLAYS IT BLIND',
+    desc: 'He can\'t see the load. Now neither can you: LIVE / BLANK counts stay hidden.' },
+  { id: 'collector', name: 'TAXTOAD TONY', hp: 6, aggro: 0.5,
+    rule: 'CHARGES THE SEAT',
+    desc: 'The vig runs while you sit: every trigger pull YOU take costs 1 chip.' },
+  { id: 'spinner', name: 'DIZZY SAL', hp: 6, aggro: null, // null = coin-flip brain
+    rule: 'NEVER SITS STILL',
+    desc: 'The drum re-shuffles after EVERY shot. Peeks don\'t survive him. Neither does math.' },
+  { id: 'lily', name: 'SLICK LILY', hp: 7, aggro: 0.6,
+    rule: 'DISARMING',
+    desc: 'She already charmed your iron: your GUN tricks are locked this duel.' },
+  { id: 'cage', name: 'WARDEN WART', hp: 7, aggro: 0.55,
+    rule: 'NO TOYS IN THE YARD',
+    desc: 'Everything on the table stays on the table: trinket ACTIVES are locked this duel.' },
+  { id: 'vig', name: 'DON BUFO', hp: 9, aggro: 0.5,
+    rule: 'TOO FAT TO FALL',
+    desc: 'Nine hearts of blubber. There is no trick. Start shooting.' },
+  { id: 'owner', name: 'THE BULLFROG', hp: 9, aggro: 0.65,
+    rule: 'THE DEBT HIMSELF',
+    desc: 'The first time he dies, he gets back up — and hits for 2 once he\'s angry.' },
 ];
 
-/* ------------------------------------------------------------
-   CHARMS — 12 passive artifacts.
-   ------------------------------------------------------------ */
+/* small/big blind opponents — procedural mooks */
+const MOOK_NAMES = ['TAD', 'WEBS', 'BENNY', 'SPOTS', 'HOPPER', 'MUDGE', 'LOU', 'FLIP', 'GILLS', 'DIP'];
+const CAPO_NAMES = ['POCKETS', 'KNUCKLES', 'THE EEL', 'BIG MO', 'SLICK', 'RIBBIT ROY', 'CUE BALL', 'FAT TONGUE'];
 
-const CHARMS = {
-  graveDancer: { id: 'graveDancer', name: 'Grave Dancer', icon: '💃', rarity: 'uncommon', price: 26,
-    desc: 'Called BACKFIREs pay ×2.' },
-  monocle: { id: 'monocle', name: "Cheat's Monocle", icon: '🧐', rarity: 'common', price: 20,
-    desc: '+1 Trick every round.' },
-  rabbit: { id: 'rabbit', name: 'Loaded Rabbit', icon: '🐇', rarity: 'rare', price: 36,
-    desc: 'The first call each round cannot miss.' },
-  spider: { id: 'spider', name: 'Web of Fate', icon: '🕷️', rarity: 'uncommon', price: 24,
-    desc: 'After any JAM, your next payout ×3.' },
-  horseshoe: { id: 'horseshoe', name: 'Rusty Horseshoe', icon: '🍀', rarity: 'common', price: 18,
-    desc: 'DUD payouts get +12 base value.' },
-  houseKey: { id: 'houseKey', name: 'House Key', icon: '🗝️', rarity: 'uncommon', price: 24,
-    desc: 'Everything in the casino costs 25% less.' },
-  whisperer: { id: 'whisperer', name: 'Chicken Whisperer', icon: '🐔', rarity: 'common', price: 20,
-    desc: 'Derby wins pay double. Winning birds always drop a Feather Shell.' },
-  vampire: { id: 'vampire', name: 'Vampire Chip', icon: '🧛', rarity: 'uncommon', price: 30,
-    desc: 'Banking 100+ points heals 1 Nerve (once per round).' },
-  ironNerve: { id: 'ironNerve', name: 'Iron Nerve', icon: '🛡️', rarity: 'uncommon', price: 25,
-    desc: '+2 max Nerve, and steadies you (heal 2) on purchase.' },
-  ashtray: { id: 'ashtray', name: "Pit Boss's Ashtray", icon: '🚬', rarity: 'uncommon', price: 26,
-    desc: 'Once per round, an uncalled JAM refunds the pull.' },
-  allIn: { id: 'allIn', name: 'All-In Amulet', icon: '🔮', rarity: 'rare', price: 42,
-    desc: 'While the pot holds 200+, payouts ×2.' },
-  secondWind: { id: 'secondWind', name: 'Second Wind', icon: '🫀', rarity: 'rare', price: 45,
-    desc: 'Cheat death once: survive the killing blow at 1 Nerve.' },
-};
-
-const CHARM_RARITY_WEIGHT = { common: 60, uncommon: 32, rare: 8 };
-const MAX_CHARMS = 5;
-
-/* ------------------------------------------------------------
-   THE MOB — boss antes are collection visits from the
-   Bullfrog's people. Each twists one rule.
-   ------------------------------------------------------------ */
-
-const BOSSES = {
-  blindfold: { id: 'blindfold', name: 'BLIND NEWT', icon: '🎭', fat: false,
-    desc: 'He can\'t see. Now you can\'t either: all odds hidden, no peeking, every call pays a flat ×3.' },
-  vig: { id: 'vig', name: 'DON BUFO', icon: '🩸', fat: true,
-    desc: 'The fat man takes his taste: 25% skimmed off everything you bank.' },
-  spinner: { id: 'spinner', name: 'DIZZY SAL', icon: '🌀', fat: false,
-    desc: 'He never stops twitching. The chamber re-spins and re-hides after every pull.' },
-  croupier: { id: 'croupier', name: 'CROAKER', icon: '🎩', fat: false,
-    desc: 'House croupier. No banking until your streak reaches 2 — ride or starve.' },
-  collector: { id: 'collector', name: 'TAXTOAD TONY', icon: '💼', fat: true,
-    desc: 'Every pull, his briefcase eats 15 of your score.' },
-  cage: { id: 'cage', name: 'WARDEN WART', icon: '🔒', fat: false,
-    desc: 'Nothing up your sleeves — all Tricks disabled this round.' },
-  owner: { id: 'owner', name: 'THE BULLFROG', icon: '👁️', fat: true,
-    desc: 'The owner himself. All odds hidden (flat ×3 calls) AND 20% skimmed off every bank.' },
-};
-const BOSS_POOL = ['blindfold', 'vig', 'spinner', 'croupier', 'collector', 'cage'];
-
-/* ------------------------------------------------------------
-   ROULETTE FATES — 8 pockets that rewrite the next round.
-   ------------------------------------------------------------ */
-
-const FATES = {
-  fireFever: { id: 'fireFever', color: 'R', num: 7, name: 'Fire Fever', icon: '🔥',
-    desc: 'Next round: FIRE payouts ×2.' },
-  bloodNight: { id: 'bloodNight', color: 'R', num: 23, name: 'Blood Night', icon: '🩸',
-    desc: 'Next round: BACKFIRE odds +15%, but called BACKFIREs pay ×3.' },
-  highRoller: { id: 'highRoller', color: 'R', num: 9, name: 'High Roller', icon: '🎩',
-    desc: 'Next round: debt +25%, but the round\'s chip reward is doubled.' },
-  longTable: { id: 'longTable', color: 'B', num: 4, name: 'The Long Table', icon: '📏',
-    desc: 'Next round: +3 pulls.' },
-  coldDeck: { id: 'coldDeck', color: 'B', num: 17, name: 'Cold Deck', icon: '🧊',
-    desc: 'Next round: every shell is loaded face-up. Perfect information.' },
-  blanksParty: { id: 'blanksParty', color: 'B', num: 26, name: "Blanks' Party", icon: '🎉',
-    desc: 'Next round: DUD payouts ×2.' },
-  zeroHour: { id: 'zeroHour', color: 'G', num: 0, name: 'Zero Hour', icon: '🌑',
-    desc: 'Next round: debt −35%, payouts ×1.5 — but Nerve damage is DOUBLED.' },
-  houseBlinks: { id: 'houseBlinks', color: 'G', num: 100, name: 'The House Blinks', icon: '😉',
-    desc: 'Next round: the boss stays home. If none was coming, debt −20%.' },
-};
-
-/* ------------------------------------------------------------
-   STATION UNLOCKS — the floor opens up as you go deeper.
-   ------------------------------------------------------------ */
-
-const UNLOCKS = { slots: 1, pawn: 1, guncase: 2, bj: 2, roulette: 3, derby: 4 };
-
-/* ------------------------------------------------------------
-   CHICKENS
-   ------------------------------------------------------------ */
-
-const CHICKENS = [
-  { name: 'Clucktavius', flavor: 'a veteran with a thousand-yard stare' },
-  { name: 'Sir Pecksalot', flavor: 'nobility, allegedly' },
-  { name: 'Henrietta Vane', flavor: 'runs on spite alone' },
-  { name: 'Nugget', flavor: 'has everything to prove' },
-  { name: 'Bawk Vega', flavor: 'plays it too cool' },
-  { name: 'Feathers McGraw', flavor: 'is... probably a chicken' },
-  { name: 'Omelette Danger', flavor: 'born yesterday, literally' },
-  { name: "The Colonel's Bane", flavor: 'wanted in eleven counties' },
+/* mook portrait ingredients (fed to the frog rig) */
+const MOOK_SKINS = [
+  ['F', 'f', 'e'], ['B', 'b', 'u'], ['O', 'o', 'o'], ['N', 'n', 'n'],
+  ['w', 'q', 'q'], ['s', 't', 't'], ['f', 'e', 'e'], ['V', 'v', 'X'],
 ];
+const MOOK_SUITS = ['T', 't', 'k', 'u'];
 
-/* Standard blackjack deck data */
-const BJ_SUITS = ['♠', '♥', '♦', '♣'];
-const BJ_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+/* ------------------------------------------------------------
+   KEYBINDS — shown in help and the hint bar.
+   ------------------------------------------------------------ */
 
-/* Slot machine symbols: weight per reel */
-const SLOT_SYMBOLS = [
-  { s: '🔥', w: 5 }, { s: '⚪', w: 5 }, { s: '🐔', w: 4 }, { s: '💰', w: 3 },
-  { s: '🕸️', w: 2 }, { s: '💀', w: 2 }, { s: '7️⃣', w: 1 },
+const BINDS = [
+  ['A', 'aim at yourself'],
+  ['D', 'aim at the mark'],
+  ['SPACE', 'pull the trigger'],
+  ['1–5', 'use a trinket'],
+  ['Q', 'saw grip (SAWN-OFF)'],
+  ['E', 'double tap (TOMMY GUN)'],
+  ['R', 'reroll the shop'],
+  ['ENTER', 'continue / next blind'],
+  ['M', 'mute'],
+  ['H', 'house rules'],
 ];

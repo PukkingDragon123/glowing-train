@@ -1,9 +1,9 @@
 'use strict';
 /* ============================================================
-   Headless browser smoke test for SHELL & DEBT.
-   Drives a full loop: title → run → pulls/bank/sleight →
-   round win → every casino mini-game → next ante, and fails
-   on any console error or page error.
+   Headless browser smoke test for SHELL & DEBT (duel era).
+   Drives a real run: title → collection → small blind duel →
+   big blind → boss intro → shop (buy, reroll) → ante 2.
+   Fails on any console error or page error.
 
      npm i playwright-core   (or use an existing install)
      node dev/smoke.js [path-to-chromium]
@@ -30,125 +30,109 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.screenshot({ path: path.join(SHOTS, name + '.png') });
     console.log('shot:', name);
   };
-  const click = (sel) => page.locator(sel).first().click({ timeout: 5000 });
+  const click = (sel) => page.locator(sel).first().click({ timeout: 6000 });
+  const state = () => page.evaluate(() => ({
+    phase: G2().phase, ante: G2().ante, blind: G2().blind,
+    turn: G2().duel ? G2().duel.turn : null,
+    over: G2().duel ? G2().duel.over : null,
+    busy: DUEL.busy, chips: G2().chips, hearts: G2().hearts,
+  }));
+  const settle = () => page.waitForFunction(
+    () => !DUEL.busy || G2().phase !== 'duel' ||
+      document.querySelector('#duel-overlay:not(.hidden) .primary'),
+    null, { timeout: 25000 });
+
+  /* win the current duel deterministically via the ?debug rig */
+  async function winDuel() {
+    for (let i = 0; i < 12; i++) {
+      const s = await state();
+      if (s.phase !== 'duel' || s.over) break;
+      if (!s.busy && s.turn === 'you') {
+        await page.locator('button', { hasText: 'kill foe' }).click();
+        await click('#aim-foe');
+        await click('#btn-fire');
+      }
+      await settle();
+      await page.waitForTimeout(250);
+    }
+    /* payout overlay → THE SHOP */
+    await page.waitForSelector('#duel-overlay:not(.hidden) .primary', { timeout: 25000 });
+  }
 
   try {
     await page.goto(GAME);
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(700);
     await shot('01-title');
 
-    await page.fill('#seed-in', 'SMOKE-42');
-    await click('#btn-deal');
-    await page.waitForTimeout(700);
-    await shot('02-round-start');
+    /* collection round-trip */
+    await click('#btn-collection');
+    await page.waitForTimeout(400);
+    await shot('02-collection');
+    await click('#btn-back');
+    await page.waitForTimeout(300);
 
-    if (!await page.locator('#btn-peek').isDisabled()) {
-      await click('#btn-peek');
+    /* deal in */
+    await page.fill('#seed-input', 'SMOKE-7');
+    await click('#btn-deal');
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
+    await shot('03-duel-small');
+
+    /* the two aim poses */
+    await click('#aim-self');
+    await page.waitForTimeout(450);
+    await shot('03b-aim-self');
+    await click('#aim-foe');
+    await page.waitForTimeout(450);
+    await shot('03c-aim-foe');
+
+    /* two honest pulls at the mark, then the debug finisher */
+    for (let p = 0; p < 2; p++) {
+      const s = await state();
+      if (s.phase !== 'duel' || s.over || s.busy || s.turn !== 'you') break;
+      await click('#aim-foe');
+      await click('#btn-fire');
+      await settle();
       await page.waitForTimeout(300);
     }
-
-    for (let i = 0; i < 6; i++) {
-      const call = i % 2 === 0 ? 1 : 2;
-      await page.locator('.call-btn').nth(call - 1).click();
-      await page.waitForTimeout(150);
-      if (await page.locator('#btn-pull').isDisabled()) break;
-      await click('#btn-pull');
-      await page.waitForTimeout(1300);
-      if (!await page.locator('#btn-bank').isDisabled() && i % 2 === 1) {
-        await click('#btn-bank');
-        await page.waitForTimeout(400);
-      }
-      if (await page.locator('#mm-go').count() > 0) break;
-    }
-    await shot('03-round-mid');
-
-    if (await page.locator('#mm-go').count() === 0) {
-      if (!await page.locator('#btn-spin').isDisabled()) {
-        await click('#btn-spin'); await page.waitForTimeout(700);
-      }
-      if (!await page.locator('#btn-load').isDisabled()) {
-        await click('#btn-load');
-        await page.waitForTimeout(300);
-        const chips = page.locator('#load-strip button');
-        if (await chips.count() > 0) await chips.first().click();
-        else await click('.m-close');
-        await page.waitForTimeout(300);
-      }
-    }
-
-    // force the round win via the ?debug buttons
-    for (let i = 0; i < 4; i++) {
-      if (await page.locator('#mm-go').count() > 0) break;
-      await page.locator('button', { hasText: '+250 score' }).click();
-      await page.waitForTimeout(400);
-    }
-    await page.waitForTimeout(1200);
-    await shot('04-round-won');
-    // jump deep enough that every station is unlocked (?debug exposes G)
-    await page.evaluate(() => { G.ante = 4; });
-    await click('#mm-go');
+    await shot('04-duel-mid');
+    await winDuel();
+    await shot('05-payout');
+    await click('#duel-overlay .primary');
     await page.waitForTimeout(500);
-    await shot('05-casino');
+    await shot('06-shop');
 
-    for (let i = 0; i < 3; i++) await page.locator('button', { hasText: '+100⛁' }).click();
-
-    await page.locator('.station[data-station="slots"]').click();
+    /* shop: reroll + buy what's affordable */
+    await page.locator('button', { hasText: '+20⛁' }).click();
+    await click('#btn-reroll');
     await page.waitForTimeout(300);
-    await click('#btn-spin-slots');
-    await page.waitForTimeout(2800);
-    await shot('06-slots');
-    await click('.m-close');
+    const ware = page.locator('#shop-stock .ware-card:not(.sold):not(:disabled)');
+    if (await ware.count() > 0) { await ware.first().click(); await page.waitForTimeout(300); }
+    await shot('07-shop-bought');
+    await click('#btn-go');
 
-    await page.locator('.station[data-station="bj"]').click();
-    await page.waitForTimeout(300);
-    await click('#bj-deal');
-    await page.waitForTimeout(600);
-    if (!await page.locator('#bj-stand').isDisabled()) {
-      await click('#bj-stand');
-      await page.waitForTimeout(2500);
-    }
-    await shot('07-blackjack');
-    await click('.m-close');
+    /* big blind — finish it */
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    await winDuel();
+    await click('#duel-overlay .primary');
+    await page.waitForTimeout(400);
+    await click('#btn-go');
 
-    await page.locator('.station[data-station="roulette"]').click();
-    await page.waitForTimeout(300);
-    await page.locator('[data-col="R"]').click();
-    await click('#btn-spin-wheel');
-    await page.waitForTimeout(3800);
-    await shot('08-roulette');
-    await click('.m-close');
+    /* boss blind — intro card, then the kill */
+    await page.waitForSelector('#duel-overlay:not(.hidden) .primary', { timeout: 25000 });
+    await shot('08-boss-intro');
+    await click('#duel-overlay .primary');           // SIT DOWN
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    await shot('09-boss-duel');
+    await winDuel();
+    await click('#duel-overlay .primary');
+    await page.waitForTimeout(400);
+    await click('#btn-go');
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    await shot('10-ante2');
 
-    await page.locator('.station[data-station="derby"]').click();
-    await page.waitForTimeout(300);
-    await page.locator('.chick-btn').first().click();
-    await click('#btn-race');
-    await page.waitForTimeout(6000);
-    await shot('09-derby');
-    await click('.m-close');
-
-    await page.locator('.station[data-station="pawn"]').click();
-    await page.waitForTimeout(300);
-    await shot('10-pawn');
-    const buy = page.locator('#pawn-charms .w-buy:not([disabled])');
-    if (await buy.count() > 0) { await buy.first().click(); await page.waitForTimeout(300); }
-    await click('.m-close');
-
-    await page.locator('.station[data-station="guncase"]').click();
-    await page.waitForTimeout(300);
-    const buyGun = page.locator('#btn-buy-gun:not([disabled])');
-    if (await buyGun.count() > 0) { await buyGun.click(); await page.waitForTimeout(500); }
-    await shot('10b-guncase');
-    await click('.m-close');
-
-    await click('#btn-next');
-    await page.waitForTimeout(700);
-    await shot('11-ante2');
-
-    const state = await page.evaluate(() => ({
-      ante: G.ante, debt: G.debt, chips: G.chips, phase: G.phase,
-      bag: G.bag.length, charms: G.charms.length, gun: E.gun().id, plays: G.machinePlays,
-    }));
-    console.log('final state:', JSON.stringify(state));
+    const fin = await state();
+    console.log('final state:', JSON.stringify(fin));
+    if (fin.ante !== 2) errors.push('[flow] expected ante 2, got ' + fin.ante);
   } catch (e) {
     errors.push('[script] ' + e.message);
     await shot('99-failure');

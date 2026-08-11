@@ -1,0 +1,93 @@
+'use strict';
+/* ============================================================
+   SHELL & DEBT — meta.js
+   The stuff that survives death: account stats, trinket
+   unlocks, collection. localStorage with an in-memory
+   fallback so the headless sim can run it.
+   ============================================================ */
+
+const META = {
+  KEY: 'snd2.meta',
+  d: null,
+
+  blank() {
+    return {
+      stats: {
+        runs: 0, wins: 0, deaths: 0, duelsWon: 0, shots: 0,
+        selfBlanks: 0, liveTaken: 0, activesUsed: 0, flawless: 0,
+        clutchWins: 0, oppSelfKills: 0, maxDmgOneDuel: 0,
+        bestAnte: 0, bossKills: 0,
+      },
+      bossSeen: {},   // boss id -> kills
+      gunsOwned: { snub: true },
+      unlocked: {},   // trinket id -> true (only gated ones live here)
+    };
+  },
+
+  load() {
+    if (META.d) return META.d;
+    META.d = META.blank();
+    try {
+      const raw = localStorage.getItem(META.KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        Object.assign(META.d.stats, saved.stats || {});
+        Object.assign(META.d.bossSeen, saved.bossSeen || {});
+        Object.assign(META.d.gunsOwned, saved.gunsOwned || {});
+        Object.assign(META.d.unlocked, saved.unlocked || {});
+      }
+    } catch (e) { /* node / private mode: memory only */ }
+    return META.d;
+  },
+
+  save() {
+    try { localStorage.setItem(META.KEY, JSON.stringify(META.d)); } catch (e) {}
+  },
+
+  reset() { META.d = META.blank(); META.save(); },
+
+  stats() { return META.load().stats; },
+
+  bump(k, n = 1) { META.load().stats[k] = (META.load().stats[k] || 0) + n; },
+
+  maxStat(k, v) {
+    const s = META.load().stats;
+    if (v > (s[k] || 0)) s[k] = v;
+  },
+
+  addBossKill(id) {
+    const d = META.load();
+    d.bossSeen[id] = (d.bossSeen[id] || 0) + 1;
+    d.stats.bossKills++;
+  },
+
+  ownGun(id) { META.load().gunsOwned[id] = true; },
+
+  /* ---------- unlocks ---------- */
+
+  isUnlocked(tid) {
+    const t = TRINKETS[tid];
+    if (!t || !t.unlock) return true;
+    return !!META.load().unlocked[tid];
+  },
+
+  /* check every gated trinket against stats; returns newly unlocked defs */
+  check() {
+    const d = META.load();
+    const fresh = [];
+    for (const t of Object.values(TRINKETS)) {
+      if (!t.unlock || d.unlocked[t.id]) continue;
+      if ((d.stats[t.unlock.stat] || 0) >= t.unlock.need) {
+        d.unlocked[t.id] = true;
+        fresh.push(t);
+      }
+    }
+    if (fresh.length) META.save();
+    return fresh;
+  },
+
+  unlockAll() { // debug
+    for (const t of Object.values(TRINKETS)) if (t.unlock) META.load().unlocked[t.id] = true;
+    META.save();
+  },
+};

@@ -6,6 +6,7 @@
 
 window.addEventListener('DOMContentLoaded', () => {
   SFX.loadMutePref();
+  META.load();
   BG.init();
   UI.initTooltip();
   UI.initKeys();
@@ -21,27 +22,25 @@ window.addEventListener('DOMContentLoaded', () => {
     bar.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:300;display:flex;gap:6px;opacity:.85';
     const mk = (label, fn) => {
       const b = U.el('button', '', label);
-      b.style.cssText = 'font-size:11px;padding:4px 8px';
+      b.style.cssText = 'font-size:11px;padding:4px 8px;background:#272c3d;border:2px solid #12101d;color:#f4efe0';
       b.onclick = fn;
       bar.appendChild(b);
     };
-    mk('+100⛁', () => { G.chips += 100; UI.sync(); if (CASINO.syncChips) CASINO.syncChips(); });
-    mk('+250 score', () => {
-      if (G.phase !== 'round') return;
-      G.score += 250;
-      if (G.score >= G.debt && !G.flags.roundWon) { E.roundWon(null); UI.roundWonFlow(); }
-      UI.sync();
+    mk('+20⛁', () => { G.chips += 20; UI.syncChips(); if (G.phase === 'shop') SHOP.sync(); });
+    mk('kill foe', () => {
+      if (G.phase !== 'duel' || G.duel.over) return;
+      G.duel.opp.hp = 1;
+      G.duel.shells[G.duel.ptr] = true;
+      G.duel.known[G.duel.ptr] = true;
+      UI.syncDuel();
     });
     mk('reveal', () => {
-      if (G.phase !== 'round') return;
-      G.holes.forEach(h => { if (h) h.revealed = true; });
-      UI.sync();
+      if (G.phase !== 'duel') return;
+      G.duel.known = G.duel.shells.map(s => s);
+      UI.syncDuel();
     });
-    mk('shells', () => {
-      ['web', 'cursed', 'magnet', 'dead', 'glass', 'buck'].forEach(id => E.addShellById(id));
-      UI.sync();
-    });
+    mk('unlock all', () => { META.unlockAll(); });
     document.body.appendChild(bar);
-    window.G = G; window.E = E; window.UI = UI; // console access
+    window.G2 = () => G; window.E = E; window.UI = UI; window.DUEL = DUEL; // console access
   }
 });
