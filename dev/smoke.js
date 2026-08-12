@@ -105,6 +105,15 @@ fs.mkdirSync(SHOTS, { recursive: true });
     /* deal in */
     await page.fill('#seed-input', 'SMOKE-7');
     await click('#btn-deal');
+    await page.waitForSelector('#btn-sit', { timeout: 10000 });
+    await shot('02b-blind-select');
+    /* the run panel */
+    await click('#btn-run');
+    await page.waitForTimeout(350);
+    await shot('02c-run-panel');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+    await click('#btn-sit');
     await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
     await shot('03-duel-small');
 
@@ -139,8 +148,8 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.locator('button', { hasText: '+20⛁' }).click();
     await lootAndGo('06-loot-done');
 
-    /* mobile layout check */
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    /* mobile layout check (on the blind select, then in the duel) */
+    await page.waitForSelector('#btn-sit', { timeout: 25000 });
     await page.setViewportSize({ width: 430, height: 860 });
     await page.waitForTimeout(600);
     await shot('07-mobile');
@@ -153,11 +162,17 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForTimeout(400);
 
-    /* big blind — finish it */
+    /* big blind — sit down, then finish it */
+    await click('#btn-sit');
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    await shot('07d-duel-mobile-check');
     await winDuel();
     await lootAndGo(null);
 
-    /* boss blind — intro card, then the kill */
+    /* boss blind — the select screen names him, then the intro card */
+    await page.waitForSelector('#btn-sit', { timeout: 20000 });
+    await shot('08a-boss-select');
+    await click('#btn-sit');
     await page.waitForSelector('#duel-overlay:not(.hidden) .primary', { timeout: 25000 });
     await shot('08-boss-intro');
     await click('#duel-overlay .primary');           // SIT DOWN
@@ -166,7 +181,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await winDuel();
     await page.locator('button', { hasText: '+20⛁' }).click();
     await lootAndGo('10-boss-loot');
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    await page.waitForSelector('#btn-sit', { timeout: 25000 });
     await shot('11-ante2');
 
     const fin = await state();
@@ -185,6 +200,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
     if (!sys.cops) errors.push('[systems] COPS not loaded');
     if (sys.items < 8) errors.push('[systems] ITEMS table too small');
     if (fin.ante !== 2) errors.push('[flow] expected ante 2, got ' + fin.ante);
+    if (fin.phase !== 'blind') errors.push('[flow] expected the blind select, got ' + fin.phase);
   } catch (e) {
     errors.push('[script] ' + e.message);
     await shot('99-failure');

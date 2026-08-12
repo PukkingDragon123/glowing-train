@@ -1477,3 +1477,101 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   .mark-speech:not(.flip) { transform: translate(calc(-1 * var(--sp-tail-x) - 5px), calc(-100% - 21px)) !important; }
   #fx-flash { display: none; }
 }
+
+/* ============================================================
+   THE BLIND SELECT — the three chairs of an ante
+   ============================================================ */
+
+.blind-wrap {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: var(--gap-lg, 18px);
+  padding: 18px; min-height: 0; position: relative; z-index: 2;
+  overflow-y: auto; scrollbar-width: none;
+}
+.blind-wrap::-webkit-scrollbar { display: none; }
+.blind-head { display: flex; align-items: center; gap: 14px; }
+
+.blind-row { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
+.blind-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: var(--felt-panel);
+  border: 3px solid var(--line); border-radius: 16px;
+  box-shadow: 0 6px 0 rgba(0,0,0,.4), inset 0 0 0 3px rgba(0,0,0,.22);
+  padding: 14px 16px; min-width: 148px; max-width: 260px;
+  opacity: .55; filter: saturate(.7);
+  transition: transform .12s, opacity .12s;
+}
+.blind-card.done { opacity: .35; }
+.blind-card.done .bc-tag::after { content: ' ✓'; color: var(--gold-hi); }
+.blind-card.now {
+  opacity: 1; filter: none; transform: translateY(-6px);
+  border-color: var(--gold);
+  box-shadow: 0 8px 0 rgba(0,0,0,.45), inset 0 0 0 3px rgba(0,0,0,.25), 0 0 44px rgba(224,166,60,.22);
+}
+.blind-card.boss.now { border-color: var(--red); box-shadow: 0 8px 0 rgba(0,0,0,.45), 0 0 48px rgba(209,59,69,.3); }
+.bc-tag { letter-spacing: 1px; }
+.bc-art { display: flex; align-items: flex-end; justify-content: center; min-height: 84px; }
+.bc-art.dim { opacity: .5; }
+.bc-name, .bc-rule { display: flex; }
+.bc-stats { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; max-width: 150px; }
+.bc-tells { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+.bc-tell {
+  display: inline-flex; padding: 2px 6px; border-radius: 6px;
+  background: rgba(0,0,0,.3); border: 2px solid rgba(111,247,216,.35);
+}
+.bc-tell.unknown { border-color: rgba(141,134,114,.35); }
+.bc-purse { display: flex; align-items: center; gap: 5px; padding-top: 6px; border-top: 2px solid rgba(0,0,0,.3); width: 100%; justify-content: center; }
+
+.tag-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(10,31,22,.85); border: 2px solid var(--line); border-radius: 8px;
+  padding: 3px 8px;
+}
+.blind-btns { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.pixbtn.ghost { background: transparent; box-shadow: 0 4px 0 rgba(0,0,0,.35); border-style: dashed; }
+
+/* ============================================================
+   THE RUN PANEL
+   ============================================================ */
+
+.ri-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+.ri-head h3 { color: var(--gold-hi); letter-spacing: 2px; }
+.ri-seed { font-size: 11px; color: var(--dust); letter-spacing: 2px; }
+.ri-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(64px, 1fr));
+  gap: 6px; margin-bottom: 12px;
+}
+.ri-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: rgba(0,0,0,.26); border: 2px solid var(--line); border-radius: 9px;
+  padding: 7px 4px;
+}
+.ri-stat b { color: var(--gold-hi); font-size: 15px; }
+.ri-stat span { font-size: 9px; letter-spacing: 1px; color: var(--dust); }
+.ri-sec { margin-bottom: 10px; max-width: 560px; }
+.ri-sec h4 { color: var(--gold-hi); font-size: 11px; letter-spacing: 2px; margin-bottom: 5px; }
+.ri-row {
+  display: grid; grid-template-columns: 130px 1fr; gap: 10px;
+  font-size: 12px; line-height: 1.45; padding: 5px 8px;
+  background: rgba(0,0,0,.2); border-radius: 7px; margin-bottom: 4px;
+}
+.ri-row b { color: var(--bone); letter-spacing: 1px; }
+.ri-row span { color: #cfe8d8; }
+.ri-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.ri-pill {
+  font-size: 10px; letter-spacing: 1px; padding: 3px 8px; border-radius: 7px;
+  background: rgba(111,247,216,.14); border: 2px solid rgba(111,247,216,.4); color: var(--neon);
+}
+.ri-pill.off { background: rgba(0,0,0,.2); border-color: var(--line); color: var(--dust); }
+.ri-foot { font-size: 12px; color: #cfe8d8; max-width: 560px; line-height: 1.5; }
+.ri-foot b { color: var(--gold-hi); }
+
+@media (max-width: 860px), (pointer: coarse) and (max-width: 1100px) {
+  .blind-row { gap: 8px; }
+  .blind-card { min-width: 0; flex: 1 1 30%; padding: 10px 8px; }
+  .blind-card:not(.now) .bc-art { min-height: 54px; }
+  .blind-card:not(.now) .bc-art canvas { width: 44px; height: auto; }
+  .ri-grid { grid-template-columns: repeat(2, 1fr); }
+  .ri-row { grid-template-columns: 1fr; gap: 2px; }
+}

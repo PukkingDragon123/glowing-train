@@ -131,6 +131,12 @@ function driver() {
     while (G.phase !== 'over' && guard++ < 6000) {
       if (G.phase === 'won') return { ante: ANTES, won: true };
       if (G.ante > (maxAnte || 12)) return { ante: maxAnte, won: false }; // endless cap for sim
+      if (G.phase === 'blind') {
+        /* the bot skips a small blind only when it is already flush and healthy */
+        if (E.canSkip() && G.blind === 0 && G.chips >= HEAT_COST(G.ante) + 12 && Math.random() < 0.25) E.skipBlind();
+        else E.sitDown();
+        continue;
+      }
       if (G.phase === 'loot') { botLoot(); continue; }
       if (G.duel.turn === 'you') botTurn();
       else E.pull(E.oppDecide());
@@ -172,7 +178,8 @@ function driver() {
     '· avg shots:', (shots / N).toFixed(1),
     '· avg gun idx:', (gunSum / N).toFixed(2),
     '· avg chips held:', (chipsAtDeath / N).toFixed(1));
-  console.log('items used per run:', (META.stats().itemsUsed / N).toFixed(2));
+  console.log('items used per run:', (META.stats().itemsUsed / N).toFixed(2),
+    '· skips:', (META.stats().skips / N).toFixed(2));
   console.log('boss table deaths:', JSON.stringify(bossDeaths));
   console.log('crashes:', crashes);
 
@@ -183,6 +190,10 @@ function driver() {
       E.newRun('FUZZ-' + run);
       let guard = 0;
       while (G.phase !== 'over' && G.phase !== 'won' && guard++ < 4000) {
+        if (G.phase === 'blind') {
+          if (Math.random() < 0.3 && E.canSkip()) E.skipBlind(); else E.sitDown();
+          continue;
+        }
         if (G.phase === 'loot') {
           const r = Math.random();
           if (G.loot.pendingCard) {

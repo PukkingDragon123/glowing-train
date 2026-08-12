@@ -35,9 +35,9 @@ const DUEL = {
   /* ---------------- gun poses (world space) ---------------- */
 
   POSES: {
-    rest:     { x: 178, y: 126, rot: 0, flip: false, sc: 1.15 },
-    youFoe:   { x: 128, y: 148, rot: -0.62, flip: false, sc: 1.5 },
-    youSelf:  { x: 108, y: 168, rot: 0.28, flip: true, sc: 1.5 },
+    rest:     { x: 268, y: 154, rot: -0.16, flip: false, sc: 1.3 },
+    youFoe:   { x: 256, y: 134, rot: -0.74, flip: false, sc: 1.5 },
+    youSelf:  { x: 212, y: 128, rot: -1.64, flip: false, sc: 1.55 },
     oppYou:   { x: 226, y: 102, rot: 0.34, flip: true, sc: 1.25 },
     oppSelf:  { x: 224, y: 84, rot: -1.15, flip: false, sc: 1.25 },
   },
@@ -391,24 +391,6 @@ const DUEL = {
       x.restore();
     });
 
-    /* --- the iron --- */
-    if (!DUEL.corpse) {
-      const g = DUEL.gun;
-      x.save();
-      SPR.ellipse(x, g.x + 2, 140 + (g.y - 126) * 0.2, 18 * g.sc, 3, 'rgba(0,0,0,.4)');
-      x.translate(Math.round(g.x), Math.round(g.y));
-      x.rotate(g.rot);
-      if (g.flip) x.scale(-1, 1);
-      const gm = PIX.make(GUN_SPRITES[E.gun().id], 1);
-      x.drawImage(gm, -gm.width / 2 * g.sc, -gm.height / 2 * g.sc, gm.width * g.sc, gm.height * g.sc);
-      if (G.duel && G.duel.sawArmed) {
-        x.globalAlpha = 0.5 + Math.sin(DUEL.t / 5) * 0.3;
-        PIX.rect(x, gm.width / 2 * g.sc - 12, -gm.height / 2 * g.sc + 2, 12, 5, P.O);
-        x.globalAlpha = 1;
-      }
-      x.restore();
-    }
-
     /* --- muzzle flash --- */
     if (DUEL.muzzle) {
       const m = DUEL.muzzle;
@@ -433,9 +415,10 @@ const DUEL = {
 
     FX.drawFront(x, DUEL.t);
 
-    /* --- you, over the shoulder --- */
-    DUEL.drawYou(x);
-    DUEL.hearts(x, 8, 101, G.hearts, E.maxHP(), G.hearts === 1 && (DUEL.t % 40 < 20));
+    /* --- you: first person — your hands, your sleeve, your iron --- */
+    const myPose = DUEL.drawYou(x);
+    DUEL.drawYourIron(x, myPose);
+    DUEL.hearts(x, 16, 168, G.hearts, E.maxHP(), G.hearts === 1 && (DUEL.t % 40 < 20));
 
     /* --- the lamp itself --- */
     const lampY = -DUEL.OY;   // hangs from the real top of the screen
@@ -551,31 +534,106 @@ const DUEL = {
     }
   },
 
+  /* ============================================================
+     FIRST PERSON. You are not on screen — you ARE the camera. What
+     you see of yourself is your own two hands on the near edge of
+     the felt and your sleeve coming in from the bottom of the frame,
+     with the iron in your right hand. Aim at yourself and the barrel
+     swings back at the lens.
+     ============================================================ */
   drawYou(x) {
     const P = PIX.PAL;
-    const bob = Math.sin(DUEL.t / 40 + 2) * 1;
-    const oy = DUEL.youFall ? 26 : 0;
+    const def = FROG_DEFS.player;
+    const bob = Math.sin(DUEL.t / 40 + 2) * 0.8;
+    const drop = DUEL.youFall ? 34 : 0;
+    const aimSelf = DUEL.aim === 'self' && !DUEL.corpse;
+    const aimFoe = DUEL.aim === 'foe' && !DUEL.corpse;
+
     x.save();
-    x.translate(0, Math.round(bob) + oy);
-    if (DUEL.youFall) x.rotate(0.12);
-    x.fillStyle = P.K;
-    x.beginPath(); x.moveTo(-6, 206); x.lineTo(2, 168); x.lineTo(52, 158); x.lineTo(108, 172); x.lineTo(116, 206); x.closePath(); x.fill();
-    x.fillStyle = P.T;
-    x.beginPath(); x.moveTo(-4, 206); x.lineTo(4, 170); x.lineTo(52, 161); x.lineTo(105, 174); x.lineTo(112, 206); x.closePath(); x.fill();
-    // collar line + pinstripes on your own shoulders
-    x.fillStyle = 'rgba(255,255,255,.06)';
-    for (let i = 0; i < 5; i++) x.fillRect(10 + i * 20, 168, 2, 38);
-    PIX.disc(x, 50, 148, 21, P.K);
-    PIX.disc(x, 50, 148, 19, P.f);
-    PIX.disc(x, 44, 142, 8, P.F);
-    PIX.disc(x, 34, 132, 7, P.K); PIX.disc(x, 34, 132, 5, P.f);
-    PIX.disc(x, 66, 132, 7, P.K); PIX.disc(x, 66, 132, 5, P.f);
-    SPR.ellipse(x, 50, 138, 25, 7, P.K);
-    SPR.ellipse(x, 50, 137, 23, 6, P.T);
-    PIX.disc(x, 50, 128, 15, P.K);
-    PIX.disc(x, 50, 129, 13, P.T);
-    PIX.rect(x, 36, 132, 28, 4, P.d);
+    x.translate(0, Math.round(bob) + drop);
+    if (DUEL.youFall) x.rotate(-0.06);
+
+    /* the near lip of the table, right under the lens */
+    SPR.ellipse(x, 180, 190, 212, 28, P.K);
+    SPR.ellipse(x, 180, 188, 208, 25, P.u);
+    SPR.ellipse(x, 180, 187, 202, 22, P.b);
+    SPR.ellipse(x, 180, 185, 198, 20, P.E);
+    SPR.ellipse(x, 180, 183, 190, 16, P.e);
+
+    /* --- your left hand, flat on the felt --- */
+    const lx = 58, ly = 156;
+    SPR.ellipse(x, lx, ly + 11, 13, 4, 'rgba(0,0,0,.35)');
+    x.save();
+    x.translate(lx, ly); x.scale(1.5, 1.5);
+    SPR.frogHand(x, 0, 0, def, -1, { link: true });
     x.restore();
+
+    /* --- your right arm + the iron --- */
+    const rx = aimSelf ? 214 : 268, ry = aimSelf ? 150 : 160;
+    /* sleeve coming in from the bottom of the frame */
+    const sleeveC = SPR.outerColor ? SPR.outerColor(def) : P.T;
+    const cuffC = SPR.cuffColor ? SPR.cuffColor(def) : P.W;
+    const sy0 = ry + 4, sy1 = 206;
+    const sx0 = rx, sx1 = 336;
+    const centerOf = (y) => {
+      const t = U.clamp((y - sy0) / (sy1 - sy0), 0, 1);
+      return Math.round((sx0 + (sx1 - sx0) * t) / 2) * 2;      // 2px stair steps
+    };
+    const widthOf = (y) => {
+      const t = U.clamp((y - sy0) / (sy1 - sy0), 0, 1);
+      return 19 + Math.round(t * 9);                          // forearm thickens to the elbow
+    };
+    for (let y = sy0 - 1; y <= sy1; y++) {                     // ink silhouette
+      const c = centerOf(y), w = widthOf(y);
+      PIX.rect(x, c - (w >> 1) - 1, y, w + 2, 1, P.K);
+    }
+    for (let y = sy0; y <= sy1; y++) {                         // cloth + rounding
+      const c = centerOf(y), w = widthOf(y);
+      PIX.rect(x, c - (w >> 1), y, w, 1, sleeveC);
+      PIX.rect(x, c + (w >> 1) - 4, y, 4, 1, 'rgba(0,0,0,.3)');
+      PIX.rect(x, c - (w >> 1), y, 3, 1, 'rgba(255,255,255,.09)');
+      if ((y & 7) === 0) PIX.rect(x, c - (w >> 1) + 3, y, w - 7, 1, 'rgba(0,0,0,.1)');
+    }
+    /* cuff, then the hand around the grip */
+    PIX.rect(x, rx - 10, ry + 2, 20, 7, P.K);
+    PIX.rect(x, rx - 9, ry + 2, 18, 6, cuffC);
+    PIX.rect(x, rx - 9, ry + 7, 18, 1, 'rgba(0,0,0,.28)');
+    SPR.ellipse(x, rx, ry + 14, 13, 4, 'rgba(0,0,0,.35)');
+    x.save();
+    x.translate(rx, ry); x.scale(1.5, 1.5);
+    SPR.frogHand(x, 0, 0, def, 1, { noCuff: true, grip: true });
+    x.restore();
+
+    /* --- your hearts, on the felt in front of you --- */
+    x.restore();
+    return { aimSelf, aimFoe, rx, ry };
+  },
+
+  /* the iron, drawn from your point of view (in front of your hand) */
+  drawYourIron(x, pose) {
+    if (!pose || DUEL.corpse) return;
+    const P = PIX.PAL;
+    const g = DUEL.gun;
+    const gm = PIX.make(GUN_SPRITES[E.gun().id], 1);
+    x.save();
+    x.translate(Math.round(g.x), Math.round(g.y));
+    x.rotate(g.rot);
+    if (g.flip) x.scale(-1, 1);
+    x.drawImage(gm, -gm.width / 2 * g.sc, -gm.height / 2 * g.sc, gm.width * g.sc, gm.height * g.sc);
+    if (G.duel && G.duel.sawArmed) {
+      x.globalAlpha = 0.5 + Math.sin(DUEL.t / 5) * 0.3;
+      PIX.rect(x, gm.width / 2 * g.sc - 12, -gm.height / 2 * g.sc + 2, 12, 5, P.O);
+      x.globalAlpha = 1;
+    }
+    x.restore();
+    /* pointed at the lens: a muzzle seen end-on, staring back at you */
+    if (pose.aimSelf) {
+      const t = DUEL.muzzleTip();
+      PIX.disc(x, t.x, t.y, 7, P.K);
+      PIX.disc(x, t.x, t.y, 5, P.T);
+      PIX.disc(x, t.x, t.y, 3, P.Z);
+      PIX.rect(x, t.x - 5, t.y - 5, 3, 1, 'rgba(255,255,255,.18)');
+    }
   },
 
   /* the mark says something — a pixel bubble pinned over his head */

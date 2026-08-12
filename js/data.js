@@ -83,6 +83,26 @@ const TRAITS = {
 };
 const MOOK_TRAIT_POOL = Object.keys(TRAITS);
 
+/* ------------------------------------------------------------
+   TAGS — skip a blind and you take a tag instead of a corpse.
+   No purse, no pockets, no cards: just the favour. Bosses can
+   never be skipped.
+   ------------------------------------------------------------ */
+
+const TAGS = {
+  purse:  { id: 'purse',  name: 'FAT ENVELOPE', icon: 'ic_chip',
+    desc: 'Somebody owed you: +10 chips, right now.' },
+  pocket: { id: 'pocket', name: 'INSIDE MAN', icon: 'ic_badge',
+    desc: 'A badge owes you a favour: +1 free pocket at the next corpse.' },
+  item:   { id: 'item',   name: 'CARE PACKAGE', icon: 'ic_chip',
+    desc: 'Left at the bar for you: a free belt item, right now.' },
+  nerve:  { id: 'nerve',  name: 'DUTCH COURAGE', icon: 'ic_heart',
+    desc: '+1 max heart for the next duel only.' },
+  iron:   { id: 'iron',   name: 'GUNRUNNER', icon: 'ic_lock',
+    desc: 'A word with the armourer: the next corpse holsters your next gun.' },
+};
+const TAG_POOL = ['purse', 'pocket', 'item', 'nerve', 'iron'];
+
 const BLIND_NAMES = ['SMALL BLIND', 'BIG BLIND', 'BOSS BLIND'];
 
 /* mook hearts: small blind / big blind opponents */

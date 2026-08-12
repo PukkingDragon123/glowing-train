@@ -51,11 +51,13 @@ const UI = {
     BG.set({
       title: 'title', collection: 'title',
       duel: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'round',
+      blind: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'casino',
       loot: 'casino', over: 'dead', won: 'win',
     }[G.phase] || 'round');
     switch (G.phase) {
       case 'title':      UI.buildTitle(app); break;
       case 'collection': UI.buildCollection(app); break;
+      case 'blind':      UI.buildBlindSelect(app); break;
       case 'duel':
       case 'loot':       UI.buildDuel(app); DUEL.enter(); break;
       case 'over':       UI.buildEnd(app, false); break;
@@ -204,6 +206,173 @@ const UI = {
       wrap.appendChild(best);
     }
     app.appendChild(wrap);
+  },
+
+  /* ================= the blind select ================= */
+
+  buildBlindSelect(app) {
+    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
+    const opp = G.duel.opp;
+    const wrap = U.el('div', 'blind-wrap');
+
+    const head = U.el('div', 'blind-head');
+    head.appendChild(UI.txt('ANTE ' + G.ante + (G.endless ? ' - ENDLESS' : ' OF ' + ANTES),
+      { scale: 3, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    wrap.appendChild(head);
+
+    const row = U.el('div', 'blind-row');
+    for (let i = 0; i < 3; i++) {
+      const isNow = i === G.blind, done = i < G.blind;
+      const card = U.el('div', 'blind-card' + (isNow ? ' now' : done ? ' done' : '') + (i === 2 ? ' boss' : ''));
+      const tag = U.el('div', 'bc-tag');
+      tag.appendChild(UI.txt(BLIND_NAMES[i], { scale: 2, color: i === 2 ? PIX.PAL.R : PIX.PAL.w }));
+      card.appendChild(tag);
+
+      if (isNow) {
+        const art = U.el('div', 'bc-art');
+        art.appendChild(SPR.clone(SPR.frogCustom((opp.boss || opp.name) + ':sel', opp.def), 4));
+        card.appendChild(art);
+        const nm = U.el('div', 'bc-name has-tip');
+        nm.dataset.tipOppTells = '1';
+        nm.appendChild(UI.txt(opp.name, { scale: 2, color: opp.boss ? PIX.PAL.R : PIX.PAL.W }));
+        card.appendChild(nm);
+        if (opp.rule) {
+          const rl = U.el('div', 'bc-rule');
+          rl.appendChild(UI.txt(opp.rule, { scale: 2, color: PIX.PAL.G }));
+          card.appendChild(rl);
+        }
+        const st = U.el('div', 'bc-stats');
+        for (let h = 0; h < opp.maxHP; h++) st.appendChild(PIX.el('ic_heart', 2));
+        card.appendChild(st);
+        if (opp.traits && opp.traits.length) {
+          const tl = U.el('div', 'bc-tells');
+          opp.traits.forEach(t => {
+            const known = META.knowsTell(t);
+            const chip = U.el('span', 'bc-tell has-tip' + (known ? '' : ' unknown'));
+            chip.appendChild(UI.txt(known ? TRAITS[t].name : '???',
+              { scale: 2, color: known ? PIX.PAL.N : PIX.PAL.q }));
+            chip.dataset.tipText = known ? TRAITS[t].desc
+              : TRAITS[t].hint + ' - you have not read this tell yet.';
+            tl.appendChild(chip);
+          });
+          card.appendChild(tl);
+        }
+      } else {
+        const art = U.el('div', 'bc-art dim');
+        art.appendChild(SPR.clone(SPR.cardBack(), 3));
+        card.appendChild(art);
+      }
+
+      const pay = U.el('div', 'bc-purse');
+      pay.appendChild(UI.txt(String(BLIND_PURSE(G.ante, i)), { scale: 2, color: PIX.PAL.G }));
+      pay.appendChild(UI.icon('ic_chip', 2));
+      card.appendChild(pay);
+      row.appendChild(card);
+    }
+    wrap.appendChild(row);
+
+    if (G.tagsTaken.length) {
+      const tr = U.el('div', 'tag-row');
+      tr.appendChild(UI.txt('TAGS TAKEN', { scale: 2, color: PIX.PAL.q }));
+      G.tagsTaken.slice(-6).forEach(id => {
+        const t = TAGS[id];
+        const chip = U.el('span', 'tag-chip has-tip');
+        chip.dataset.tipText = t.name + ' - ' + t.desc;
+        chip.appendChild(PIX.el(t.icon, 2));
+        chip.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.G }));
+        tr.appendChild(chip);
+      });
+      wrap.appendChild(tr);
+    }
+
+    const btns = U.el('div', 'blind-btns');
+    const sit = U.el('button', 'pixbtn gold primary big-deal');
+    sit.id = 'btn-sit';
+    sit.appendChild(PIX.el(GUN_SPRITES[E.gun().id], 2));
+    sit.appendChild(UI.txt('SIT DOWN', { scale: 3, shadow: null, color: PIX.PAL.K }));
+    const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
+    sit.appendChild(kh);
+    sit.onclick = () => { SFX.chak(); E.sitDown(); UI.render(); };
+    btns.appendChild(sit);
+
+    if (E.canSkip()) {
+      const skip = U.el('button', 'pixbtn ghost has-tip');
+      skip.id = 'btn-skip';
+      skip.dataset.tipText = 'Walk past this chair: no purse and no corpse to go through, ' +
+        'but somebody in the room owes you a favour instead.';
+      skip.appendChild(UI.txt('SKIP FOR A TAG', { scale: 2, shadow: null }));
+      const k2 = U.el('span', 'key-hint'); k2.textContent = 'S';
+      skip.appendChild(k2);
+      skip.onclick = () => {
+        const t = E.skipBlind();
+        SFX.deal();
+        UI.render();
+        if (t) setTimeout(() => UI.tagToast(t), 120);
+      };
+      btns.appendChild(skip);
+    }
+
+    const info = U.el('button', 'pixbtn has-tip');
+    info.id = 'btn-run';
+    info.dataset.tipText = 'Everything you are carrying. [TAB]';
+    info.appendChild(UI.txt('THE RUN', { scale: 2, shadow: null }));
+    info.onclick = () => UI.showRunInfo();
+    btns.appendChild(info);
+    wrap.appendChild(btns);
+
+    app.appendChild(wrap);
+  },
+
+  tagToast(t) {
+    const box = document.getElementById('fx-particles');
+    const el = U.el('div', 'unlock-toast pop');
+    el.appendChild(PIX.el(t.icon, 3));
+    const col = U.el('div');
+    col.appendChild(UI.txt('TAG TAKEN', { scale: 2, color: PIX.PAL.N }));
+    col.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.W }));
+    el.appendChild(col);
+    box.appendChild(el);
+    SFX.jackpot();
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 2400);
+  },
+
+  /* ================= the run panel ================= */
+
+  showRunInfo() {
+    const r = E.runInfo();
+    const cards = r.trinkets.length
+      ? r.trinkets.map(id => '<div class="ri-row"><b>' + TRINKETS[id].name + '</b><span>' + TRINKETS[id].desc + '</span></div>').join('')
+      : '<div class="ri-row"><span>Nothing but the iron.</span></div>';
+    const items = r.items.length
+      ? r.items.map(id => '<div class="ri-row"><b>' + ITEMS[id].name + '</b><span>' + ITEMS[id].desc + '</span></div>').join('')
+      : '<div class="ri-row"><span>Belt loops empty.</span></div>';
+    const tags = r.tags.length
+      ? r.tags.map(id => '<span class="ri-pill">' + TAGS[id].name + '</span>').join('')
+      : '<span class="ri-pill off">none</span>';
+    const nb = r.next;
+    UI.modal(
+      '<button class="pixbtn m-close" id="mm-close"></button>' +
+      '<div class="ri-head"><h3>THE RUN</h3><span class="ri-seed">SEED ' + U.esc(r.seed) + '</span></div>' +
+      '<div class="ri-grid">' +
+      '<div class="ri-stat"><b>' + r.ante + (r.endless ? '' : '/' + ANTES) + '</b><span>ANTE</span></div>' +
+      '<div class="ri-stat"><b>' + r.blindName.split(' ')[0] + '</b><span>BLIND</span></div>' +
+      '<div class="ri-stat"><b>' + r.chips + '</b><span>CHIPS</span></div>' +
+      '<div class="ri-stat"><b>' + r.hearts + '/' + r.maxHP + '</b><span>HEARTS</span></div>' +
+      '<div class="ri-stat"><b>' + r.duelsWon + '</b><span>MARKS DOWN</span></div>' +
+      '<div class="ri-stat"><b>' + r.shots + '</b><span>SHOTS</span></div>' +
+      '<div class="ri-stat"><b>' + r.damage + '</b><span>DAMAGE</span></div>' +
+      '<div class="ri-stat"><b>' + r.skipped + '</b><span>SKIPPED</span></div>' +
+      '</div>' +
+      '<div class="ri-sec"><h4>YOUR IRON</h4><div class="ri-row"><b>' + r.gun.name + '</b><span>' + r.gun.desc + '</span></div></div>' +
+      '<div class="ri-sec"><h4>TRINKETS ' + r.trinkets.length + '/' + MAX_TRINKETS + '</h4>' + cards + '</div>' +
+      '<div class="ri-sec"><h4>BELT ' + r.items.length + '/' + E.maxItems() + '</h4>' + items + '</div>' +
+      '<div class="ri-sec"><h4>TAGS</h4><div class="ri-pills">' + tags + '</div></div>' +
+      '<p class="ri-foot">Next up: <b>' + nb.name + '</b>' + (nb.boss ? ' - ' + nb.boss.name : '') +
+      ', purse ' + nb.purse + '. Swamp PD wants ' + HEAT_COST(r.ante) + ' after this ante\'s boss.</p>'
+    );
+    const c = document.querySelector('#mm-close');
+    c.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W, shadow: null }));
+    c.onclick = () => UI.closeModal();
   },
 
   /* ================= the duel frame ================= */
@@ -939,6 +1108,11 @@ const UI = {
       if (k === 'm') { document.getElementById('btn-mute') ? document.getElementById('btn-mute').click() : SFX.toggleMute(); return; }
       if (k === 'h' || e.key === '?') { UI.modalOpen() ? UI.closeModal() : UI.showHelp(); return; }
       if (e.key === 'Escape') { UI.closeModal(); return; }
+      if (e.key === 'Tab' && (G.phase === 'duel' || G.phase === 'blind' || G.phase === 'loot')) {
+        e.preventDefault();
+        UI.modalOpen() ? UI.closeModal() : UI.showRunInfo();
+        return;
+      }
       if (UI.modalOpen()) return;
 
       /* overlay primary button eats Enter/Space */
@@ -947,7 +1121,10 @@ const UI = {
 
       if (G.phase === 'title' && e.key === 'Enter') { document.getElementById('btn-deal').click(); return; }
 
-      if (G.phase === 'duel') {
+      if (G.phase === 'blind') {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('btn-sit').click(); }
+        else if (k === 's' && document.getElementById('btn-skip')) document.getElementById('btn-skip').click();
+      } else if (G.phase === 'duel') {
         if (k === 'a' || e.key === 'ArrowLeft') DUEL.setAim('self');
         else if (k === 'd' || e.key === 'ArrowRight') DUEL.setAim('foe');
         else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); DUEL.onFire(); }

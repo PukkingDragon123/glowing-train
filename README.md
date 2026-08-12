@@ -31,9 +31,33 @@ with their tongue out), suits with lapels, cuffs and three-finger hands, and eve
 drawn right on the frog. Works on phones — the buttons grow to thumb size. Sounds are
 synthesized with WebAudio. Runs are seeded. Unlocks persist in localStorage.
 
-## The duel
+## The run
+
+![The blind select](docs/screen-blinds.png)
+
+Eight antes, three chairs each — **SMALL**, **BIG**, then the **BOSS**. Before every one
+you get the select screen: who's sitting there, how many hearts he has, what his purse
+is worth, and which of his tells you can already read. Then either sit down, or
+**skip for a tag** — walk past the chair and take a favour instead of a corpse (a fat
+envelope, an inside man at the precinct, a care package, dutch courage, a gunrunner).
+No purse, no pockets, no cards: that's the trade. Bosses can never be skipped.
+
+`TAB` opens **the run** at any time — every trinket and item spelled out, your iron,
+tags taken, and what the night has cost so far.
+
+![The run panel](docs/screen-run.png)
+
+## The duel — first person
 
 ![The table](docs/screen-duel.png)
+
+You're not a sprite on the far side of the table; **you are the camera**. What you see of
+yourself is your own two frog hands on the near edge of the felt and your sleeve coming
+in from the bottom of the frame with the iron in your right fist. Aim at the mark and the
+barrel swings out across the table. Aim at yourself and it turns back at the lens —
+you're looking down your own muzzle.
+
+![Down your own barrel](docs/screen-self.png)
 
 The drum loads with a posted mix — say **2 LIVE, 3 blank** — in an order nobody knows.
 Take turns with the mark across the felt:
@@ -141,8 +165,8 @@ The gun ladder stacks as you take it off boss corpses:
 ## Keys
 
 `A` aim at yourself · `D` aim at the mark · `SPACE` fire · `1–5` trinkets · `6–8` belt
-items · `Q`/`E` gun tricks · `R` bribe · `ENTER` walk out / continue · `M` mute ·
-`H` house rules
+items · `Q`/`E` gun tricks · `R` bribe · `S` skip a blind · `TAB` the run · `ENTER` sit down /
+walk out · `M` mute · `H` house rules
 
 Or just **tap**: tap the mark to aim at him, tap again to fire. Tap during any animation
 to fast-forward it. The whole game is playable with one thumb, portrait or landscape.
@@ -187,8 +211,9 @@ node dev/sim.js      # 500 bot runs + 200 random-action fuzz runs against the re
 node dev/smoke.js    # drives the full UI in headless Chromium, fails on any console error
 ```
 
-Current curve (counting bot that also plays its belt): ~86% clear ante 1, ~42% reach
-the Bullfrog, ~10% walk out clean, ~4.5 items burned per run. Humans who can't read a
+Current curve (counting bot that plays its belt and sometimes skips): ~85% clear ante 1,
+~39% reach the Bullfrog, ~10% walk out clean, ~4.4 items burned and ~1 blind skipped
+per run. Humans who can't read a
 top hat do worse. That's the point.
 
 ---

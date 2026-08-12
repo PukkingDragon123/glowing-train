@@ -25,6 +25,7 @@ const E = {
       hearts: PLAYER_HP,
       duel: null, loot: null,
       endless: false, wonRun: false, busted: false,
+      tag: null, tagsTaken: [], skipped: 0,
       run: { duelsWon: 0, shots: 0, damage: 0 },
     };
     META.bump('runs');
@@ -46,6 +47,7 @@ const E = {
   itemRoom() { return G.items.length < E.maxItems(); },
   giveItem(id) { if (!E.itemRoom()) return false; G.items.push(id); return true; },
   freePockets() { return LOOT_TUNING.freePockets + (E.has('pockets') ? 1 : 0)
+    + (G.tagPocket ? 1 : 0)
     - (G.duel && G.duel.opp.traits.some(t => TRAITS[t] && TRAITS[t].hot) ? 1 : 0); },
 
   /* damage outside the shell cycle (knuckles, shiv): flat, no gun/trinket bonuses */
@@ -182,7 +184,9 @@ const E = {
       payout: null,
     };
     G.trinkets.forEach(t => { t.used = {}; });
-    G.phase = 'duel';
+    /* DUTCH COURAGE rides along for exactly one duel */
+    if (G.tag === 'nerve') { G.hearts += 1; G.duel.bonusHeart = true; G.tag = null; }
+    G.phase = 'blind';                       // the select screen sits you down
     return E.reload();
   },
 
@@ -204,6 +208,58 @@ const E = {
     G.trinkets.forEach(t => { t.used.reload = 0; });
     if (E.has('deadeye')) d.known[0] = d.shells[0];
     return { lives, blanks, total: lives + blanks };
+  },
+
+  /* ---- the run: blind select, sitting down, skipping for a tag ---- */
+
+  atBoss() { return G.blind === 2; },
+
+  sitDown() {
+    if (G.phase !== 'blind') return false;
+    G.phase = 'duel';
+    return true;
+  },
+
+  canSkip() { return G.phase === 'blind' && G.blind !== 2; },
+
+  rollTag() { return U.pick(G.rng, TAG_POOL); },
+
+  /* take the tag instead of the corpse */
+  skipBlind() {
+    if (!E.canSkip()) return null;
+    const id = E.rollTag();
+    G.tagsTaken.push(id);
+    G.skipped++;
+    META.bump('skips');
+    switch (id) {
+      case 'purse': G.chips += 10; break;
+      case 'item': {
+        const pool = ITEM_IDS.filter(x => ITEMS[x]);
+        const pick = U.pick(G.rng, pool);
+        if (!E.giveItem(pick)) G.tag = null;
+        break;
+      }
+      case 'pocket': G.tagPocket = true; break;
+      case 'nerve': G.tag = 'nerve'; break;
+      case 'iron': G.tagIron = true; break;
+    }
+    META.save();
+    E.nextBlind();
+    return TAGS[id];
+  },
+
+  /* everything you are carrying, for the run panel */
+  runInfo() {
+    return {
+      seed: G.seedStr, ante: G.ante, blind: G.blind, blindName: E.blindName(),
+      chips: G.chips, hearts: G.hearts, maxHP: E.maxHP(), gun: E.gun(),
+      trinkets: G.trinkets.map(t => t.id),
+      items: G.items.slice(),
+      tags: G.tagsTaken.slice(),
+      duelsWon: G.run.duelsWon, shots: G.run.shots, damage: G.run.damage,
+      skipped: G.skipped, endless: G.endless,
+      next: E.peekNext(),
+    };
   },
 
   bossIs(id) { return !!(G.duel && G.duel.opp.boss === id); },
@@ -569,7 +625,10 @@ const E = {
       : { id: 'hand', label: 'HIS HAND', w: 0.7 });
     pockets.push({ id: 'boot', label: 'BOOT', w: 0.6 });
     if (tr.includes('goldtooth')) pockets.push({ id: 'tooth', label: 'GOLD TOOTH', fixed: 5 });
-    if (opp.boss) pockets.push({ id: 'holster', label: 'HOLSTER',
+    if (G.tagIron && G.gunIdx < GUNS.length - 1) {
+      pockets.push({ id: 'holster', label: 'HOLSTER', gun: true, fixed: 0 });
+      G.tagIron = false;
+    } else if (opp.boss) pockets.push({ id: 'holster', label: 'HOLSTER',
       gun: G.gunIdx < GUNS.length - 1, fixed: G.gunIdx < GUNS.length - 1 ? 0 : 8 });
 
     /* split the budget over the weighted pockets */
@@ -684,6 +743,7 @@ const E = {
     if (G.loot.pendingCard) G.loot.pendingCard = null; // left it on the corpse
     if (G.loot.pendingItem) G.loot.pendingItem = null;
     G.loot.done = true;
+    G.tagPocket = false;
     const learned = [];
     for (const t of G.duel.opp.traits) if (META.learnTrait(t)) learned.push(t);
     META.save();
