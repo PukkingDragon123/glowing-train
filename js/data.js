@@ -265,7 +265,6 @@ const BINDS = [
   ['Q', 'saw grip (SAWN-OFF)'],
   ['E', 'double tap (TOMMY GUN)'],
   ['R', 'bribe the badges (looting)'],
-  ['N', 'the little black book'],
   ['ENTER', 'walk out / next blind'],
   ['M', 'mute'],
   ['H', 'house rules'],

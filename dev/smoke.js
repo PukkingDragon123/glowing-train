@@ -123,13 +123,13 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.locator('button', { hasText: '+20⛁' }).click();
     await lootAndGo('06-loot-done');
 
-    /* the notebook */
+    /* mobile layout check */
     await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
-    await page.keyboard.press('n');
-    await page.waitForTimeout(350);
-    await shot('07-notebook');
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(200);
+    await page.setViewportSize({ width: 430, height: 860 });
+    await page.waitForTimeout(500);
+    await shot('07-mobile');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(400);
 
     /* big blind — finish it */
     await winDuel();

@@ -16,6 +16,11 @@ const UI = {
     app.innerHTML = '';
     UI.closeModal();
     if (G.phase !== 'duel' && G.phase !== 'loot') DUEL.stop();
+    BG.set({
+      title: 'title', collection: 'title',
+      duel: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'round',
+      loot: 'casino', over: 'dead', won: 'win',
+    }[G.phase] || 'round');
     switch (G.phase) {
       case 'title':      UI.buildTitle(app); break;
       case 'collection': UI.buildCollection(app); break;
@@ -75,12 +80,6 @@ const UI = {
     cnum.appendChild(UI.num(G.chips, { color: PIX.PAL.G }));
     chips.appendChild(cnum);
     R.appendChild(chips);
-
-    const book = U.el('button', 'pixbtn tb-btn has-tip');
-    book.dataset.tipText = 'The little black book — every tell you\'ve learned. [N]';
-    book.appendChild(PIX.el('ic_book', 2));
-    book.onclick = () => UI.showNotebook();
-    R.appendChild(book);
 
     const mute = U.el('button', 'pixbtn tb-btn');
     mute.id = 'btn-mute';
@@ -250,12 +249,12 @@ const UI = {
       for (let i = d.ptr; i < d.shells.length; i++) {
         const cell = U.el('span', 'strip-cell' + (i === d.ptr ? ' under-hammer' : ''));
         if (i === d.ptr) {
-          const ptr = PIX.el('ic_ptr', 2); ptr.className = 'pix strip-ptr';
+          const ptr = PIX.el('ic_ptr', 3); ptr.className = 'pix strip-ptr';
           cell.appendChild(ptr);
         }
         const known = d.known[i];
         const master = known === null ? SPR.hiddenMaster() : SPR.backMaster(known ? 'live' : 'blank');
-        cell.appendChild(SPR.clone(master, 2));
+        cell.appendChild(SPR.clone(master, 3));
         strip.appendChild(cell);
       }
     }
@@ -347,7 +346,7 @@ const UI = {
     const g = E.gun();
     const spr = U.el('span', 'has-tip gun-spr');
     spr.dataset.tipGun = g.id;
-    spr.appendChild(PIX.el(GUN_SPRITES[g.id], 2));
+    spr.appendChild(PIX.el(GUN_SPRITES[g.id], 3));
     p.appendChild(spr);
     const mk = (kind, key, label, need) => {
       if (G.gunIdx < need) return;
@@ -416,8 +415,8 @@ const UI = {
     for (let i = 0; i < total; i++) {
       await U.sleep(90);
       SFX.tick();
-      const s = hid ? SPR.clone(SPR.hiddenMaster(), 2)
-        : SPR.clone(SPR.backMaster(i < d.lives ? 'live' : 'blank'), 2);
+      const s = hid ? SPR.clone(SPR.hiddenMaster(), 3)
+        : SPR.clone(SPR.backMaster(i < d.lives ? 'live' : 'blank'), 3);
       s.classList.add('pop');
       shells.appendChild(s);
     }
@@ -425,8 +424,7 @@ const UI = {
     SFX.spin();
     shells.innerHTML = '';
     for (let i = 0; i < total; i++) {
-      const s = SPR.clone(SPR.hiddenMaster(), 2);
-      shells.appendChild(s);
+      shells.appendChild(SPR.clone(SPR.hiddenMaster(), 3));
     }
     await U.sleep(400);
     b.className = 'hidden';
@@ -472,30 +470,6 @@ const UI = {
     box.appendChild(el);
     SFX.bank();
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 2600);
-  },
-
-  /* the little black book — every tell you've learned */
-  showNotebook() {
-    const rows = Object.entries(TRAITS).map(([id, t]) => {
-      const known = META.knowsTell(id);
-      return `<div class="nb-row ${known ? '' : 'nb-unknown'}">
-        <b>${known ? t.name : '???'}</b>
-        <span>${known ? t.desc : 'A tell you haven\'t read yet — loot a frog that carries it.'}</span>
-      </div>`;
-    }).join('');
-    UI.modal(`
-      <button class="pixbtn m-close" id="mm-close"></button>
-      <div class="nb-head"><h3>THE LITTLE BLACK BOOK</h3>
-      <p>What a frog wears tells you how he plays and what he carries.
-      Go through enough pockets and you learn to read a table.</p></div>
-      <div class="nb-list">${rows}</div>
-      <p class="nb-foot">Bribes stall the badges while you loot. After every BOSS,
-      Swamp PD wants protection — <b>${HEAT_COST(G.ante || 1)}⛁ at ante ${G.ante || 1}</b> —
-      or they take your marker.</p>
-    `);
-    const c = document.querySelector('#mm-close');
-    c.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W, shadow: null }));
-    c.onclick = () => UI.closeModal();
   },
 
   unlockToast(t) {
@@ -805,10 +779,10 @@ const UI = {
           closer — three and they're at the door. <b>Bribe</b> to keep digging or walk with
           what you've got. Trinket cards (5 slots, keys 1–5) and guns come out of corpses —
           boss holsters carry your next iron.</p>
-          <h4>TELLS &amp; THE BOOK</h4>
+          <h4>TELLS</h4>
           <p>What a frog wears is how he plays: a top hat means money, an eye patch means
           he shoots first, the sweats mean he'd rather risk his own head. Loot a frog to
-          learn his tells — the <b>little black book</b> (N) remembers forever.</p>
+          learn his tells for good — then <b>hover the mark's name</b> to read him.</p>
           <h4>SWAMP PD</h4>
           <p>After every boss, protection money comes due — it scales with the ante.
           Can't pay? They take your marker. That's the debt now.</p>
@@ -841,8 +815,6 @@ const UI = {
       if (prim && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); prim.click(); return; }
 
       if (G.phase === 'title' && e.key === 'Enter') { document.getElementById('btn-deal').click(); return; }
-
-      if (k === 'n') { UI.modalOpen() ? UI.closeModal() : UI.showNotebook(); return; }
 
       if (G.phase === 'duel') {
         if (k === 'a' || e.key === 'ArrowLeft') DUEL.setAim('self');

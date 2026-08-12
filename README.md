@@ -17,11 +17,13 @@ No build, no dependencies, no assets, no network — plain HTML/CSS/JS:
 python3 -m http.server 8080   # then visit http://localhost:8080
 ```
 
-Every sprite is drawn by the game at boot — the entire cast comes out of one
-parameterized frog rig: big cartoon heads, seven facial expressions (they grin when you
-get hit, sweat when they're losing, and die with their tongue out), fat and thin builds,
-and every tell drawn right on the frog. Sounds are synthesized with WebAudio. Runs are
-seeded. Unlocks persist in localStorage.
+The whole game plays **fullscreen over a Balatro-style paint swirl** — the table, the
+lamp and the mark sit right on the casino floor, and the UI is felt and gold trim. Every
+sprite is drawn by the game at boot from one parameterized frog rig: big cartoon heads,
+seven facial expressions (they grin when you get hit, sweat when they're losing, and die
+with their tongue out), suits with lapels, cuffs and three-finger hands, and every tell
+drawn right on the frog. Works on phones — the buttons grow to thumb size. Sounds are
+synthesized with WebAudio. Runs are seeded. Unlocks persist in localStorage.
 
 ## The duel
 
@@ -55,20 +57,20 @@ you can read across the table:
 | 🚬 **CIGAR** | cool head, thick skin: +1 heart |
 | 🦺 **FANCY VEST** | the VEST pocket always pays |
 
-You don't start knowing any of this. **Loot a frog that carries a tell and it goes in
-the little black book** (`N`) — forever, across every run.
-
-![The little black book](docs/screen-notebook.png)
+You don't start knowing any of this. **Loot a frog that carries a tell and you can
+read it forever** — hover the mark's name and every learned tell is spelled out;
+the ones you haven't earned yet stay `???`.
 
 ## The loot
 
 ![Going through his pockets](docs/screen-loot.png)
 
-There is no shop. Kill the mark and **go through his pockets** while the corpse is warm:
-hat, jacket, vest, hand, boot — a bulge means something better than chips. Every rifle
-brings **the badges** closer; three and they're at the door. **Bribe** them to keep
-digging (the price climbs) or walk with what you've got. Trinket cards and guns come out
-of corpses — **boss holsters carry your next iron**.
+There is no shop. Kill the mark — he sprawls across the felt, legs, splayed hand,
+wounds where your lead landed, a pool that keeps spreading — and **go through his
+pockets** while the corpse is warm: hat, jacket, vest, hand, boot — a bulge means
+something better than chips. Every rifle brings **the badges** closer; three and they're
+at the door. **Bribe** them to keep digging (the price climbs) or walk with what you've
+got. Trinket cards and guns come out of corpses — **boss holsters carry your next iron**.
 
 After every boss, **Swamp PD wants protection money**, scaling with the ante.
 Can't pay? They take your marker. That's the debt now.
@@ -106,8 +108,9 @@ The gun ladder stacks as you take it off boss corpses:
 ## Keys
 
 `A` aim at yourself · `D` aim at the mark · `SPACE` fire · `1–5` trinkets ·
-`Q`/`E` gun tricks · `R` bribe · `N` the black book · `ENTER` walk out / continue ·
-`M` mute · `H` house rules
+`Q`/`E` gun tricks · `R` bribe · `ENTER` walk out / continue · `M` mute · `H` house rules
+
+![On a phone](docs/screen-mobile.png)
 
 ## Project layout
 
@@ -122,7 +125,7 @@ js/meta.js        persistence: stats, unlocks, learned tells (localStorage)
 js/sprites.js     ALL the art: frog rig v2 (expressions, tells, bodies), cards, guns
 js/bg.js          the swirling paint background
 js/engine.js      pure rules: the duel, the mark's brain, the loot, the heat (no DOM)
-js/ui.js          screens: title, duel frame, notebook, collection, help, keys
+js/ui.js          screens: title, duel frame, collection, help, keys
 js/duel.js        the drawn table scene: expressions, blood, the fall, the corpse
 js/loot.js        the take: pockets, the badges bar, bribes, Swamp PD
 js/main.js        boot (+ ?debug harness)
