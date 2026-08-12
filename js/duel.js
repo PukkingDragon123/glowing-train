@@ -148,14 +148,17 @@ const DUEL = {
     const body = SPR.bodyCustom(key, opp.def);
     const head = SPR.frogCustom(key, opp.def, expr);
     const hs = 1.5;
-    const W = 118, H = 116;
+    /* size follows the art: the head overlaps the body's collar by NECK px */
+    const NECK = 8;
+    const hw = Math.round(head.width * hs), hh = Math.round(head.height * hs);
+    const W = Math.max(body.width, hw) + 2;
+    const H = hh + body.height - NECK;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(body, (W - body.width) / 2, H - body.height);
-    ctx.drawImage(head, Math.round((W - head.width * hs) / 2), 0,
-      Math.round(head.width * hs), Math.round(head.height * hs));
+    ctx.drawImage(body, Math.round((W - body.width) / 2), H - body.height);
+    ctx.drawImage(head, Math.round((W - hw) / 2), 0, hw, hh);
     const white = document.createElement('canvas');
     white.width = W; white.height = H;
     const wctx = white.getContext('2d');
