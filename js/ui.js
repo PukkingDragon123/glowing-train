@@ -196,6 +196,7 @@ const UI = {
     const stampB = U.el('div'); stampB.id = 'stamp-big'; holder.appendChild(stampB);
     const stampS = U.el('div'); stampS.id = 'stamp-small'; holder.appendChild(stampS);
     const turn = U.el('div'); turn.id = 'turn-stamp'; holder.appendChild(turn);
+    const hint = U.el('div'); hint.id = 'hint-bar'; hint.className = 'hidden'; holder.appendChild(hint);
     const banner = U.el('div'); banner.id = 'load-banner'; banner.className = 'hidden'; holder.appendChild(banner);
     const overlay = U.el('div'); overlay.id = 'duel-overlay'; overlay.className = 'hidden'; holder.appendChild(overlay);
     wrap.appendChild(holder);
@@ -292,8 +293,22 @@ const UI = {
     if (turn) {
       turn.innerHTML = '';
       if (!d.over) {
+        const yours = d.turn === 'you' && !DUEL.busy;
         turn.appendChild(UI.txt(d.turn === 'you' ? 'YOUR PULL' : d.opp.name + ' HOLDS IT',
-          { scale: 2, color: d.turn === 'you' ? PIX.PAL.G : PIX.PAL.R }));
+          { scale: yours ? 3 : 2, color: d.turn === 'you' ? PIX.PAL.G : PIX.PAL.R,
+            outline: yours ? PIX.PAL.K : undefined }));
+      }
+    }
+
+    /* first-run helper */
+    const hint = document.getElementById('hint-bar');
+    if (hint) {
+      const fresh = META.stats().shots < 30 && G.ante === 1 && G.blind === 0 && !d.over;
+      hint.className = fresh ? '' : 'hidden';
+      if (fresh) {
+        hint.textContent = DUEL.aim === 'foe'
+          ? 'tap HIM again to fire — or tap YOURSELF: a blank there keeps your turn'
+          : 'tap YOURSELF again to risk it — a blank keeps your turn';
       }
     }
 
@@ -733,6 +748,25 @@ const UI = {
 
   initTooltip() {
     const tip = document.getElementById('tooltip');
+    /* touch: tap to toggle a tooltip pinned under the element */
+    if (matchMedia('(hover: none)').matches) {
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('.has-tip');
+        if (!t) { tip.classList.add('hidden'); return; }
+        const html = UI.tooltipFor(t);
+        if (!html) { tip.classList.add('hidden'); return; }
+        tip.innerHTML = html;
+        tip.classList.remove('hidden');
+        const r = t.getBoundingClientRect();
+        const tr = tip.getBoundingClientRect();
+        let x = Math.min(Math.max(6, r.left), innerWidth - tr.width - 6);
+        let y = r.bottom + 8;
+        if (y + tr.height > innerHeight - 6) y = Math.max(6, r.top - tr.height - 8);
+        tip.style.left = x + 'px'; tip.style.top = y + 'px';
+        setTimeout(() => tip.classList.add('hidden'), 3500);
+      });
+      return;
+    }
     document.addEventListener('mouseover', (e) => {
       const t = e.target.closest('.has-tip');
       if (!t) { tip.classList.add('hidden'); return; }

@@ -50,6 +50,20 @@ const DUEL = {
     if (snap) { g.x = p.x; g.y = p.y; g.rot = p.rot; g.sc = p.sc; }
   },
 
+  hurry: false,
+  /* a sleep the player can skip by tapping — animations, not decisions */
+  sleep(ms) {
+    if (DUEL.hurry) ms = Math.min(ms, 60);
+    return new Promise(res => {
+      const t0 = performance.now();
+      const id = setInterval(() => {
+        if (performance.now() - t0 >= ms || (DUEL.hurry && performance.now() - t0 >= 60)) {
+          clearInterval(id); res();
+        }
+      }, 16);
+    });
+  },
+
   muzzleTip() {
     const g = DUEL.gun;
     const m = PIX.make(GUN_SPRITES[E.gun().id], 1);
@@ -590,10 +604,11 @@ const DUEL = {
   async onFire() {
     if (DUEL.busy || G.phase !== 'duel' || G.duel.over || G.duel.turn !== 'you') return;
     DUEL.busy = true;
+    DUEL.hurry = false;
     DUEL.setPose(DUEL.aim === 'foe' ? 'youFoe' : 'youSelf');
-    await U.sleep(220);
+    await DUEL.sleep(160);
     SFX.chak();
-    await U.sleep(190);
+    await DUEL.sleep(150);
     const ev = E.pull(DUEL.aim);
     await DUEL.playShot(ev);
     await DUEL.afterPull(ev);
@@ -642,7 +657,7 @@ const DUEL = {
     if (ev.chips) UI.chipTick(ev.chips);
     if (ev.tonyTax) UI.chipTick(-1);
     UI.syncDuel();
-    await U.sleep(ev.live ? 620 : 480);
+    await DUEL.sleep(ev.live ? 500 : 380);
   },
 
   async afterPull(ev) {
@@ -650,13 +665,13 @@ const DUEL = {
     if (ev.over === 'loss') { await DUEL.deathSequence(); return; }
 
     if (ev.revived) {
-      await U.sleep(300);
+      await DUEL.sleep(300);
       DUEL.shake = 12; SFX.backfire();
       DUEL.oppCache = {};
       DUEL.wounds = [];             // phase two: he shakes the lead out
       DUEL.setExpr('angry', 240);
       UI.stampBig('HE GETS BACK UP', PIX.PAL.V);
-      await U.sleep(900);
+      await DUEL.sleep(800);
       UI.syncDuel();
     }
     if (ev.shuffled) { SFX.spin(); UI.stampSmall('SHUFFLED'); }
@@ -682,21 +697,22 @@ const DUEL = {
   async oppLoop() {
     while (G.phase === 'duel' && !G.duel.over && G.duel.turn === 'opp') {
       DUEL.setPose('rest');
+      DUEL.hurry = false;
       UI.syncDuel();
-      await U.sleep(520 + Math.random() * 480);
+      await DUEL.sleep(380 + Math.random() * 320);
       const choice = E.oppDecide();
       DUEL.setPose(choice === 'foe' ? 'oppYou' : 'oppSelf');
       if (choice === 'self') DUEL.setExpr('worry', 70);
-      await U.sleep(420);
+      await DUEL.sleep(300);
       SFX.chak();
-      await U.sleep(260 + Math.random() * 300);
+      await DUEL.sleep(200 + Math.random() * 220);
       const ev = E.pull(choice);
       await DUEL.playShot(ev);
       if (ev.over === 'win') { await DUEL.killSequence(); return; }
       if (ev.over === 'loss') { await DUEL.deathSequence(); return; }
       if (ev.shuffled) { SFX.spin(); UI.stampSmall('SHUFFLED'); }
       if (ev.reloaded) { SFX.spin(); await UI.loadBanner(); }
-      if (ev.extraTurn) { UI.stampSmall('HE GOES AGAIN'); await U.sleep(160); }
+      if (ev.extraTurn) { UI.stampSmall('HE GOES AGAIN'); await DUEL.sleep(140); }
       UI.syncDuel();
     }
     if (G.phase === 'duel' && !G.duel.over) {
@@ -766,14 +782,21 @@ const DUEL = {
     UI.syncDuel();
   },
 
-  /* clicks on the scene: the mark = aim at him, your corner = aim at you */
+  /* tap the mark to aim at him, tap again to FIRE; same for yourself.
+     any tap during an animation fast-forwards it. */
   sceneClick(e) {
     if (G.phase !== 'duel') return;
+    if (DUEL.busy) { DUEL.hurry = true; return; }
     const r = DUEL.cv.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width * DUEL.W - DUEL.OX;
     const py = (e.clientY - r.top) / r.height * DUEL.H - DUEL.OY;
-    if (px > 110 && px < 255 && py < 128) DUEL.setAim('foe');
-    else if (px < 118 && py > 118) DUEL.setAim('self');
+    if (px > 100 && px < 262 && py < 132) {
+      if (DUEL.aim === 'foe') DUEL.onFire();
+      else DUEL.setAim('foe');
+    } else if (px < 128 && py > 110) {
+      if (DUEL.aim === 'self') DUEL.onFire();
+      else DUEL.setAim('self');
+    }
   },
 };
 

@@ -1316,133 +1316,158 @@ SPR.buildFrog = function (d, expr) {
   return cv;
 };
 
-/* seated body for the duel table — outlined, cartoony, more anatomy:
-   collar, lapels, sleeves with cuffs, three-finger frog hands, buttons */
+/* seated body for the duel table — true stepped pixel-art: no
+   diagonals, only stair-stepped rects, chunky K outlines, side
+   shading. Collar, lapels, buttons, cuffs; vest/tie/rings on top. */
 SPR.buildBody = function (d) {
   const P = PIX.PAL;
   const W = 116, H = 60;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  const cx = W / 2;
+  const cx = 58;
   const fat = !!d.fat;
-  const suitCol = d.suit === 'stripes' ? P.t : (P[d.suit] || P.T);
-  const suitDk = 'rgba(0,0,0,.28)';
+  const suit = d.suit === 'stripes' ? P.t : (P[d.suit] || P.T);
+  const shirt = P[d.shirt] || P.W;
   const skin = P[d.skin[0]], shade = P[d.skin[1]];
-  const sw = fat ? 44 : 32;
 
-  /* neck / throat under the chin */
+  /* neck */
   PIX.rect(ctx, cx - 8, 0, 16, 8, P.K);
   PIX.rect(ctx, cx - 7, 0, 14, 7, skin);
   PIX.rect(ctx, cx - 7, 5, 14, 2, shade);
 
-  /* torso */
-  ctx.fillStyle = P.K;
-  ctx.beginPath();
-  ctx.moveTo(cx - sw - 3, H); ctx.lineTo(cx - sw + 4, 9); ctx.lineTo(cx - 14, 2);
-  ctx.lineTo(cx + 14, 2); ctx.lineTo(cx + sw - 4, 9); ctx.lineTo(cx + sw + 3, H);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = suitCol;
-  ctx.beginPath();
-  ctx.moveTo(cx - sw - 1, H); ctx.lineTo(cx - sw + 5, 11); ctx.lineTo(cx - 13, 4);
-  ctx.lineTo(cx + 13, 4); ctx.lineTo(cx + sw - 5, 11); ctx.lineTo(cx + sw + 1, H);
-  ctx.closePath(); ctx.fill();
+  /* torso profile: half-width per row, stepped every few rows */
+  const prof = [];
+  for (let y = 0; y < H; y++) {
+    let hw;
+    if (y < 2) hw = 14; else if (y < 4) hw = 20; else if (y < 6) hw = 25;
+    else if (y < 8) hw = 29; else if (y < 11) hw = 32; else if (y < 15) hw = 34;
+    else if (y < 26) hw = 35; else if (y < 38) hw = 36; else if (y < 50) hw = 37;
+    else hw = 38;
+    if (fat) {
+      hw += 9;
+      if (y >= 24) hw += Math.min(7, 2 + ((y - 24) >> 2)); // the belly steps out
+    }
+    prof.push(Math.min(hw, 56));
+  }
+  /* outline pass, then suit pass */
+  for (let y = 2; y < H; y++) {
+    const hw = prof[y], hwUp = prof[y - 1] || 0;
+    PIX.rect(ctx, cx - hw - 1, y, (hw + 1) * 2 + 1, 1, P.K);
+    if (y === 2) continue;                       // top edge stays ink
+    if (hw > hwUp + 1) {                         // step ledges get an ink cap
+      PIX.rect(ctx, cx - hw - 1, y, hw - hwUp, 1, P.K);
+      PIX.rect(ctx, cx + hwUp + 1, y, hw - hwUp + 1, 1, P.K);
+    }
+    PIX.rect(ctx, cx - hw, y, hw * 2 + 1, 1, suit);
+  }
+  /* side shading (light from the lamp, top-left) + inner highlight */
+  for (let y = 4; y < H; y++) {
+    const hw = prof[y];
+    PIX.rect(ctx, cx + hw - 4, y, 4, 1, 'rgba(0,0,0,.28)');
+    PIX.rect(ctx, cx - hw + 1, y, 2, 1, 'rgba(255,255,255,.08)');
+  }
   if (d.suit === 'stripes') {
-    ctx.fillStyle = P.T;
-    for (let x = -sw; x <= sw; x += 4) ctx.fillRect(cx + x, 10, 2, H - 10);
+    for (let x = -52; x <= 52; x += 5) {
+      for (let y = 4; y < H; y++) {
+        if (Math.abs(x) <= prof[y] - 2) PIX.rect(ctx, cx + x, y, 2, 1, P.T);
+      }
+    }
   }
-  /* shoulder shading */
-  ctx.fillStyle = suitDk;
-  ctx.beginPath();
-  ctx.moveTo(cx - sw - 1, H); ctx.lineTo(cx - sw + 5, 11); ctx.lineTo(cx - sw + 12, 13);
-  ctx.lineTo(cx - sw + 8, H); ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(cx + sw + 1, H); ctx.lineTo(cx + sw - 5, 11); ctx.lineTo(cx + sw - 12, 13);
-  ctx.lineTo(cx + sw - 8, H); ctx.closePath(); ctx.fill();
-
-  /* belly rolls for the big boys */
-  if (fat) {
-    SPR.ellipse(ctx, cx, H - 4, sw - 3, 11, P.K);
-    SPR.ellipse(ctx, cx, H - 5, sw - 5, 10, suitCol);
-    PIX.rect(ctx, cx - sw + 12, H - 10, sw * 2 - 24, 1, suitDk);
-    PIX.rect(ctx, cx - sw + 16, H - 5, sw * 2 - 32, 1, suitDk);
+  if (fat) { // belly crease
+    PIX.rect(ctx, cx - prof[H - 8] + 10, H - 8, (prof[H - 8] - 10) * 2, 1, 'rgba(0,0,0,.3)');
   }
 
-  /* shirt with collar points + buttons */
-  PIX.rect(ctx, cx - 7, 2, 14, 34, P[d.shirt] || P.W);
-  ctx.fillStyle = P[d.shirt] || P.W;
-  ctx.beginPath(); ctx.moveTo(cx - 7, 2); ctx.lineTo(cx - 1, 9); ctx.lineTo(cx - 10, 8); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cx + 7, 2); ctx.lineTo(cx + 1, 9); ctx.lineTo(cx + 10, 8); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,.22)';
-  ctx.fillRect(cx - 7, 30, 14, 6);
-  for (let y = 12; y <= 30; y += 6) PIX.rect(ctx, cx - 1, y, 1, 1, P.q); // buttons
+  /* shirt: stepped collar V opening to a straight panel */
+  const shirtRows = [[2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 7]];
+  shirtRows.forEach(([y, hw]) => {
+    PIX.rect(ctx, cx - hw - 1, y, hw * 2 + 3, 1, P.K);
+    PIX.rect(ctx, cx - hw, y, hw * 2 + 1, 1, shirt);
+  });
+  for (let y = 8; y < 38; y++) {
+    PIX.rect(ctx, cx - 8, y, 17, 1, P.K);
+    PIX.rect(ctx, cx - 7, y, 15, 1, shirt);
+  }
+  PIX.rect(ctx, cx - 7, 33, 15, 5, 'rgba(0,0,0,.2)');
+  /* collar points: little stepped wings */
+  [[-1], [1]].forEach(([s]) => {
+    PIX.rect(ctx, cx + s * 4 - 2, 2, 4, 2, shirt);
+    PIX.rect(ctx, cx + s * 7 - 2, 4, 4, 2, shirt);
+    PIX.rect(ctx, cx + s * 9 - 1, 6, 3, 2, shirt);
+    PIX.rect(ctx, cx + s * 9 - 1, 8, 3, 1, 'rgba(0,0,0,.25)');
+  });
+  for (let y = 12; y <= 30; y += 6) PIX.rect(ctx, cx - 1, y, 2, 2, P.q); // buttons
 
+  /* lapels: stair-stepped, ink edge with suit face */
+  [[-1], [1]].forEach(([s]) => {
+    for (let i = 0; i < 8; i++) {
+      const lx = cx + s * (13 - i) - 2, ly = 3 + i * 2;
+      PIX.rect(ctx, lx, ly, 4, 3, P.K);
+      PIX.rect(ctx, lx + (s < 0 ? 1 : 0), ly, 3, 2, suit);
+    }
+    // notch at the top
+    PIX.rect(ctx, cx + s * 14 - 2, 3, 4, 2, P.K);
+  });
+  /* pocket square, left breast */
+  PIX.rect(ctx, cx - 26, 20, 6, 4, P.K);
+  PIX.rect(ctx, cx - 25, 20, 4, 3, P.W);
+
+  /* arms: continuous stepped tubes — shoulder out to elbow, forearm in */
+  [[-1], [1]].forEach(([sgn]) => {
+    const baseHw = fat ? 44 : 35;
+    const shX = cx + sgn * (baseHw - 7);
+    const elX = cx + sgn * (baseHw + 5);
+    const haX = cx + sgn * (baseHw - 9);
+    const y0 = 9, y1 = 32, y2 = 57;
+    const centerAt = (y) => {
+      const t = y < y1 ? (y - y0) / (y1 - y0) : (y - y1) / (y2 - y1);
+      const a = y < y1 ? shX : elX, b = y < y1 ? elX : haX;
+      return Math.round((a + (b - a) * t) / 2) * 2;   // 2px stair steps
+    };
+    for (let y = y0 - 1; y <= y2; y++) {              // ink pass, capped ends
+      const c = centerAt(Math.min(Math.max(y, y0), y2 - 1));
+      const w = (y > y1 - 4 && y < y1 + 4) ? 12 : 11; // a little elbow
+      PIX.rect(ctx, c - (w >> 1), y, w, 1, P.K);
+    }
+    for (let y = y0; y < y2; y++) {                   // suit pass + shading
+      const c = centerAt(y);
+      const w = (y > y1 - 4 && y < y1 + 4) ? 10 : 9;
+      PIX.rect(ctx, c - (w >> 1), y, w, 1, suit);
+      PIX.rect(ctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, 'rgba(0,0,0,.25)');
+      if (y === y0 + 1 || y === y0 + 2) PIX.rect(ctx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.07)');
+    }
+    /* cuff peeking at the wrist */
+    const wc = centerAt(y2 - 1);
+    PIX.rect(ctx, wc - 5, y2 - 3, 10, 4, P.K);
+    PIX.rect(ctx, wc - 4, y2 - 3, 8, 3, shirt);
+  });
+
+  /* vest / tie / bowtie on top */
   if (d.vest) {
-    PIX.rect(ctx, cx - 10, 5, 5, 31, P.d); PIX.rect(ctx, cx + 5, 5, 5, 31, P.d);
-    PIX.rect(ctx, cx - 10, 5, 1, 31, P.K); PIX.rect(ctx, cx + 9, 5, 1, 31, P.K);
+    [[-1], [1]].forEach(([s]) => {
+      for (let y = 6; y < 36; y++) {
+        PIX.rect(ctx, cx + s * 9 - (s < 0 ? 4 : 0), y, 5, 1, P.d);
+      }
+      PIX.rect(ctx, cx + s * 9 - (s < 0 ? 5 : 0), 6, 1, 30, P.K);
+    });
     PIX.rect(ctx, cx - 1, 12, 2, 2, P.G); PIX.rect(ctx, cx - 1, 20, 2, 2, P.G);
-    for (let i = 0; i < 8; i++) PIX.rect(ctx, cx + 5 + i, 26 + Math.round(Math.sin(i * 0.9) * 2) + i, 1, 1, P.G);
+    for (let i = 0; i < 8; i++) {
+      PIX.rect(ctx, cx + 6 + i, 26 + ((i * i) >> 2), 1, 1, P.G); // watch chain sag
+    }
   }
   if (d.tie) {
-    PIX.rect(ctx, cx - 2, 5, 4, 19, P[d.tie] === undefined ? P.d : P[d.tie]);
-    PIX.rect(ctx, cx - 3, 5, 6, 3, P[d.tie] === undefined ? P.d : P[d.tie]);
-    PIX.rect(ctx, cx - 1, 24, 2, 2, P[d.tie] === undefined ? P.d : P[d.tie]);
+    const tc = P[d.tie] === undefined ? P.d : P[d.tie];
+    PIX.rect(ctx, cx - 3, 6, 6, 4, P.K); PIX.rect(ctx, cx - 2, 7, 4, 3, tc);   // knot
+    PIX.rect(ctx, cx - 2, 10, 4, 14, tc);
+    PIX.rect(ctx, cx - 1, 24, 2, 3, tc);                                       // tip
+    PIX.rect(ctx, cx - 2, 14, 1, 8, 'rgba(0,0,0,.3)');
   }
   if (d.bowtie) {
     const bc = P[d.bowtie] || P.d;
-    PIX.rect(ctx, cx - 7, 3, 6, 5, bc); PIX.rect(ctx, cx + 2, 3, 6, 5, bc);
-    PIX.rect(ctx, cx - 2, 4, 4, 3, P.K);
+    PIX.rect(ctx, cx - 8, 3, 6, 6, P.K); PIX.rect(ctx, cx + 2, 3, 6, 6, P.K);
+    PIX.rect(ctx, cx - 7, 4, 5, 4, bc); PIX.rect(ctx, cx + 3, 4, 5, 4, bc);
+    PIX.rect(ctx, cx - 2, 4, 4, 4, P.K); PIX.rect(ctx, cx - 1, 5, 2, 2, bc);
   }
-
-  /* lapels with pocket square */
-  ctx.fillStyle = P.K;
-  ctx.beginPath(); ctx.moveTo(cx - 13, 3); ctx.lineTo(cx - 3, 20); ctx.lineTo(cx - 16, 25); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cx + 13, 3); ctx.lineTo(cx + 3, 20); ctx.lineTo(cx + 16, 25); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = suitCol;
-  ctx.beginPath(); ctx.moveTo(cx - 14, 4); ctx.lineTo(cx - 5, 19); ctx.lineTo(cx - 17, 23); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cx + 14, 4); ctx.lineTo(cx + 5, 19); ctx.lineTo(cx + 17, 23); ctx.closePath(); ctx.fill();
-  PIX.rect(ctx, cx - sw + 9, 22, 5, 3, P.W); // pocket square
-  PIX.rect(ctx, cx - sw + 9, 22, 5, 1, P.w);
-
-  /* arms: upper arm out, forearm onto the felt, cuff, 3-finger hand */
-  [[-1], [1]].forEach(([sgn]) => {
-    const shX = cx + sgn * (sw - 4);         // shoulder
-    const elX = cx + sgn * (sw + 8);         // elbow, flared out
-    const haX = cx + sgn * (sw - 10);        // hand, in toward the table
-    ctx.fillStyle = P.K;
-    ctx.beginPath();
-    ctx.moveTo(shX - 7 * sgn, 12); ctx.lineTo(shX + 6 * sgn, 16);
-    ctx.lineTo(elX, 34); ctx.lineTo(elX - 9 * sgn, 38);
-    ctx.closePath(); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(elX, 33); ctx.lineTo(elX - 9 * sgn, 38);
-    ctx.lineTo(haX - 4 * sgn, H - 5); ctx.lineTo(haX + 7 * sgn, H - 8);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = suitCol;
-    ctx.beginPath();
-    ctx.moveTo(shX - 5 * sgn, 13); ctx.lineTo(shX + 4 * sgn, 17);
-    ctx.lineTo(elX - 2 * sgn, 34); ctx.lineTo(elX - 8 * sgn, 37);
-    ctx.closePath(); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(elX - 2 * sgn, 34); ctx.lineTo(elX - 8 * sgn, 37);
-    ctx.lineTo(haX - 3 * sgn, H - 6); ctx.lineTo(haX + 5 * sgn, H - 9);
-    ctx.closePath(); ctx.fill();
-    /* cuff */
-    PIX.rect(ctx, haX + (sgn < 0 ? -1 : -4), H - 11, 6, 3, P[d.shirt] || P.W);
-    /* three-finger frog hand */
-    const hx = haX + sgn * 2, hy = H - 7;
-    PIX.disc(ctx, hx, hy, 5, P.K);
-    PIX.disc(ctx, hx, hy - 1, 4, skin);
-    for (let f = -1; f <= 1; f++) {
-      PIX.rect(ctx, hx + f * 3 - 1, hy + 1, 2, 4, P.K);
-      PIX.rect(ctx, hx + f * 3 - 1, hy + 1, 2, 3, skin);
-      PIX.rect(ctx, hx + f * 3 - 1, hy + 3, 2, 1, shade);
-    }
-    if (d.rings) {
-      PIX.rect(ctx, hx - 4, hy - 1, 2, 2, P.G);
-      PIX.rect(ctx, hx + 2, hy - 2, 2, 2, P.G);
-    }
-  });
   return cv;
 };
 
