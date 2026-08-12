@@ -1898,11 +1898,11 @@ SPR.buildBody = function (d) {
     if (y < 2) hw = 15;                       // neck root
     else if (y < 3) hw = 25;                  // trapezius, one hard step
     else if (y < 4) hw = 34;
-    else if (y < 17) hw = 41;                 // THE shoulder line — the widest point
-    else if (y < 22) hw = 40 - (y - 17);      // taper off the pad
-    else if (y < 34) hw = 36;                 // chest
-    else if (y < 46) hw = 35;                 // waist, slightly nipped
-    else hw = 37;                             // seat spreading on the chair
+    else if (y < 15) hw = 41;                 // THE shoulder line — the widest point
+    else if (y < 21) hw = 40 - (y - 15) * 2;  // hard taper under the pad
+    else if (y < 36) hw = 30;                 // ribs — narrow, so the arms hang clear
+    else if (y < 48) hw = 31;                 // waist
+    else hw = 33;                             // seat spreading on the chair
     if (fat) {
       hw += 8;
       if (y >= 22) hw += Math.min(8, 2 + ((y - 22) >> 2)); // the belly steps out
@@ -2421,8 +2421,8 @@ SPR.buildBody = function (d) {
   const armCv = document.createElement('canvas');
   armCv.width = W; armCv.height = H;
   const actx = armCv.getContext('2d');
-  let baseHw = (fat ? 47 : 39) + Math.round(pad * 0.5) + Math.round(shX * 0.6);
-  baseHw = Math.min(baseHw, 48);
+  let baseHw = (fat ? 50 : 43) + Math.round(pad * 0.5) + Math.round(shX * 0.6);
+  baseHw = Math.min(baseHw, 52);
   const rolled = !!(sh && sh.rolled);
   const sleeveC = gown ? L(acc.gloves || gown.col, P.W) : base;
   /* must agree with SPR.cuffColor — duel.js paints the felt-hand cuff from it */
@@ -2431,77 +2431,117 @@ SPR.buildBody = function (d) {
   const bulky = O && O.big ? 2 : 0;
 
   [-1, 1].forEach(sgn => {
-    const shoX = cx + sgn * (baseHw - 7);
-    const elX = cx + sgn * (baseHw + 5);
-    const haX = cx + sgn * (baseHw - 9);
-    const y0 = 9, y1 = 32, y2 = 57;
+    /* Anatomy of a frog leaning on a table: the shoulder sits under the coat's
+       padded cap, the upper arm hangs just inside the silhouette, and the
+       FOREARM swings forward and inward over the coat to reach the felt.
+       Upper arm -> behind layer. Forearm -> front layer, fully outlined, so it
+       reads as a limb instead of another panel of jacket. */
+    const shoX = cx + sgn * (baseHw - 9);          // sleeve head, tucked under the cap
+    const elX  = cx + sgn * (baseHw - 1);          // elbow bows out past the ribs
+    const haX  = cx + sgn * (baseHw - 9);          // wrist back in, onto the felt
+    const y0 = 8, yEl = 30, y2 = 57;
     const centerAt = (y) => {
-      const t = y < y1 ? (y - y0) / (y1 - y0) : (y - y1) / (y2 - y1);
-      const a = y < y1 ? shoX : elX, b = y < y1 ? elX : haX;
+      const t = y < yEl ? (y - y0) / (yEl - y0) : (y - yEl) / (y2 - yEl);
+      const a = y < yEl ? shoX : elX, b = y < yEl ? elX : haX;
       return Math.round((a + (b - a) * t) / 2) * 2;   // 2px stair steps
     };
-    const rollY = rolled ? 27 : y2;
-    for (let y = y0 - 1; y <= y2; y++) {              // ink pass, capped ends
-      const c = centerAt(Math.min(Math.max(y, y0), y2 - 1));
-      let w = ((y > y1 - 4 && y < y1 + 4) ? 12 : 11) + (y <= rollY ? bulky : 0);
-      if (rolled && y > rollY) w = 10;
+    const widthAt = (y) => {
+      const el = Math.abs(y - yEl) < 4;
+      let w = el ? 13 : 12;
+      if (y > yEl) w = 12 - Math.round((y - yEl) / 12);   // forearm tapers to the wrist
+      return w + (y <= (rolled ? 26 : y2) ? bulky : 0);
+    };
+    const rollY = rolled ? 26 : y2 + 1;
+
+    /* ---- upper arm: BEHIND the coat ---- */
+    for (let y = y0 - 1; y <= yEl + 2; y++) {
+      const c = centerAt(U.clamp(y, y0, y2 - 1)), w = widthAt(y);
       PIX.rect(actx, c - (w >> 1), y, w, 1, INK);
     }
-    for (let y = y0; y < y2; y++) {
-      const c = centerAt(y);
-      const inSleeve = y <= rollY;
-      let w = ((y > y1 - 4 && y < y1 + 4) ? 10 : 9) + (inSleeve ? bulky : 0);
-      if (!inSleeve) w = 8;
-      PIX.rect(actx, c - (w >> 1), y, w, 1, inSleeve ? sleeveC : skin);
-      PIX.rect(actx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, 'rgba(0,0,0,.25)');
-      if (y === y0 + 1 || y === y0 + 2) PIX.rect(actx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.07)');
-      if (inSleeve && stripe === 'chalk') {
+    for (let y = y0; y <= yEl + 1; y++) {
+      const c = centerAt(y), w = widthAt(y) - 2;
+      const bare = y > rollY;
+      PIX.rect(actx, c - (w >> 1), y, w, 1, bare ? skin : sleeveC);
+      PIX.rect(actx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, SH1);
+      if (y <= y0 + 2) PIX.rect(actx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.08)');
+      if (!bare && stripe === 'chalk') {
         const lx = c - (w >> 1) + ((Math.abs(c) + 1) % stripeGap);
         PIX.rect(actx, lx, y, 1, 1, CHALK);
         PIX.rect(actx, lx + stripeGap, y, 1, 1, CHALK);
       }
-      if (!inSleeve && (y & 3) === 0) PIX.rect(actx, c - 1, y, 2, 1, skShade);
     }
-    /* shoulder seam */
-    PIX.rect(actx, centerAt(y0) - 5, y0, 10, 1, SH2);
+
+    /* ---- forearm: IN FRONT, coming toward the felt ---- */
+    for (let y = yEl - 3; y <= y2; y++) {
+      const c = centerAt(U.clamp(y, y0, y2 - 1)), w = widthAt(y);
+      PIX.rect(ctx, c - (w >> 1), y, w, 1, INK);        // full outline against the coat
+    }
+    for (let y = yEl - 2; y < y2; y++) {
+      const c = centerAt(y), w = widthAt(y) - 2;
+      const bare = y > rollY;
+      PIX.rect(ctx, c - (w >> 1), y, w, 1, bare ? skin : sleeveC);
+      /* round the tube: lit on the inside edge, shaded on the outside */
+      PIX.rect(ctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, SH1);
+      PIX.rect(ctx, c + (sgn < 0 ? (w >> 1) - 1 : -(w >> 1)), y, 1, 1, 'rgba(255,255,255,.07)');
+      if (!bare && stripe === 'chalk') {
+        const lx = c - (w >> 1) + ((Math.abs(c) + 1) % stripeGap);
+        PIX.rect(ctx, lx, y, 1, 1, CHALK);
+      }
+      if (bare && (y & 3) === 0) PIX.rect(ctx, c - 1, y, 2, 1, skShade);
+    }
+    /* elbow crease where the sleeve bends onto the table */
+    const ec = centerAt(yEl);
+    PIX.rect(ctx, ec - 4, yEl - 1, 8, 1, SH3);
+    PIX.rect(ctx, ec - 3, yEl + 1, 6, 1, SH2);
+
+    /* shoulder cap: the coat's own seam riding over the sleeve head */
+    const sc = centerAt(y0);
+    PIX.rect(ctx, sc - 7, y0 - 1, 14, 2, INK);
+    PIX.rect(ctx, sc - 6, y0, 12, 1, base);
+    PIX.rect(ctx, sc - 6, y0 + 1, 12, 1, SH2);
+
     if (rolled) {                                    // the roll itself
       const rc = centerAt(rollY);
-      PIX.rect(actx, rc - 7, rollY - 3, 14, 6, INK);
-      PIX.rect(actx, rc - 6, rollY - 3, 12, 4, sleeveC);
-      PIX.rect(actx, rc - 6, rollY - 1, 12, 1, SH2);
-      PIX.rect(actx, rc - 6, rollY - 3, 12, 1, 'rgba(255,255,255,.12)');
+      PIX.rect(ctx, rc - 8, rollY - 3, 16, 7, INK);
+      PIX.rect(ctx, rc - 7, rollY - 3, 14, 5, sleeveC);
+      PIX.rect(ctx, rc - 7, rollY + 1, 14, 1, SH2);
+      PIX.rect(ctx, rc - 7, rollY - 3, 14, 1, 'rgba(255,255,255,.14)');
     }
     if (O && O.frayed) {                             // worn-through elbow
-      const ec = centerAt(y1);
-      PIX.rect(actx, ec - 4, y1 - 3, 9, 7, 'rgba(0,0,0,.22)');
-      PIX.rect(actx, ec - 3, y1 - 2, 3, 2, baseDk);
-      PIX.rect(actx, ec + 1, y1 + 1, 3, 2, baseDk);
+      PIX.rect(ctx, ec - 4, yEl - 3, 9, 7, 'rgba(0,0,0,.22)');
+      PIX.rect(ctx, ec - 3, yEl - 2, 3, 2, baseDk);
+      PIX.rect(ctx, ec + 1, yEl + 1, 3, 2, baseDk);
     }
-    /* cuff at the wrist (kept where the felt hands meet it) */
+
+    /* cuff at the wrist — the scene's felt hands butt straight up against this */
     const wc = centerAt(y2 - 1);
-    PIX.rect(actx, wc - 5, y2 - 3, 10, 4, INK);
-    PIX.rect(actx, wc - 4, y2 - 3, 8, 3, cuffC);
-    PIX.rect(actx, wc - 4, y2 - 3, 8, 1, 'rgba(0,0,0,.2)');
+    PIX.rect(ctx, wc - 6, y2 - 4, 12, 5, INK);
+    PIX.rect(ctx, wc - 5, y2 - 4, 10, 4, cuffC);
+    PIX.rect(ctx, wc - 5, y2 - 4, 10, 1, 'rgba(255,255,255,.16)');
+    PIX.rect(ctx, wc - 5, y2 - 1, 10, 1, SH1);
     if (!gown && !rolled) {                          // cuff link
-      PIX.rect(actx, wc + (sgn < 0 ? -4 : 2), y2 - 2, 2, 2, P.G);
+      PIX.rect(ctx, wc + (sgn < 0 ? -4 : 2), y2 - 3, 2, 2, P.G);
     }
-    /* ---------- 8. sleeve accessories ---------- */
+
+    /* sleeve accessories, on the forearm where you can see them */
     if (acc.armGarters) {
       const gc = L(acc.armGarters, P.d);
-      const gy = 20, gcx = centerAt(gy);
-      PIX.rect(actx, gcx - 6, gy - 1, 12, 6, INK);
-      PIX.rect(actx, gcx - 5, gy, 10, 4, gc);
-      PIX.rect(actx, gcx - 5, gy, 10, 1, 'rgba(255,255,255,.18)');
-      PIX.rect(actx, gcx - 5, gy + 3, 10, 1, SH1);
+      const gy = 34, gcx = centerAt(gy);
+      PIX.rect(ctx, gcx - 7, gy - 1, 14, 7, INK);
+      PIX.rect(ctx, gcx - 6, gy, 12, 5, gc);
+      PIX.rect(ctx, gcx - 6, gy, 12, 1, 'rgba(255,255,255,.2)');
+      PIX.rect(ctx, gcx - 6, gy + 4, 12, 1, SH1);
     }
-    if (acc.gloves) {                                // glove top, above the elbow
+    if (acc.gloves) {                                // glove top above the elbow
       const gl = L(acc.gloves, P.W);
-      const gy = 18, gcx = centerAt(gy);
-      PIX.rect(actx, gcx - 6, gy - 1, 12, 4, INK);
-      PIX.rect(actx, gcx - 5, gy, 10, 2, L(DARKER[acc.gloves], P.w));
+      const gy = 24, gcx = centerAt(gy);
+      PIX.rect(ctx, gcx - 7, gy - 1, 14, 5, INK);
+      PIX.rect(ctx, gcx - 6, gy, 12, 3, L(DARKER[acc.gloves], P.w));
+      PIX.rect(ctx, gcx - 6, gy, 12, 1, gl);
     }
   });
-  /* drop the whole arm layer in behind the coat */
+
+  /* drop the upper-arm layer in behind the coat */
   ctx.save();
   ctx.globalCompositeOperation = 'destination-over';
   ctx.drawImage(armCv, 0, 0);
