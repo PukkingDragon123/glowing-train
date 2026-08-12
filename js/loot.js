@@ -78,6 +78,7 @@ const LOOT = {
       if (p.taken) {
         if (p.gun) val.appendChild(PIX.el(GUN_SPRITES[GUNS[G.gunIdx].id], 1));
         else if (p.card) val.appendChild(SPR.trinketCardEl(p.card, 1));
+        else if (p.item) val.appendChild(SPR.itemCardEl(p.item, 1));
         if (p.lint && !p.card) val.appendChild(UI.txt('LINT', { scale: 2, color: PIX.PAL.q }));
         else if (p.chips > 0) {
           val.appendChild(UI.txt('+' + p.chips, { scale: 2, color: PIX.PAL.G }));
@@ -85,6 +86,7 @@ const LOOT = {
         }
       } else {
         keyN++;
+        if (p.bulge) b.classList.add('rq-rare');
         const k = U.el('span', 'key-hint tk'); k.textContent = keyN;
         b.appendChild(k);
         val.appendChild(UI.txt('?', { scale: 2, color: PIX.PAL.q }));
@@ -99,7 +101,7 @@ const LOOT = {
     const heat = E.heatUp();
     const fill = document.getElementById('heat-fill');
     const lab = document.getElementById('heat-label');
-    const pct = Math.min(1, L.sinceBribe / LOOT_CFG.freePockets);
+    const pct = Math.min(1, L.sinceBribe / E.freePockets());
     fill.style.width = (pct * 100) + '%';
     fill.classList.toggle('hot', heat);
     lab.innerHTML = '';
@@ -120,6 +122,7 @@ const LOOT = {
     const canBribe = heat && G.chips >= cost && E.lootLeft() > 0;
     bribe.disabled = !canBribe;
     bribe.classList.toggle('pulse-red', heat && canBribe);
+    if (heat && !COPS.active) { COPS.arrive(); LOOT.callout(); }
 
     /* card swap flow */
     const swap = document.getElementById('card-swap');
@@ -144,9 +147,57 @@ const LOOT = {
       skip.onclick = () => { E.resolveCard(null); SFX.click(); LOOT.sync(); };
       row.appendChild(skip);
       swap.appendChild(row);
+    } else if (L.pendingItem) {
+      swap.className = 'pop';
+      swap.innerHTML = '';
+      swap.appendChild(UI.txt('BELT FULL — SWAP?', { scale: 2, color: PIX.PAL.G }));
+      const row = U.el('div', 'swap-row');
+      const found = U.el('span', 'tcard');
+      found.appendChild(SPR.itemCardEl(L.pendingItem, 3));
+      row.appendChild(found);
+      row.appendChild(UI.txt('FOR', { scale: 2, color: PIX.PAL.q }));
+      G.items.forEach((id, i) => {
+        const c = U.el('button', 'tcard has-tip');
+        c.dataset.tipItem = id;
+        c.appendChild(SPR.itemCardEl(id, 3));
+        c.onclick = () => { E.resolveItem(i); SFX.bank(); LOOT.sync(); UI.syncItems(); };
+        row.appendChild(c);
+      });
+      const skip = U.el('button', 'pixbtn');
+      skip.appendChild(UI.txt('LEAVE IT', { scale: 2, shadow: null }));
+      skip.onclick = () => { E.resolveItem(null); SFX.click(); LOOT.sync(); };
+      row.appendChild(skip);
+      swap.appendChild(row);
     } else {
       swap.className = 'hidden';
     }
+  },
+
+  /* the blue strip that slides in when the law shows up */
+  callout(title, sub) {
+    if (document.querySelector('.cop-callout')) return;
+    const wrap = document.getElementById('duel-wrap');
+    const holder = document.getElementById('scene-holder');
+    if (!wrap || !holder) return;
+    const cc = U.el('div', 'cop-callout' + (title ? ' bust' : ''));
+    const bd = U.el('span', 'cc-badge'); bd.appendChild(PIX.el('ic_badge', 2));
+    cc.appendChild(bd);
+    const tx = U.el('span', 'cc-text');
+    tx.appendChild(document.createTextNode(title || 'THE BADGES ARE HERE'));
+    const s2 = U.el('b', 'cc-sub');
+    s2.textContent = sub || 'bribe them or walk out';
+    tx.appendChild(s2);
+    cc.appendChild(tx);
+    wrap.insertBefore(cc, holder);
+    const wash = document.getElementById('siren-wash');
+    if (wash) wash.classList.add('on');
+  },
+
+  retireCallout() {
+    const cc = document.querySelector('.cop-callout');
+    const wash = document.getElementById('siren-wash');
+    if (wash) wash.classList.remove('on');
+    if (cc) { cc.classList.add('out'); setTimeout(() => cc.remove(), 340); }
   },
 
   rifle(i) {
@@ -177,13 +228,16 @@ const LOOT = {
     if (E.bribe()) {
       SFX.coin(); SFX.chak();
       if (c > 0) UI.chipTick(-c);
-      UI.stampSmall(c === 0 ? 'THE BADGE LOOKS AWAY' : 'THE BADGE POCKETS IT');
+      UI.stampSmall(c === 0 ? 'THE BADGE LOOKS AWAY' : 'THE BADGE POCKETS IT', 'cop');
+      COPS.bribe(c);
+      LOOT.retireCallout();
       LOOT.sync();
     }
   },
 
   onWalk() {
     if (G.phase !== 'loot' || !G.loot || G.loot.done) return;
+    if (G.blind !== 2) LOOT.retireCallout();
     const res = E.endLoot();
     (res.learned || []).forEach((t, i) => setTimeout(() => UI.tellToast(t), 300 + i * 700));
     const fresh = META.check();
@@ -211,16 +265,20 @@ const LOOT = {
     pay.id = 'btn-heat';
     pay.appendChild(UI.txt(G.chips >= cost ? 'PAY THE BADGES' : 'HAND OVER THE MARKER',
       { scale: 2, shadow: null, color: PIX.PAL.K }));
-    pay.onclick = () => {
+    pay.onclick = async () => {
+      pay.disabled = true;
       const ok = E.payHeat();
-      if (ok) { SFX.coin(); UI.chipTick(-cost); }
-      else SFX.lose();
+      if (ok) { SFX.coin(); UI.chipTick(-cost); await COPS.paid(); }
+      else { SFX.lose(); await COPS.bust(); }
+      LOOT.retireCallout();
       UI.render();
     };
     card.appendChild(pay);
     o.appendChild(card);
     UI.shake();
     SFX.jamSfx();
+    LOOT.callout('SWAMP PD AT THE DOOR', 'protection money comes due');
+    COPS.shakedown(G.chips >= cost ? 3 : 2);
   },
 };
 

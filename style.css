@@ -87,12 +87,18 @@
   --scrim-deep: rgba(4, 8, 6, .82);
   --btn-felt-top: #26684c;   /* between PAL.f and PAL.e — the machine button */
   --btn-felt-bot: #16452f;
+  --btn-red-top: #a32836;    /* between PAL.r and PAL.d — DANGER / FIRE */
+  --btn-red-bot: #6e1220;
+  --btn-red-deep: #2a060f;   /* darker than PAL.D */
+  --btn-cop-bot: #1d4a76;    /* between PAL.l and PAL.T — the police button */
+  --btn-cop-deep: #0b2138;
   --felt-panel: radial-gradient(circle at 30% 12%, var(--felt), var(--felt-mid) 55%, var(--felt-dk) 115%);
   --felt-btn: linear-gradient(180deg, var(--btn-felt-top), var(--btn-felt-bot));
   --text-soft: #cfe8d8;
   --text-mute: #a8c9b4;
 
-  /* ---- rarity (matches TRINKET_RAR in js/sprites.js) ---- */
+  /* ---- rarity: the bright PAL siblings (S/N/V/G) of the card-frame
+     tones TRINKET_RAR uses in js/sprites.js (s/n/v/g) ---- */
   --rar-common: #9aa3b8;
   --rar-uncommon: #6ff7d8;
   --rar-rare: #b18cff;
@@ -278,8 +284,8 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 .pixbtn.gold { --btn-top: var(--gold-hi); --btn-bot: var(--gold); --btn-deep: var(--gold-dk); --btn-edge: rgba(255, 243, 176, .6); }
 .pixbtn.gold { box-shadow: 0 var(--depth) 0 var(--btn-deep), inset 0 2px 0 var(--gold-lite); }
-.pixbtn.danger { --btn-top: #a32836; --btn-bot: #6e1220; --btn-deep: #2a060f; --btn-edge: rgba(255, 160, 150, .4); }
-.pixbtn.cop { --btn-top: var(--ice-dk); --btn-bot: #1d4a76; --btn-deep: #0b2138; --btn-edge: rgba(127, 215, 255, .5); }
+.pixbtn.danger { --btn-top: var(--btn-red-top); --btn-bot: var(--btn-red-bot); --btn-deep: var(--btn-red-deep); --btn-edge: rgba(255, 160, 150, .4); }
+.pixbtn.cop { --btn-top: var(--ice-dk); --btn-bot: var(--btn-cop-bot); --btn-deep: var(--btn-cop-deep); --btn-edge: rgba(127, 215, 255, .5); }
 .pixbtn.ghost {
   --btn-top: transparent; --btn-bot: transparent; --btn-deep: transparent;
   border-color: var(--line-soft); box-shadow: none;
@@ -775,7 +781,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 #aim-controls { display: flex; align-items: center; gap: var(--gap); pointer-events: auto; }
 .aim-btn { padding: 12px 16px; min-height: var(--hit); }
 .fire-btn {
-  --btn-top: #a32836; --btn-bot: #6e1220; --btn-deep: #2a060f;
+  --btn-top: var(--btn-red-top); --btn-bot: var(--btn-red-bot); --btn-deep: var(--btn-red-deep);
   --btn-edge: rgba(255, 160, 150, .4); --depth: 6px;
   padding: 18px 38px; min-height: 58px;
 }
@@ -895,9 +901,9 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
    ============================================================ */
 
 #duel-overlay.loot-in {
-  background: rgba(4, 8, 6, .3);
-  align-items: center; justify-content: flex-end;
-  padding-right: 3%;
+  background: rgba(4, 8, 6, .28);
+  align-items: center; justify-content: flex-start;
+  padding-left: max(2%, var(--sa-l, 0px));
 }
 .loot-panel {
   display: flex; flex-direction: column; gap: var(--gap-sm);

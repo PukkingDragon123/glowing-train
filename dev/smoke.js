@@ -59,16 +59,25 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForSelector('#loot-panel', { timeout: 25000 });
   }
 
-  /* rifle up to three pockets, then walk out (pays heat if it's a boss) */
+  /* rifle pockets until the badges arrive, bribe once, then walk out */
   async function lootAndGo(shotName) {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       const btn = page.locator('.pocket-btn:not(.taken):not(:disabled)');
       if (await btn.count() === 0) break;
       await btn.first().click();
-      await page.waitForTimeout(350);
-      /* found a card with a full rack? leave it */
+      await page.waitForTimeout(400);
+      /* full rack / full belt? leave the find */
       const skip = page.locator('#card-swap button.pixbtn');
       if (await skip.count() > 0) { await skip.last().click(); await page.waitForTimeout(200); }
+    }
+    /* the badges should be at the door now — catch the cop and pay him off */
+    const cop = await page.evaluate(() => !!(window.COPS && COPS.active));
+    if (cop && shotName) await shot(shotName + '-cop');
+    const bribe = page.locator('#btn-bribe:not([disabled])');
+    if (await bribe.count() > 0) {
+      await bribe.click();
+      await page.waitForTimeout(900);
+      if (shotName) await shot(shotName + '-bribed');
     }
     if (shotName) await shot(shotName);
     await click('#btn-walk');
@@ -116,6 +125,13 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await settle();
       await page.waitForTimeout(300);
     }
+    /* the belt: use whatever we're carrying */
+    const belt = page.locator('#item-belt .ibelt-slot:not(.empty):not([disabled])');
+    if (await belt.count() > 0) {
+      await shot('04b-belt');
+      await belt.first().click();
+      await page.waitForTimeout(600);
+    }
     await shot('04-duel-mid');
     await winDuel();
     await shot('05-loot');
@@ -126,8 +142,14 @@ fs.mkdirSync(SHOTS, { recursive: true });
     /* mobile layout check */
     await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
     await page.setViewportSize({ width: 430, height: 860 });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(600);
     await shot('07-mobile');
+    await page.setViewportSize({ width: 860, height: 430 });
+    await page.waitForTimeout(600);
+    await shot('07b-landscape');
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.waitForTimeout(600);
+    await shot('07c-small');
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForTimeout(400);
 
@@ -149,6 +171,19 @@ fs.mkdirSync(SHOTS, { recursive: true });
 
     const fin = await state();
     console.log('final state:', JSON.stringify(fin));
+    const sys = await page.evaluate(() => ({
+      fx: typeof FX !== 'undefined' && typeof FX.bloodBurst === 'function',
+      cops: typeof COPS !== 'undefined' && typeof COPS.arrive === 'function',
+      items: Object.keys(ITEMS).length,
+      costumes: Object.keys(COSTUMES).length,
+      trinkets: Object.keys(TRINKETS).length,
+      itemsUsed: META.stats().itemsUsed,
+      bribes: META.stats().bribesPaid,
+    }));
+    console.log('systems:', JSON.stringify(sys));
+    if (!sys.fx) errors.push('[systems] FX not loaded');
+    if (!sys.cops) errors.push('[systems] COPS not loaded');
+    if (sys.items < 8) errors.push('[systems] ITEMS table too small');
     if (fin.ante !== 2) errors.push('[flow] expected ante 2, got ' + fin.ante);
   } catch (e) {
     errors.push('[script] ' + e.message);

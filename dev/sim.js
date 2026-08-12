@@ -32,12 +32,22 @@ function driver() {
   }
 
   function trinketIdx(id) { return G.trinkets.findIndex(t => t.id === id); }
+  function itemIdx(id) { return G.items.indexOf(id); }
+  function useItemIf(id, cond) {
+    const i = itemIdx(id);
+    if (i < 0 || !cond) return false;
+    return !!(E.canUseItem(i) && E.useItem(i));
+  }
 
   function botTurn() {
     const d = G.duel;
     /* heal when hurting */
     const cig = trinketIdx('cig');
     if (cig >= 0 && G.hearts <= 2 && E.canUseTrinket(cig)) E.useTrinket(cig);
+    useItemIf('whiskey', G.hearts <= E.maxHP() - 2);
+    useItemIf('coinFlip', G.hearts >= E.maxHP() - 1 && d.opp.hp > 2);
+    if (useItemIf('brassKnuckle', d.opp.hp === 1) && d.over) return null;
+    useItemIf('smokeBomb', G.hearts === 1 && d.opp.hp > 1);
 
     let known = chamberKnown();
     const v = visible();
@@ -61,8 +71,11 @@ function driver() {
     if (known === true) {
       if (E.canUseGun('saw') && d.opp.hp >= 2) E.useGun('saw');
       if (E.canUseGun('tommy') && d.opp.hp >= 3) E.useGun('tommy');
+      useItemIf('hollowPoint', d.opp.hp >= 3);
       return E.pull('foe');
     }
+    /* nothing known and the drum looks hot: make the chamber safe */
+    if (p >= 0.6 && useItemIf('lucky1', true)) return E.pull('self');
     /* unknown: play the odds like the marks do */
     if (p <= 0.42) {
       const be = trinketIdx('beer');
@@ -88,6 +101,7 @@ function driver() {
         E.resolveCard(found > RARITY_VAL[TRINKETS[G.trinkets[worst].id].rarity] ? worst : null);
         continue;
       }
+      useItemIf('pliers', G.loot.pockets.some(p => p.id === 'tooth' && !p.taken));
       if (E.canRifle()) {
         const cand = G.loot.pockets
           .map((p, i) => ({ p, i }))
@@ -99,6 +113,7 @@ function driver() {
         continue;
       }
       if (E.heatUp()) {
+        if (useItemIf('fileFolder', E.lootLeft() >= 2)) continue;
         const reserve = G.blind === 2 ? HEAT_COST(G.ante) : Math.ceil(HEAT_COST(G.ante) / 2);
         if (E.lootLeft() >= 2 && G.loot.bribes < 2 && G.chips >= E.bribeCost() + reserve) {
           if (E.bribe()) continue;
@@ -157,6 +172,7 @@ function driver() {
     '· avg shots:', (shots / N).toFixed(1),
     '· avg gun idx:', (gunSum / N).toFixed(2),
     '· avg chips held:', (chipsAtDeath / N).toFixed(1));
+  console.log('items used per run:', (META.stats().itemsUsed / N).toFixed(2));
   console.log('boss table deaths:', JSON.stringify(bossDeaths));
   console.log('crashes:', crashes);
 

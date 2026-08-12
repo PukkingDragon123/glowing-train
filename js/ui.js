@@ -7,6 +7,38 @@
    Mostly wordless: icons + pixel numerals, hover for truth.
    ============================================================ */
 
+/* item cards: the trinket chassis in brass, with belt-tag punch holes */
+SPR.itemCard = function (id) {
+  return SPR.cached('icard_' + id, () => {
+    const it = ITEMS[id], P = PIX.PAL;
+    const rc = TRINKET_RAR[it.rarity] || TRINKET_RAR.common;
+    const W = 22, H = 28;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    PIX.rect(ctx, 1, 0, W - 2, H, P.K); PIX.rect(ctx, 0, 1, W, H - 2, P.K);
+    PIX.rect(ctx, 2, 1, W - 4, H - 2, P.b);
+    PIX.rect(ctx, 1, 2, W - 2, H - 4, P.b);
+    PIX.rect(ctx, 3, 3, W - 6, H - 6, P[rc[1]]);
+    PIX.rect(ctx, 3, 3, W - 6, 1, P.k);
+    for (let y = 5; y < H - 5; y += 2) PIX.rect(ctx, 4, y, W - 8, 1, 'rgba(0,0,0,.18)');
+    PIX.rect(ctx, 4, 4, 2, 2, P.u); PIX.rect(ctx, W - 6, 4, 2, 2, P.u);   // punch holes
+    const rows = (it.glyph || []).filter(r => r && r.length);
+    const gw = Math.max.apply(null, rows.map(r => r.length).concat([1]));
+    const ox = Math.floor((W - gw) / 2), oy = Math.floor((H - 6 - rows.length) / 2) + 1;
+    rows.forEach((row, j) => {
+      for (let i = 0; i < row.length; i++) {
+        const c = row[i];
+        if (c !== '.' && c !== ' ') { ctx.fillStyle = P[c] || P.W; ctx.fillRect(ox + i, oy + j, 1, 1); }
+      }
+    });
+    PIX.rect(ctx, 3, H - 5, W - 6, 2, P.u);                               // brass tag foot
+    PIX.rect(ctx, W / 2 - 2, H - 5, 4, 2, P[rc[0]]);
+    return cv;
+  });
+};
+SPR.itemCardEl = function (id, scale, cls) { return SPR.clone(SPR.itemCard(id), scale, cls); };
+
 const UI = {
 
   /* ================= router ================= */
@@ -58,11 +90,16 @@ const UI = {
     ante.dataset.tipKey = 'ante';
     ante.appendChild(UI.txt('ANTE ' + G.ante, { scale: 2, color: PIX.PAL.W }));
     C.appendChild(ante);
-    const pips = U.el('span', 'blind-pips has-tip');
+    const pips = U.el('span', 'ante-track has-tip');
     pips.dataset.tipKey = 'blind';
+    const LAB = ['S', 'B', '*'];
     for (let i = 0; i < 3; i++) {
-      const p = U.el('span', 'bpip' + (i < G.blind ? ' done' : i === G.blind ? ' now' : '') + (i === 2 ? ' boss' : ''));
-      pips.appendChild(p);
+      if (i) pips.appendChild(U.el('i', 'at-link' + (i <= G.blind ? ' done' : '')));
+      const seg = U.el('span', 'at-seg' + (i < G.blind ? ' done' : i === G.blind ? ' now' : '') + (i === 2 ? ' boss' : ''));
+      const lab = U.el('span', 'at-lab'); lab.textContent = LAB[i];
+      seg.appendChild(lab);
+      seg.appendChild(U.el('span', 'bpip'));
+      pips.appendChild(seg);
     }
     C.appendChild(pips);
     const purse = U.el('span', 'tb-chip has-tip');
@@ -101,6 +138,8 @@ const UI = {
 
   chipTick(delta) {
     UI.syncChips();
+    const num = document.getElementById('tb-chip-num');
+    if (num) { num.classList.remove('tick'); void num.offsetWidth; num.classList.add('tick'); setTimeout(() => num.classList.remove('tick'), 200); }
     const chips = document.getElementById('tb-chips');
     if (!chips) return;
     const f = U.el('span', 'chip-float');
@@ -205,6 +244,7 @@ const UI = {
     /* bottom: trinkets + gun + controls */
     const bottom = U.el('div'); bottom.id = 'duel-bottom';
     const tr = U.el('div'); tr.id = 'trinket-row'; bottom.appendChild(tr);
+    const belt = U.el('div', 'item-belt'); belt.id = 'item-belt'; bottom.appendChild(belt);
     const controls = U.el('div'); controls.id = 'aim-controls';
 
     const mkAim = (label, key, aim) => {
@@ -321,6 +361,7 @@ const UI = {
     if (fire) fire.disabled = !canAct;
 
     UI.syncTrinkets();
+    UI.syncItems();
     UI.syncGunPanel();
   },
 
@@ -332,7 +373,7 @@ const UI = {
       const t = G.trinkets[i];
       if (!t) { tr.appendChild(U.el('span', 'tslot-empty')); continue; }
       const def = TRINKETS[t.id];
-      const card = U.el('button', 'tcard has-tip');
+      const card = U.el('button', 'tcard has-tip rq-' + def.rarity);
       card.dataset.tipTrinket = t.id;
       card.appendChild(SPR.trinketCardEl(t.id, 3));
       if (def.active) {
@@ -352,6 +393,55 @@ const UI = {
       if (G.phase === 'duel' && E.trinketsLocked() && def.active) card.classList.add('locked');
       tr.appendChild(card);
     }
+  },
+
+  syncItems() {
+    const belt = document.getElementById('item-belt');
+    if (!belt) return;
+    belt.innerHTML = '';
+    const slots = E.maxItems();
+    for (let i = 0; i < slots; i++) {
+      const id = G.items[i];
+      if (!id) { belt.appendChild(U.el('span', 'ibelt-slot empty')); continue; }
+      const it = ITEMS[id];
+      const slot = U.el('button', 'ibelt-slot has-tip rq-' + it.rarity);
+      slot.dataset.tipItem = id;
+      const card = U.el('span', 'ib-card');
+      card.appendChild(SPR.itemCardEl(id, 2));
+      slot.appendChild(card);
+      const use = U.el('span', 'ib-use'); use.textContent = 'USE';
+      slot.appendChild(use);
+      const k = U.el('span', 'key-hint ib'); k.textContent = String(6 + i);
+      slot.appendChild(k);
+      const ok = E.canUseItem(i);
+      if (!ITEM_PHASE_OK(id, G.phase)) slot.classList.add('off');
+      slot.disabled = !ok || (G.phase === 'duel' && DUEL.busy);
+      slot.onclick = () => UI.onUseItem(i);
+      belt.appendChild(slot);
+    }
+  },
+
+  onUseItem(i) {
+    const id = G.items[i];
+    if (!id || !E.canUseItem(i)) return;
+    const slot = document.querySelectorAll('#item-belt .ibelt-slot')[i];
+    if (slot) slot.classList.add('burn');
+    const r = E.useItem(i);
+    if (!r) return;
+    const it = ITEMS[id];
+    SFX.bank();
+    UI.stampSmall(it.name, 'good');
+    if (typeof FX !== 'undefined') {
+      if (r.type === 'whiskey') FX.floatText(60, 150, '+HEARTS', PIX.PAL.R);
+      else if (r.type === 'brassKnuckle') { FX.impactFrame(180, 70); FX.screen.shake(9); }
+      else if (r.type === 'smokeBomb') FX.cordite(120, 150, 14);
+      else if (r.type === 'hollowPoint') FX.sparks(150, 140, 8, 1.4);
+      else if (r.type === 'coinFlip') FX.floatText(120, 130, r.heads ? 'HEADS' : 'TAILS', r.heads ? PIX.PAL.G : PIX.PAL.R);
+    }
+    if (r.chips) UI.chipTick(r.chips);
+    if (G.phase === 'loot') { LOOT.sync(); UI.syncItems(); return; }
+    if (r.over === 'win') { DUEL.busy = true; DUEL.killSequence(); return; }
+    UI.syncDuel();
   },
 
   syncGunPanel() {
@@ -391,13 +481,13 @@ const UI = {
     UI._sbTo = setTimeout(() => { z.innerHTML = ''; }, 950);
   },
 
-  stampSmall(text) {
+  stampSmall(text, kind) {
     const z = document.getElementById('stamp-small');
     if (!z) return;
-    const t = U.el('span', 'toast pop');
+    const t = U.el('span', 'toast pop' + (kind ? ' t-' + kind : ''));
     t.appendChild(UI.txt(text, { scale: 2, color: PIX.PAL.W }));
     z.appendChild(t);
-    while (z.children.length > 2) z.firstChild.remove();
+    while (z.children.length > 3) z.firstChild.remove();
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, 1400);
   },
 
@@ -451,7 +541,7 @@ const UI = {
       const o = document.getElementById('duel-overlay');
       o.className = 'boss-in';
       o.innerHTML = '';
-      const card = U.el('div', 'boss-card pop');
+      const card = U.el('div', 'boss-card slam');
       card.appendChild(SPR.clone(SPR.frogCustom(opp.boss + ':intro', opp.def), 5));
       card.appendChild(UI.txt(opp.name, { scale: 4, color: PIX.PAL.R, outline: PIX.PAL.K }));
       card.appendChild(UI.txt(opp.rule, { scale: 2, color: PIX.PAL.G }));
@@ -731,6 +821,13 @@ const UI = {
         : `<div class="tt-odds">No tells. A plain frog.</div>`;
       return head + tells;
     }
+    if (ds.tipItem) {
+      const it = ITEMS[ds.tipItem];
+      const r = RARITY_META[it.rarity].label;
+      const when = it.use === 'loot' ? 'at the corpse' : it.use === 'duel' ? 'at the table' : 'anywhere';
+      return `<div class="tt-name">${it.name} <span class="rar-${it.rarity}">${r}</span></div>
+        <div class="tt-desc">${it.desc}</div><div class="tt-odds">ONE SHOT — ${when}</div>`;
+    }
     if (ds.tipGun) {
       const g = GUNS.find(x => x.id === ds.tipGun);
       return `<div class="tt-name">${g.name}</div><div class="tt-desc">${g.desc}</div>`;
@@ -855,10 +952,12 @@ const UI = {
         else if (k === 'd' || e.key === 'ArrowRight') DUEL.setAim('foe');
         else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); DUEL.onFire(); }
         else if (k >= '1' && k <= '5') DUEL.useTrinket(+k - 1);
+        else if (k >= '6' && k <= '9') UI.onUseItem(+k - 6);
         else if (k === 'q') DUEL.useGunActive('saw');
         else if (k === 'e') DUEL.useGunActive('tommy');
       } else if (G.phase === 'loot') {
         if (k === 'r') LOOT.onBribe();
+        else if (k >= '6' && k <= '9') UI.onUseItem(+k - 6);
         else if (k >= '1' && k <= '9') LOOT.rifleKey(+k);
       }
     });

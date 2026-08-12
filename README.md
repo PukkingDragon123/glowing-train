@@ -17,6 +17,12 @@ No build, no dependencies, no assets, no network — plain HTML/CSS/JS:
 python3 -m http.server 8080   # then visit http://localhost:8080
 ```
 
+Every frog wears a real outfit, built from a wardrobe of **15 named costumes** — 3-piece
+pinstripe, double-breasted, dinner jacket, white tie and tails, belted trench,
+shirtsleeves with braces, croupier livery, warden's tunic, evening gown, zoot suit — with
+shirt collars, waistcoats, lapels in notch/peak/shawl, watch chains and pocket squares.
+Arms sit *under* the coat and end in four-fingered frog hands resting on the felt.
+
 The whole game plays **fullscreen over a Balatro-style paint swirl** — the table, the
 lamp and the mark sit right on the casino floor, and the UI is felt and gold trim. Every
 sprite is drawn by the game at boot from one parameterized frog rig: big cartoon heads,
@@ -61,7 +67,7 @@ You don't start knowing any of this. **Loot a frog that carries a tell and you c
 read it forever** — hover the mark's name and every learned tell is spelled out;
 the ones you haven't earned yet stay `???`.
 
-## The loot
+## The loot, and the law
 
 ![Going through his pockets](docs/screen-loot.png)
 
@@ -72,8 +78,35 @@ something better than chips. Every rifle brings **the badges** closer; three and
 at the door. **Bribe** them to keep digging (the price climbs) or walk with what you've
 got. Trinket cards and guns come out of corpses — **boss holsters carry your next iron**.
 
-After every boss, **Swamp PD wants protection money**, scaling with the ante.
-Can't pay? They take your marker. That's the debt now.
+The badges are not an abstraction: a cop **walks in from the right**, stands over the
+body tapping his nightstick in his palm, and waits. Bribe him and the chips arc across
+the felt into his glove one at a time — he pockets them, tips his cap and leaves. Refuse
+and he folds his arms and stays.
+
+![Swamp PD](docs/screen-cops.png)
+
+After every boss, **Swamp PD wants protection money**, scaling with the ante. Two or
+three of them march in flanking the table under a red-and-blue light wash. Pay and they
+salute and go. Can't pay, and the cuffs come out, the paddy wagon rolls past, and the
+screen tips over. That's the debt now.
+
+## The belt
+
+Trinkets are permanent; **items are one-shot** and come out of the same pockets. Three
+belt loops, keys **6–8**:
+
+| Item | What it does |
+|---|---|
+| 🥃 **WHISKEY** | heal 2 hearts |
+| 🔧 **PLIERS** | look at the LAST shell — or pull a gold tooth at the corpse |
+| 🪙 **COIN FLIP** | heal 1 or take 1, but always +6 chips |
+| ⚪ **SPARE BLANK** | slip an extra blank into the drum (the count changes) |
+| 🔴 **SPARE LIVE** | slip an extra live in — for a mark about to take the gun |
+| 👊 **BRASS KNUCKLE** | 1 damage right now, no shell spent |
+| 📁 **FILE FOLDER** | make the current heat level go away, free |
+| 💥 **HOLLOW POINT** | your next live hit deals +2 |
+| 💨 **SMOKE BOMB** | the mark's next shot at you misses entirely |
+| 🍀 **LUCKY PENNY** | force the shell under the hammer to be a blank |
 
 ## The mob
 
@@ -94,7 +127,7 @@ Eight bosses, one per ante, each with a house rule and signature tells:
 
 ## Trinkets & the iron
 
-**24 trinket cards** (5 slots, four rarities) loot out of pockets — passives like BAD
+**32 trinket cards** (5 slots, four rarities) loot out of pockets — passives like BAD
 BLOOD (+1 on full-health marks) and actives on keys **1–5** like the MONOCLE (peek the
 chamber) and the MIRROR SHARD (flip the shell under the hammer). Nine start locked
 behind account-wide feats; the collection screen tracks everything.
@@ -107,8 +140,12 @@ The gun ladder stacks as you take it off boss corpses:
 
 ## Keys
 
-`A` aim at yourself · `D` aim at the mark · `SPACE` fire · `1–5` trinkets ·
-`Q`/`E` gun tricks · `R` bribe · `ENTER` walk out / continue · `M` mute · `H` house rules
+`A` aim at yourself · `D` aim at the mark · `SPACE` fire · `1–5` trinkets · `6–8` belt
+items · `Q`/`E` gun tricks · `R` bribe · `ENTER` walk out / continue · `M` mute ·
+`H` house rules
+
+Or just **tap**: tap the mark to aim at him, tap again to fire. Tap during any animation
+to fast-forward it. The whole game is playable with one thumb, portrait or landscape.
 
 ![On a phone](docs/screen-mobile.png)
 
@@ -126,8 +163,10 @@ js/sprites.js     ALL the art: frog rig v2 (expressions, tells, bodies), cards, 
 js/bg.js          the swirling paint background
 js/engine.js      pure rules: the duel, the mark's brain, the loot, the heat (no DOM)
 js/ui.js          screens: title, duel frame, collection, help, keys
+js/fx.js          the effects engine: smoke, gore, chip arcs, slow-mo, ambient dust
 js/duel.js        the drawn table scene: expressions, blood, the fall, the corpse
-js/loot.js        the take: pockets, the badges bar, bribes, Swamp PD
+js/cops.js        Swamp PD: the walk-in, the bribe handoff, the shakedown, the bust
+js/loot.js        the take: pockets, the badges bar, bribes, protection money
 js/main.js        boot (+ ?debug harness)
 dev/sim.js        headless balance & fuzz harness (node dev/sim.js)
 dev/smoke.js      full browser smoke test (playwright-core)
@@ -148,8 +187,9 @@ node dev/sim.js      # 500 bot runs + 200 random-action fuzz runs against the re
 node dev/smoke.js    # drives the full UI in headless Chromium, fails on any console error
 ```
 
-Current curve (counting bot): ~80% clear ante 1, ~41% reach the Bullfrog, ~10% walk
-out clean. Humans who can't read a top hat do worse. That's the point.
+Current curve (counting bot that also plays its belt): ~86% clear ante 1, ~42% reach
+the Bullfrog, ~10% walk out clean, ~4.5 items burned per run. Humans who can't read a
+top hat do worse. That's the point.
 
 ---
 

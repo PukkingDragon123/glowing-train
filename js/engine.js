@@ -21,6 +21,7 @@ const E = {
       ante: 1, blind: 0,                    // blind: 0 small · 1 big · 2 boss
       chips: ECON.start, gunIdx: 0,
       trinkets: [],                         // { id, used:{duel,reload} }
+      items: [],                            // belt: item ids (dupes allowed)
       hearts: PLAYER_HP,
       duel: null, loot: null,
       endless: false, wonRun: false, busted: false,
@@ -38,6 +39,26 @@ const E = {
   has(tid) { return G.trinkets.some(t => t.id === tid); },
   trinketBy(tid) { return G.trinkets.find(t => t.id === tid); },
   maxHP() { return PLAYER_HP + (E.has('totem') ? 1 : 0) + (G.gunIdx >= 4 ? 1 : 0); },
+
+  /* ---- belt items ---- */
+  maxItems() { return MAX_ITEMS + (E.has('belt') ? 1 : 0); },
+  hasItem(id) { return G.items.indexOf(id) >= 0; },
+  itemRoom() { return G.items.length < E.maxItems(); },
+  giveItem(id) { if (!E.itemRoom()) return false; G.items.push(id); return true; },
+  freePockets() { return LOOT_TUNING.freePockets + (E.has('pockets') ? 1 : 0)
+    - (G.duel && G.duel.opp.traits.some(t => TRAITS[t] && TRAITS[t].hot) ? 1 : 0); },
+
+  /* damage outside the shell cycle (knuckles, shiv): flat, no gun/trinket bonuses */
+  freeHit(dmg) {
+    const d = G.duel;
+    d.opp.hp -= dmg;
+    d.dmgDealt += dmg; G.run.damage += dmg;
+    if (d.opp.hp <= 0) {
+      if (d.opp.boss === 'owner' && !d.revived) { d.revived = true; d.opp.hp = 4; }
+      else { d.opp.hp = 0; d.over = 'win'; E.onDuelWon(); }
+    }
+    return dmg;
+  },
 
   bossFor(ante) {
     if (ante <= ANTES) return BOSSES[ante - 1];
@@ -157,6 +178,7 @@ const E = {
       sawArmed: false, sawUsed: false, tommyUsed: false, extraShots: 0,
       cuffed: false, coltSpent: false, snakePrimed: false, revived: false,
       selfBlanks: 0, heartsLost: 0, dmgDealt: 0,
+      hollow: false, smoke: false, gauzeUsed: false,
       payout: null,
     };
     G.trinkets.forEach(t => { t.used = {}; });
@@ -229,17 +251,21 @@ const E = {
           if (E.has('blood') && d.opp.hp === d.opp.maxHP) dmg++;
           if (E.has('snake') && d.snakePrimed) { dmg++; d.snakePrimed = false; }
           if (E.has('gator')) dmg++;
+          if (E.has('nail') && G.hearts === 1) dmg += 2;
+          if (d.hollow) { dmg += 2; d.hollow = false; ev.hollow = true; }
         }
         if (d.sawArmed) { dmg *= 2; d.sawArmed = false; ev.sawed = true; }
       } else {
         if (d.opp.boss === 'owner' && d.revived) dmg = 2; // phase two: he's angry now
         if (target === 'foe') { // the mark is shooting YOU
-          if (E.has('clover') && G.rng() < 1 / 6) { ev.fizzled = true; dmg = 0; }
+          if (d.smoke) { d.smoke = false; ev.smoked = true; dmg = 0; }
+          else if (E.has('clover') && G.rng() < 1 / 6) { ev.fizzled = true; dmg = 0; }
         } else if (E.has('dirt')) dmg++; // he did it to himself, on salted felt
       }
     } else {
       /* -- blank bookkeeping -- */
       if (E.has('fly')) { G.chips += 1; ev.chips += 1; }
+      if (by === 'opp' && target === 'foe' && d.smoke) { d.smoke = false; ev.smoked = true; }
       if (by === 'you' && target === 'self') {
         d.selfBlanks++;
         META.bump('selfBlanks');
@@ -256,6 +282,9 @@ const E = {
     if (live && dmg > 0) {
       const victim = target === 'self' ? by : (by === 'you' ? 'foe' : 'you');
       ev.victim = victim;
+      if (victim === 'you' && E.has('gauze') && !d.gauzeUsed) {
+        d.gauzeUsed = true; dmg = Math.max(0, dmg - 1); ev.gauze = true;
+      }
       if (victim === 'you') {
         if (dmg >= G.hearts && E.has('rosary')) {
           G.hearts = 1; ev.rosary = true; dmg = 0;
@@ -344,6 +373,7 @@ const E = {
     if (E.chargesLeft(t) <= 0) return false;
     if (t.id === 'cig' && G.hearts >= E.maxHP()) return false;
     if (t.id === 'cuffs' && G.duel.cuffed) return false;
+    if (t.id === 'dice' && E.shellsLeft() < 2) return false;
     return true;
   },
 
@@ -376,8 +406,94 @@ const E = {
         d.shells[d.ptr] = !d.shells[d.ptr];
         d.known[d.ptr] = d.shells[d.ptr];
         return { type: 'mirror', live: d.shells[d.ptr] };
+      case 'dice': {
+        const rest = d.shells.slice(d.ptr);
+        U.shuffle(G.rng, rest);
+        for (let i = 0; i < rest.length; i++) {
+          d.shells[d.ptr + i] = rest[i];
+          d.known[d.ptr + i] = null;
+        }
+        return { type: 'shuffle' };
+      }
+      case 'shiv':
+        return { type: 'shiv', dmg: E.freeHit(1) };
     }
     return null;
+  },
+
+  /* ================= belt items ================= */
+
+  canUseItem(i) {
+    const id = G.items[i];
+    if (!id || !ITEMS[id]) return false;
+    if (G.phase === 'duel') {
+      const d = G.duel;
+      if (!d || d.over || d.turn !== 'you') return false;
+      if (!ITEM_PHASE_OK(id, 'duel')) return false;
+      if (E.trinketsLocked()) return false;              // Warden Wart takes the belt too
+      if (id === 'whiskey' && G.hearts >= E.maxHP()) return false;
+      if (id === 'hollowPoint' && d.hollow) return false;
+      if (id === 'smokeBomb' && d.smoke) return false;
+      if (id === 'lucky1' && d.shells[d.ptr] === false) return false;
+      if (id === 'pliers' && d.known[d.shells.length - 1] !== null) return false;
+      return true;
+    }
+    if (G.phase === 'loot') {
+      if (!G.loot || G.loot.done || G.loot.pendingCard || G.loot.pendingItem) return false;
+      if (!ITEM_PHASE_OK(id, 'loot')) return false;
+      if (id === 'fileFolder') return G.loot.sinceBribe > 0 && E.lootLeft() > 0;
+      if (id === 'pliers') return G.loot.pockets.some(p => p.id === 'tooth' && !p.taken);
+      return true;
+    }
+    return false;
+  },
+
+  useItem(i) {
+    if (!E.canUseItem(i)) return null;
+    const id = G.items[i], d = G.duel;
+    G.items.splice(i, 1);                   // one shot: it is gone either way
+    META.bump('itemsUsed');
+    const r = { type: id };
+    switch (id) {
+      case 'whiskey':
+        G.hearts = Math.min(E.maxHP(), G.hearts + 2);
+        r.hearts = G.hearts; break;
+      case 'coinFlip':
+        r.heads = G.rng() < 0.5;
+        if (r.heads) G.hearts = Math.min(E.maxHP(), G.hearts + 1);
+        else if (G.hearts > 1) { G.hearts--; d.heartsLost++; }
+        G.chips += 6; r.chips = 6; break;
+      case 'pliers':
+        if (G.phase === 'loot') {
+          const t = G.loot.pockets.find(p => p.id === 'tooth' && !p.taken);
+          if (t) { t.taken = true; G.chips += t.chips; r.chips = t.chips; r.pocket = 'tooth'; }
+        } else {
+          const last = d.shells.length - 1;
+          d.known[last] = d.shells[last];
+          r.live = d.shells[last]; r.at = last;
+        }
+        break;
+      case 'spareBlank':
+      case 'spareLive': {
+        const live = id === 'spareLive';
+        const at = U.ri(G.rng, d.ptr, d.shells.length);   // never behind the hammer
+        d.shells.splice(at, 0, live);
+        d.known.splice(at, 0, null);
+        live ? d.lives++ : d.blanks++;
+        r.live = live; r.at = at; break;
+      }
+      case 'hollowPoint': d.hollow = true; break;
+      case 'smokeBomb':   d.smoke = true;  break;
+      case 'lucky1': {
+        r.was = d.shells[d.ptr];
+        if (r.was) { d.shells[d.ptr] = false; d.lives--; d.blanks++; }
+        d.known[d.ptr] = false; break;
+      }
+      case 'brassKnuckle': r.dmg = E.freeHit(1); break;
+      case 'fileFolder': G.loot.sinceBribe = 0; r.cleared = true; break;
+    }
+    r.over = G.duel ? G.duel.over : null;
+    return r;
   },
 
   /* ================= gun actives ================= */
@@ -483,10 +599,19 @@ const E = {
         U.pick(rng, pockets.filter(p => !p.gun)).card = card.id;
       }
     }
-    /* something square shows through the cloth */
-    pockets.forEach(p => { p.bulge = !!(p.card || p.gun); });
+    /* and maybe something for the belt */
+    if (rng() < (E.has('contract') ? 1 : LOOT_TUNING.itemChance[G.blind])) {
+      const rar = ['common', 'uncommon', 'rare', 'legendary'];
+      const IW = ITEM_RW[G.blind];
+      const pickId = U.wpick(rng, ITEM_IDS, id => IW[rar.indexOf(ITEMS[id].rarity)]);
+      const spots = pockets.filter(p => !p.gun && !p.card);
+      if (pickId && spots.length) U.pick(rng, spots).item = pickId;
+    }
 
-    G.loot = { pockets, sinceBribe: 0, bribes: 0, pendingCard: null, done: false };
+    /* something square shows through the cloth */
+    pockets.forEach(p => { p.bulge = !!(p.card || p.gun || p.item); });
+
+    G.loot = { pockets, sinceBribe: 0, bribes: 0, pendingCard: null, pendingItem: null, done: false };
     G.phase = 'loot';
     return G.loot;
   },
@@ -494,11 +619,11 @@ const E = {
   lootLeft() { return G.loot.pockets.filter(p => !p.taken).length; },
   canRifle() {
     return G.phase === 'loot' && !G.loot.done && !G.loot.pendingCard &&
-      G.loot.sinceBribe < LOOT_TUNING.freePockets;
+      G.loot.sinceBribe < E.freePockets();
   },
   heatUp() { // the badges are at the door
     return G.phase === 'loot' && !G.loot.done &&
-      G.loot.sinceBribe >= LOOT_TUNING.freePockets && E.lootLeft() > 0;
+      G.loot.sinceBribe >= E.freePockets() && E.lootLeft() > 0;
   },
 
   rifle(i) {
@@ -514,6 +639,7 @@ const E = {
       if (G.trinkets.length < MAX_TRINKETS) G.trinkets.push({ id: p.card, used: {} });
       else G.loot.pendingCard = p.card;
     }
+    if (p.item && !E.giveItem(p.item)) G.loot.pendingItem = p.item;
     return p;
   },
 
@@ -527,9 +653,18 @@ const E = {
     G.loot.pendingCard = null;
   },
 
+  /* full belt: swap or leave the item you found */
+  resolveItem(replaceIdx) {
+    const id = G.loot.pendingItem;
+    if (!id) return;
+    if (replaceIdx !== null && G.items[replaceIdx]) G.items[replaceIdx] = id;
+    G.loot.pendingItem = null;
+  },
+
   bribeCost() {
     if (E.has('marked') && G.loot.bribes === 0) return 0;
-    let c = LOOT_TUNING.bribeBase + G.ante * LOOT_TUNING.bribePerAnte + G.loot.bribes * LOOT_TUNING.bribeStep;
+    let c = LOOT_TUNING.bribeBase + G.ante * LOOT_TUNING.bribePerAnte +
+      (E.has('ledger') ? 0 : G.loot.bribes * LOOT_TUNING.bribeStep);
     if (E.has('glove')) c = Math.max(1, c - 2);
     return c;
   },
@@ -547,6 +682,7 @@ const E = {
   /* walk out: learn his tells, then face the badges if it's a boss */
   endLoot() {
     if (G.loot.pendingCard) G.loot.pendingCard = null; // left it on the corpse
+    if (G.loot.pendingItem) G.loot.pendingItem = null;
     G.loot.done = true;
     const learned = [];
     for (const t of G.duel.opp.traits) if (META.learnTrait(t)) learned.push(t);
