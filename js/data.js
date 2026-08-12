@@ -227,7 +227,7 @@ const TRINKETS = {
   /* ---- second wave: the belt-item era ---- */
   dice: { id: 'dice', name: 'LOADED DICE', rarity: 'common', cost: 4,
     active: { per: 'reload' },
-    desc: 'Once a load: roll the drum over. Same shells, new order — every peek is forgotten.',
+    desc: 'Once a load: roll the drum over. Same shells, new order — you see what lands under the hammer, and forget the rest.',
     glyph: ['.KKKKKK.', 'KWWWWWWK', 'KWGWWKWK', 'KWWKKWWK', 'KWKWWKWK', 'KWWWWWWK', '.KKKKKK.'] },
   gauze: { id: 'gauze', name: 'RAG TOURNIQUET', rarity: 'common', cost: 4,
     desc: 'The FIRST live shell that hits you each duel deals 1 less.',
@@ -379,7 +379,7 @@ const TAUNTS = {
   afterHittingYou: [
     'That is the vig.',
     'Bleed quieter, would you.',
-    'Don Bufo says hello.',
+    'That is one heart of interest.',
     'You are into me for more than chips now.',
     'Hold still, it goes faster.',
     'One down. You have got, what, a few?',

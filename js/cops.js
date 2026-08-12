@@ -27,7 +27,13 @@ const COPS = {
   LEG_H: 20,          // hip -> sole
   CW: 96, CH: 80,     // cached composite (head + tunic); hip sits at CH
   BODY_SC: 0.75,      // the seated rig body, scaled down for a standing cop
-  STAND: 286,         // where a lone shakedown artist plants himself
+  /* STAND is where the lone badge from arrive()/refuse() plants himself, and he
+     only ever shows up during the loot phase — where .loot-in pins the panel to
+     the right of the scene (world 269..347 on a 360-wide viewport). 286 put his
+     head dead centre behind it, so he stands just clear of its left edge. The
+     FLANK marks belong to shakedown(), which runs under the CENTRED heat card
+     (world ~125..235), so those stay out on the right. */
+  STAND: 246,
   FLANK: [262, 308, 212],
 
   /* ---------------- who they are ---------------- */
@@ -86,6 +92,8 @@ const COPS = {
   _defCache: {},
   _uniCache: {},
   _tilted: false,
+  _tiltCss: '',
+  _grads: null,
 
   /* ============================================================
      lifecycle
@@ -407,17 +415,43 @@ const COPS = {
      per frame
      ============================================================ */
 
-  _offX() {
+  /* DUEL.W is the viewport in world units, so the visible band is
+     180 +- DUEL.W/2 — NOT a fixed 0..360. It is 108 wide on a phone. */
+  _vis() {
     const W = (typeof DUEL !== 'undefined' && DUEL.W) ? DUEL.W : 360;
-    return Math.max(400, Math.round(W / 2 + 214));
+    return { l: 180 - W / 2, r: 180 + W / 2 };
   },
 
-  _spawn(rank, tx) {
+  /* just past the right edge, whatever the window is */
+  _offX() {
+    return Math.round(COPS._vis().r + 54);
+  },
+
+  /* Pull a mark inside the visible band. At 430px wide the game is only 108
+     world px across (126..234), so the authored 246/262/308 marks stood a cop
+     entirely off screen — the whole sequence played to nobody. Wide viewports
+     are untouched; narrow ones get a per-slot stagger so the cops still read as
+     separate bodies instead of stacking on one pixel. */
+  _fit(x, i) {
+    const right = COPS._vis().r - 22;
+    const F = COPS.FLANK;
+    const widest = Math.max(COPS.STAND, F[0], F[1], F[2]);
+    if (widest <= right) return x;               // room for the authored marks
+    return Math.round(right - (i || 0) * 20);    // squeezed: one slot per stagger
+  },
+
+  _spawn(rank, tx, slot) {
     const r = rank === 'sgt' ? 'sgt' : 'beat';
+    tx = COPS._fit(tx, slot);
+    const from = COPS._offX();
+    /* the off-screen mark tracks the viewport width, so on a wide window the
+       walk in is much longer — pace it by distance or he is still marching
+       when the beat that spawned him has already given up waiting */
+    const speed = Math.max(1.55, Math.abs(from - tx) / 80);
     const c = {
       rank: r,
-      x: COPS._offX(), y: COPS.GROUND, tx: tx,
-      speed: 1.55, walk: 0, lastStep: 0, bob: 0, dip: 0, dipTo: 0,
+      x: from, y: COPS.GROUND, tx: tx,
+      speed: speed, walk: 0, lastStep: 0, bob: 0, dip: 0, dipTo: 0,
       moving: true, leaving: false,
       expr: 'neutral', armMode: 'idle',
       hL: { x: -22, y: -14 }, hR: { x: 14, y: -18 },
@@ -497,7 +531,6 @@ const COPS = {
       const p = Math.min(1, ch.t / ch.dur);
       ch.px = ch.x + (gx - ch.x) * p;
       ch.py = ch.y + (gy - ch.y) * p - Math.sin(p * Math.PI) * 34;
-      ch.rot = p * 6;
       if (p >= 1) {
         c.palmChips = Math.min(8, c.palmChips + 1);
         SFX.coin();
@@ -592,9 +625,12 @@ const COPS = {
   draw(ctx, t) {
     if (!COPS.active) return;
     if (COPS.wagon) COPS._drawWagon(ctx, COPS.wagon);
-    /* far cops first so the nearest one overlaps */
-    const order = COPS.cops.slice().sort((a, b) => b.x - a.x);
-    order.forEach(c => COPS._drawCop(ctx, c));
+    /* far cops first so the nearest one overlaps (no copy for the common case) */
+    if (COPS.cops.length > 1) {
+      COPS.cops.slice().sort((a, b) => b.x - a.x).forEach(c => COPS._drawCop(ctx, c));
+    } else if (COPS.cops.length) {
+      COPS._drawCop(ctx, COPS.cops[0]);
+    }
     COPS.parts.forEach(p => {
       ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.9;
       ctx.fillStyle = p.col;
@@ -670,23 +706,24 @@ const COPS = {
     const len = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
     const n = Math.max(4, Math.min(28, Math.round(len / 3)));
     const vert = Math.abs(y1 - y0) > Math.abs(x1 - x0);
-    for (let pass = 0; pass < 2; pass++) {
+    /* three passes, not two: ink, then every fill, then every edge. Drawing the
+       edge with its own step's fill let the NEXT step's fill eat most of it,
+       which is what turns a sleeve into a rung ladder. */
+    for (let pass = 0; pass < 3; pass++) {
       for (let i = 0; i <= n; i++) {
         const f = i / n;
         const px = Math.round((x0 + (x1 - x0) * f) / 2) * 2;
         const py = Math.round((y0 + (y1 - y0) * f) / 2) * 2;
         if (pass === 0) {
           PIX.rect(ctx, px - 5, py - 4, 9, 8, P.K);
-        } else {
+        } else if (pass === 1) {
           PIX.rect(ctx, px - 4, py - 3, 7, 6, col);
-          /* one continuous light edge, never one per step (no ladder stripes) */
-          if (vert) {
-            PIX.rect(ctx, px - 4, py - 3, 2, 6, hi);
-            PIX.rect(ctx, px + 1, py - 3, 2, 6, 'rgba(0,0,0,.22)');
-          } else {
-            PIX.rect(ctx, px - 4, py - 3, 7, 1, hi);
-            PIX.rect(ctx, px - 4, py + 1, 7, 2, 'rgba(0,0,0,.22)');
-          }
+        } else if (vert) {
+          PIX.rect(ctx, px - 4, py - 3, 2, 6, hi);
+          PIX.rect(ctx, px + 1, py - 3, 2, 6, 'rgba(0,0,0,.22)');
+        } else {
+          PIX.rect(ctx, px - 4, py - 3, 7, 1, hi);
+          PIX.rect(ctx, px - 4, py + 1, 7, 2, 'rgba(0,0,0,.22)');
         }
       }
     }
@@ -766,6 +803,34 @@ const COPS = {
      screen space: the light wash + the front layer
      ============================================================ */
 
+  /* the wash gradients only depend on the canvas width, so build them once and
+     slide the sweeping beam with a translate instead of rebuilding three
+     gradient objects on every single frame of the light show */
+  _grad(ctx, W) {
+    if (COPS._grads && COPS._grads.w === W) return COPS._grads;
+    const mk = (x0, x1, rgb) => {
+      const g = ctx.createLinearGradient(x0, 0, x1, 0);
+      g.addColorStop(0, 'rgba(' + rgb + ',.95)');
+      g.addColorStop(0.55, 'rgba(' + rgb + ',0)');
+      return g;
+    };
+    const beam = (rgb) => {
+      const g = ctx.createLinearGradient(-26, 0, 26, 0);
+      g.addColorStop(0, 'rgba(' + rgb + ',0)');
+      g.addColorStop(0.5, 'rgba(' + rgb + ',.7)');
+      g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      return g;
+    };
+    COPS._grads = {
+      w: W,
+      red: mk(0, W, '209,59,69'),
+      blue: mk(W, 0, '127,215,255'),
+      beamR: beam('255,106,94'),
+      beamB: beam('127,215,255'),
+    };
+    return COPS._grads;
+  },
+
   drawOverlay(ctx, W, H) {
     if (!COPS.active) return;
     const P = PIX.PAL;
@@ -773,27 +838,18 @@ const COPS = {
     if (COPS.wash > 0.02) {
       const s = (Math.sin(COPS.t / 24) + 1) / 2;
       const a = Math.min(1, COPS.wash);
+      const G0 = COPS._grad(ctx, W);
       ctx.save();
-      let g = ctx.createLinearGradient(0, 0, W, 0);
-      g.addColorStop(0, 'rgba(209,59,69,.95)');
-      g.addColorStop(0.55, 'rgba(209,59,69,0)');
       ctx.globalAlpha = a * 0.34 * (0.3 + s * 0.7);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      g = ctx.createLinearGradient(W, 0, 0, 0);
-      g.addColorStop(0, 'rgba(127,215,255,.95)');
-      g.addColorStop(0.55, 'rgba(127,215,255,0)');
+      ctx.fillStyle = G0.red; ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = a * 0.34 * (1 - s * 0.7);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = G0.blue; ctx.fillRect(0, 0, W, H);
       /* a soft beam sweeping across the room */
       const bx = (0.5 + 0.5 * Math.sin(COPS.t / 46)) * W;
-      const beam = ctx.createLinearGradient(bx - 26, 0, bx + 26, 0);
-      const core = s > 0.5 ? '255,106,94' : '127,215,255';
-      beam.addColorStop(0, 'rgba(' + core + ',0)');
-      beam.addColorStop(0.5, 'rgba(' + core + ',.7)');
-      beam.addColorStop(1, 'rgba(' + core + ',0)');
       ctx.globalAlpha = a * 0.1;
-      ctx.fillStyle = beam;
-      ctx.fillRect(0, 0, W, H);
+      ctx.translate(bx, 0);
+      ctx.fillStyle = s > 0.5 ? G0.beamR : G0.beamB;
+      ctx.fillRect(-bx, 0, W, H);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
@@ -918,7 +974,10 @@ const COPS = {
     COPS._tilted = true;
     const deg = (COPS.tilt * 57.2958).toFixed(2);
     const sc = (1 + Math.abs(COPS.tilt) * 1.6).toFixed(3);
-    cv.style.transform = 'rotate(' + deg + 'deg) scale(' + sc + ')';
+    const css = 'rotate(' + deg + 'deg) scale(' + sc + ')';
+    /* only touch the style when it actually changed — once the tip settles this
+       would otherwise force a style recalc on a fullscreen canvas every frame */
+    if (css !== COPS._tiltCss) { COPS._tiltCss = css; cv.style.transform = css; }
   },
 
   _clearTilt() {
@@ -926,6 +985,7 @@ const COPS = {
     const cv = COPS._sceneEl();
     if (cv) cv.style.transform = '';
     COPS._tilted = false;
+    COPS._tiltCss = '';
   },
 
   /* ============================================================
@@ -941,6 +1001,13 @@ const COPS = {
   _unhurry() {
     if (typeof DUEL !== 'undefined' && DUEL.hurry) DUEL.hurry = false;
   },
+
+  /* Take ownership of the cops. Every public beat claims before it starts, so
+     a beat fired while an older one is still awaiting (the pay button landing
+     while shakedown() is still marching them in, say) makes the older one bail
+     at its next check instead of re-posing cops the new beat has already moved.
+     reset() bumps the same counter, which is why cancellation already works. */
+  _claim() { return ++COPS._gen; },
 
   _until(cond, maxMs) {
     return new Promise(res => {
@@ -958,10 +1025,10 @@ const COPS = {
   /* one badge walks in and stands there with his hand out */
   async arrive(rank) {
     COPS._unhurry();
-    const gen = COPS._gen;
+    const gen = COPS._claim();
     const c = COPS._spawn(rank || 'beat', COPS.STAND);
     SFX.click();
-    await COPS._until(() => COPS._gen !== gen || !c.moving, 3200);
+    await COPS._until(() => COPS._gen !== gen || !c.moving, 4500);
     if (COPS._gen !== gen) return c;
     c.expr = 'smug';
     c.armMode = 'palm';
@@ -974,7 +1041,7 @@ const COPS = {
 
   /* chips arc over one at a time, he pockets them, tips his cap, leaves */
   async bribe(amount) {
-    const gen = COPS._gen;
+    const gen = COPS._claim();
     const c = COPS.cops[0];
     if (!c) return;
     c.tapping = false;
@@ -1011,7 +1078,7 @@ const COPS = {
 
   /* he shrugs, folds his arms, and is not going anywhere */
   async refuse() {
-    const gen = COPS._gen;
+    const gen = COPS._claim();
     const c = COPS.cops[0] || COPS._spawn('beat', COPS.STAND);
     c.tapping = false;
     c.armMode = 'shrug';
@@ -1027,17 +1094,19 @@ const COPS = {
   },
 
   /* after a boss: two or three of them march in and flank the table */
-  async shakedown(n) {
+  /* _gen: internal — bust() passes its own claim so the march-in it triggers
+     counts as part of the bust instead of cancelling it */
+  async shakedown(n, _gen) {
     COPS._unhurry();
-    const gen = COPS._gen;
+    const gen = (_gen === undefined) ? COPS._claim() : _gen;
     const count = Math.max(2, Math.min(3, n || 2));
     COPS.washTo = 1;
     COPS.torchTo = 1;
     SFX.jamSfx();
     const ranks = ['sgt', 'beat', 'beat'];
     for (let i = 0; i < count; i++) {
-      const c = COPS._spawn(ranks[i], COPS.FLANK[i]);
-      c.speed = 1.7;
+      const c = COPS._spawn(ranks[i], COPS.FLANK[i], i);
+      c.speed = Math.max(c.speed, 1.7);   // never below the distance-aware walk-in
       c.torch = (i === 1);
       SFX.deal();
       await COPS._nap(220);
@@ -1056,7 +1125,7 @@ const COPS = {
 
   /* the envelope changes hands, salutes all round, they go */
   async paid() {
-    const gen = COPS._gen;
+    const gen = COPS._claim();
     const c = COPS.cops[0];
     if (!c) return;
     c.tapping = false;
@@ -1090,9 +1159,9 @@ const COPS = {
   /* you can't pay: cuffs, a raised stick, the wagon, and the room tips */
   async bust() {
     COPS._unhurry();
-    const gen = COPS._gen;
+    const gen = COPS._claim();
     if (!COPS.cops.length) {
-      await COPS.shakedown(2);
+      await COPS.shakedown(2, gen);
       if (COPS._gen !== gen) return;
     }
     COPS.washTo = 1.3;
@@ -1100,7 +1169,7 @@ const COPS = {
     COPS.wagon = { x: 340, vx: -1.5, t: 0 };
     COPS.cops.forEach((c, i) => {
       c.tapping = false; c.speed = 2.1; c.expr = 'angry';
-      c.armMode = 'grab'; c.tx = 246 - i * 40;
+      c.armMode = 'grab'; c.tx = COPS._fit(246, i) - i * 40;
     });
     SFX.jamSfx();
     await COPS._nap(620);
@@ -1126,5 +1195,9 @@ const COPS = {
     if (COPS._gen !== gen) return;
     COPS.tiltTo = 0.035;
     await COPS._nap(900);
+    /* let the tip ease out again: the caller normally tears the scene down on
+       the next line, but a CSS transform left pinned on a canvas that survives
+       would rotate + scale the whole game until the next duel reset it */
+    COPS.tiltTo = 0;
   },
 };

@@ -1116,6 +1116,7 @@ const COSTUMES = {
     label: 'SHIRTSLEEVES', tintable: false, era: 'flatcap',
     shirt: { col: 'W', collar: 'point', rolled: true, cuff: 'W' },
     neck: { type: 'tie', col: 'd', loose: true },
+    waistcoat: { col: 't', dark: 'T', buttons: 5, outer: true },
     acc: { braces: 'T', armGarters: 'd' },
   },
 
@@ -1201,7 +1202,7 @@ const COSTUMES = {
 
 /* which wardrobe a procedural opponent may draw from, by rank */
 const COSTUME_POOL = {
-  mook: ['shabby', 'sack', 'shirtsleeves', 'sack', 'shabby', 'croupier'],
+  mook: ['shabby', 'sack', 'sack', 'shabby', 'shirtsleeves', 'threePiece'],
   capo: ['pinstripe', 'sack', 'doubleBreast', 'threePiece', 'zoot', 'trench'],
   boss: ['doubleBreast', 'tux', 'tails', 'trench', 'uniform', 'zoot', 'cop',
          'pinstripe', 'donCoat'],
@@ -1280,6 +1281,71 @@ SPR.costumeOf = function (d) {
   if (d.braces && !C.acc.braces && !C.jacket && !C.overcoat && !C.gown) C.acc.braces = 'T';
   if (d.badge && !C.acc.badge) C.acc.badge = 'L';
   return C;
+};
+
+/* ============================================================
+   THE FROG HAND — four fingers, each ending in a fat round toe
+   pad, webbing between them. Drawn splayed on the felt, seen
+   from the player's low angle. Used by the seated mark, the
+   corpse and the cops.
+   sgn: -1 left hand, +1 right hand (thumb side flips)
+   ============================================================ */
+SPR.frogHand = function (ctx, x, y, d, sgn, opts) {
+  const P = PIX.PAL;
+  opts = opts || {};
+  const skin = P[d.skin[0]] || P.F;
+  const shade = P[d.skin[1]] || P.f;
+  const dark = P[d.skin[2]] || P.e;
+  const INK = P.K;
+  const grip = !!opts.grip;          // curled around something instead of splayed
+
+  /* sleeve cuff the wrist comes out of */
+  if (!opts.noCuff) {
+    const cuffC = SPR.cuffColor ? SPR.cuffColor(d) : (P[d.shirt] || P.W);
+    PIX.rect(ctx, x - 5, y - 9, 10, 5, INK);
+    PIX.rect(ctx, x - 4, y - 9, 8, 4, cuffC);
+    PIX.rect(ctx, x - 4, y - 6, 8, 1, 'rgba(0,0,0,.3)');
+    PIX.rect(ctx, x - 4, y - 9, 8, 1, 'rgba(255,255,255,.18)');
+    if (opts.link) PIX.rect(ctx, x + sgn * 3 - 1, y - 8, 2, 2, P.G);
+  }
+
+  /* back of the hand */
+  PIX.disc(ctx, x, y - 1, 6, INK);
+  PIX.disc(ctx, x, y - 1, 5, skin);
+  PIX.rect(ctx, x - sgn * 2 - 1, y - 4, 3, 2, 'rgba(255,255,255,.22)');  // knuckle light
+  SPR.ellipse(ctx, x, y + 2, 5, 2, shade);                              // palm heel
+
+  /* four fingers — outer two shorter, splayed like a fan, fat toe pads */
+  const F = grip ? [[-4, 2], [-1, 3], [2, 3], [5, 2]]
+                 : [[-5, 3], [-2, 5], [2, 5], [5, 3]];
+  F.forEach(([fx, len], i) => {
+    const bx = x + fx * (sgn < 0 ? -1 : 1);
+    if (i > 0) {                                    // webbing between digits
+      const px = x + F[i - 1][0] * (sgn < 0 ? -1 : 1);
+      const lo = Math.min(bx, px), wdt = Math.abs(bx - px);
+      PIX.rect(ctx, lo, y, wdt, 3, INK);
+      PIX.rect(ctx, lo, y, wdt, 2, dark);
+    }
+    PIX.rect(ctx, bx - 2, y - 1, 4, len + 2, INK);            // digit ink
+    PIX.rect(ctx, bx - 1, y - 1, 2, len + 1, skin);           // digit
+    PIX.disc(ctx, bx, y + len + 1, 3, INK);                   // toe pad
+    PIX.disc(ctx, bx, y + len + 1, 2, skin);
+    PIX.rect(ctx, bx - 1, y + len, 1, 1, 'rgba(255,255,255,.3)');
+    PIX.rect(ctx, bx - 1, y + len + 3, 2, 1, dark);           // pad shadow
+  });
+
+  if (d.rings) {
+    PIX.rect(ctx, x - sgn * 3 - 1, y + 1, 3, 2, INK);
+    PIX.rect(ctx, x - sgn * 3 - 1, y + 1, 3, 1, P.G);
+    PIX.rect(ctx, x + sgn * 2 - 1, y, 3, 2, INK);
+    PIX.rect(ctx, x + sgn * 2 - 1, y, 3, 1, P.G);
+  }
+  if (d.knuckles) {
+    for (let k = -1; k <= 1; k++) {
+      PIX.rect(ctx, x + k * 4 - 1, y - 3, 3, 3, INK);
+      PIX.rect(ctx, x + k * 4 - 1, y - 3, 2, 2, P.G);
+    }
+  }
 };
 
 /* colour the duel scene should use for the visible cuff at the wrist */
@@ -1823,16 +1889,23 @@ SPR.buildBody = function (d) {
 
   /* ---------- torso profile (half-width per row) ---------- */
   const pad = C.pad || 0, shX = C.shoulder || 0;
+  /* A tailored jacket is WIDEST at the shoulder and tapers to the waist —
+     the old profile had it backwards (narrow shoulders, wide gut), which is
+     why the arms looked bolted on. Rows 4-17 are the padded shoulder line. */
   const prof = [];
   for (let y = 0; y < H; y++) {
     let hw;
-    if (y < 2) hw = 14; else if (y < 4) hw = 20; else if (y < 6) hw = 25;
-    else if (y < 8) hw = 29; else if (y < 11) hw = 32; else if (y < 15) hw = 34;
-    else if (y < 26) hw = 35; else if (y < 38) hw = 36; else if (y < 50) hw = 37;
-    else hw = 38;
+    if (y < 2) hw = 15;                       // neck root
+    else if (y < 3) hw = 25;                  // trapezius, one hard step
+    else if (y < 4) hw = 34;
+    else if (y < 17) hw = 41;                 // THE shoulder line — the widest point
+    else if (y < 22) hw = 40 - (y - 17);      // taper off the pad
+    else if (y < 34) hw = 36;                 // chest
+    else if (y < 46) hw = 35;                 // waist, slightly nipped
+    else hw = 37;                             // seat spreading on the chair
     if (fat) {
-      hw += 9;
-      if (y >= 24) hw += Math.min(7, 2 + ((y - 24) >> 2)); // the belly steps out
+      hw += 8;
+      if (y >= 22) hw += Math.min(8, 2 + ((y - 22) >> 2)); // the belly steps out
     }
     hw += pad;
     if (shX) {
@@ -2323,9 +2396,33 @@ SPR.buildBody = function (d) {
     }
   }
 
-  /* ---------- 7. sleeves ---------- */
-  let baseHw = (fat ? 44 : 35) + Math.round(pad * 0.5) + Math.round(shX * 0.6);
-  baseHw = Math.min(baseHw, 44);
+  /* a jacketless torso is a big flat panel — sculpt it so it reads as cloth */
+  if (!O && sh && !vcOuter) {
+    for (let y = 4; y < H; y++) {
+      const hw = prof[y];
+      PIX.rect(ctx, cx + hw - 7, y, 6, 1, SH2);        // right side falls away
+      PIX.rect(ctx, cx + hw - 1, y, 1, 1, SH3);        // side seam
+      PIX.rect(ctx, cx - hw + 1, y, 3, 1, HI);         // lit left edge
+      PIX.rect(ctx, cx - hw, y, 1, 1, SH2);
+    }
+    PIX.rect(ctx, cx - 30, 30, 3, 1, SH3);             // yoke seam hints
+    PIX.rect(ctx, cx + 27, 30, 3, 1, SH3);
+    /* chest pocket with a flap */
+    PIX.rect(ctx, cx + 13, 20, 12, 9, SH3);
+    PIX.rect(ctx, cx + 14, 21, 10, 7, shirtC);
+    PIX.rect(ctx, cx + 13, 20, 12, 2, SH2);
+    PIX.rect(ctx, cx + 18, 24, 2, 2, shirtDk);
+  }
+
+  /* ---------- 7. sleeves ----------
+     Arms belong UNDER the coat: they are drawn onto their own layer and
+     composited behind everything already painted, so the padded shoulder
+     overlaps the sleeve head instead of the sleeve sitting on the chest. */
+  const armCv = document.createElement('canvas');
+  armCv.width = W; armCv.height = H;
+  const actx = armCv.getContext('2d');
+  let baseHw = (fat ? 47 : 39) + Math.round(pad * 0.5) + Math.round(shX * 0.6);
+  baseHw = Math.min(baseHw, 48);
   const rolled = !!(sh && sh.rolled);
   const sleeveC = gown ? L(acc.gloves || gown.col, P.W) : base;
   /* must agree with SPR.cuffColor — duel.js paints the felt-hand cuff from it */
@@ -2348,55 +2445,73 @@ SPR.buildBody = function (d) {
       const c = centerAt(Math.min(Math.max(y, y0), y2 - 1));
       let w = ((y > y1 - 4 && y < y1 + 4) ? 12 : 11) + (y <= rollY ? bulky : 0);
       if (rolled && y > rollY) w = 10;
-      PIX.rect(ctx, c - (w >> 1), y, w, 1, INK);
+      PIX.rect(actx, c - (w >> 1), y, w, 1, INK);
     }
     for (let y = y0; y < y2; y++) {
       const c = centerAt(y);
       const inSleeve = y <= rollY;
       let w = ((y > y1 - 4 && y < y1 + 4) ? 10 : 9) + (inSleeve ? bulky : 0);
       if (!inSleeve) w = 8;
-      PIX.rect(ctx, c - (w >> 1), y, w, 1, inSleeve ? sleeveC : skin);
-      PIX.rect(ctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, 'rgba(0,0,0,.25)');
-      if (y === y0 + 1 || y === y0 + 2) PIX.rect(ctx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.07)');
+      PIX.rect(actx, c - (w >> 1), y, w, 1, inSleeve ? sleeveC : skin);
+      PIX.rect(actx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, 'rgba(0,0,0,.25)');
+      if (y === y0 + 1 || y === y0 + 2) PIX.rect(actx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.07)');
       if (inSleeve && stripe === 'chalk') {
         const lx = c - (w >> 1) + ((Math.abs(c) + 1) % stripeGap);
-        PIX.rect(ctx, lx, y, 1, 1, CHALK);
-        PIX.rect(ctx, lx + stripeGap, y, 1, 1, CHALK);
+        PIX.rect(actx, lx, y, 1, 1, CHALK);
+        PIX.rect(actx, lx + stripeGap, y, 1, 1, CHALK);
       }
-      if (!inSleeve && (y & 3) === 0) PIX.rect(ctx, c - 1, y, 2, 1, skShade);
+      if (!inSleeve && (y & 3) === 0) PIX.rect(actx, c - 1, y, 2, 1, skShade);
     }
     /* shoulder seam */
-    PIX.rect(ctx, centerAt(y0) - 5, y0, 10, 1, SH2);
+    PIX.rect(actx, centerAt(y0) - 5, y0, 10, 1, SH2);
     if (rolled) {                                    // the roll itself
       const rc = centerAt(rollY);
-      PIX.rect(ctx, rc - 7, rollY - 3, 14, 6, INK);
-      PIX.rect(ctx, rc - 6, rollY - 3, 12, 4, sleeveC);
-      PIX.rect(ctx, rc - 6, rollY - 1, 12, 1, SH2);
-      PIX.rect(ctx, rc - 6, rollY - 3, 12, 1, 'rgba(255,255,255,.12)');
+      PIX.rect(actx, rc - 7, rollY - 3, 14, 6, INK);
+      PIX.rect(actx, rc - 6, rollY - 3, 12, 4, sleeveC);
+      PIX.rect(actx, rc - 6, rollY - 1, 12, 1, SH2);
+      PIX.rect(actx, rc - 6, rollY - 3, 12, 1, 'rgba(255,255,255,.12)');
     }
     if (O && O.frayed) {                             // worn-through elbow
       const ec = centerAt(y1);
-      PIX.rect(ctx, ec - 4, y1 - 3, 9, 7, 'rgba(0,0,0,.22)');
-      PIX.rect(ctx, ec - 3, y1 - 2, 3, 2, baseDk);
-      PIX.rect(ctx, ec + 1, y1 + 1, 3, 2, baseDk);
+      PIX.rect(actx, ec - 4, y1 - 3, 9, 7, 'rgba(0,0,0,.22)');
+      PIX.rect(actx, ec - 3, y1 - 2, 3, 2, baseDk);
+      PIX.rect(actx, ec + 1, y1 + 1, 3, 2, baseDk);
     }
     /* cuff at the wrist (kept where the felt hands meet it) */
     const wc = centerAt(y2 - 1);
-    PIX.rect(ctx, wc - 5, y2 - 3, 10, 4, INK);
-    PIX.rect(ctx, wc - 4, y2 - 3, 8, 3, cuffC);
-    PIX.rect(ctx, wc - 4, y2 - 3, 8, 1, 'rgba(0,0,0,.2)');
+    PIX.rect(actx, wc - 5, y2 - 3, 10, 4, INK);
+    PIX.rect(actx, wc - 4, y2 - 3, 8, 3, cuffC);
+    PIX.rect(actx, wc - 4, y2 - 3, 8, 1, 'rgba(0,0,0,.2)');
     if (!gown && !rolled) {                          // cuff link
-      PIX.rect(ctx, wc + (sgn < 0 ? -4 : 2), y2 - 2, 2, 2, P.G);
+      PIX.rect(actx, wc + (sgn < 0 ? -4 : 2), y2 - 2, 2, 2, P.G);
     }
     /* ---------- 8. sleeve accessories ---------- */
     if (acc.armGarters) {
       const gc = L(acc.armGarters, P.d);
       const gy = 20, gcx = centerAt(gy);
-      PIX.rect(ctx, gcx - 6, gy - 1, 12, 6, INK);
-      PIX.rect(ctx, gcx - 5, gy, 10, 4, gc);
-      PIX.rect(ctx, gcx - 5, gy, 10, 1, 'rgba(255,255,255,.18)');
-      PIX.rect(ctx, gcx - 5, gy + 3, 10, 1, SH1);
+      PIX.rect(actx, gcx - 6, gy - 1, 12, 6, INK);
+      PIX.rect(actx, gcx - 5, gy, 10, 4, gc);
+      PIX.rect(actx, gcx - 5, gy, 10, 1, 'rgba(255,255,255,.18)');
+      PIX.rect(actx, gcx - 5, gy + 3, 10, 1, SH1);
     }
+    if (acc.gloves) {                                // glove top, above the elbow
+      const gl = L(acc.gloves, P.W);
+      const gy = 18, gcx = centerAt(gy);
+      PIX.rect(actx, gcx - 6, gy - 1, 12, 4, INK);
+      PIX.rect(actx, gcx - 5, gy, 10, 2, L(DARKER[acc.gloves], P.w));
+    }
+  });
+  /* drop the whole arm layer in behind the coat */
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.drawImage(armCv, 0, 0);
+  ctx.restore();
+
+  /* where the sleeves end, so the scene can put the hands exactly there */
+  cv.wrist = { dx: baseHw - 9, dy: 56, cx: cx, h: H };
+
+  /* epaulets ride ON TOP of the shoulder, not under it */
+  [-1, 1].forEach(sgn => {
     if (acc.epaulets) {
       const ec = L(acc.epaulets, P.G);
       const x0 = sgn < 0 ? cx - baseHw - 1 : cx + baseHw - 10;
@@ -2405,13 +2520,8 @@ SPR.buildBody = function (d) {
       PIX.rect(ctx, x0, 6, 11, 1, 'rgba(255,255,255,.22)');
       PIX.rect(ctx, x0 + (sgn < 0 ? 1 : 8), 7, 2, 2, INK);
     }
-    if (acc.gloves) {                                // glove top, above the elbow
-      const gl = L(acc.gloves, P.W);
-      const gy = 18, gcx = centerAt(gy);
-      PIX.rect(ctx, gcx - 6, gy - 1, 12, 4, INK);
-      PIX.rect(ctx, gcx - 5, gy, 10, 2, L(DARKER[acc.gloves], P.w));
-    }
   });
+
   if (acc.radio) {                                   // shoulder mic on the left
     const rc = L(acc.radio, P.T);
     const x0 = cx - baseHw - 1;

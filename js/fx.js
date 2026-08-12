@@ -81,15 +81,27 @@ const FX = (function () {
       const p = pool[j];
       if (!p.live) { cursor = (j + 1) % MAX; bump(kind, 1); return scrub(p, kind, layer); }
     }
-    const p = pool[cursor];                 // pool full: recycle the oldest slot
-    kill(p); cursor = (cursor + 1) % MAX;
-    bump(kind, 1); return scrub(p, kind, layer);
+    /* pool full: recycle the oldest slot — but skip slots holding a pending
+       onEnd (cardFly's onDone reveals the loot card; swallowing it would
+       leave the DOM card hidden forever). If every slot has one, fire it. */
+    let j = cursor, tries = 0;
+    while (pool[j].onEnd && tries < MAX) { j = (j + 1) % MAX; tries++; }
+    const p = pool[j];
+    const cb = p.onEnd;
+    kill(p); cursor = (j + 1) % MAX;
+    bump(kind, 1);
+    const np = scrub(p, kind, layer);
+    if (cb) { try { cb(); } catch (e) {} }
+    return np;
   }
 
   /* blood on the cloth — kept outside the pool so it can persist */
   let stains = [];
   function stain(x, y, rx, ry, col, grow) {
-    stains.push({ x: x, y: y, rx: rx, ry: ry, col: col, grow: grow || 0, tx: rx });
+    /* SPR.ellipse divides by ry — a zero/NaN radius would emit NaN fillRects */
+    rx = Math.max(0.5, +rx || 0.5); ry = Math.max(0.5, +ry || 0.5);
+    if (!isFinite(x) || !isFinite(y)) return;
+    stains.push({ x: x, y: y, rx: rx, ry: ry, col: col || PIX.PAL.d, grow: grow || 0, tx: rx });
     if (grow) stains[stains.length - 1].tx = rx * (2 + Math.random());
     if (stains.length > MAXSTAIN) stains.splice(0, stains.length - MAXSTAIN);
   }
@@ -103,6 +115,7 @@ const FX = (function () {
   /* ================= tweens ================= */
 
   const tweens = [];
+  let inTweens = false;
 
   function tween(o) {
     o = o || {};
@@ -115,24 +128,35 @@ const FX = (function () {
       up: o.onUpdate, done: o.onDone, dead: false,
       cancel() { this.dead = true; },
     };
-    if (tweens.length < 64) tweens.push(tw);
+    /* at the cap, retire the stalest rather than silently ignoring the new
+       request — a FX.after() whose onDone never fires is a nasty failure.
+       Never splice while stepTweens is walking the array. */
+    if (tweens.length >= 64) {
+      if (inTweens) { for (let i = 0; i < tweens.length; i++) if (!tweens[i].dead) { tweens[i].dead = true; break; } }
+      else tweens.splice(0, 1);
+    }
+    tweens.push(tw);
     return tw;
   }
 
   function stepTweens(d) {
+    inTweens = true;
     for (let i = tweens.length - 1; i >= 0; i--) {
       const tw = tweens[i];
       if (tw.dead) { tweens.splice(i, 1); continue; }
       if (tw.wait > 0) { tw.wait -= d; continue; }
       tw.el += d;
       const k = Math.min(1, tw.el / tw.ms);
-      const v = tw.from + (tw.to - tw.from) * tw.e(k);
+      let v = tw.to;                          // a caller-supplied ease must not kill the frame
+      try { const kk = tw.e(k); if (isFinite(kk)) v = tw.from + (tw.to - tw.from) * kk; }
+      catch (e) { tw.dead = true; }
       if (tw.up) { try { tw.up(v, k); } catch (e) {} }
       if (k >= 1) {
         tweens.splice(i, 1);
         if (tw.done) { try { tw.done(); } catch (e) {} }
       }
     }
+    inTweens = false;
   }
 
   /* ================= screen state ================= */
@@ -241,7 +265,7 @@ const FX = (function () {
   /* --- arterial spray. power 1..3, dir in radians (default: up) --- */
   function bloodBurst(x, y, power, dir) {
     const p = PIX.PAL;
-    power = Math.max(0.5, power === undefined ? 1 : power);
+    power = Math.max(0.5, Math.min(3, power === undefined ? 1 : power));
     const base = dir === undefined ? -Math.PI / 2 : dir;
     const n = cap(8 + power * 7, 30);
     for (let i = 0; i < n; i++) {
@@ -417,7 +441,7 @@ const FX = (function () {
     sparks(x, y, 10, 1.2);
     bloodBurst(x, y, 2.4);
     gib(x, y, 4);
-    if (label) floatText(x - 12, y - 10, label, PIX.PAL.R, 2);
+    if (label) floatText(x, y - 10, label, PIX.PAL.R, 2);   // floatText centres on x
     screen.shake(15); screen.chroma(3); screen.flash(PIX.PAL.W, 0.42);
   }
 
@@ -549,7 +573,11 @@ const FX = (function () {
 
         case 'card': {                        // parametric, no physics
           p.rot += p.vr * dt;
-          if (p.t >= p.life) { const cb = p.onEnd; kill(p); if (cb) { try { cb(); } catch (e) {} } continue; }
+          if (p.t >= p.life) {
+            const cb = p.onEnd; p.onEnd = null; kill(p);
+            if (cb) { try { cb(); } catch (e) {} }
+            continue;
+          }
           break;
         }
 
@@ -582,7 +610,8 @@ const FX = (function () {
           if (p.drag !== 1) { p.vx *= p.drag; p.vy *= p.drag; }
           p.x += p.vx * dt;
           p.y += p.vy * dt;
-          if (p.wob) p.x += Math.sin(p.t * 0.06 + p.ph) * p.wob * 0.35 * dt;
+          // 'text' draws its own wobble; adding it here too made the number slide sideways
+          if (p.wob && p.kind !== 'text') p.x += Math.sin(p.t * 0.06 + p.ph) * p.wob * 0.35 * dt;
           if (p.grow) p.s += p.grow * dt;
           if (p.spin) p.rot += p.spin * dt;
           if (p.vr) p.rot += p.vr * dt;
@@ -604,7 +633,7 @@ const FX = (function () {
             if (p.kind === 'blood' && p.data === 'wet' && Math.random() < 0.3) {
               stain(p.x, Math.min(FELT + 12, Math.max(120, p.y)), rnd(1.4, 2.6), rnd(0.7, 1.3), p.col, 0);
             }
-            const cb = p.onEnd; kill(p);
+            const cb = p.onEnd; p.onEnd = null; kill(p);
             if (cb) { try { cb(); } catch (e) {} }
             continue;
           }
@@ -1009,7 +1038,7 @@ const FX = (function () {
     reset: reset, step: step, draw: draw, drawFront: drawFront, drawFelt: drawFelt,
     drawScreen: drawScreen, shakeOffset: shakeOffset,
     ease: ease, tween: tween,
-    after(msLen, fn) { return tween({ ms: msLen, onDone: fn }); },
+    after(msLen, fn) { return tween({ ms: Math.max(1, msLen || 1), onDone: fn }); },
     timeScale() { return ts; },
     dt() { return dt; },
     frame() { return frame; },

@@ -351,24 +351,17 @@ const DUEL = {
     /* --- his hands resting on the felt (over the table edge) --- */
     if (!DUEL.opp.gone && DUEL.opp.fall < 0 && G.duel) {
       const def = G.duel.opp.def;
-      const hskin = P[def.skin[0]], hshade = P[def.skin[1]];
-      const hsw = def.fat ? 46 : 36;
+      /* land the hands exactly where the sleeves end (the sprite tells us) */
+      const body = SPR.bodyCustom(DUEL.oppKey, def);
+      const w = body.wrist || { dx: def.fat ? 38 : 30, dy: 56, h: 60 };
+      const hy = 130 - (w.h - w.dy);
       const hbob = Math.round(Math.sin(DUEL.t / 34) * 0.8);
+      /* drum his fingers when it is his turn and he is thinking about it */
+      const think = G.duel.turn === 'opp' && !G.duel.over;
       [-1, 1].forEach(sgn => {
-        const hx = 180 + sgn * hsw, hy = 121 + hbob;
-        PIX.rect(x, hx - 3, hy - 6, 7, 3, P[def.shirt] || P.W);      // cuff
-        PIX.rect(x, hx - 3, hy - 6, 7, 1, 'rgba(0,0,0,.25)');
-        PIX.disc(x, hx, hy, 5, P.K);
-        PIX.disc(x, hx, hy - 1, 4, hskin);
-        for (let f = -1; f <= 1; f++) {
-          PIX.rect(x, hx + f * 3 - 1, hy + 2, 2, 5, P.K);
-          PIX.rect(x, hx + f * 3 - 1, hy + 2, 2, 4, hskin);
-          PIX.rect(x, hx + f * 3 - 1, hy + 5, 2, 1, hshade);
-        }
-        if (def.rings) {
-          PIX.rect(x, hx - 4, hy - 1, 2, 2, P.G);
-          PIX.rect(x, hx + 2, hy - 2, 2, 2, P.G);
-        }
+        const drum = think ? Math.round(Math.sin(DUEL.t / 5 + sgn) * 0.9) : 0;
+        SPR.ellipse(x, 180 + sgn * w.dx, hy + 8 + hbob, 9, 3, 'rgba(0,0,0,.32)');
+        SPR.frogHand(x, 180 + sgn * w.dx, hy + hbob + drum, def, sgn, { link: true });
       });
     }
 
