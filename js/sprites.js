@@ -995,27 +995,340 @@ const SPR = {
    the whole cast stays on-model. Fat toads get real jowls.
    ============================================================ */
 
+/* ============================================================
+   THE WARDROBE — layered garment data.
+
+   Every entry of COSTUMES is PURE DATA describing which layers
+   exist and which PIX.PAL letters they wear. SPR.costumeOf(def)
+   resolves a frog def (either the new `costume` key or the legacy
+   suit/shirt/tie/bowtie/vest keys) into one normalised outfit
+   object, which SPR.buildBody / SPR.buildFrog render back-to-front:
+
+     torso -> shirt(+collar,placket,buttons) -> waistcoat ->
+     neckwear -> jacket/overcoat(lapels,buttons,pockets) ->
+     accessories -> sleeves -> cuffs
+
+   Layer fields (all optional):
+     jacket / overcoat  col dark lapel(notch|peak|shawl|none) lapelW
+                        satin dbl buttons rows gorge open openBot close
+                        stripe pockets(welt|patch|flap) buttonCol
+     waistcoat          col dark top close buttons buttonCol stripe
+     gown               col dark neckline(sweetheart|halter)
+     shirt              col collar(point|spread|wing|band) cuff studs rolled
+     neck               type(tie|bowtie|cravat|none) col pat(stripe|dot) loose
+     acc                pocketSquare boutonniere watchChain chainLong braces
+                        armGarters epaulets badge belt gloves stole cummerbund
+                        sash lapelPin pearls radio apron
+   ============================================================ */
+
+/* rough perceived brightness of a palette letter (0..255) */
+function palLum(letter) {
+  const hex = PIX.PAL[letter] || '#000000';
+  const r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16),
+        b = parseInt(hex.substr(5, 2), 16);
+  return (r * 0.299 + g * 0.587 + b * 0.114);
+}
+
+/* one darker partner per palette letter, for shadow sides / stripes */
+const DARKER = {
+  K: 'K', k: 'K', Z: 'K',
+  W: 'w', w: 'q', q: 'k',
+  G: 'g', g: 'h', h: 'H', H: 'K',
+  R: 'r', r: 'd', d: 'D', D: 'K',
+  F: 'f', f: 'e', e: 'E', E: 'K',
+  S: 's', s: 't', t: 'T', T: 'k',
+  B: 'b', b: 'u', u: 'U', U: 'K',
+  N: 'n', n: 'e', P: 'p', p: 'X',
+  V: 'v', v: 'X', X: 'k',
+  O: 'o', o: 'u', Y: 'G',
+  L: 'l', l: 't', M: 'm', m: 's',
+};
+
+const COSTUMES = {
+
+  /* 1 — three-piece chalk pinstripe: waistcoat + notch lapels + tie */
+  pinstripe: {
+    label: 'PINSTRIPE 3-PIECE', tintable: true, era: 'fedora',
+    jacket: { col: 't', lapel: 'notch', lapelW: 5, buttons: 2, gorge: 5, open: 15,
+              close: 27, stripe: 'chalk', pockets: 'welt' },
+    waistcoat: { col: 'T', top: 8, close: 21, buttons: 4, buttonCol: 'q' },
+    shirt: { col: 'W', collar: 'point' },
+    neck: { type: 'tie', col: 'd', pat: 'stripe' },
+    acc: { pocketSquare: 'W', watchChain: 'G' },
+  },
+
+  /* 2 — six-button double-breasted, peak lapels, big shoulders */
+  doubleBreast: {
+    label: 'DOUBLE-BREASTED', tintable: true, era: 'fedora', shoulder: 4,
+    jacket: { col: 'k', lapel: 'peak', lapelW: 6, dbl: true, buttons: 3, rows: 2,
+              gorge: 5, open: 17, close: 20, pockets: 'flap' },
+    shirt: { col: 'W', collar: 'spread' },
+    neck: { type: 'tie', col: 'G', pat: 'dot' },
+    acc: { pocketSquare: 'W', lapelPin: 'G' },
+  },
+
+  /* 3 — dinner jacket: shawl lapel, wing collar, bowtie, cummerbund */
+  tux: {
+    label: 'DINNER JACKET', tintable: false, era: 'tophat',
+    jacket: { col: 'k', dark: 'K', lapel: 'shawl', lapelW: 6, satin: true, buttons: 1,
+              gorge: 4, open: 19, close: 33, pockets: 'welt' },
+    shirt: { col: 'W', collar: 'wing', studs: 'K' },
+    neck: { type: 'bowtie', col: 'K' },
+    acc: { cummerbund: 'k', boutonniere: 'W', pocketSquare: 'W' },
+  },
+
+  /* 4 — white tie: tailcoat cut away, waistcoat, sash, watch chain */
+  tails: {
+    label: 'WHITE TIE & TAILS', tintable: false, era: 'tophat', shoulder: 2,
+    jacket: { col: 'k', dark: 'K', lapel: 'peak', lapelW: 6, satin: true, buttons: 0,
+              gorge: 4, open: 18, openBot: 10, close: 46, pockets: null },
+    waistcoat: { col: 'W', dark: 'w', top: 7, close: 20, buttons: 3, buttonCol: 'q' },
+    shirt: { col: 'W', collar: 'wing', studs: 'q' },
+    neck: { type: 'bowtie', col: 'W' },
+    acc: { sash: 'd', watchChain: 'G', boutonniere: 'R', pearls: null },
+  },
+
+  /* 5 — the don's overcoat: fat pinstripe double-breasted, fur collar */
+  donCoat: {
+    label: 'DON\'S OVERCOAT', tintable: true, era: 'fedora', pad: 4, shoulder: 5,
+    overcoat: { col: 'k', dark: 'K', lapel: 'peak', lapelW: 8, big: true, dbl: true,
+                buttons: 3, rows: 2, gorge: 5, open: 19, close: 24, stripe: 'chalk',
+                pockets: 'flap', fur: 'T', stormFlap: true },
+    waistcoat: { col: 'D', top: 8, close: 19, buttons: 4, buttonCol: 'G' },
+    shirt: { col: 'W', collar: 'spread' },
+    neck: { type: 'tie', col: 'G', pat: 'dot' },
+    acc: { pocketSquare: 'W', watchChain: 'G', lapelPin: 'G' },
+  },
+
+  /* 6 — belted overcoat, collar up, shirt + tie underneath */
+  trench: {
+    label: 'BELTED OVERCOAT', tintable: true, era: 'fedora', pad: 3, shoulder: 3,
+    overcoat: { col: 'q', dark: 'k', lapel: 'notch', lapelW: 7, big: true, dbl: true,
+                buttons: 2, rows: 2, gorge: 6, open: 16, close: 22, pockets: 'flap',
+                stormFlap: true },
+    shirt: { col: 'w', collar: 'point' },
+    neck: { type: 'tie', col: 'd' },
+    acc: { belt: 'u' },
+  },
+
+  /* 7 — no jacket: shirt, braces, arm garters, sleeves rolled */
+  shirtsleeves: {
+    label: 'SHIRTSLEEVES', tintable: false, era: 'flatcap',
+    shirt: { col: 'W', collar: 'point', rolled: true, cuff: 'W' },
+    neck: { type: 'tie', col: 'd', loose: true },
+    acc: { braces: 'T', armGarters: 'd' },
+  },
+
+  /* 8 — house livery: waistcoat over shirt, arm garters, bowtie, apron */
+  croupier: {
+    label: 'HOUSE LIVERY', tintable: false, era: 'visor',
+    waistcoat: { col: 'd', dark: 'D', top: 6, close: 18, buttons: 4, buttonCol: 'G',
+                 outer: true },
+    shirt: { col: 'W', collar: 'band', cuff: 'W' },
+    neck: { type: 'bowtie', col: 'K' },
+    acc: { armGarters: 'G', apron: 'q', watchChain: null },
+  },
+
+  /* 9 — warden's tunic: brass buttons, epaulets, patch pockets, belt */
+  uniform: {
+    label: 'WARDEN TUNIC', tintable: true, era: 'flatcap', shoulder: 2,
+    jacket: { col: 'e', dark: 'E', lapel: 'none', buttons: 4, dbl: true, rows: 2,
+              gorge: 3, open: 5, close: 6, pockets: 'patch', buttonCol: 'G' },
+    shirt: { col: 'w', collar: 'band' },
+    neck: { type: 'none' },
+    acc: { epaulets: 'G', belt: 'U', badge: 'G' },
+  },
+
+  /* 10 — evening gown, long gloves, fur stole, pearls */
+  gown: {
+    label: 'EVENING GOWN', tintable: true, era: 'none',
+    gown: { col: 'd', dark: 'D', neckline: 'sweetheart' },
+    neck: { type: 'none' },
+    acc: { gloves: 'W', stole: 'W', pearls: 'W' },
+  },
+
+  /* 11 — zoot: huge shoulders, enormous peak lapels, long chain */
+  zoot: {
+    label: 'ZOOT SUIT', tintable: true, era: 'fedora', shoulder: 6, pad: 1,
+    jacket: { col: 'X', lapel: 'peak', lapelW: 8, buttons: 1, gorge: 6, open: 20,
+              close: 32, stripe: 'chalk', pockets: 'flap' },
+    shirt: { col: 'W', collar: 'spread' },
+    neck: { type: 'tie', col: 'R', pat: 'stripe' },
+    acc: { chainLong: 'G', pocketSquare: 'R' },
+  },
+
+  /* 12 — Swamp PD: tunic, brass buttons, badge, shoulder radio, belt */
+  cop: {
+    label: 'SWAMP PD', tintable: false, era: 'flatcap', shoulder: 2,
+    jacket: { col: 't', dark: 'T', lapel: 'none', buttons: 4, dbl: false,
+              gorge: 3, open: 5, close: 6, pockets: 'patch', buttonCol: 'G' },
+    shirt: { col: 'l', collar: 'band' },
+    neck: { type: 'none' },
+    acc: { epaulets: 'S', belt: 'K', badge: 'M', radio: 'T' },
+  },
+
+  /* 13 — cheap shabby sack suit, frayed hem, sad little tie */
+  shabby: {
+    label: 'CHEAP SUIT', tintable: true, era: 'flatcap',
+    jacket: { col: 'b', lapel: 'notch', lapelW: 4, buttons: 3, gorge: 7, open: 12,
+              close: 21, pockets: 'patch', frayed: true, wrinkles: true },
+    shirt: { col: 'w', collar: 'point' },
+    neck: { type: 'tie', col: 'U', loose: true },
+    acc: {},
+  },
+
+  /* 14 — plain single-breasted sack suit (the workaday default) */
+  sack: {
+    label: 'SACK SUIT', tintable: true, era: 'fedora',
+    jacket: { col: 'T', lapel: 'notch', lapelW: 5, buttons: 2, gorge: 5, open: 14,
+              close: 25, pockets: 'welt' },
+    shirt: { col: 'W', collar: 'point' },
+    neck: { type: 'tie', col: 'd' },
+    acc: { pocketSquare: null },
+  },
+
+  /* 15 — sober 3-piece with a spread collar and a fat watch chain */
+  threePiece: {
+    label: 'THREE PIECE', tintable: true, era: 'bowler',
+    jacket: { col: 'u', dark: 'U', lapel: 'notch', lapelW: 5, buttons: 3, gorge: 5,
+              open: 14, close: 26, pockets: 'welt' },
+    waistcoat: { col: 'U', top: 8, close: 20, buttons: 5, buttonCol: 'G' },
+    shirt: { col: 'w', collar: 'spread' },
+    neck: { type: 'cravat', col: 'T' },
+    acc: { watchChain: 'G', lapelPin: 'G' },
+  },
+};
+
+/* which wardrobe a procedural opponent may draw from, by rank */
+const COSTUME_POOL = {
+  mook: ['shabby', 'sack', 'shirtsleeves', 'sack', 'shabby', 'croupier'],
+  capo: ['pinstripe', 'sack', 'doubleBreast', 'threePiece', 'zoot', 'trench'],
+  boss: ['doubleBreast', 'tux', 'tails', 'trench', 'uniform', 'zoot', 'cop',
+         'pinstripe', 'donCoat'],
+};
+
+/* ---- resolver: def -> concrete outfit ---- */
+
+function costumeClone(src) {
+  const out = {};
+  for (const k in src) {
+    const v = src[k];
+    out[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? costumeClone(v) : v;
+  }
+  return out;
+}
+
+/* legacy defs (no `costume` key) still have to look like somebody */
+function legacyCostume(d) {
+  if (d.suit === 'stripes') return 'zoot';
+  if (d.bowtie) return d.visor ? 'croupier' : 'tux';
+  if (d.vest) return 'threePiece';
+  if (d.braces) return 'shirtsleeves';
+  return 'sack';
+}
+
+SPR.costumeOf = function (d) {
+  const legacy = !d || !d.costume || !COSTUMES[d.costume];
+  const id = legacy ? legacyCostume(d || {}) : d.costume;
+  const C = costumeClone(COSTUMES[id] || COSTUMES.sack);
+  C.id = id;
+  d = d || {};
+
+  /* fill in the dark partner of every garment colour */
+  ['jacket', 'overcoat', 'waistcoat', 'gown'].forEach(k => {
+    if (C[k] && !C[k].dark) C[k].dark = DARKER[C[k].col] || 'K';
+  });
+  if (!C.acc) C.acc = {};
+
+  /* the suit letter tints the outermost tailored layer */
+  const suitLetter = (typeof d.suit === 'string' && d.suit !== 'stripes' && PIX.PAL[d.suit])
+    ? d.suit : null;
+  if (suitLetter && C.tintable) {
+    const tgt = C.overcoat || C.jacket || C.gown;
+    if (tgt) { tgt.col = suitLetter; tgt.dark = DARKER[suitLetter] || 'K'; }
+    if (C.waistcoat && !C.waistcoat.outer) {
+      C.waistcoat.col = DARKER[suitLetter] || 'T';
+      C.waistcoat.dark = DARKER[C.waistcoat.col] || 'K';
+    }
+  }
+  if (d.suit === 'stripes') {
+    const t = C.overcoat || C.jacket;
+    if (t) t.stripe = 'chalk';
+  }
+  if (d.shirt && PIX.PAL[d.shirt] && C.shirt) C.shirt.col = d.shirt;
+
+  /* neckwear from the legacy keys */
+  if (d.bowtie && PIX.PAL[d.bowtie]) {
+    C.neck = { type: 'bowtie', col: d.bowtie, loose: !!d.loosened };
+  } else if (d.tie && PIX.PAL[d.tie]) {
+    if (C.neck && C.neck.type === 'cravat') C.neck.col = d.tie;
+    else C.neck = { type: 'tie', col: d.tie, pat: (C.neck && C.neck.pat) || null,
+                    loose: !!d.loosened || !!(C.neck && C.neck.loose) };
+  } else if (legacy && (d.tie === null || d.tie === undefined) && !d.bowtie) {
+    C.neck = { type: 'none' };
+  }
+  if (d.loosened && C.neck) C.neck.loose = true;
+
+  /* a legacy `vest` trait bolts a waistcoat onto anything */
+  if (d.vest && !C.waistcoat) {
+    C.waistcoat = { col: 'd', dark: 'D', top: 8, close: 20, buttons: 4, buttonCol: 'G' };
+    if (!C.acc.watchChain) C.acc.watchChain = 'G';
+  }
+  /* braces only read as braces when there is no coat over them — the legacy
+     `braces` trait on a def that also wears a jacket would otherwise paint
+     suspenders straight across a buttoned coat front */
+  if (d.braces && !C.acc.braces && !C.jacket && !C.overcoat && !C.gown) C.acc.braces = 'T';
+  if (d.badge && !C.acc.badge) C.acc.badge = 'L';
+  return C;
+};
+
+/* colour the duel scene should use for the visible cuff at the wrist */
+SPR.cuffColor = function (d) {
+  d = d || {};
+  const C = SPR.costumeOf(d);
+  if (C.acc.gloves) return PIX.PAL[C.acc.gloves] || PIX.PAL.W;
+  if (C.shirt && C.shirt.rolled) {
+    return PIX.PAL[(d.skin && d.skin[0]) || 'F'] || PIX.PAL.F;
+  }
+  const l = (C.shirt && (C.shirt.cuff || C.shirt.col)) || d.shirt || 'W';
+  return PIX.PAL[l] || PIX.PAL.W;
+};
+
+/* the outermost garment colour — handy for confetti / silhouettes */
+SPR.outerColor = function (d) {
+  const C = SPR.costumeOf(d);
+  const g = C.overcoat || C.jacket || C.gown ||
+    (C.waistcoat && C.waistcoat.outer ? C.waistcoat : null) || C.shirt;
+  return PIX.PAL[(g && g.col) || 'T'] || PIX.PAL.T;
+};
+
 const FROG_DEFS = {
   player:    { skin: ['F', 'f', 'e'], fat: false, suit: 'T', shirt: 'W', tie: 'd',
+               costume: 'pinstripe', braces: true,
                hat: 'fedora', hatCol: 'T', band: 'd', cigar: true },
-  blindfold: { skin: ['w', 'q', 'q'], fat: false, suit: 't', shirt: 'w', tie: 't',
-               glasses: 'round' },
+  blindfold: { skin: ['w', 'q', 'q'], fat: false, suit: 'u', shirt: 'w', tie: 'U',
+               costume: 'shabby', glasses: 'round' },
   vig:       { skin: ['B', 'b', 'u'], fat: true, suit: 'k', shirt: 'W', tie: 'G',
+               costume: 'donCoat',
                hat: 'fedora', hatCol: 'U', band: 'G', cigar: true, warts: true },
   spinner:   { skin: ['N', 'n', 'n'], fat: false, suit: 't', shirt: 'W', bowtie: 'r',
-               spiral: true },
+               costume: 'tux', loosened: true, spiral: true },
   croupier:  { skin: ['f', 'e', 'e'], fat: false, suit: 'k', shirt: 'W', bowtie: 'd',
-               visor: true },
+               costume: 'croupier', visor: true },
   collector: { skin: ['O', 'o', 'o'], fat: true, suit: 't', shirt: 'w', tie: 'T',
-               glasses: 'square', warts: true },
+               costume: 'threePiece', glasses: 'square', warts: true },
   cage:      { skin: ['s', 't', 't'], fat: false, suit: 'stripes', shirt: 'w', tie: null,
-               flatcap: true },
+               costume: 'uniform', flatcap: true },
   lily:      { skin: ['P', 'p', 'X'], fat: false, suit: 'd', shirt: 'P', tie: null,
+               costume: 'gown',
                lips: 'R', lashes: true, necklace: 'W', earring: 'G', cigholder: true },
-  owner:     { skin: ['v', 'X', 'X'], fat: true, suit: 'k', shirt: 'W', tie: 'G',
+  owner:     { skin: ['v', 'X', 'X'], fat: true, suit: 'k', shirt: 'W', bowtie: 'W',
+               costume: 'tails',
                hat: 'tophat', hatCol: 'k', band: 'G', goldEyes: true, cigar: true, warts: true },
   dealer:    { skin: ['F', 'f', 'e'], fat: false, suit: 'W', shirt: 'W', bowtie: 'K',
-               visor: true },
+               costume: 'croupier', visor: true },
+  cop:       { skin: ['f', 'e', 'e'], fat: true, suit: 't', shirt: 'l', tie: null,
+               costume: 'cop', flatcap: true, warts: true },
 };
 
 SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
@@ -1051,23 +1364,46 @@ SPR.buildFrog = function (d, expr) {
   const ex = fat ? 12 : 9, ey = 11;      // eye bulbs
   const er = 6;
 
-  /* little shoulders — the head is the point */
+  /* ---- the costume at the neck: BACK layers (the head covers most) ---- */
+  const C = SPR.costumeOf(d);
+  const CO = C.overcoat || C.jacket || null;
+  const cAcc = C.acc || {};
+  const cSh = C.shirt;
+  const bare = !!C.gown;                       // strapless gown: bare shoulders
+  const outerL = CO ? CO.col : (C.gown ? C.gown.col : (cSh ? cSh.col : 'T'));
+  const outer = bare ? skin : (P[outerL] || P.T);
+  const outerDk = bare ? shade : (P[(CO && CO.dark) || DARKER[outerL]] || P.k);
   const sw = fat ? 21 : 14;
-  PIX.rect(ctx, cx - sw - 1, H - 7, sw * 2 + 2, 7, P.K);
-  if (d.suit === 'stripes') {
-    for (let x = -sw; x <= sw; x++) {
-      ctx.fillStyle = (x + 100) % 4 < 2 ? P.t : P.T;
-      ctx.fillRect(cx + x, H - 6, 1, 6);
+  const gTop = H - 10;
+  PIX.rect(ctx, cx - sw + 2, gTop, (sw - 2) * 2 + 1, 2, P.K);
+  PIX.rect(ctx, cx - sw - 1, gTop + 2, (sw + 1) * 2 + 1, H - gTop - 2, P.K);
+  PIX.rect(ctx, cx - sw + 2, gTop + 1, (sw - 2) * 2 + 1, 1, outer);
+  PIX.rect(ctx, cx - sw, gTop + 3, sw * 2 + 1, H - gTop - 3, outer);
+  PIX.rect(ctx, cx + sw - 3, gTop + 3, 3, H - gTop - 3, 'rgba(0,0,0,.26)');
+  PIX.rect(ctx, cx - sw, gTop + 3, 2, H - gTop - 3, 'rgba(255,255,255,.09)');
+  if (CO && CO.stripe === 'chalk') {
+    for (let x = -sw; x <= sw; x += (CO.stripeGap || 5)) {
+      PIX.rect(ctx, cx + x, gTop + 1, 1, H - gTop - 1, 'rgba(244,239,224,.22)');
     }
-  } else {
-    PIX.rect(ctx, cx - sw, H - 6, sw * 2 + 1, 6, P[d.suit] || P.T);
   }
-  PIX.rect(ctx, cx - 3, H - 6, 7, 6, P[d.shirt] || P.W);
-  if (d.tie) PIX.rect(ctx, cx - 1, H - 5, 3, 5, P[d.tie]);
-  if (d.necklace) {
-    for (let x = -5; x <= 5; x += 2) {
-      PIX.rect(ctx, cx + x, H - 5 + (Math.abs(x) > 3 ? 0 : 1), 1, 1, P[d.necklace] || P.W);
-    }
+  if (cAcc.epaulets) {
+    const ec = P[cAcc.epaulets] || P.G;
+    [-1, 1].forEach(s => {
+      const x0 = s < 0 ? cx - sw : cx + sw - 7;
+      PIX.rect(ctx, x0 - 1, gTop + 1, 9, 4, P.K);
+      PIX.rect(ctx, x0, gTop + 2, 7, 2, ec);
+      PIX.rect(ctx, x0, gTop + 2, 7, 1, 'rgba(255,255,255,.22)');
+    });
+  }
+  if (cAcc.stole) {
+    const fc = P[cAcc.stole] || P.W, fd = P[DARKER[cAcc.stole]] || P.w;
+    PIX.rect(ctx, cx - sw - 2, gTop, (sw + 2) * 2 + 1, 5, P.K);
+    PIX.dither(ctx, cx - sw - 1, gTop + 1, (sw + 1) * 2 + 1, 3, fc, fd);
+  }
+  if (cAcc.radio) {
+    PIX.rect(ctx, cx - sw - 1, gTop + 1, 5, 8, P.K);
+    PIX.rect(ctx, cx - sw, gTop + 2, 3, 6, P[cAcc.radio] || P.T);
+    PIX.rect(ctx, cx - sw, gTop + 3, 3, 1, P.s);
   }
 
   /* head */
@@ -1265,6 +1601,131 @@ SPR.buildFrog = function (d, expr) {
     PIX.rect(ctx, cx + rx, headY + 4, 1, 2, P[d.earring] || P.G);
   }
 
+  /* ---- the costume at the neck: FRONT layers, tucked under the chin ---- */
+  {
+    const fTop = Math.min(H - 4, headY + ry - 1);
+    const rows = H - fTop;
+    const cSt = (cSh && cSh.collar) || 'point';
+    const shirtC = P[(cSh && cSh.col) || d.shirt] || P.W;
+    const N = C.neck || { type: 'none' };
+
+    /* lapel tips flanking the collar */
+    if (CO && CO.lapel !== 'none') {
+      for (let i = 0; i < rows; i++) {
+        [-1, 1].forEach(s => {
+          const x0 = cx + s * (9 + i * 2) - (s < 0 ? 4 : 0);
+          PIX.rect(ctx, x0 - 1, fTop + i, 6, 1, P.K);
+          PIX.rect(ctx, x0, fTop + i, 4, 1, outer);
+          PIX.rect(ctx, x0, fTop + i, 4, 1,
+            CO.satin ? 'rgba(255,255,255,.20)' : 'rgba(255,255,255,.10)');
+        });
+      }
+      if (CO.lapel === 'peak') {                 // peak spikes riding up
+        [-1, 1].forEach(s => {
+          for (let i = 0; i < 3; i++) {
+            const x0 = cx + s * (13 + i * 2) - (s < 0 ? 3 : 0);
+            PIX.rect(ctx, x0 - 1, fTop - 1 - i, 5, 2, P.K);
+            PIX.rect(ctx, x0, fTop - 1 - i, 3, 1, outer);
+          }
+        });
+      }
+      if (CO.fur) {
+        const fc = P[CO.fur] || P.T;
+        [-1, 1].forEach(s => {
+          const x0 = s < 0 ? cx - 17 : cx + 12;
+          PIX.rect(ctx, x0 - 1, fTop - 1, 7, rows + 1, P.K);
+          PIX.dither(ctx, x0, fTop - 1, 5, rows, fc, outerDk);
+        });
+      }
+    }
+
+    /* shirt collar / gown neckline */
+    if (bare) {
+      for (let i = 0; i < Math.min(3, rows); i++) {
+        const hwv = 5 + i * 3;
+        PIX.rect(ctx, cx - hwv - 1, H - 3 + i, hwv * 2 + 3, 1, P.K);
+        PIX.rect(ctx, cx - hwv, H - 3 + i, hwv * 2 + 1, 1, P[C.gown.col] || P.d);
+      }
+    } else if (cSt === 'band') {
+      PIX.rect(ctx, cx - 8, fTop - 1, 17, 4, P.K);
+      PIX.rect(ctx, cx - 7, fTop - 1, 15, 3, shirtC);
+      PIX.rect(ctx, cx - 7, fTop + 1, 15, 1, 'rgba(0,0,0,.22)');
+      if (CO && CO.buttonCol) PIX.rect(ctx, cx - 1, fTop, 2, 2, P[CO.buttonCol] || P.G);
+    } else {
+      PIX.rect(ctx, cx - 7, fTop - 1, 15, 2, P.K);
+      PIX.rect(ctx, cx - 6, fTop - 1, 13, 1, shirtC);
+      for (let i = 0; i < rows; i++) {
+        const out = cSt === 'wing' ? Math.min(i, 1) : (cSt === 'spread' ? i + 1 : i);
+        [-1, 1].forEach(s => {
+          const x0 = cx + s * (4 + out) - (s < 0 ? 3 : 0);
+          PIX.rect(ctx, x0 - 1, fTop + i, 5, 1, P.K);
+          PIX.rect(ctx, x0, fTop + i, 3, 1, shirtC);
+          if (i === rows - 1) PIX.rect(ctx, x0, fTop + i, 3, 1, 'rgba(0,0,0,.22)');
+        });
+      }
+    }
+
+    /* neckwear */
+    if (N.type === 'tie') {
+      const tc = P[N.col] || P.d;
+      const kx = cx + (N.loose ? 1 : 0);
+      PIX.rect(ctx, kx - 4, fTop, 8, 5, P.K);
+      PIX.rect(ctx, kx - 3, fTop + 1, 6, 3, tc);
+      PIX.rect(ctx, kx - 3, fTop + 1, 6, 1, 'rgba(255,255,255,.18)');
+      PIX.rect(ctx, kx - 3, fTop + 4, 6, H - fTop - 4, P.K);
+      PIX.rect(ctx, kx - 2, fTop + 4, 4, H - fTop - 4, tc);
+      PIX.rect(ctx, kx + 1, fTop + 4, 1, H - fTop - 4, 'rgba(0,0,0,.26)');
+    } else if (N.type === 'bowtie') {
+      const bc = P[N.col] || P.d, bd = P[DARKER[N.col]] || P.K;
+      const tl = N.loose ? 1 : 0;
+      /* fat frogs push fTop to H-4; keep the whole bow on the canvas */
+      const ty = Math.min(fTop, H - 6 - 2 * tl) + tl;
+      PIX.rect(ctx, cx - 10, ty - tl, 7, 6, P.K);
+      PIX.rect(ctx, cx + 3, ty + tl, 7, 6, P.K);
+      PIX.rect(ctx, cx - 9, ty + 1 - tl, 5, 4, bc);
+      PIX.rect(ctx, cx + 4, ty + 1 + tl, 5, 4, bc);
+      PIX.rect(ctx, cx - 9, ty + 3 - tl, 5, 1, bd);
+      PIX.rect(ctx, cx + 4, ty + 3 + tl, 5, 1, bd);
+      PIX.rect(ctx, cx - 3, ty + 1, 7, 5, P.K);
+      PIX.rect(ctx, cx - 2, ty + 2, 5, 3, bc);
+      PIX.rect(ctx, cx - 2, ty + 2, 5, 1, 'rgba(255,255,255,.18)');
+    } else if (N.type === 'cravat') {
+      const cc = P[N.col] || P.T;
+      PIX.rect(ctx, cx - 6, fTop, 13, rows, P.K);
+      PIX.rect(ctx, cx - 5, fTop + 1, 11, rows - 1, cc);
+      PIX.rect(ctx, cx + 2, fTop + 1, 3, rows - 1, 'rgba(0,0,0,.24)');
+      PIX.rect(ctx, cx - 4, fTop + 1, 4, 1, 'rgba(255,255,255,.16)');
+      PIX.rect(ctx, cx - 1, fTop + 2, 2, 2, P.G);
+    }
+
+    /* pearls / necklace ride over the collar */
+    const pearl = cAcc.pearls || d.necklace;
+    if (pearl) {
+      const pc = P[pearl] || P.W;
+      for (let i = -4; i <= 4; i++) {
+        const yy = fTop - 1 + Math.round((4 - Math.abs(i)) * 0.5);
+        PIX.rect(ctx, cx + i * 2 - 1, yy, 2, 2, P.K);
+        PIX.rect(ctx, cx + i * 2 - 1, yy, 2, 1, pc);
+      }
+    }
+    if (cAcc.badge) {
+      const bc = P[cAcc.badge] || P.L;
+      PIX.rect(ctx, cx - 15, fTop + 1, 5, 5, P.K);
+      PIX.rect(ctx, cx - 14, fTop + 2, 3, 3, bc);
+      PIX.rect(ctx, cx - 14, fTop + 2, 1, 1, P.W);
+    }
+  }
+
+  /* hat brim throws a shadow across the top of the eye bulbs */
+  if (d.hat || d.flatcap) {
+    const brimY = d.hat === 'tophat' ? 10 : (d.flatcap ? 8 : 9);
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+    PIX.rect(ctx, 0, brimY, W, 2, 'rgba(0,0,0,.26)');
+    PIX.rect(ctx, 0, brimY + 2, W, 1, 'rgba(0,0,0,.13)');
+    ctx.restore();
+  }
+
   /* hats (over everything) — the crown sits between the eye bulbs */
   const hatTop = 0;
   if (d.hat === 'fedora') {
@@ -1316,27 +1777,52 @@ SPR.buildFrog = function (d, expr) {
   return cv;
 };
 
-/* seated body for the duel table — true stepped pixel-art: no
+/* ------------------------------------------------------------
+   seated body for the duel table — true stepped pixel-art: no
    diagonals, only stair-stepped rects, chunky K outlines, side
-   shading. Collar, lapels, buttons, cuffs; vest/tie/rings on top. */
+   shading from the hanging lamp (top-left highlight, right shade).
+   Layers, back to front:
+     torso -> shirt/skin in the front opening (collar, placket,
+     buttons) -> waistcoat -> neckwear -> jacket/overcoat lapels,
+     buttons, pockets -> chest accessories -> sleeves -> sleeve
+     accessories -> bowtie.
+   ------------------------------------------------------------ */
 SPR.buildBody = function (d) {
   const P = PIX.PAL;
-  const W = 116, H = 60;
+  const C = SPR.costumeOf(d);
+  const W = 116, H = 60, cx = 58;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  const cx = 58;
+
   const fat = !!d.fat;
-  const suit = d.suit === 'stripes' ? P.t : (P[d.suit] || P.T);
-  const shirt = P[d.shirt] || P.W;
-  const skin = P[d.skin[0]], shade = P[d.skin[1]];
+  const L = (l, fb) => (l && P[l]) || fb;
+  const skin = P[d.skin[0]], skShade = P[d.skin[1]], skDark = P[d.skin[2]];
+  const INK = P.K;
+  const SH1 = 'rgba(0,0,0,.28)';       // right-side shadow
+  const SH2 = 'rgba(0,0,0,.18)';       // soft crease
+  const SH3 = 'rgba(0,0,0,.38)';       // hard seam
+  const HI = 'rgba(255,255,255,.09)';  // left highlight
+  const SHEEN = 'rgba(255,255,255,.26)'; // satin / silk
+  const CHALK = 'rgba(244,239,224,.22)'; // chalk stripe
 
-  /* neck */
-  PIX.rect(ctx, cx - 8, 0, 16, 8, P.K);
-  PIX.rect(ctx, cx - 7, 0, 14, 7, skin);
-  PIX.rect(ctx, cx - 7, 5, 14, 2, shade);
+  const O = C.overcoat || C.jacket || null;   // outermost tailored layer
+  const vc = C.waistcoat, vcOuter = !!(vc && vc.outer);
+  const sh = C.shirt, gown = C.gown, acc = C.acc || {};
+  const N = C.neck || { type: 'none' };
 
-  /* torso profile: half-width per row, stepped every few rows */
+  /* ---------- colours ---------- */
+  let baseL, baseD, stripe = null, stripeGap = 5;
+  if (O) { baseL = O.col; baseD = O.dark; stripe = O.stripe; stripeGap = O.stripeGap || 5; }
+  else if (gown) { baseL = gown.col; baseD = gown.dark; }
+  else if (sh) { baseL = sh.col; baseD = DARKER[sh.col] || 'q'; }
+  else { baseL = 'T'; baseD = 'k'; }
+  const base = L(baseL, P.T), baseDk = L(baseD, P.k);
+  const shirtC = L(sh && sh.col, P.W);
+  const shirtDk = L(sh && DARKER[sh.col], P.w);
+
+  /* ---------- torso profile (half-width per row) ---------- */
+  const pad = C.pad || 0, shX = C.shoulder || 0;
   const prof = [];
   for (let y = 0; y < H; y++) {
     let hw;
@@ -1348,125 +1834,609 @@ SPR.buildBody = function (d) {
       hw += 9;
       if (y >= 24) hw += Math.min(7, 2 + ((y - 24) >> 2)); // the belly steps out
     }
-    prof.push(Math.min(hw, 56));
+    hw += pad;
+    if (shX) {
+      if (y >= 3 && y <= 18) hw += shX;
+      else if (y > 18 && y <= 24) hw += Math.round(shX * (24 - y) / 6);
+    }
+    prof.push(Math.min(hw, 55));
   }
-  /* outline pass, then suit pass */
+
+  /* ---------- 1. neck + torso silhouette ---------- */
+  PIX.rect(ctx, cx - 8, 0, 16, 8, INK);
+  PIX.rect(ctx, cx - 7, 0, 14, 7, skin);
+  PIX.rect(ctx, cx - 7, 5, 14, 2, skShade);
+
   for (let y = 2; y < H; y++) {
     const hw = prof[y], hwUp = prof[y - 1] || 0;
-    PIX.rect(ctx, cx - hw - 1, y, (hw + 1) * 2 + 1, 1, P.K);
-    if (y === 2) continue;                       // top edge stays ink
-    if (hw > hwUp + 1) {                         // step ledges get an ink cap
-      PIX.rect(ctx, cx - hw - 1, y, hw - hwUp, 1, P.K);
-      PIX.rect(ctx, cx + hwUp + 1, y, hw - hwUp + 1, 1, P.K);
+    PIX.rect(ctx, cx - hw - 1, y, (hw + 1) * 2 + 1, 1, INK);
+    if (y === 2) continue;                        // top edge stays ink
+    if (hw > hwUp + 1) {                          // step ledges get an ink cap
+      PIX.rect(ctx, cx - hw - 1, y, hw - hwUp, 1, INK);
+      PIX.rect(ctx, cx + hwUp + 1, y, hw - hwUp + 1, 1, INK);
     }
-    PIX.rect(ctx, cx - hw, y, hw * 2 + 1, 1, suit);
+    PIX.rect(ctx, cx - hw, y, hw * 2 + 1, 1, base);
   }
-  /* side shading (light from the lamp, top-left) + inner highlight */
-  for (let y = 4; y < H; y++) {
+  for (let y = 4; y < H; y++) {                   // lamp light: left hi, right shade
     const hw = prof[y];
-    PIX.rect(ctx, cx + hw - 4, y, 4, 1, 'rgba(0,0,0,.28)');
-    PIX.rect(ctx, cx - hw + 1, y, 2, 1, 'rgba(255,255,255,.08)');
+    PIX.rect(ctx, cx + hw - 4, y, 4, 1, SH1);
+    PIX.rect(ctx, cx - hw + 1, y, 2, 1, HI);
   }
-  if (d.suit === 'stripes') {
-    for (let x = -52; x <= 52; x += 5) {
-      for (let y = 4; y < H; y++) {
-        if (Math.abs(x) <= prof[y] - 2) PIX.rect(ctx, cx + x, y, 2, 1, P.T);
+  if (stripe === 'chalk') {
+    for (let x = -54; x <= 54; x += stripeGap) {
+      for (let y = 3; y < H; y++) if (Math.abs(x) <= prof[y] - 3) PIX.rect(ctx, cx + x, y, 1, 1, CHALK);
+    }
+  }
+  if (fat) {                                      // belly step + crease
+    const bp = prof[H - 8];
+    PIX.rect(ctx, cx - bp + 10, H - 8, (bp - 10) * 2, 1, 'rgba(0,0,0,.3)');
+    PIX.rect(ctx, cx - bp + 14, H - 18, (bp - 14) * 2, 1, SH2);
+  }
+
+  /* ---------- geometry of the front opening ---------- */
+  const gorge = O ? O.gorge : 3;
+  const closeY = O ? O.close : H;
+  const openTop = O ? O.open : (fat ? 26 : 22);
+  const openBot = O ? (O.openBot === undefined ? 2 : O.openBot) : (fat ? 26 : 22);
+  function frontHW(y) {
+    if (!O) {
+      if (y < 1) return 0;
+      return Math.min(openTop, Math.max(4, prof[y] - 13));
+    }
+    if (y < gorge || y > closeY) return 0;
+    const span = Math.max(1, closeY - gorge);
+    const t = Math.min(1, (y - gorge) / span);
+    return Math.max(2, Math.round((openTop * (1 - t) + openBot * t) / 2) * 2);
+  }
+  const frontBot = Math.min(H - 1, O ? closeY : H - 1);
+
+  /* ---------- 2. shirt (or bare skin, for a gown) ---------- */
+  if (gown) {
+    for (let y = 0; y < 14; y++) {                // stepped neckline
+      const f = 16 - Math.round(y * 1.4 / 2) * 2;
+      if (f < 1) continue;
+      PIX.rect(ctx, cx - f - 1, y, f * 2 + 3, 1, INK);
+      PIX.rect(ctx, cx - f, y, f * 2 + 1, 1, skin);
+      PIX.rect(ctx, cx + f - 2, y, 2, 1, 'rgba(0,0,0,.2)');
+      PIX.rect(ctx, cx - f + 1, y, 1, 1, 'rgba(255,255,255,.10)');
+    }
+    if (gown.neckline !== 'halter') {             // sweetheart point rising centre
+      for (let i = 0; i < 7; i++) {
+        const hwv = i + 1;
+        PIX.rect(ctx, cx - hwv - 1, 4 + i, hwv * 2 + 3, 1, INK);
+        PIX.rect(ctx, cx - hwv, 4 + i, hwv * 2 + 1, 1, base);
+      }
+    }
+    PIX.rect(ctx, cx - 5, 11, 11, 1, skDark);     // collarbone hint
+  } else {
+    for (let y = 1; y <= frontBot; y++) {
+      const f = frontHW(y);
+      if (f < 2) continue;
+      PIX.rect(ctx, cx - f - 1, y, 1, 1, INK);
+      PIX.rect(ctx, cx + f + 1, y, 1, 1, INK);
+      PIX.rect(ctx, cx - f, y, f * 2 + 1, 1, shirtC);
+      if (f >= 4) PIX.rect(ctx, cx + f - 2, y, 2, 1, SH2);
+    }
+    /* placket + shirt buttons / studs down the centre */
+    const plTop = Math.max(2, gorge + 4);
+    for (let y = plTop; y <= frontBot; y++) {
+      if (frontHW(y) < 3) continue;
+      PIX.rect(ctx, cx - 2, y, 1, 1, 'rgba(0,0,0,.13)');
+      PIX.rect(ctx, cx + 2, y, 1, 1, 'rgba(0,0,0,.13)');
+    }
+    const studC = L(sh && sh.studs, shirtDk);
+    for (let y = plTop + 3; y <= frontBot; y += 6) {
+      if (frontHW(y) < 3) continue;
+      PIX.rect(ctx, cx - 1, y, 2, 2, studC);
+      PIX.rect(ctx, cx - 1, y, 1, 1, 'rgba(255,255,255,.25)');
+    }
+    /* collar */
+    const cst = (sh && sh.collar) || 'point';
+    const f0 = Math.max(4, frontHW(gorge + 1));
+    if (cst === 'band') {
+      PIX.rect(ctx, cx - f0 - 3, 0, (f0 + 3) * 2 + 1, 5, INK);
+      PIX.rect(ctx, cx - f0 - 2, 0, (f0 + 2) * 2 + 1, 4, shirtC);
+      PIX.rect(ctx, cx - f0 - 2, 3, (f0 + 2) * 2 + 1, 1, SH2);
+    } else {
+      const WINGS = { point: [[3, 4], [4, 5], [5, 6], [6, 5], [7, 4]],
+                      spread: [[2, 6], [3, 7], [4, 8], [5, 7]],
+                      wing: [[2, 5], [3, 5], [4, 4]] };
+      const wing = WINGS[cst] || WINGS.point;
+      [-1, 1].forEach(s => {
+        wing.forEach(([row, out], i) => {
+          const y = 1 + row, x = cx + (s < 0 ? -3 - out : 3 + out - 3);
+          PIX.rect(ctx, x - 1, y, 5, 2, INK);
+          PIX.rect(ctx, x, y, 3, 2, shirtC);
+          if (i === wing.length - 1) PIX.rect(ctx, x, y + 2, 3, 1, SH1);
+        });
+        PIX.rect(ctx, cx + s * 5 - 2, 1, 4, 2, shirtC);   // collar band
+      });
+    }
+  }
+
+  /* braces (suspenders) sit straight on the shirt — never on top of a coat,
+     so every row is clipped to whatever shirt is actually showing */
+  if (acc.braces && !gown) {
+    const bc = L(acc.braces, P.T), bd = L(DARKER[acc.braces], P.k);
+    [-1, 1].forEach(s => {
+      for (let y = 8; y < H; y++) {
+        const t = Math.min(1, y / 34);
+        const bw = Math.round((13 * (1 - t) + 7 * t) / 2) * 2;
+        if (bw + 3 > frontHW(y)) continue;         // hidden under the jacket
+        const bx = cx + s * bw;
+        PIX.rect(ctx, bx - 3, y, 6, 1, INK);
+        PIX.rect(ctx, bx - 2, y, 4, 1, bc);
+        PIX.rect(ctx, bx + 1, y, 1, 1, bd);
+      }
+    });
+    if (frontHW(30) > 12) {
+      PIX.rect(ctx, cx - 9, 30, 3, 3, P.G); PIX.rect(ctx, cx + 7, 30, 3, 3, P.G);
+    }
+  }
+
+  /* ---------- 3. waistcoat ---------- */
+  if (vc) {
+    const vcC = L(vc.col, P.T), vcD = L(vc.dark, P.k);
+    const vTop = vc.top === undefined ? 8 : vc.top;
+    const vClose = vc.close === undefined ? 20 : vc.close;
+    const vBot = vcOuter ? H : Math.min(H, closeY + 2);
+    for (let y = vTop; y < vBot; y++) {
+      const f = vcOuter ? Math.min(prof[y] - 9, 27) : frontHW(y);
+      if (f < 3) continue;
+      let inner = 0;
+      if (y < vClose) {
+        const t = (y - vTop) / Math.max(1, vClose - vTop);
+        inner = Math.max(2, Math.round((9 * (1 - t)) / 2) * 2);
+      }
+      if (inner <= 0) {
+        PIX.rect(ctx, cx - f - 1, y, f * 2 + 3, 1, INK);
+        PIX.rect(ctx, cx - f, y, f * 2 + 1, 1, vcC);
+      } else {
+        PIX.rect(ctx, cx - f - 1, y, f - inner + 2, 1, INK);
+        PIX.rect(ctx, cx + inner - 1, y, f - inner + 2, 1, INK);
+        PIX.rect(ctx, cx - f, y, f - inner, 1, vcC);
+        PIX.rect(ctx, cx + inner + 1, y, f - inner, 1, vcC);
+      }
+      PIX.rect(ctx, cx + f - 2, y, 2, 1, SH1);
+      PIX.rect(ctx, cx - f, y, 1, 1, 'rgba(255,255,255,.10)');
+    }
+    /* buttons down the closed part, gold if brass */
+    const bc = L(vc.buttonCol, P.q);
+    const nb = vc.buttons || 4;
+    for (let i = 0; i < nb; i++) {
+      const y = vClose + 1 + i * 5;
+      if (y > vBot - 3) break;
+      PIX.rect(ctx, cx - 2, y - 1, 5, 5, INK);
+      PIX.rect(ctx, cx - 1, y, 3, 3, bc);
+      PIX.rect(ctx, cx - 1, y, 2, 1, 'rgba(255,255,255,.34)');
+      PIX.rect(ctx, cx, y + 2, 2, 1, SH3);
+      if (fat) {                                  // the buttons strain
+        PIX.rect(ctx, cx - 6, y + 1, 4, 1, SH2);
+        PIX.rect(ctx, cx + 3, y + 1, 4, 1, SH2);
+      }
+    }
+    if (vcOuter) {                                // livery: welt pockets low
+      [-1, 1].forEach(s => {
+        const px = cx + s * 20 - (s < 0 ? 8 : 0);
+        PIX.rect(ctx, px - 1, 33, 10, 3, INK);
+        PIX.rect(ctx, px, 33, 8, 2, vcD);
+      });
+    }
+  }
+
+  /* ---------- 4. neckwear that lives UNDER the lapels ---------- */
+  const nTop = O ? gorge + 1 : 3;
+  if (N.type === 'tie') {
+    const tc = L(N.col, P.d), tl = 'rgba(255,255,255,.20)';
+    const kx = cx + (N.loose ? 2 : 0);
+    const kY = nTop + (N.loose ? 3 : 0);
+    PIX.rect(ctx, kx - 4, kY, 8, 7, INK);
+    PIX.rect(ctx, kx - 3, kY + 1, 6, 5, tc);
+    PIX.rect(ctx, kx - 3, kY + 1, 6, 1, 'rgba(255,255,255,.16)');
+    PIX.rect(ctx, kx + 1, kY + 1, 2, 5, SH2);
+    const tipY = Math.min(H - 3, O ? Math.max(closeY - 2, kY + 14) : 36);
+    for (let y = kY + 6; y <= tipY; y++) {
+      const half = (y > tipY - 3) ? Math.max(1, 3 - (y - (tipY - 3))) : 3;
+      PIX.rect(ctx, kx - half - 1, y, half * 2 + 3, 1, INK);
+      PIX.rect(ctx, kx - half, y, half * 2 + 1, 1, tc);
+      PIX.rect(ctx, kx + half - 1, y, 1, 1, 'rgba(0,0,0,.26)');
+      if (N.pat === 'stripe') {
+        const xo = ((((y >> 1) * 2) % 8) - 4);
+        PIX.rect(ctx, kx + Math.max(-half, Math.min(half - 1, xo)), y, 2, 1, tl);
+      } else if (N.pat === 'dot' && (y % 4) === 1) {
+        PIX.rect(ctx, kx - 1 + ((y % 8) < 4 ? -1 : 1), y, 2, 1, tl);
       }
     }
   }
-  if (fat) { // belly crease
-    PIX.rect(ctx, cx - prof[H - 8] + 10, H - 8, (prof[H - 8] - 10) * 2, 1, 'rgba(0,0,0,.3)');
+  if (N.type === 'cravat') {
+    const cc = L(N.col, P.T);
+    const rows = [[7, 0], [8, 2], [8, 4], [7, 6], [6, 8], [4, 10]];
+    rows.forEach(([hwv, dy]) => {
+      PIX.rect(ctx, cx - hwv - 1, nTop + dy, hwv * 2 + 3, 2, INK);
+      PIX.rect(ctx, cx - hwv, nTop + dy, hwv * 2 + 1, 2, cc);
+      PIX.rect(ctx, cx + hwv - 2, nTop + dy, 2, 2, SH1);
+    });
+    PIX.rect(ctx, cx - 4, nTop + 3, 3, 1, 'rgba(255,255,255,.16)');
+    PIX.rect(ctx, cx + 1, nTop + 6, 4, 1, SH2);
+    PIX.rect(ctx, cx - 1, nTop + 5, 3, 3, INK);   // stick pin
+    PIX.rect(ctx, cx, nTop + 6, 2, 2, P.G);
   }
 
-  /* shirt: stepped collar V opening to a straight panel */
-  const shirtRows = [[2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 7]];
-  shirtRows.forEach(([y, hw]) => {
-    PIX.rect(ctx, cx - hw - 1, y, hw * 2 + 3, 1, P.K);
-    PIX.rect(ctx, cx - hw, y, hw * 2 + 1, 1, shirt);
-  });
-  for (let y = 8; y < 38; y++) {
-    PIX.rect(ctx, cx - 8, y, 17, 1, P.K);
-    PIX.rect(ctx, cx - 7, y, 15, 1, shirt);
-  }
-  PIX.rect(ctx, cx - 7, 33, 15, 5, 'rgba(0,0,0,.2)');
-  /* collar points: little stepped wings */
-  [[-1], [1]].forEach(([s]) => {
-    PIX.rect(ctx, cx + s * 4 - 2, 2, 4, 2, shirt);
-    PIX.rect(ctx, cx + s * 7 - 2, 4, 4, 2, shirt);
-    PIX.rect(ctx, cx + s * 9 - 1, 6, 3, 2, shirt);
-    PIX.rect(ctx, cx + s * 9 - 1, 8, 3, 1, 'rgba(0,0,0,.25)');
-  });
-  for (let y = 12; y <= 30; y += 6) PIX.rect(ctx, cx - 1, y, 2, 2, P.q); // buttons
-
-  /* lapels: stair-stepped, ink edge with suit face */
-  [[-1], [1]].forEach(([s]) => {
-    for (let i = 0; i < 8; i++) {
-      const lx = cx + s * (13 - i) - 2, ly = 3 + i * 2;
-      PIX.rect(ctx, lx, ly, 4, 3, P.K);
-      PIX.rect(ctx, lx + (s < 0 ? 1 : 0), ly, 3, 2, suit);
+  /* ---------- 5. jacket / overcoat: lapels, closure, pockets ---------- */
+  if (O && O.lapel !== 'none') {
+    const lw = O.lapelW || 5;
+    const f0 = frontHW(gorge);
+    for (let y = gorge; y <= Math.min(closeY, H - 1); y++) {
+      const f = frontHW(y);
+      if (f < 2) continue;
+      const extra = (y < gorge + 4 && O.lapel === 'shawl') ? 2 : 0;
+      [-1, 1].forEach(s => {
+        const x0 = s < 0 ? cx - f - 1 - lw - extra : cx + f + 2;
+        const wd = lw + extra;
+        PIX.rect(ctx, x0, y, wd, 1, base);
+        PIX.rect(ctx, x0, y, wd, 1, O.satin ? SHEEN : 'rgba(255,255,255,.15)');
+        PIX.rect(ctx, s < 0 ? x0 - 1 : x0 + wd, y, 1, 1, INK);              // lapel edge
+        PIX.rect(ctx, s < 0 ? x0 : x0 + wd - 1, y, 1, 1, 'rgba(255,255,255,.22)');
+      });
     }
-    // notch at the top
-    PIX.rect(ctx, cx + s * 14 - 2, 3, 4, 2, P.K);
-  });
-  /* pocket square, left breast */
-  PIX.rect(ctx, cx - 26, 20, 6, 4, P.K);
-  PIX.rect(ctx, cx - 25, 20, 4, 3, P.W);
+    if (O.lapel === 'notch') {
+      [-1, 1].forEach(s => {
+        const ox = cx + s * (f0 + 1 + lw);
+        PIX.rect(ctx, s < 0 ? ox - 2 : ox - 1, gorge, 4, 2, INK);
+        PIX.rect(ctx, s < 0 ? ox - 1 : ox - 1, gorge + 2, 3, 1, INK);
+      });
+    }
+    if (O.lapel === 'peak') {                    // stepped peaks pointing up-out
+      [-1, 1].forEach(s => {
+        for (let i = 0; i < 4; i++) {
+          const py = gorge + 1 - i;
+          if (py < 0) break;
+          const ox = cx + s * (f0 + 1 + lw + i);
+          const x0 = s < 0 ? ox - 1 : ox - 2;
+          PIX.rect(ctx, x0, py, 4, 2, INK);
+          PIX.rect(ctx, x0 + 1, py, 2, 1, base);
+          PIX.rect(ctx, x0 + 1, py, 2, 1, O.satin ? SHEEN : HI);
+        }
+      });
+    }
+    if (O.lapel === 'shawl') {                   // unbroken satin roll over the top
+      [-1, 1].forEach(s => {
+        for (let i = 0; i < 3; i++) {
+          const ox = cx + s * (f0 - 1 + i * 2);
+          PIX.rect(ctx, s < 0 ? ox - lw : ox, gorge - 1 - i, lw, 2, INK);
+          PIX.rect(ctx, s < 0 ? ox - lw + 1 : ox, gorge - 1 - i, lw - 1, 1, base);
+          PIX.rect(ctx, s < 0 ? ox - lw + 1 : ox, gorge - 1 - i, lw - 1, 1, SHEEN);
+        }
+      });
+    }
+    if (O.fur) {                                 // fur collar, dithered
+      const fc = L(O.fur, P.T);
+      [-1, 1].forEach(s => {
+        for (let i = 0; i < 5; i++) {
+          const x0 = cx + s * (f0 + lw + 1 + i) - (s < 0 ? 3 : 0);
+          PIX.rect(ctx, x0, gorge - 2 + i, 4, 3, INK);
+          PIX.dither(ctx, x0 + 1, gorge - 2 + i, 2, 2, fc, baseDk);
+        }
+      });
+    }
+  }
+  if (O) {
+    const bcol = L(O.buttonCol, palLum(baseL) < 90 ? P.q : P[DARKER[baseL]] || P.k);
+    const bhi = O.buttonCol ? 'rgba(255,255,255,.38)' : 'rgba(255,255,255,.34)';
+    if (O.dbl) {
+      /* the wrap-over edge, stair-stepped in */
+      const wEnd = Math.min(H - 1, closeY + 10);
+      for (let y = gorge; y <= wEnd; y++) {
+        const t = Math.min(1, (y - gorge) / Math.max(1, wEnd - gorge));
+        const xw = Math.round(((frontHW(gorge) + 2) * (1 - t) + 11 * t) / 2) * 2;
+        PIX.rect(ctx, cx + xw, y, 1, 1, SH3);
+      }
+      const rows = O.rows || 2, per = O.buttons || 3;
+      for (let r = 0; r < rows; r++) {
+        for (let i = 0; i < per; i++) {
+          const y = closeY + i * 6, bx = cx + (r === 0 ? -11 : 8);
+          if (y > H - 5) break;
+          PIX.rect(ctx, bx - 1, y - 1, 5, 5, INK);
+          PIX.rect(ctx, bx, y, 3, 3, bcol);
+          PIX.rect(ctx, bx, y, 2, 1, bhi);
+          PIX.rect(ctx, bx + 1, y + 2, 2, 1, SH3);
+        }
+      }
+    } else if (O.buttons) {
+      for (let i = 0; i < O.buttons; i++) {
+        const y = closeY + i * 6;
+        if (y > H - 5) break;
+        PIX.rect(ctx, cx - 2, y - 1, 5, 5, INK);
+        PIX.rect(ctx, cx - 1, y, 3, 3, bcol);
+        PIX.rect(ctx, cx - 1, y, 2, 1, bhi);
+        PIX.rect(ctx, cx, y + 2, 2, 1, SH3);
+      }
+    }
+    /* front darts — quiet tailoring lines */
+    [-1, 1].forEach(s => {
+      for (let y = Math.max(18, closeY - 4); y < H - 4; y++) {
+        PIX.rect(ctx, cx + s * 15, y, 1, 1, 'rgba(0,0,0,.12)');
+      }
+    });
+    /* pockets */
+    const hipY = 34, hipHW = prof[hipY] - 5;
+    if (O.pockets === 'welt' || O.pockets === 'flap') {
+      PIX.rect(ctx, cx - 27, 15, 10, 3, INK);            // breast welt
+      PIX.rect(ctx, cx - 26, 15, 8, 2, baseDk);
+      [-1, 1].forEach(s => {
+        const x0 = s < 0 ? cx - hipHW : cx + hipHW - 15;
+        if (O.pockets === 'flap') {
+          PIX.rect(ctx, x0 - 1, hipY, 17, 6, INK);
+          PIX.rect(ctx, x0, hipY, 15, 4, base);
+          PIX.rect(ctx, x0, hipY, 15, 1, HI);
+          PIX.rect(ctx, x0, hipY + 4, 15, 1, SH1);
+        } else {
+          PIX.rect(ctx, x0 - 1, hipY, 17, 3, INK);
+          PIX.rect(ctx, x0, hipY, 15, 2, baseDk);
+        }
+      });
+    } else if (O.pockets === 'patch') {
+      PIX.rect(ctx, cx - 27, 13, 11, 9, INK);            // breast patch
+      PIX.rect(ctx, cx - 26, 14, 9, 7, base);
+      PIX.rect(ctx, cx - 26, 14, 9, 2, baseDk);
+      PIX.rect(ctx, cx - 22, 15, 2, 1, L(O.buttonCol, baseDk));
+      [-1, 1].forEach(s => {
+        const x0 = s < 0 ? cx - hipHW : cx + hipHW - 15;
+        PIX.rect(ctx, x0 - 1, hipY - 2, 17, 12, INK);
+        PIX.rect(ctx, x0, hipY - 1, 15, 10, base);
+        PIX.rect(ctx, x0, hipY - 1, 15, 2, baseDk);
+        PIX.rect(ctx, x0 + 6, hipY, 3, 2, L(O.buttonCol, baseDk));
+        PIX.rect(ctx, x0 + 13, hipY - 1, 2, 10, SH1);
+      });
+    }
+  }
 
-  /* arms: continuous stepped tubes — shoulder out to elbow, forearm in */
-  [[-1], [1]].forEach(([sgn]) => {
-    const baseHw = fat ? 44 : 35;
-    const shX = cx + sgn * (baseHw - 7);
+  if (O && O.stormFlap) {                        // overcoat gun flap over one chest
+    const fY = gorge + 2, fB = Math.min(H - 6, closeY + 12);
+    for (let y = fY; y < fB; y++) {
+      const t = Math.min(1, (y - fY) / Math.max(1, fB - fY));
+      const xo = Math.round((frontHW(fY) + 4) * (1 - t) * 0.5 + 13) ;
+      PIX.rect(ctx, cx + xo, y, 1, 1, INK);
+      PIX.rect(ctx, cx + xo - 3, y, 3, 1, HI);
+    }
+    PIX.rect(ctx, cx + 13, fB, 10, 1, INK);
+  }
+  if (O && O.wrinkles) {                         // cheap cloth, sagging
+    [[-24, 22, 7], [-19, 27, 6], [16, 24, 8], [20, 30, 6], [-10, 34, 9], [8, 36, 8]]
+      .forEach(([ox, oy, wd]) => PIX.rect(ctx, cx + ox, oy, wd, 1, SH2));
+  }
+
+  /* ---------- 6. chest accessories ---------- */
+  if (acc.pocketSquare) {
+    const pc = L(acc.pocketSquare, P.W);
+    PIX.rect(ctx, cx - 26, 12, 9, 4, INK);
+    PIX.rect(ctx, cx - 25, 13, 3, 3, pc);
+    PIX.rect(ctx, cx - 21, 12, 3, 4, pc);
+    PIX.rect(ctx, cx - 23, 14, 2, 2, pc);
+  }
+  if (acc.boutonniere) {
+    const fc = L(acc.boutonniere, P.W);
+    PIX.rect(ctx, cx - 22, 11, 5, 5, INK);
+    PIX.rect(ctx, cx - 21, 12, 3, 3, fc);
+    PIX.rect(ctx, cx - 20, 13, 1, 1, P.G);
+    PIX.rect(ctx, cx - 19, 15, 1, 3, P.f);
+  }
+  if (acc.lapelPin) {
+    PIX.rect(ctx, cx - 20, 18, 3, 3, INK);
+    PIX.rect(ctx, cx - 19, 19, 2, 2, L(acc.lapelPin, P.G));
+  }
+  if (acc.badge) {
+    const bc = L(acc.badge, P.L);
+    const star = [[0, 2, 1], [-1, 3, 3], [-2, 4, 5], [-2, 5, 5], [-1, 6, 3], [0, 7, 1]];
+    star.forEach(([ox, oy, wd]) => {
+      PIX.rect(ctx, cx - 22 + ox - 1, 13 + oy, wd + 2, 1, INK);
+      PIX.rect(ctx, cx - 22 + ox, 13 + oy, wd, 1, bc);
+    });
+    PIX.rect(ctx, cx - 23, 17, 3, 1, bc);
+    PIX.rect(ctx, cx - 22, 17, 1, 1, P.W);
+  }
+  if (acc.watchChain || acc.chainLong) {
+    const gc = L(acc.watchChain || acc.chainLong, P.G);
+    const long = !!acc.chainLong;
+    const y0 = vc ? (vc.close || 20) + 3 : 24;
+    const span = long ? 20 : 12, drop = long ? 18 : 6;
+    for (let i = 0; i <= span; i++) {
+      const t = i / span;
+      const yy = y0 + Math.round(Math.sin(t * Math.PI) * drop);
+      PIX.rect(ctx, cx + 3 + i, yy, 1, 1, gc);
+      if ((i & 3) === 0) PIX.rect(ctx, cx + 3 + i, yy + 1, 1, 1, L(DARKER[acc.watchChain || acc.chainLong], P.h));
+    }
+    PIX.rect(ctx, cx + 2, y0 - 1, 3, 3, INK);
+    PIX.rect(ctx, cx + 3, y0, 2, 2, gc);
+  }
+  if (acc.cummerbund) {
+    const cc = L(acc.cummerbund, P.k);
+    const cbY = Math.max(31, closeY + 1);
+    const cbW = Math.min(prof[cbY] - 10, 20);
+    PIX.rect(ctx, cx - cbW - 1, cbY - 1, cbW * 2 + 3, 9, INK);
+    PIX.rect(ctx, cx - cbW, cbY, cbW * 2 + 1, 7, cc);
+    for (let i = 0; i < 3; i++) PIX.rect(ctx, cx - cbW, cbY + 1 + i * 2, cbW * 2 + 1, 1, SH2);
+    PIX.rect(ctx, cx - cbW, cbY, cbW * 2 + 1, 1, 'rgba(255,255,255,.14)');
+    PIX.rect(ctx, cx + cbW - 2, cbY, 2, 7, SH1);
+  }
+  if (acc.sash) {                                 // stair-stepped shoulder sash
+    const sc = L(acc.sash, P.d), sd = L(DARKER[acc.sash], P.D);
+    for (let y = 8; y < 44; y++) {
+      const x = cx - 24 + Math.round((y - 8) * 1.2 / 2) * 2;
+      PIX.rect(ctx, x - 1, y, 10, 1, INK);
+      PIX.rect(ctx, x, y, 8, 1, sc);
+      PIX.rect(ctx, x + 6, y, 2, 1, sd);
+      PIX.rect(ctx, x, y, 1, 1, 'rgba(255,255,255,.14)');
+    }
+  }
+  if (acc.belt) {
+    const bc = L(acc.belt, P.U);
+    const bY = 38;
+    PIX.rect(ctx, cx - prof[bY] - 1, bY - 1, (prof[bY] + 1) * 2 + 1, 8, INK);
+    PIX.rect(ctx, cx - prof[bY], bY, prof[bY] * 2 + 1, 6, bc);
+    PIX.rect(ctx, cx - prof[bY], bY, prof[bY] * 2 + 1, 1, 'rgba(255,255,255,.10)');
+    PIX.rect(ctx, cx - prof[bY], bY + 5, prof[bY] * 2 + 1, 1, SH1);
+    PIX.rect(ctx, cx - 6, bY - 1, 13, 8, INK);    // buckle
+    PIX.rect(ctx, cx - 5, bY, 11, 6, P.G);
+    PIX.rect(ctx, cx - 2, bY + 1, 5, 4, INK);
+    PIX.rect(ctx, cx - 5, bY, 11, 1, P.Y);
+  }
+  if (acc.apron) {
+    const ac = L(acc.apron, P.w);
+    const aY = 36;
+    for (let y = aY; y < H; y++) {
+      const hw = Math.min(prof[y] - 17, 16);
+      PIX.rect(ctx, cx - hw - 1, y, hw * 2 + 3, 1, INK);
+      PIX.rect(ctx, cx - hw, y, hw * 2 + 1, 1, ac);
+      PIX.rect(ctx, cx + hw - 3, y, 3, 1, SH2);
+      PIX.rect(ctx, cx - hw, y, 1, 1, 'rgba(255,255,255,.12)');
+    }
+    const aHw = Math.min(prof[aY] - 17, 16);
+    PIX.rect(ctx, cx - aHw - 1, aY - 1, aHw * 2 + 3, 4, INK);
+    PIX.rect(ctx, cx - aHw, aY, aHw * 2 + 1, 2, L(DARKER[acc.apron], P.q));
+    PIX.rect(ctx, cx - 3, aY, 7, 2, L(acc.apron, P.w));
+  }
+  if (acc.stole || acc.pearls || d.necklace) {
+    if (acc.stole) {                            // fur stole across the shoulders
+      const fc = L(acc.stole, P.W), fd = L(DARKER[acc.stole], P.w);
+      for (let y = 1; y < 12; y++) {
+        const hw = Math.min(prof[y] + 1, 46);
+        if (y < 4 && !gown) continue;
+        PIX.rect(ctx, cx - hw - 1, y, (hw + 1) * 2 + 1, 1, INK);
+        PIX.dither(ctx, cx - hw, y, hw * 2 + 1, 1, fc, fd);
+      }
+      for (let y = 12; y < 22; y++) {              // the two ends hanging down
+        [-1, 1].forEach(s => {
+          const x0 = cx + s * 22 - (s < 0 ? 7 : 0);
+          PIX.rect(ctx, x0 - 1, y, 9, 1, INK);
+          PIX.dither(ctx, x0, y, 7, 1, fc, fd);
+        });
+      }
+    }
+    if (acc.pearls || d.necklace) {
+      const pc = L(acc.pearls || d.necklace, P.W);
+      for (let i = -5; i <= 5; i++) {
+        const yy = 13 + Math.round((5 - Math.abs(i)) * 0.7);
+        PIX.rect(ctx, cx + i * 2 - 1, yy, 2, 2, INK);
+        PIX.rect(ctx, cx + i * 2 - 1, yy, 2, 1, pc);
+      }
+    }
+  }
+
+  /* ---------- 7. sleeves ---------- */
+  let baseHw = (fat ? 44 : 35) + Math.round(pad * 0.5) + Math.round(shX * 0.6);
+  baseHw = Math.min(baseHw, 44);
+  const rolled = !!(sh && sh.rolled);
+  const sleeveC = gown ? L(acc.gloves || gown.col, P.W) : base;
+  /* must agree with SPR.cuffColor — duel.js paints the felt-hand cuff from it */
+  const cuffC = gown ? L(acc.gloves, P.W)
+    : (rolled ? skin : L((sh && (sh.cuff || sh.col)) || 'W', P.W));
+  const bulky = O && O.big ? 2 : 0;
+
+  [-1, 1].forEach(sgn => {
+    const shoX = cx + sgn * (baseHw - 7);
     const elX = cx + sgn * (baseHw + 5);
     const haX = cx + sgn * (baseHw - 9);
     const y0 = 9, y1 = 32, y2 = 57;
     const centerAt = (y) => {
       const t = y < y1 ? (y - y0) / (y1 - y0) : (y - y1) / (y2 - y1);
-      const a = y < y1 ? shX : elX, b = y < y1 ? elX : haX;
+      const a = y < y1 ? shoX : elX, b = y < y1 ? elX : haX;
       return Math.round((a + (b - a) * t) / 2) * 2;   // 2px stair steps
     };
+    const rollY = rolled ? 27 : y2;
     for (let y = y0 - 1; y <= y2; y++) {              // ink pass, capped ends
       const c = centerAt(Math.min(Math.max(y, y0), y2 - 1));
-      const w = (y > y1 - 4 && y < y1 + 4) ? 12 : 11; // a little elbow
-      PIX.rect(ctx, c - (w >> 1), y, w, 1, P.K);
+      let w = ((y > y1 - 4 && y < y1 + 4) ? 12 : 11) + (y <= rollY ? bulky : 0);
+      if (rolled && y > rollY) w = 10;
+      PIX.rect(ctx, c - (w >> 1), y, w, 1, INK);
     }
-    for (let y = y0; y < y2; y++) {                   // suit pass + shading
+    for (let y = y0; y < y2; y++) {
       const c = centerAt(y);
-      const w = (y > y1 - 4 && y < y1 + 4) ? 10 : 9;
-      PIX.rect(ctx, c - (w >> 1), y, w, 1, suit);
+      const inSleeve = y <= rollY;
+      let w = ((y > y1 - 4 && y < y1 + 4) ? 10 : 9) + (inSleeve ? bulky : 0);
+      if (!inSleeve) w = 8;
+      PIX.rect(ctx, c - (w >> 1), y, w, 1, inSleeve ? sleeveC : skin);
       PIX.rect(ctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, 'rgba(0,0,0,.25)');
       if (y === y0 + 1 || y === y0 + 2) PIX.rect(ctx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.07)');
-    }
-    /* cuff peeking at the wrist */
-    const wc = centerAt(y2 - 1);
-    PIX.rect(ctx, wc - 5, y2 - 3, 10, 4, P.K);
-    PIX.rect(ctx, wc - 4, y2 - 3, 8, 3, shirt);
-  });
-
-  /* vest / tie / bowtie on top */
-  if (d.vest) {
-    [[-1], [1]].forEach(([s]) => {
-      for (let y = 6; y < 36; y++) {
-        PIX.rect(ctx, cx + s * 9 - (s < 0 ? 4 : 0), y, 5, 1, P.d);
+      if (inSleeve && stripe === 'chalk') {
+        const lx = c - (w >> 1) + ((Math.abs(c) + 1) % stripeGap);
+        PIX.rect(ctx, lx, y, 1, 1, CHALK);
+        PIX.rect(ctx, lx + stripeGap, y, 1, 1, CHALK);
       }
-      PIX.rect(ctx, cx + s * 9 - (s < 0 ? 5 : 0), 6, 1, 30, P.K);
-    });
-    PIX.rect(ctx, cx - 1, 12, 2, 2, P.G); PIX.rect(ctx, cx - 1, 20, 2, 2, P.G);
-    for (let i = 0; i < 8; i++) {
-      PIX.rect(ctx, cx + 6 + i, 26 + ((i * i) >> 2), 1, 1, P.G); // watch chain sag
+      if (!inSleeve && (y & 3) === 0) PIX.rect(ctx, c - 1, y, 2, 1, skShade);
     }
+    /* shoulder seam */
+    PIX.rect(ctx, centerAt(y0) - 5, y0, 10, 1, SH2);
+    if (rolled) {                                    // the roll itself
+      const rc = centerAt(rollY);
+      PIX.rect(ctx, rc - 7, rollY - 3, 14, 6, INK);
+      PIX.rect(ctx, rc - 6, rollY - 3, 12, 4, sleeveC);
+      PIX.rect(ctx, rc - 6, rollY - 1, 12, 1, SH2);
+      PIX.rect(ctx, rc - 6, rollY - 3, 12, 1, 'rgba(255,255,255,.12)');
+    }
+    if (O && O.frayed) {                             // worn-through elbow
+      const ec = centerAt(y1);
+      PIX.rect(ctx, ec - 4, y1 - 3, 9, 7, 'rgba(0,0,0,.22)');
+      PIX.rect(ctx, ec - 3, y1 - 2, 3, 2, baseDk);
+      PIX.rect(ctx, ec + 1, y1 + 1, 3, 2, baseDk);
+    }
+    /* cuff at the wrist (kept where the felt hands meet it) */
+    const wc = centerAt(y2 - 1);
+    PIX.rect(ctx, wc - 5, y2 - 3, 10, 4, INK);
+    PIX.rect(ctx, wc - 4, y2 - 3, 8, 3, cuffC);
+    PIX.rect(ctx, wc - 4, y2 - 3, 8, 1, 'rgba(0,0,0,.2)');
+    if (!gown && !rolled) {                          // cuff link
+      PIX.rect(ctx, wc + (sgn < 0 ? -4 : 2), y2 - 2, 2, 2, P.G);
+    }
+    /* ---------- 8. sleeve accessories ---------- */
+    if (acc.armGarters) {
+      const gc = L(acc.armGarters, P.d);
+      const gy = 20, gcx = centerAt(gy);
+      PIX.rect(ctx, gcx - 6, gy - 1, 12, 6, INK);
+      PIX.rect(ctx, gcx - 5, gy, 10, 4, gc);
+      PIX.rect(ctx, gcx - 5, gy, 10, 1, 'rgba(255,255,255,.18)');
+      PIX.rect(ctx, gcx - 5, gy + 3, 10, 1, SH1);
+    }
+    if (acc.epaulets) {
+      const ec = L(acc.epaulets, P.G);
+      const x0 = sgn < 0 ? cx - baseHw - 1 : cx + baseHw - 10;
+      PIX.rect(ctx, x0 - 1, 5, 13, 5, INK);
+      PIX.rect(ctx, x0, 6, 11, 3, ec);
+      PIX.rect(ctx, x0, 6, 11, 1, 'rgba(255,255,255,.22)');
+      PIX.rect(ctx, x0 + (sgn < 0 ? 1 : 8), 7, 2, 2, INK);
+    }
+    if (acc.gloves) {                                // glove top, above the elbow
+      const gl = L(acc.gloves, P.W);
+      const gy = 18, gcx = centerAt(gy);
+      PIX.rect(ctx, gcx - 6, gy - 1, 12, 4, INK);
+      PIX.rect(ctx, gcx - 5, gy, 10, 2, L(DARKER[acc.gloves], P.w));
+    }
+  });
+  if (acc.radio) {                                   // shoulder mic on the left
+    const rc = L(acc.radio, P.T);
+    const x0 = cx - baseHw - 1;
+    PIX.rect(ctx, x0, 11, 9, 12, INK);
+    PIX.rect(ctx, x0 + 1, 12, 7, 10, rc);
+    PIX.rect(ctx, x0 + 2, 13, 5, 3, P.s);
+    PIX.rect(ctx, x0 + 2, 18, 5, 1, P.K);
+    PIX.rect(ctx, x0 + 3, 8, 2, 4, P.K);
+    PIX.rect(ctx, x0 + 3, 7, 2, 1, P.R);
   }
-  if (d.tie) {
-    const tc = P[d.tie] === undefined ? P.d : P[d.tie];
-    PIX.rect(ctx, cx - 3, 6, 6, 4, P.K); PIX.rect(ctx, cx - 2, 7, 4, 3, tc);   // knot
-    PIX.rect(ctx, cx - 2, 10, 4, 14, tc);
-    PIX.rect(ctx, cx - 1, 24, 2, 3, tc);                                       // tip
-    PIX.rect(ctx, cx - 2, 14, 1, 8, 'rgba(0,0,0,.3)');
-  }
-  if (d.bowtie) {
-    const bc = P[d.bowtie] || P.d;
-    PIX.rect(ctx, cx - 8, 3, 6, 6, P.K); PIX.rect(ctx, cx + 2, 3, 6, 6, P.K);
-    PIX.rect(ctx, cx - 7, 4, 5, 4, bc); PIX.rect(ctx, cx + 3, 4, 5, 4, bc);
-    PIX.rect(ctx, cx - 2, 4, 4, 4, P.K); PIX.rect(ctx, cx - 1, 5, 2, 2, bc);
+
+  /* ---------- 9. bowtie sits in front of everything ---------- */
+  if (N.type === 'bowtie') {
+    const bc = L(N.col, P.d), bd = L(DARKER[N.col], P.K);
+    const byy = nTop + (N.loose ? 3 : 0), bxx = cx + (N.loose ? 2 : 0);
+    const tilt = N.loose ? 1 : 0;
+    PIX.rect(ctx, bxx - 10, byy - tilt, 8, 8, INK);
+    PIX.rect(ctx, bxx + 3, byy + tilt, 8, 8, INK);
+    PIX.rect(ctx, bxx - 9, byy + 1 - tilt, 6, 6, bc);
+    PIX.rect(ctx, bxx + 4, byy + 1 + tilt, 6, 6, bc);
+    PIX.rect(ctx, bxx - 9, byy + 4 - tilt, 6, 2, bd);
+    PIX.rect(ctx, bxx + 4, byy + 4 + tilt, 6, 2, bd);
+    PIX.rect(ctx, bxx - 3, byy + 1, 7, 6, INK);      // knot
+    PIX.rect(ctx, bxx - 2, byy + 2, 5, 4, bc);
+    PIX.rect(ctx, bxx - 2, byy + 2, 5, 1, 'rgba(255,255,255,.18)');
   }
   return cv;
 };

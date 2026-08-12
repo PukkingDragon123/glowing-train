@@ -57,9 +57,12 @@ const E = {
 
   /* ================= starting a duel ================= */
 
-  mookDef() {
+  /* who wears what: street mooks are NOT handed police tunics or evening gowns */
+  mookDef(rank) {
     const rng = G.rng;
-    return {
+    const pool = (typeof COSTUME_POOL !== 'undefined' && COSTUME_POOL[rank])
+      ? COSTUME_POOL[rank] : null;
+    const def = {
       skin: U.pick(rng, MOOK_SKINS),
       fat: rng() < 0.35,
       suit: U.pick(rng, MOOK_SUITS),
@@ -70,6 +73,19 @@ const E = {
       spots: rng() < 0.3,
       earring: rng() < 0.12 ? 'G' : null,
     };
+    if (pool) def.costume = U.pick(rng, pool);
+    /* a bare frog head reads as unfinished — most of them wear something */
+    if (rng() < 0.55) {
+      const lids = rank === 'capo'
+        ? [['hat', 'fedora'], ['hat', 'bowler'], ['hat', 'fedora'], ['flatcap', true]]
+        : [['flatcap', true], ['flatcap', true], ['hat', 'bowler'], ['hat', 'fedora']];
+      const [k, v] = U.pick(rng, lids);
+      def[k] = v;
+      def.hatCol = U.pick(rng, ['T', 't', 'u', 'k']);
+      def.band = U.pick(rng, ['d', 'K', 'u']);
+    }
+    if (def.bowtie) def.tie = null;
+    return def;
   },
 
   /* roll tells onto a mook (hats are exclusive); deeper antes wear more */
@@ -93,10 +109,14 @@ const E = {
   /* paint the tells onto the portrait def */
   traitsToDef(def, traits) {
     for (const t of traits) {
-      if (t === 'tophat') def.hat = 'tophat';
-      else if (t === 'bowler') def.hat = 'bowler';
-      else if (t === 'flatcap') def.flatcap = true;
+      if (t === 'tophat') { def.hat = 'tophat'; def.flatcap = false; }
+      else if (t === 'bowler') { def.hat = 'bowler'; def.flatcap = false; }
+      else if (t === 'flatcap') { def.flatcap = true; def.hat = null; }
       else if (t === 'cigar') def.cigar = true;
+      else if (t === 'chain') def.necklace = 'G';           // fat rope of gold
+      else if (t === 'loudtie') { def.tie = 'P'; def.bowtie = null; }
+      else if (t === 'braces') { def.costume = 'shirtsleeves'; def.braces = true; }
+      else if (t === 'badge') def.tinBadge = true;          // pinned inside the coat
       else def[t] = true;   // goldtooth, rings, scar, patch, sweats, vest
     }
     return def;
@@ -113,7 +133,7 @@ const E = {
               frog: b.id, rule: b.rule, desc: b.desc, traits: b.traits.slice(), def };
     } else {
       const traits = E.rollTraits();
-      const def = E.traitsToDef(E.mookDef(), traits);
+      const def = E.traitsToDef(E.mookDef(G.blind === 0 ? 'mook' : 'capo'), traits);
       let hp = MOOK_HP(G.ante, G.blind);
       let aggro = Math.min(0.78, 0.35 + G.rng() * 0.3 + (G.ante - 1) * 0.028);
       for (const t of traits) {

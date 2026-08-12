@@ -12,6 +12,7 @@
 const ANTES = 8;              // beat the ante-8 boss to clear your marker
 const PLAYER_HP = 5;          // base hearts (totem +1, golden gun +1)
 const MAX_TRINKETS = 5;
+const MAX_ITEMS = 3;          // belt loops: one-shot consumables you loot off corpses
 
 const ECON = {
   start: 6,                   // starting chips
@@ -33,7 +34,11 @@ const LOOT_TUNING = {
   freePockets: 3,             // rifles before the badges arrive
   bribeBase: 3, bribePerAnte: 1, bribeStep: 3, // bribe = base + ante + step*bribesPaid
   trinketChance: [0.5, 0.65, 1.0],             // per blind: odds one pocket hides a card
+  itemChance: [0.45, 0.6, 0.9],                // per blind: odds one pocket hides a belt item
 };
+
+/* item rarity weights per blind — same shape/order as the trinket table's RW rows */
+const ITEM_RW = [[65, 28, 6, 1], [50, 33, 14, 3], [25, 40, 27, 8]];
 
 function HEAT_COST(ante) { return 6 + 6 * ante; } // protection, after each boss
 
@@ -65,6 +70,16 @@ const TRAITS = {
     desc: 'Cool head, thick skin: +1 heart.' },
   vest:      { name: 'FANCY VEST', hint: 'buttons and a watch chain', chips: 4,
     desc: 'Buttons and a watch chain: the VEST pocket always pays (+4 chips).' },
+
+  /* ---- newer tells ---- */
+  chain:     { name: 'GOLD CHAIN', hint: 'a fat rope of gold at the throat', chips: 7, aggro: 0.05,
+    desc: 'He wears the payroll: +7 chips on the corpse, and he likes an audience (a little quicker to shoot you).' },
+  loudtie:   { name: 'LOUD TIE', hint: 'a tie you can hear', aggro: 0.1, chips: -2,
+    desc: 'All show, no shirt: quicker to point it at you, and his pockets are 2 chips lighter.' },
+  braces:    { name: 'BRACES', hint: 'jacket off, braces on', hp: 1, aggro: -0.06,
+    desc: 'Settled in for a long sit: +1 heart, and he is in no hurry.' },
+  badge:     { name: 'TIN BADGE', hint: 'a badge pinned inside the coat', chips: 9, hot: true,
+    desc: 'He was on the pad: +9 chips — but killing a badge brings the badges. ONE fewer free pocket at this corpse.' },
 };
 const MOOK_TRAIT_POOL = Object.keys(TRAITS);
 
@@ -208,7 +223,99 @@ const TRINKETS = {
     desc: 'They can smell it on you: corpses carry +2 chips per heart you lost taking them.',
     unlock: { stat: 'clutchWins', need: 1, hint: 'win a duel at your last heart' },
     glyph: ['K..K....', '.KK...K.', '.....KK.', '..K.....', '.KK..K..', '....KK..', 'K.....K.', '.K...KK.'] },
+
+  /* ---- second wave: the belt-item era ---- */
+  dice: { id: 'dice', name: 'LOADED DICE', rarity: 'common', cost: 4,
+    active: { per: 'reload' },
+    desc: 'Once a load: roll the drum over. Same shells, new order — every peek is forgotten.',
+    glyph: ['.KKKKKK.', 'KWWWWWWK', 'KWGWWKWK', 'KWWKKWWK', 'KWKWWKWK', 'KWWWWWWK', '.KKKKKK.'] },
+  gauze: { id: 'gauze', name: 'RAG TOURNIQUET', rarity: 'common', cost: 4,
+    desc: 'The FIRST live shell that hits you each duel deals 1 less.',
+    glyph: ['..WWWW..', '.WwwwwW.', 'WwWWWWwW', 'WwWRRWwW', 'WwWWWWwW', '.WwwwwW.', '..WWWW..'] },
+  ledger: { id: 'ledger', name: 'THE LEDGER', rarity: 'uncommon', cost: 7,
+    desc: 'You keep books on them too: bribes never get more expensive at a corpse.',
+    glyph: ['eeeeeeG.', 'eWWWWWG.', 'eWKKKWe.', 'eWWWWWe.', 'eWKKKWe.', 'eWWWWWe.', 'eeeeeee.'] },
+  belt: { id: 'belt', name: 'TOOL BELT', rarity: 'uncommon', cost: 7,
+    desc: 'One more loop: +1 belt slot for items (4 instead of 3).',
+    glyph: ['.KKKKKKK', 'KGGKuuuU', 'KGKKbbbU', 'KGGKuuuU', '.KKKKKKK'] },
+  pockets: { id: 'pockets', name: 'DEEP POCKETS', rarity: 'uncommon', cost: 7,
+    desc: 'You rifle faster than they walk: +1 free pocket at every corpse before the badges arrive.',
+    unlock: { stat: 'looted', need: 40, hint: 'rifle 40 pockets' },
+    glyph: ['..GG.G..', 'ttttttt.', 'tTTTTTt.', 'tTTTTTt.', '.tTTTt..', '..ttt...'] },
+  shiv: { id: 'shiv', name: 'RUSTY SHIV', rarity: 'rare', cost: 10,
+    active: { per: 'duel' },
+    desc: 'Once a duel: under the table, no shell spent — 1 damage and your turn stays yours.',
+    unlock: { stat: 'duelsWon', need: 20, hint: 'win 20 duels' },
+    glyph: ['.....SS.', '....SSs.', '...SSs..', '..SSs...', '.uub....', 'uKKb....', 'uub.....'] },
+  nail: { id: 'nail', name: 'COFFIN NAIL', rarity: 'rare', cost: 10,
+    desc: 'Nothing left to lose: while you are at 1 heart, your live hits deal +2.',
+    unlock: { stat: 'clutchWins', need: 3, hint: 'win 3 duels at your last heart' },
+    glyph: ['SSSSSS..', 'sSSSSs..', '..SS....', '..Sb....', '..bS....', '..SS....', '..ss....', '..K.....'] },
+  contract: { id: 'contract', name: 'THE CONTRACT', rarity: 'legendary', cost: 15,
+    desc: 'Signed in somebody\'s blood: every corpse carries an ITEM, guaranteed.',
+    unlock: { stat: 'bossKills', need: 8, hint: 'kill 8 bosses' },
+    glyph: ['wWWWWWw.', 'WKKKKKW.', 'WWWWWWW.', 'WKKKKKW.', 'WWWWWWW.', 'WKKKKKW.', 'wWWdddW.', '...dRd..'] },
 };
+
+/* ------------------------------------------------------------
+   ITEMS — one-shot consumables, 3 belt loops. Trinkets are
+   who you are; items are what you do RIGHT NOW. Looted off
+   corpses like cards, burned on use.
+   use: 'duel'  — only mid-duel, on your turn
+        'loot'  — only while going through his pockets
+        'any'   — either phase
+   ------------------------------------------------------------ */
+
+const ITEMS = {
+  whiskey: { id: 'whiskey', name: 'BAD WHISKEY', rarity: 'common', use: 'duel',
+    desc: 'Drain it: heal 2 hearts (never above your max).',
+    glyph: ['..KKK...', '..bBb...', '..bBb...', '.KBBBK..', '.bBBBb..', '.bWWWb..', '.bBBBb..', '.KKKKK..'] },
+
+  pliers: { id: 'pliers', name: 'PLIERS', rarity: 'common', use: 'any',
+    desc: 'In a duel: you see the LAST shell of the load. At a corpse: yank the GOLD TOOTH free — the badges do not count it.',
+    glyph: ['SS...SS.', '.SS.SS..', '..SSS...', '...S....', '..sSs...', '.t...t..', 't.....t.', 'T.....T.'] },
+
+  coinFlip: { id: 'coinFlip', name: 'TWO-HEAD COIN', rarity: 'common', use: 'duel',
+    desc: 'Call it in the air: heads heal 1 heart, tails cost 1 (never your last). Either way the table pays you +6 chips.',
+    glyph: ['.W....W.', '..GGGG..', '.GhGGhG.', '.GGKKGG.', '.GhGGhG.', '..GGGG..', '.W....W.'] },
+
+  spareBlank: { id: 'spareBlank', name: 'SPARE BLANK', rarity: 'uncommon', use: 'duel',
+    desc: 'Thumb an extra BLANK into the drum, somewhere you have not reached. The count goes up.',
+    glyph: ['.wwww...', '.wWWw.W.', '.wWWwWWW', '.wWWw.W.', '.qqqq...', '.GBBG...', '.hGGh...'] },
+
+  spareLive: { id: 'spareLive', name: 'SPARE LIVE', rarity: 'uncommon', use: 'duel',
+    desc: 'Thumb an extra LIVE into the drum, somewhere you have not reached. Sweetens the gun before you hand it over.',
+    glyph: ['.rrrr...', '.rRRr.W.', '.rRRrWWW', '.rRRr.W.', '.dddd...', '.GBBG...', '.hGGh...'] },
+
+  brassKnuckle: { id: 'brassKnuckle', name: 'BRASS KNUCKLES', rarity: 'uncommon', use: 'duel',
+    desc: 'No shell, no drum, no turn lost: deal 1 damage across the table right now.',
+    glyph: ['.GGGGGG.', 'GKGKGKGK', 'GKGKGKGK', 'GGGGGGGG', '.gggggg.', '..hhhh..'] },
+
+  fileFolder: { id: 'fileFolder', name: 'FILE FOLDER', rarity: 'uncommon', use: 'loot',
+    desc: 'Hand the badges somebody else\'s paperwork: the heat at this corpse clears for free — no bribe, no chips.',
+    glyph: ['..WWWW..', 'BBWWWWW.', 'BBBBBBBB', 'BBBBBBBb', 'bBBBBBBb', 'bbbbbbbb'] },
+
+  hollowPoint: { id: 'hollowPoint', name: 'HOLLOW POINT', rarity: 'rare', use: 'duel',
+    desc: 'Score the tip: the next LIVE shell you put in the mark deals +2.',
+    glyph: ['..SS....', '.SKKS...', '.SSSS...', '.SSSS...', '.gGGg...', '.gGGg...', '.hGGh...', '.hhhh...'] },
+
+  smokeBomb: { id: 'smokeBomb', name: 'SMOKE BOMB', rarity: 'rare', use: 'duel',
+    desc: 'Kick it under the table: the mark\'s next shot AT YOU misses entirely, live or not.',
+    glyph: ['.....oO.', '.qq..u..', 'qqqq.u..', '.ttttt..', 'tSttttT.', 'ttttttT.', 'tttttTT.', '.tttTT..'] },
+
+  lucky1: { id: 'lucky1', name: "SAINT'S MEDAL", rarity: 'legendary', use: 'duel',
+    desc: 'Kiss it once: the shell under the hammer BECOMES a blank. The count knows.',
+    glyph: ['.dd.dd..', '.dd.dd..', '..MMM...', '.MMWMM..', '.MWWWM..', '.MMWMM..', '..MMM...'] },
+};
+
+const ITEM_IDS = Object.keys(ITEMS);
+
+/* can this item legally be reached for in this phase? */
+function ITEM_PHASE_OK(id, phase) {
+  const it = ITEMS[id];
+  if (!it) return false;
+  return it.use === 'any' || it.use === (phase === 'loot' ? 'loot' : 'duel');
+}
 
 /* ------------------------------------------------------------
    THE MOB — one boss per ante, in a fixed order. Each twists
@@ -243,8 +350,69 @@ const BOSSES = [
 ];
 
 /* small/big blind opponents — procedural mooks */
-const MOOK_NAMES = ['TAD', 'WEBS', 'BENNY', 'SPOTS', 'HOPPER', 'MUDGE', 'LOU', 'FLIP', 'GILLS', 'DIP'];
-const CAPO_NAMES = ['POCKETS', 'KNUCKLES', 'THE EEL', 'BIG MO', 'SLICK', 'RIBBIT ROY', 'CUE BALL', 'FAT TONGUE'];
+const MOOK_NAMES = ['TAD', 'WEBS', 'BENNY', 'SPOTS', 'HOPPER', 'MUDGE', 'LOU', 'FLIP', 'GILLS', 'DIP',
+  'SKEETER', 'CROAK', 'PUDDLE', 'WEEDY', 'NIPPER', 'SLIMEY PETE', 'BUG EYE', 'REEDS', 'TOECAP',
+  'LITTLE MARSH', 'DUCKWEED', 'SPAWN', 'MOSSY', 'TWO TOES', 'WHISTLER', 'SOGGY AL'];
+const CAPO_NAMES = ['POCKETS', 'KNUCKLES', 'THE EEL', 'BIG MO', 'SLICK', 'RIBBIT ROY', 'CUE BALL', 'FAT TONGUE',
+  'THE HERON', 'MARBLE JOE', 'SIX-FINGER SID', 'MAMA GREEN', 'THE UNDERTAKER', 'BOG STANLEY',
+  'PENNY WEBB', 'THE ACCOUNTANT', 'LEFTY LILYPAD', 'GRAVEL GUS', 'THREE-CARD TESS', 'IRON JAW'];
+
+/* ------------------------------------------------------------
+   TAUNTS — one line, muttered across the felt. Keyed by
+   situation; the scene can float one in a speech bubble.
+     afterSelfBlank    he pointed it at himself and got a dud
+     afterHittingYou   he just put a live one in you
+     afterYouSelfBlank you pointed it at yourself and got a dud
+     lowHearts         he is down to his last heart
+     reload            the drum was just refilled
+   ------------------------------------------------------------ */
+
+const TAUNTS = {
+  afterSelfBlank: [
+    'Empty. Like your marker.',
+    'See? Nothing to it.',
+    'I do this sober.',
+    'Still my turn, friend.',
+    'The swamp likes me today.',
+    'Warm one. Yours will not be.',
+  ],
+  afterHittingYou: [
+    'That is the vig.',
+    'Bleed quieter, would you.',
+    'Don Bufo says hello.',
+    'You are into me for more than chips now.',
+    'Hold still, it goes faster.',
+    'One down. You have got, what, a few?',
+  ],
+  afterYouSelfBlank: [
+    'Lucky. Do it again.',
+    'You are enjoying that too much.',
+    'Big man. Big empty gun.',
+    'Keep going, I can wait.',
+    'That was the easy one.',
+  ],
+  lowHearts: [
+    'Last one. Make it count for nothing.',
+    'I have been shot in nicer rooms.',
+    'You would not shoot a family frog.',
+    'Take the chips. Take them and go.',
+    'I got tadpoles, you know.',
+  ],
+  reload: [
+    'Fresh load. New arithmetic.',
+    'Count them again, I dare you.',
+    'House loads it. House knows it.',
+    'Cylinder is full. So is your marker.',
+    'Somebody wipe the grip.',
+  ],
+};
+
+/* pick a line; rng is U.mulberry32-style (0..1) */
+function TAUNT(rng, kind) {
+  const pool = TAUNTS[kind];
+  if (!pool || !pool.length) return null;
+  return pool[Math.floor(rng() * pool.length)];
+}
 
 /* mook portrait ingredients (fed to the frog rig) */
 const MOOK_SKINS = [
@@ -262,6 +430,7 @@ const BINDS = [
   ['D', 'aim at the mark'],
   ['SPACE', 'pull the trigger'],
   ['1–5', 'use a trinket'],
+  ['6–8', 'use a belt item'],
   ['Q', 'saw grip (SAWN-OFF)'],
   ['E', 'double tap (TOMMY GUN)'],
   ['R', 'bribe the badges (looting)'],
