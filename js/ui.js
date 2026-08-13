@@ -66,7 +66,7 @@ const UI = {
   },
 
   /* small builders */
-  txt(str, opts) { return PIXFONT.render(str, Object.assign({ scale: 2, shadow: PIX.PAL.K }, opts)); },
+  txt(str, opts) { return PIXFONT.render(str, Object.assign({ scale: 3, shadow: PIX.PAL.K }, opts)); },
   num(n, opts) { return UI.txt(U.fmt(Math.round(n)), opts); },
   put(holder, canvas) { if (!holder) return; holder.innerHTML = ''; holder.appendChild(canvas); },
   icon(name, scale, tipKey, tipVal) {
@@ -84,13 +84,13 @@ const UI = {
 
     const logo = U.el('span', 'has-tip');
     logo.dataset.tipText = 'SHELL & DEBT — seed ' + G.seedStr;
-    logo.appendChild(UI.txt('S&D', { scale: 2, color: PIX.PAL.g }));
+    logo.appendChild(UI.txt('S&D', { scale: 3, color: PIX.PAL.g }));
     L.appendChild(logo);
 
     /* ante + blind pips */
     const ante = U.el('span', 'has-tip tb-chip');
     ante.dataset.tipKey = 'ante';
-    ante.appendChild(UI.txt('ANTE ' + G.ante, { scale: 2, color: PIX.PAL.W }));
+    ante.appendChild(UI.txt('ANTE ' + G.ante, { scale: 3, color: PIX.PAL.W }));
     C.appendChild(ante);
     const pips = U.el('span', 'ante-track has-tip');
     pips.dataset.tipKey = 'blind';
@@ -106,15 +106,15 @@ const UI = {
     C.appendChild(pips);
     const purse = U.el('span', 'tb-chip has-tip');
     purse.dataset.tipKey = 'purse';
-    purse.appendChild(UI.txt(String(E.purse()), { scale: 2, color: PIX.PAL.G }));
-    purse.appendChild(UI.icon('ic_chip', 2));
+    purse.appendChild(UI.txt(String(E.purse()), { scale: 3, color: PIX.PAL.G }));
+    purse.appendChild(UI.icon('ic_chip', 3));
     C.appendChild(purse);
 
     /* chips */
     const chips = U.el('span', 'tb-chip has-tip');
     chips.id = 'tb-chips';
     chips.dataset.tipKey = 'chips';
-    chips.appendChild(UI.icon('ic_chip', 2));
+    chips.appendChild(UI.icon('ic_chip', 3));
     const cnum = U.el('span'); cnum.id = 'tb-chip-num';
     cnum.appendChild(UI.num(G.chips, { color: PIX.PAL.G }));
     chips.appendChild(cnum);
@@ -122,11 +122,11 @@ const UI = {
 
     const mute = U.el('button', 'pixbtn tb-btn');
     mute.id = 'btn-mute';
-    mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: 2, shadow: null, color: PIX.PAL.w }));
-    mute.onclick = () => { SFX.toggleMute(); UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: 2, shadow: null, color: PIX.PAL.w })); };
+    mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: 3, shadow: null, color: PIX.PAL.w }));
+    mute.onclick = () => { SFX.toggleMute(); UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: 3, shadow: null, color: PIX.PAL.w })); };
     R.appendChild(mute);
     const help = U.el('button', 'pixbtn tb-btn');
-    help.appendChild(UI.txt('?', { scale: 2, shadow: null, color: PIX.PAL.G }));
+    help.appendChild(UI.txt('?', { scale: 3, shadow: null, color: PIX.PAL.G }));
     help.onclick = () => UI.showHelp();
     R.appendChild(help);
 
@@ -145,7 +145,7 @@ const UI = {
     const chips = document.getElementById('tb-chips');
     if (!chips) return;
     const f = U.el('span', 'chip-float');
-    f.appendChild(UI.txt((delta > 0 ? '+' : '') + delta, { scale: 2, color: delta > 0 ? PIX.PAL.G : PIX.PAL.R }));
+    f.appendChild(UI.txt((delta > 0 ? '+' : '') + delta, { scale: 3, color: delta > 0 ? PIX.PAL.G : PIX.PAL.R }));
     chips.appendChild(f);
     setTimeout(() => f.remove(), 900);
     if (delta > 0) SFX.coin();
@@ -166,8 +166,8 @@ const UI = {
     wrap.appendChild(frogs);
 
     const logo = U.el('div', 'logo-stack');
-    logo.appendChild(UI.txt('SHELL & DEBT', { scale: 6, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    logo.appendChild(UI.txt('RUSSIAN ROULETTE WITH THE FROG MOB', { scale: 2, color: PIX.PAL.w }));
+    logo.appendChild(UI.txt('SHELL & DEBT', { scale: 7, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    logo.appendChild(UI.txt('RUSSIAN ROULETTE WITH THE FROG MOB', { scale: 3, color: PIX.PAL.w }));
     wrap.appendChild(logo);
 
     const seedRow = U.el('div', 'seed-row');
@@ -182,18 +182,18 @@ const UI = {
     const deal = U.el('button', 'pixbtn gold big-deal');
     deal.id = 'btn-deal';
     deal.appendChild(PIX.el('gun_snub', 2));
-    deal.appendChild(UI.txt('SIT DOWN', { scale: 3, shadow: null, color: PIX.PAL.K }));
+    deal.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
     deal.onclick = () => { SFX.chak(); E.newRun(inp.value); UI.render(); };
     wrap.appendChild(deal);
 
     const row2 = U.el('div', 'end-btns');
     const coll = U.el('button', 'pixbtn');
     coll.id = 'btn-collection';
-    coll.appendChild(UI.txt('COLLECTION', { scale: 2, shadow: null }));
+    coll.appendChild(UI.txt('COLLECTION', { scale: 3, shadow: null }));
     coll.onclick = () => { G.phase = 'collection'; UI.render(); };
     row2.appendChild(coll);
     const hlp = U.el('button', 'pixbtn');
-    hlp.appendChild(UI.txt('HOUSE RULES', { scale: 2, shadow: null }));
+    hlp.appendChild(UI.txt('HOUSE RULES', { scale: 3, shadow: null }));
     hlp.onclick = () => UI.showHelp();
     row2.appendChild(hlp);
     wrap.appendChild(row2);
@@ -202,7 +202,7 @@ const UI = {
       const best = U.el('div', 'best-line');
       best.appendChild(UI.txt(
         'BEST ANTE ' + s.bestAnte + '   WINS ' + s.wins + '   MARKERS LOST ' + s.deaths,
-        { scale: 2, color: PIX.PAL.q }));
+        { scale: 3, color: PIX.PAL.q }));
       wrap.appendChild(best);
     }
     app.appendChild(wrap);
@@ -225,24 +225,24 @@ const UI = {
       const isNow = i === G.blind, done = i < G.blind;
       const card = U.el('div', 'blind-card' + (isNow ? ' now' : done ? ' done' : '') + (i === 2 ? ' boss' : ''));
       const tag = U.el('div', 'bc-tag');
-      tag.appendChild(UI.txt(BLIND_NAMES[i], { scale: 2, color: i === 2 ? PIX.PAL.R : PIX.PAL.w }));
+      tag.appendChild(UI.txt(BLIND_NAMES[i], { scale: 3, color: i === 2 ? PIX.PAL.R : PIX.PAL.w }));
       card.appendChild(tag);
 
       if (isNow) {
         const art = U.el('div', 'bc-art');
-        art.appendChild(SPR.clone(SPR.frogCustom((opp.boss || opp.name) + ':sel', opp.def), 4));
+        art.appendChild(SPR.clone(SPR.frogCustom((opp.boss || opp.name) + ':sel', opp.def), 5));
         card.appendChild(art);
         const nm = U.el('div', 'bc-name has-tip');
         nm.dataset.tipOppTells = '1';
-        nm.appendChild(UI.txt(opp.name, { scale: 2, color: opp.boss ? PIX.PAL.R : PIX.PAL.W }));
+        nm.appendChild(UI.txt(opp.name, { scale: 3, color: opp.boss ? PIX.PAL.R : PIX.PAL.W }));
         card.appendChild(nm);
         if (opp.rule) {
           const rl = U.el('div', 'bc-rule');
-          rl.appendChild(UI.txt(opp.rule, { scale: 2, color: PIX.PAL.G }));
+          rl.appendChild(UI.txt(opp.rule, { scale: 3, color: PIX.PAL.G }));
           card.appendChild(rl);
         }
         const st = U.el('div', 'bc-stats');
-        for (let h = 0; h < opp.maxHP; h++) st.appendChild(PIX.el('ic_heart', 2));
+        for (let h = 0; h < opp.maxHP; h++) st.appendChild(PIX.el('ic_heart', 3));
         card.appendChild(st);
         if (opp.traits && opp.traits.length) {
           const tl = U.el('div', 'bc-tells');
@@ -250,7 +250,7 @@ const UI = {
             const known = META.knowsTell(t);
             const chip = U.el('span', 'bc-tell has-tip' + (known ? '' : ' unknown'));
             chip.appendChild(UI.txt(known ? TRAITS[t].name : '???',
-              { scale: 2, color: known ? PIX.PAL.N : PIX.PAL.q }));
+              { scale: 3, color: known ? PIX.PAL.N : PIX.PAL.q }));
             chip.dataset.tipText = known ? TRAITS[t].desc
               : TRAITS[t].hint + ' - you have not read this tell yet.';
             tl.appendChild(chip);
@@ -259,13 +259,13 @@ const UI = {
         }
       } else {
         const art = U.el('div', 'bc-art dim');
-        art.appendChild(SPR.clone(SPR.cardBack(), 3));
+        art.appendChild(SPR.clone(SPR.cardBack(), 4));
         card.appendChild(art);
       }
 
       const pay = U.el('div', 'bc-purse');
-      pay.appendChild(UI.txt(String(BLIND_PURSE(G.ante, i)), { scale: 2, color: PIX.PAL.G }));
-      pay.appendChild(UI.icon('ic_chip', 2));
+      pay.appendChild(UI.txt(String(BLIND_PURSE(G.ante, i)), { scale: 3, color: PIX.PAL.G }));
+      pay.appendChild(UI.icon('ic_chip', 3));
       card.appendChild(pay);
       row.appendChild(card);
     }
@@ -273,13 +273,13 @@ const UI = {
 
     if (G.tagsTaken.length) {
       const tr = U.el('div', 'tag-row');
-      tr.appendChild(UI.txt('TAGS TAKEN', { scale: 2, color: PIX.PAL.q }));
+      tr.appendChild(UI.txt('TAGS TAKEN', { scale: 3, color: PIX.PAL.q }));
       G.tagsTaken.slice(-6).forEach(id => {
         const t = TAGS[id];
         const chip = U.el('span', 'tag-chip has-tip');
         chip.dataset.tipText = t.name + ' - ' + t.desc;
         chip.appendChild(PIX.el(t.icon, 2));
-        chip.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.G }));
+        chip.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.G }));
         tr.appendChild(chip);
       });
       wrap.appendChild(tr);
@@ -288,8 +288,8 @@ const UI = {
     const btns = U.el('div', 'blind-btns');
     const sit = U.el('button', 'pixbtn gold primary big-deal');
     sit.id = 'btn-sit';
-    sit.appendChild(PIX.el(GUN_SPRITES[E.gun().id], 2));
-    sit.appendChild(UI.txt('SIT DOWN', { scale: 3, shadow: null, color: PIX.PAL.K }));
+    sit.appendChild(PIX.el(GUN_SPRITES[E.gun().id], 3));
+    sit.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
     const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
     sit.appendChild(kh);
     sit.onclick = () => { SFX.chak(); E.sitDown(); UI.render(); };
@@ -300,7 +300,7 @@ const UI = {
       skip.id = 'btn-skip';
       skip.dataset.tipText = 'Walk past this chair: no purse and no corpse to go through, ' +
         'but somebody in the room owes you a favour instead.';
-      skip.appendChild(UI.txt('SKIP FOR A TAG', { scale: 2, shadow: null }));
+      skip.appendChild(UI.txt('SKIP FOR A TAG', { scale: 3, shadow: null }));
       const k2 = U.el('span', 'key-hint'); k2.textContent = 'S';
       skip.appendChild(k2);
       skip.onclick = () => {
@@ -315,7 +315,7 @@ const UI = {
     const info = U.el('button', 'pixbtn has-tip');
     info.id = 'btn-run';
     info.dataset.tipText = 'Everything you are carrying. [TAB]';
-    info.appendChild(UI.txt('THE RUN', { scale: 2, shadow: null }));
+    info.appendChild(UI.txt('THE RUN', { scale: 3, shadow: null }));
     info.onclick = () => UI.showRunInfo();
     btns.appendChild(info);
     wrap.appendChild(btns);
@@ -328,8 +328,8 @@ const UI = {
     const el = U.el('div', 'unlock-toast pop');
     el.appendChild(PIX.el(t.icon, 3));
     const col = U.el('div');
-    col.appendChild(UI.txt('TAG TAKEN', { scale: 2, color: PIX.PAL.N }));
-    col.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.W }));
+    col.appendChild(UI.txt('TAG TAKEN', { scale: 3, color: PIX.PAL.N }));
+    col.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.W }));
     el.appendChild(col);
     box.appendChild(el);
     SFX.jackpot();
@@ -371,7 +371,7 @@ const UI = {
       ', purse ' + nb.purse + '. Swamp PD wants ' + HEAT_COST(r.ante) + ' after this ante\'s boss.</p>'
     );
     const c = document.querySelector('#mm-close');
-    c.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W, shadow: null }));
+    c.appendChild(UI.txt('X', { scale: 3, color: PIX.PAL.W, shadow: null }));
     c.onclick = () => UI.closeModal();
   },
 
@@ -419,7 +419,7 @@ const UI = {
     const mkAim = (label, key, aim) => {
       const b = U.el('button', 'pixbtn aim-btn');
       b.id = 'aim-' + aim;
-      b.appendChild(UI.txt(label, { scale: 2, shadow: null }));
+      b.appendChild(UI.txt(label, { scale: 3, shadow: null }));
       const k = U.el('span', 'key-hint'); k.textContent = key;
       b.appendChild(k);
       b.onclick = () => DUEL.setAim(aim);
@@ -459,12 +459,12 @@ const UI = {
       for (let i = d.ptr; i < d.shells.length; i++) {
         const cell = U.el('span', 'strip-cell' + (i === d.ptr ? ' under-hammer' : ''));
         if (i === d.ptr) {
-          const ptr = PIX.el('ic_ptr', 3); ptr.className = 'pix strip-ptr';
+          const ptr = PIX.el('ic_ptr', 4); ptr.className = 'pix strip-ptr';
           cell.appendChild(ptr);
         }
         const known = d.known[i];
         const master = known === null ? SPR.hiddenMaster() : SPR.backMaster(known ? 'live' : 'blank');
-        cell.appendChild(SPR.clone(master, 3));
+        cell.appendChild(SPR.clone(master, 4));
         strip.appendChild(cell);
       }
     }
@@ -474,16 +474,16 @@ const UI = {
     if (counts) {
       counts.innerHTML = '';
       if (E.countsHidden()) {
-        counts.appendChild(UI.txt('? / ?', { scale: 2, color: PIX.PAL.q }));
+        counts.appendChild(UI.txt('? / ?', { scale: 3, color: PIX.PAL.q }));
       } else if (E.has('counter')) {
         const { l, b } = E.remaining();
-        counts.appendChild(UI.txt(l + '', { scale: 2, color: PIX.PAL.R }));
-        counts.appendChild(UI.txt('/', { scale: 2, color: PIX.PAL.q }));
-        counts.appendChild(UI.txt(b + '', { scale: 2, color: PIX.PAL.w }));
+        counts.appendChild(UI.txt(l + '', { scale: 3, color: PIX.PAL.R }));
+        counts.appendChild(UI.txt('/', { scale: 3, color: PIX.PAL.q }));
+        counts.appendChild(UI.txt(b + '', { scale: 3, color: PIX.PAL.w }));
       } else {
-        counts.appendChild(UI.txt(d.lives + '', { scale: 2, color: PIX.PAL.R }));
-        counts.appendChild(UI.txt('/', { scale: 2, color: PIX.PAL.q }));
-        counts.appendChild(UI.txt(d.blanks + '', { scale: 2, color: PIX.PAL.w }));
+        counts.appendChild(UI.txt(d.lives + '', { scale: 3, color: PIX.PAL.R }));
+        counts.appendChild(UI.txt('/', { scale: 3, color: PIX.PAL.q }));
+        counts.appendChild(UI.txt(d.blanks + '', { scale: 3, color: PIX.PAL.w }));
         counts.title = '';
       }
     }
@@ -494,7 +494,7 @@ const UI = {
       nm.innerHTML = '';
       nm.className = d.opp.boss ? 'has-tip bossname' : 'has-tip';
       nm.dataset.tipOppTells = '1';
-      nm.appendChild(UI.txt(d.opp.name, { scale: 2, color: d.opp.boss ? PIX.PAL.R : PIX.PAL.w }));
+      nm.appendChild(UI.txt(d.opp.name, { scale: 3, color: d.opp.boss ? PIX.PAL.R : PIX.PAL.w }));
     }
 
     /* turn stamp */
@@ -544,7 +544,7 @@ const UI = {
       const def = TRINKETS[t.id];
       const card = U.el('button', 'tcard has-tip rq-' + def.rarity);
       card.dataset.tipTrinket = t.id;
-      card.appendChild(SPR.trinketCardEl(t.id, 3));
+      card.appendChild(SPR.trinketCardEl(t.id, 4));
       if (def.active) {
         const key = U.el('span', 'key-hint tk'); key.textContent = i + 1;
         card.appendChild(key);
@@ -576,7 +576,7 @@ const UI = {
       const slot = U.el('button', 'ibelt-slot has-tip rq-' + it.rarity);
       slot.dataset.tipItem = id;
       const card = U.el('span', 'ib-card');
-      card.appendChild(SPR.itemCardEl(id, 2));
+      card.appendChild(SPR.itemCardEl(id, 3));
       slot.appendChild(card);
       const use = U.el('span', 'ib-use'); use.textContent = 'USE';
       slot.appendChild(use);
@@ -620,13 +620,13 @@ const UI = {
     const g = E.gun();
     const spr = U.el('span', 'has-tip gun-spr');
     spr.dataset.tipGun = g.id;
-    spr.appendChild(PIX.el(GUN_SPRITES[g.id], 3));
+    spr.appendChild(PIX.el(GUN_SPRITES[g.id], 4));
     p.appendChild(spr);
     const mk = (kind, key, label, need) => {
       if (G.gunIdx < need) return;
       const b = U.el('button', 'pixbtn gun-act has-tip');
       b.dataset.tipText = label;
-      b.appendChild(UI.txt(key, { scale: 2, shadow: null, color: PIX.PAL.G }));
+      b.appendChild(UI.txt(key, { scale: 3, shadow: null, color: PIX.PAL.G }));
       b.disabled = !E.canUseGun(kind) || DUEL.busy;
       const d = G.duel;
       if (kind === 'saw' && d && d.sawArmed) b.classList.add('sel');
@@ -654,7 +654,7 @@ const UI = {
     const z = document.getElementById('stamp-small');
     if (!z) return;
     const t = U.el('span', 'toast pop' + (kind ? ' t-' + kind : ''));
-    t.appendChild(UI.txt(text, { scale: 2, color: PIX.PAL.W }));
+    t.appendChild(UI.txt(text, { scale: 3, color: PIX.PAL.W }));
     z.appendChild(t);
     while (z.children.length > 3) z.firstChild.remove();
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, 1400);
@@ -676,10 +676,10 @@ const UI = {
     const hid = E.countsHidden();
     const row = U.el('div', 'load-row');
     row.appendChild(UI.txt(hid ? '?' : String(d.lives), { scale: 4, color: PIX.PAL.R }));
-    row.appendChild(UI.txt('LIVE', { scale: 2, color: PIX.PAL.R }));
+    row.appendChild(UI.txt('LIVE', { scale: 3, color: PIX.PAL.R }));
     row.appendChild(UI.txt('-', { scale: 3, color: PIX.PAL.q }));
     row.appendChild(UI.txt(hid ? '?' : String(d.blanks), { scale: 4, color: PIX.PAL.W }));
-    row.appendChild(UI.txt('BLANK', { scale: 2, color: PIX.PAL.w }));
+    row.appendChild(UI.txt('BLANK', { scale: 3, color: PIX.PAL.w }));
     box.appendChild(row);
     const shells = U.el('div', 'load-shells');
     box.appendChild(shells);
@@ -689,8 +689,8 @@ const UI = {
     for (let i = 0; i < total; i++) {
       await U.sleep(90);
       SFX.tick();
-      const s = hid ? SPR.clone(SPR.hiddenMaster(), 3)
-        : SPR.clone(SPR.backMaster(i < d.lives ? 'live' : 'blank'), 3);
+      const s = hid ? SPR.clone(SPR.hiddenMaster(), 4)
+        : SPR.clone(SPR.backMaster(i < d.lives ? 'live' : 'blank'), 4);
       s.classList.add('pop');
       shells.appendChild(s);
     }
@@ -698,7 +698,7 @@ const UI = {
     SFX.spin();
     shells.innerHTML = '';
     for (let i = 0; i < total; i++) {
-      shells.appendChild(SPR.clone(SPR.hiddenMaster(), 3));
+      shells.appendChild(SPR.clone(SPR.hiddenMaster(), 4));
     }
     await U.sleep(400);
     b.className = 'hidden';
@@ -712,17 +712,17 @@ const UI = {
       o.innerHTML = '';
       const card = U.el('div', 'boss-card slam');
       card.appendChild(SPR.clone(SPR.frogCustom(opp.boss + ':intro', opp.def), 5));
-      card.appendChild(UI.txt(opp.name, { scale: 4, color: PIX.PAL.R, outline: PIX.PAL.K }));
-      card.appendChild(UI.txt(opp.rule, { scale: 2, color: PIX.PAL.G }));
+      card.appendChild(UI.txt(opp.name, { scale: 5, color: PIX.PAL.R, outline: PIX.PAL.K }));
+      card.appendChild(UI.txt(opp.rule, { scale: 3, color: PIX.PAL.G }));
       const desc = U.el('p', 'boss-desc');
       desc.textContent = opp.desc;
       card.appendChild(desc);
       const purse = U.el('div', 'load-row');
-      purse.appendChild(UI.txt('PURSE ' + E.purse(), { scale: 2, color: PIX.PAL.G }));
-      purse.appendChild(UI.icon('ic_chip', 2));
+      purse.appendChild(UI.txt('PURSE ' + E.purse(), { scale: 3, color: PIX.PAL.G }));
+      purse.appendChild(UI.icon('ic_chip', 3));
       card.appendChild(purse);
       const go = U.el('button', 'pixbtn gold primary');
-      go.appendChild(UI.txt('SIT DOWN', { scale: 3, shadow: null, color: PIX.PAL.K }));
+      go.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
       go.onclick = () => { o.className = 'hidden'; o.innerHTML = ''; res(); };
       card.appendChild(go);
       o.appendChild(card);
@@ -738,8 +738,8 @@ const UI = {
     const el = U.el('div', 'unlock-toast pop');
     el.appendChild(PIX.el('ic_book', 3));
     const col = U.el('div');
-    col.appendChild(UI.txt('NEW TELL', { scale: 2, color: PIX.PAL.N }));
-    col.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.W }));
+    col.appendChild(UI.txt('NEW TELL', { scale: 3, color: PIX.PAL.N }));
+    col.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.W }));
     el.appendChild(col);
     box.appendChild(el);
     SFX.bank();
@@ -751,8 +751,8 @@ const UI = {
     const el = U.el('div', 'unlock-toast pop');
     el.appendChild(SPR.trinketCardEl(t.id, 2));
     const col = U.el('div');
-    col.appendChild(UI.txt('NEW TRINKET', { scale: 2, color: PIX.PAL.G }));
-    col.appendChild(UI.txt(t.name, { scale: 2, color: PIX.PAL.W }));
+    col.appendChild(UI.txt('NEW TRINKET', { scale: 3, color: PIX.PAL.G }));
+    col.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.W }));
     el.appendChild(col);
     box.appendChild(el);
     SFX.jackpot();
@@ -769,22 +769,22 @@ const UI = {
       const f = SPR.frogEl('player', 6, 'breathe');
       wrap.appendChild(f);
       wrap.appendChild(UI.txt('DEBT CLEARED', { scale: 7, color: PIX.PAL.G, outline: PIX.PAL.K }));
-      wrap.appendChild(UI.txt('THE BULLFROG IS DOWN. THE SWAMP IS YOURS.', { scale: 2, color: PIX.PAL.w }));
+      wrap.appendChild(UI.txt('THE BULLFROG IS DOWN. THE SWAMP IS YOURS.', { scale: 3, color: PIX.PAL.w }));
     } else if (G.busted) {
       wrap.appendChild(PIX.el('ic_badge', 8));
-      wrap.appendChild(UI.txt('THE BADGES TAKE YOUR MARKER', { scale: 4, color: PIX.PAL.L, outline: PIX.PAL.K }));
-      wrap.appendChild(UI.txt('PROTECTION COMES DUE. IT ALWAYS DOES.', { scale: 2, color: PIX.PAL.q }));
+      wrap.appendChild(UI.txt('THE BADGES TAKE YOUR MARKER', { scale: 5, color: PIX.PAL.L, outline: PIX.PAL.K }));
+      wrap.appendChild(UI.txt('PROTECTION COMES DUE. IT ALWAYS DOES.', { scale: 3, color: PIX.PAL.q }));
     } else {
       const f = SPR.frogEl(G.duel && G.duel.opp.boss ? G.duel.opp.frog : 'owner', 6);
       f.style.filter = 'grayscale(.4) brightness(.8)';
       wrap.appendChild(f);
-      wrap.appendChild(UI.txt('THE SWAMP KEEPS YOUR MARKER', { scale: 4, color: PIX.PAL.R, outline: PIX.PAL.K }));
+      wrap.appendChild(UI.txt('THE SWAMP KEEPS YOUR MARKER', { scale: 5, color: PIX.PAL.R, outline: PIX.PAL.K }));
     }
 
     const grid = U.el('div', 'end-grid');
     const cell = (label, v, col) => {
       const c = U.el('div', 'end-cell');
-      c.appendChild(UI.txt(label, { scale: 2, color: PIX.PAL.q }));
+      c.appendChild(UI.txt(label, { scale: 3, color: PIX.PAL.q }));
       c.appendChild(UI.txt(String(v), { scale: 3, color: col || PIX.PAL.W }));
       grid.appendChild(c);
     };
@@ -799,16 +799,16 @@ const UI = {
     const btns = U.el('div', 'end-btns');
     if (won) {
       const endless = U.el('button', 'pixbtn gold primary');
-      endless.appendChild(UI.txt('KEEP PLAYING — ENDLESS', { scale: 2, shadow: null, color: PIX.PAL.K }));
+      endless.appendChild(UI.txt('KEEP PLAYING — ENDLESS', { scale: 4, shadow: null, color: PIX.PAL.K }));
       endless.onclick = () => { E.goEndless(); UI.render(); };
       btns.appendChild(endless);
     }
     const again = U.el('button', 'pixbtn' + (won ? '' : ' gold primary'));
-    again.appendChild(UI.txt('AGAIN', { scale: 2, shadow: null, color: won ? PIX.PAL.W : PIX.PAL.K }));
+    again.appendChild(UI.txt('AGAIN', { scale: 3, shadow: null, color: won ? PIX.PAL.W : PIX.PAL.K }));
     again.onclick = () => { E.newRun(''); UI.render(); };
     btns.appendChild(again);
     const title = U.el('button', 'pixbtn');
-    title.appendChild(UI.txt('TITLE', { scale: 2, shadow: null }));
+    title.appendChild(UI.txt('TITLE', { scale: 3, shadow: null }));
     title.onclick = () => { G.phase = 'title'; UI.render(); };
     btns.appendChild(title);
     wrap.appendChild(btns);
@@ -825,27 +825,27 @@ const UI = {
     const wrap = U.el('div', 'coll-wrap');
 
     const head = U.el('div', 'coll-head');
-    head.appendChild(UI.txt('THE COLLECTION', { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    head.appendChild(UI.txt('THE COLLECTION', { scale: 5, color: PIX.PAL.G, outline: PIX.PAL.K }));
     const back = U.el('button', 'pixbtn primary');
     back.id = 'btn-back';
-    back.appendChild(UI.txt('BACK', { scale: 2, shadow: null }));
+    back.appendChild(UI.txt('BACK', { scale: 3, shadow: null }));
     back.onclick = () => { G.phase = 'title'; UI.render(); };
     head.appendChild(back);
     wrap.appendChild(head);
 
     /* trinkets */
     const t1 = U.el('div', 'coll-sec');
-    t1.appendChild(UI.txt('TRINKETS', { scale: 2, color: PIX.PAL.w }));
+    t1.appendChild(UI.txt('TRINKETS', { scale: 3, color: PIX.PAL.w }));
     const tg = U.el('div', 'coll-grid');
     Object.values(TRINKETS).forEach(t => {
       const open = META.isUnlocked(t.id);
       const cardw = U.el('span', 'has-tip coll-card');
       if (open) {
         cardw.dataset.tipTrinket = t.id;
-        cardw.appendChild(SPR.trinketCardEl(t.id, 3));
+        cardw.appendChild(SPR.trinketCardEl(t.id, 4));
       } else {
         cardw.dataset.tipText = 'LOCKED — ' + t.unlock.hint + '.';
-        cardw.appendChild(SPR.clone(SPR.cardBack(), 3));
+        cardw.appendChild(SPR.clone(SPR.cardBack(), 4));
       }
       tg.appendChild(cardw);
     });
@@ -854,13 +854,13 @@ const UI = {
 
     /* guns */
     const t2 = U.el('div', 'coll-sec');
-    t2.appendChild(UI.txt('THE IRON', { scale: 2, color: PIX.PAL.w }));
+    t2.appendChild(UI.txt('THE IRON', { scale: 3, color: PIX.PAL.w }));
     const gg = U.el('div', 'coll-grid');
     GUNS.forEach(g => {
       const owned = meta.gunsOwned[g.id];
       const w = U.el('span', 'has-tip coll-gun');
       w.dataset.tipGun = g.id;
-      const el = PIX.el(GUN_SPRITES[g.id], 3);
+      const el = PIX.el(GUN_SPRITES[g.id], 4);
       if (!owned) el.style.filter = 'brightness(0) opacity(.45)';
       w.appendChild(el);
       gg.appendChild(w);
@@ -870,7 +870,7 @@ const UI = {
 
     /* the mob */
     const t3 = U.el('div', 'coll-sec');
-    t3.appendChild(UI.txt('THE MOB', { scale: 2, color: PIX.PAL.w }));
+    t3.appendChild(UI.txt('THE MOB', { scale: 3, color: PIX.PAL.w }));
     const bg2 = U.el('div', 'coll-grid');
     BOSSES.forEach(b => {
       const kills = meta.bossSeen[b.id] || 0;
@@ -879,7 +879,7 @@ const UI = {
       if (kills) {
         w.dataset.tipBoss = b.id;
         const k = U.el('div', 'boss-kills');
-        k.appendChild(UI.txt('×' + kills, { scale: 2, color: PIX.PAL.G }));
+        k.appendChild(UI.txt('×' + kills, { scale: 3, color: PIX.PAL.G }));
         w.appendChild(el); w.appendChild(k);
       } else {
         w.dataset.tipText = '??? — nobody\'s collected on him yet.';
@@ -896,7 +896,7 @@ const UI = {
     const line = U.el('div', 'best-line');
     line.appendChild(UI.txt(
       'RUNS ' + s.runs + '   SHOTS ' + s.shots + '   SELF-BLANKS ' + s.selfBlanks +
-      '   BOSSES DROPPED ' + s.bossKills, { scale: 2, color: PIX.PAL.q }));
+      '   BOSSES DROPPED ' + s.bossKills, { scale: 3, color: PIX.PAL.q }));
     wrap.appendChild(line);
 
     app.appendChild(wrap);
@@ -1092,7 +1092,7 @@ const UI = {
       </div>
     `);
     const c = document.querySelector('#mm-close');
-    c.appendChild(UI.txt('X', { scale: 2, color: PIX.PAL.W, shadow: null }));
+    c.appendChild(UI.txt('X', { scale: 3, color: PIX.PAL.W, shadow: null }));
     c.onclick = () => UI.closeModal();
   },
 

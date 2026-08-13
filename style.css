@@ -105,18 +105,18 @@
   --rar-legendary: #ffd75e;
 
   /* ---- radii: five steps, nothing in between ---- */
-  --r-xs: 5px;
-  --r-sm: 8px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --r-xl: 18px;
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
 
   /* ---- borders: two weights only ---- */
-  --bd: 2px;
-  --bd-thick: 3px;
+  --bd: 3px;
+  --bd-thick: 5px;
 
   /* ---- depth: chunky flat drop-shadows, four steps ---- */
-  --d1: 0 3px 0 rgba(0, 0, 0, .38);
+  --d1: 0 4px 0 rgba(0, 0, 0, .45);
   --d2: 0 5px 0 rgba(0, 0, 0, .42);
   --d3: 0 8px 0 rgba(0, 0, 0, .48);
   --d4: 0 10px 0 rgba(0, 0, 0, .5);
@@ -126,11 +126,11 @@
   --glow-ice: 0 0 56px rgba(127, 215, 255, .24);
 
   /* ---- type scale (monospace, pixel-friendly integers) ---- */
-  --fs-xs: 9.5px;
-  --fs-sm: 11px;
-  --fs-md: 12.5px;
-  --fs-lg: 14px;
-  --fs-xl: 17px;
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 23px;
   --lh-tight: 1.32;
   --lh: 1.5;
   --track: .4px;      /* normal letter-spacing */

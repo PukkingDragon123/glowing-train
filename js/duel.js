@@ -19,6 +19,9 @@ const DUEL = {
   busy: true,
 
   gun: { x: 178, y: 126, rot: 0, flip: false, sc: 1, tx: 178, ty: 126, trot: 0, tsc: 1 },
+  fist: { x: 296, y: 170, tx: 296, ty: 170 },
+  FY: 180,             // world row where the UI rail starts — the near field's floor
+  poseName: 'rest',
   shake: 0, redPulse: 0, whitePulse: 0,
   muzzle: null,
   parts: [],           // {x,y,vx,vy,g,col,life,t,s}
@@ -34,20 +37,63 @@ const DUEL = {
 
   /* ---------------- gun poses (world space) ---------------- */
 
+  /* Yours are authored as "where your fist is, and which way the barrel
+     points" against the reference floor (FY 180); the iron's own position
+     is derived from that so its grip always lands inside your hand. His
+     are plain sprite placements across the felt. */
   POSES: {
-    rest:     { x: 268, y: 154, rot: -0.16, flip: false, sc: 1.3 },
-    youFoe:   { x: 256, y: 134, rot: -0.74, flip: false, sc: 1.5 },
-    youSelf:  { x: 212, y: 128, rot: -1.64, flip: false, sc: 1.55 },
+    rest:     { mine: 1, hx: 294, hy: 172, rot: 0.26, flip: true, sc: 1.5 },
+    youFoe:   { mine: 1, hx: 288, hy: 163, rot: 0.58, flip: true, sc: 1.6 },
+    youSelf:  { mine: 1, hx: 270, hy: 138, rot: -1.22, flip: true, sc: 1.75 },
     oppYou:   { x: 226, y: 102, rot: 0.34, flip: true, sc: 1.25 },
     oppSelf:  { x: 224, y: 84, rot: -1.15, flip: false, sc: 1.25 },
   },
 
+  /* the sprite's grip sits at local (10, 13) in every iron we draw */
+  ironFromGrip(hx, hy, rot, sc, flip) {
+    const m = PIX.make(GUN_SPRITES[E.gun().id], 1);
+    const lx = (10 - m.width / 2) * sc, ly = (13 - m.height / 2) * sc;
+    const fx = flip ? -1 : 1;
+    const c = Math.cos(rot), s = Math.sin(rot);
+    return { x: hx - (lx * c * fx - ly * s), y: hy - (lx * s * fx + ly * c) };
+  },
+
   setPose(name, snap) {
     const p = DUEL.POSES[name];
-    const g = DUEL.gun;
-    g.tx = p.x; g.ty = p.y; g.trot = p.rot; g.tsc = p.sc;
+    if (!p) return;
+    DUEL.poseName = name;
+    const g = DUEL.gun, f = DUEL.fist;
+    const dy = DUEL.FY - 180;
+    const rest = DUEL.POSES.rest;
+    let tx = p.x, ty = p.y;
+    if (p.mine) {
+      f.tx = p.hx; f.ty = p.hy + dy;
+      const c = DUEL.ironFromGrip(f.tx, f.ty - 2, p.rot, p.sc, p.flip);
+      tx = c.x; ty = c.y;
+    } else {
+      /* he has the iron — your hand drops back to the felt, empty */
+      f.tx = rest.hx; f.ty = rest.hy + dy;
+    }
+    g.tx = tx; g.ty = ty; g.trot = p.rot; g.tsc = p.sc;
     g.flip = p.flip;
-    if (snap) { g.x = p.x; g.y = p.y; g.rot = p.rot; g.sc = p.sc; }
+    if (snap) {
+      g.x = tx; g.y = ty; g.rot = p.rot; g.sc = p.sc;
+      f.x = f.tx; f.y = f.ty;
+    }
+  },
+
+  /* Where the near field bottoms out. Measured off the UI rail, not the
+     window: hard-coding the window's bottom put your own hands behind
+     the FIRE button on every phone. */
+  measureFloor() {
+    let fy = 180;
+    const bar = document.getElementById('duel-bottom');
+    if (bar) {
+      const r = bar.getBoundingClientRect();
+      if (r.height > 4) fy = Math.round(r.top / DUEL.SCALE) - DUEL.OY;
+    }
+    fy = U.clamp(fy, 146, 198);
+    if (fy !== DUEL.FY) { DUEL.FY = fy; DUEL.setPose(DUEL.poseName); }
   },
 
   hurry: false,
@@ -85,6 +131,7 @@ const DUEL = {
     DUEL.cv.height = DUEL.H;
     DUEL.OX = Math.round(DUEL.W / 2 - 180);
     DUEL.OY = DUEL.H - 200;
+    DUEL.measureFloor();
   },
 
   enter() {
@@ -189,10 +236,12 @@ const DUEL = {
   /* ================= per-frame ================= */
 
   step() {
-    const g = DUEL.gun;
+    const g = DUEL.gun, f = DUEL.fist;
     const k = 0.22;
+    if (DUEL.t % 20 === 0) DUEL.measureFloor();
     g.x += (g.tx - g.x) * k; g.y += (g.ty - g.y) * k;
     g.rot += (g.trot - g.rot) * k; g.sc += (g.tsc - g.sc) * k;
+    f.x += (f.tx - f.x) * k; f.y += (f.ty - f.y) * k;
     if (DUEL.shake > 0) DUEL.shake *= 0.86;
     if (DUEL.redPulse > 0) DUEL.redPulse -= 0.03;
     if (DUEL.whitePulse > 0) DUEL.whitePulse -= 0.08;
@@ -344,25 +393,29 @@ const DUEL = {
 
     COPS.draw(x, DUEL.t);
 
-    /* --- the table --- */
-    SPR.ellipse(x, 180, 152, 156, 41, P.K);
-    SPR.ellipse(x, 180, 150, 154, 39, P.u);
-    SPR.ellipse(x, 180, 149, 150, 37, P.b);
-    SPR.ellipse(x, 180, 148, 146, 35, P.E);
-    SPR.ellipse(x, 180, 146, 139, 31, P.e);
+    /* --- the table: the far half is an ellipse, the near half runs off the
+       bottom of the frame, because that is where your own edge of the felt
+       actually is when you are sitting at it --- */
+    const TY = DUEL.TY();
+    SPR.ellipse(x, 180, TY, 164, 38, P.K);
+    SPR.ellipse(x, 180, TY - 1, 161, 36, P.b);
+    SPR.ellipse(x, 180, TY + 1, 158, 34, P.u);
+    SPR.ellipse(x, 180, TY - 2, 154, 32, P.K);
+    SPR.ellipse(x, 180, TY - 3, 151, 31, P.e);
+    DUEL.nearFelt(x, TY);
     x.globalAlpha = 0.35;
-    SPR.ellipse(x, 180, 132, 92, 12, P.f);
+    SPR.ellipse(x, 180, TY - 16, 92, 12, P.f);
     x.globalAlpha = 1;
 
     /* --- blood on the felt --- */
     DUEL.decals.forEach(d => { SPR.ellipse(x, d.x, d.y, d.r * 1.6, d.r * 0.7, d.col); });
     FX.drawFelt(x);
 
-    /* felt decor */
-    DUEL.chipStack(x, 84, 150, 4, P.r, P.R);
-    DUEL.chipStack(x, 96, 154, 2, P.l, P.L);
-    DUEL.chipStack(x, 262, 148, 3, P.g, P.G);
-    SPR.ellipse(x, 240, 158, 9, 3, P.T); SPR.ellipse(x, 240, 157, 7, 2, P.s);
+    /* felt decor: theirs across the table, yours down at the near edge */
+    DUEL.chipStack(x, 92, TY + 8, 4, P.r, P.R);
+    DUEL.chipStack(x, 104, TY + 12, 2, P.l, P.L);
+    DUEL.chipStack(x, 262, TY + 6, 3, P.g, P.G);
+    DUEL.myProps(x, DUEL.FY);
 
     /* --- his hands resting on the felt (over the table edge) --- */
     if (!DUEL.opp.gone && DUEL.opp.fall < 0 && G.duel) {
@@ -418,7 +471,6 @@ const DUEL = {
     /* --- you: first person — your hands, your sleeve, your iron --- */
     const myPose = DUEL.drawYou(x);
     DUEL.drawYourIron(x, myPose);
-    DUEL.hearts(x, 16, 168, G.hearts, E.maxHP(), G.hearts === 1 && (DUEL.t % 40 < 20));
 
     /* --- the lamp itself --- */
     const lampY = -DUEL.OY;   // hangs from the real top of the screen
@@ -462,11 +514,11 @@ const DUEL = {
     const jig = DUEL.jiggle * Math.sin(DUEL.t * 1.7);
 
     /* the pool first — it keeps spreading */
-    SPR.ellipse(x, 178, 150, DUEL.pool * 2.6, DUEL.pool * 0.62, P.D);
-    SPR.ellipse(x, 174, 149, DUEL.pool * 2.1, DUEL.pool * 0.45, P.d);
+    SPR.ellipse(x, 178, 145, DUEL.pool * 2.6, DUEL.pool * 0.58, P.D);
+    SPR.ellipse(x, 174, 144, DUEL.pool * 2.1, DUEL.pool * 0.42, P.d);
 
     x.save();
-    x.translate(190, 136 + jig);
+    x.translate(190, 132 + jig);
     x.rotate(0.06 + jig * 0.01);
 
     /* legs kicked out stage-right: trousers + shoes, one leg cocked */
@@ -541,80 +593,134 @@ const DUEL = {
      with the iron in your right hand. Aim at yourself and the barrel
      swings back at the lens.
      ============================================================ */
+  /* the table's centre row. It follows the UI rail so the near edge always
+     lands in shot, but never so far up that the felt eats the mark's hands. */
+  TY() { return U.clamp(DUEL.FY - 26, 138, 158); },
+
+  /* Your end of the felt. The near edge of a round table dips TOWARD the
+     lens, so the felt runs off the bottom of the frame in the middle and the
+     rail only shows in the two corners — which is where it actually is.
+     One parabola, filled outward, five bands wide. */
+  nearFelt(x, TY) {
+    const P = PIX.PAL;
+    const R = 151, yc = DUEL.FY + 72, fall = yc - TY;
+    const bot = DUEL.H - DUEL.OY + 2;
+    const span = (y, w, col) => PIX.rect(x, 180 - w, y, w * 2, 1, col);
+    for (let y = TY - 2; y <= bot; y++) {
+      const k = (yc - y) / fall;
+      if (k <= 0) break;
+      const hf = Math.round(R * Math.sqrt(k));
+      const t = (y - TY) / Math.max(1, bot - TY);
+      span(y, hf + 11, P.K);
+      span(y, hf + 10, P.u);                              // roll of the rail
+      span(y, hf + 7, P.b);                               // its lit top
+      span(y, hf + 1, P.K);
+      /* the felt goes off toward you: the lamp does not reach this end */
+      span(y, hf, t < 0.26 ? P.e : t < 0.50 ? P.E : t < 0.72 ? '#0b2318' : '#071810');
+      if (y % 2 === 0 && t > 0.20 && t < 0.30) span(y, hf, P.E);
+      if (y % 2 === 0 && t > 0.44 && t < 0.56) span(y, hf, '#0b2318');
+      if (y % 2 === 0 && t > 0.66 && t < 0.78) span(y, hf, '#071810');
+    }
+    /* brass tacks punched through the rail, y solved off the same parabola */
+    for (const u of [-146, -114, -76, -38, 38, 76, 114, 146]) {
+      const y = Math.round(yc - fall * (u / R) * (u / R)) + 3;
+      PIX.rect(x, 180 + u - 1, y, 3, 3, P.h);
+      PIX.rect(x, 180 + u - 1, y, 2, 2, P.G);
+    }
+  },
+
+  /* what's sitting on YOUR end of the felt: the reason the near field isn't
+     an empty green void */
+  myProps(x, FY) {
+    const P = PIX.PAL;
+    /* your glass, half drunk, a damp ring under it */
+    const gx = 116, gy = FY - 24;
+    SPR.ellipse(x, gx + 1, gy + 6, 9, 3, 'rgba(0,0,0,.40)');
+    PIX.rect(x, gx - 7, gy - 13, 15, 19, P.K);
+    PIX.rect(x, gx - 6, gy - 12, 13, 17, P.t);                 // glass, catching the room
+    PIX.rect(x, gx - 6, gy - 2, 13, 7, P.h);                   // what's left in it
+    PIX.rect(x, gx - 6, gy - 2, 13, 1, P.G);
+    PIX.rect(x, gx - 6, gy - 12, 3, 16, P.S);                  // the highlight down one side
+    PIX.rect(x, gx + 4, gy - 10, 2, 13, 'rgba(244,239,224,.35)');
+    PIX.rect(x, gx - 6, gy - 12, 13, 1, P.M);                  // the rim
+    SPR.ellipse(x, gx, gy + 5, 7, 2, P.k);
+
+    /* the ashtray, your cigar still going in it */
+    const ax = 240, ay = FY - 22;
+    SPR.ellipse(x, ax, ay + 2, 14, 5, P.K);
+    SPR.ellipse(x, ax, ay + 1, 12, 4, P.t);
+    SPR.ellipse(x, ax, ay - 1, 9, 3, P.T);
+    PIX.rect(x, ax + 3, ay - 6, 12, 3, P.K);
+    PIX.rect(x, ax + 4, ay - 5, 10, 2, P.w);
+    PIX.rect(x, ax + 12, ay - 5, 2, 2, DUEL.t % 34 < 22 ? P.O : P.o);
+    if (DUEL.t % 30 === 0) FX.emberDrift(ax + 13, ay - 7);
+  },
+
+  /* your own frog, one step darker: the near field is outside the lamp */
+  myDef() {
+    if (!DUEL._myDef) {
+      DUEL._myDef = Object.assign({}, FROG_DEFS.player, {
+        skin: ['f', 'e', 'E'], cuff: 'w', rings: false,
+      });
+    }
+    return DUEL._myDef;
+  },
+
   drawYou(x) {
     const P = PIX.PAL;
-    const def = FROG_DEFS.player;
+    const def = DUEL.myDef();
+    const FY = DUEL.FY, f = DUEL.fist;
     const bob = Math.sin(DUEL.t / 40 + 2) * 0.8;
-    const drop = DUEL.youFall ? 34 : 0;
+    const drop = DUEL.youFall ? 30 : 0;
     const aimSelf = DUEL.aim === 'self' && !DUEL.corpse;
     const aimFoe = DUEL.aim === 'foe' && !DUEL.corpse;
+    const mine = !!(DUEL.POSES[DUEL.poseName] || {}).mine;
 
     x.save();
     x.translate(0, Math.round(bob) + drop);
-    if (DUEL.youFall) x.rotate(-0.06);
+    if (DUEL.youFall) x.rotate(-0.04);
 
-    /* the near lip of the table, right under the lens */
-    SPR.ellipse(x, 180, 190, 212, 28, P.K);
-    SPR.ellipse(x, 180, 188, 208, 25, P.u);
-    SPR.ellipse(x, 180, 187, 202, 22, P.b);
-    SPR.ellipse(x, 180, 185, 198, 20, P.E);
-    SPR.ellipse(x, 180, 183, 190, 16, P.e);
-
-    /* --- your left hand, flat on the felt --- */
-    const lx = 58, ly = 156;
-    SPR.ellipse(x, lx, ly + 11, 13, 4, 'rgba(0,0,0,.35)');
-    x.save();
-    x.translate(lx, ly); x.scale(1.5, 1.5);
-    SPR.frogHand(x, 0, 0, def, -1, { link: true });
-    x.restore();
-
-    /* --- your right arm + the iron --- */
-    const rx = aimSelf ? 214 : 268, ry = aimSelf ? 150 : 160;
-    /* sleeve coming in from the bottom of the frame */
-    const sleeveC = SPR.outerColor ? SPR.outerColor(def) : P.T;
-    const cuffC = SPR.cuffColor ? SPR.cuffColor(def) : P.W;
-    const sy0 = ry + 4, sy1 = 206;
-    const sx0 = rx, sx1 = 336;
-    const centerOf = (y) => {
-      const t = U.clamp((y - sy0) / (sy1 - sy0), 0, 1);
-      return Math.round((sx0 + (sx1 - sx0) * t) / 2) * 2;      // 2px stair steps
-    };
-    const widthOf = (y) => {
-      const t = U.clamp((y - sy0) / (sy1 - sy0), 0, 1);
-      return 19 + Math.round(t * 9);                          // forearm thickens to the elbow
-    };
-    for (let y = sy0 - 1; y <= sy1; y++) {                     // ink silhouette
-      const c = centerOf(y), w = widthOf(y);
-      PIX.rect(x, c - (w >> 1) - 1, y, w + 2, 1, P.K);
+    /* your hearts, on your own end of the felt */
+    const mx = E.maxHP(), thr = G.hearts === 1 && DUEL.t % 40 < 20 ? 1 : 0;
+    for (let i = 0; i < mx; i++) {
+      const row = (i / 5) | 0, col = i % 5;
+      PIX.draw(x, i < G.hearts ? 'ic_heart' : 'ic_heart_e',
+        8 + col * 10 - (i ? 0 : thr), FY - 47 + row * 9 - (i ? 0 : thr), 1 + (i ? 0 : thr * 0.25));
     }
-    for (let y = sy0; y <= sy1; y++) {                         // cloth + rounding
-      const c = centerOf(y), w = widthOf(y);
-      PIX.rect(x, c - (w >> 1), y, w, 1, sleeveC);
-      PIX.rect(x, c + (w >> 1) - 4, y, 4, 1, 'rgba(0,0,0,.3)');
-      PIX.rect(x, c - (w >> 1), y, 3, 1, 'rgba(255,255,255,.09)');
-      if ((y & 7) === 0) PIX.rect(x, c - (w >> 1) + 3, y, w - 7, 1, 'rgba(0,0,0,.1)');
-    }
-    /* cuff, then the hand around the grip */
-    PIX.rect(x, rx - 10, ry + 2, 20, 7, P.K);
-    PIX.rect(x, rx - 9, ry + 2, 18, 6, cuffC);
-    PIX.rect(x, rx - 9, ry + 7, 18, 1, 'rgba(0,0,0,.28)');
-    SPR.ellipse(x, rx, ry + 14, 13, 4, 'rgba(0,0,0,.35)');
-    x.save();
-    x.translate(rx, ry); x.scale(1.5, 1.5);
-    SPR.frogHand(x, 0, 0, def, 1, { noCuff: true, grip: true });
-    x.restore();
 
-    /* --- your hearts, on the felt in front of you --- */
+    /* Your forearms: short stubs rising out of the BOTTOM of the frame, the
+       way your own arms actually sit at a table. Run them in from the side
+       edges instead and they read as concrete beams. Dark suit cloth with a
+       rim light and a pinstripe, or they vanish into the felt. */
+    const sC = P.T, sD = P.k, sL = P.t, sS = 'rgba(100,109,132,.34)';
+    const HK = 1.7;
+
+    /* --- your off hand, flat on your own end of the felt --- */
+    const lhx = 76, lhy = FY - 12;
+    SPR.ellipse(x, lhx + 3, FY - 2, 17, 5, 'rgba(0,0,0,.45)');
+    SPR.povSleeve(x, 42, FY + 24, lhx - 3, FY - 2, 30, 20, sC, sD, sL, sS);
+    SPR.povCuff(x, lhx, FY - 4, def, -1);
+    SPR.povHand(x, lhx, lhy, def, -1, HK, false);
+
+    /* --- your gun hand --- */
+    const fx = Math.round(f.x), fy = Math.round(f.y);
+    SPR.ellipse(x, fx, fy + 12, 16, 5, 'rgba(0,0,0,.42)');
+    SPR.povSleeve(x, 330, FY + 24, fx - 3, fy + 8, 32, 21, sC, sD, sL, sS);
+    SPR.povCuff(x, fx, fy + 8, def, 1);
+    SPR.povHand(x, fx, fy, def, 1, HK, mine);
+
     x.restore();
-    return { aimSelf, aimFoe, rx, ry };
+    return { aimSelf, aimFoe, mine, bob: Math.round(bob) + drop };
   },
 
-  /* the iron, drawn from your point of view (in front of your hand) */
+  /* the iron, drawn from your point of view — the fingers close over it after */
   drawYourIron(x, pose) {
     if (!pose || DUEL.corpse) return;
     const P = PIX.PAL;
-    const g = DUEL.gun;
+    const g = DUEL.gun, f = DUEL.fist;
     const gm = PIX.make(GUN_SPRITES[E.gun().id], 1);
+    x.save();
+    x.translate(0, pose.mine ? pose.bob : 0);
     x.save();
     x.translate(Math.round(g.x), Math.round(g.y));
     x.rotate(g.rot);
@@ -626,13 +732,28 @@ const DUEL = {
       x.globalAlpha = 1;
     }
     x.restore();
-    /* pointed at the lens: a muzzle seen end-on, staring back at you */
+    /* two digits closed over the grip, so the iron is held and not glued on */
+    if (pose.mine) {
+      const c = SPR.povInk ? null : null;
+      const d = DUEL.myDef(), skin = P[d.skin[0]], sh = P[d.skin[1]];
+      for (let i = 0; i < 2; i++) {
+        const gy = Math.round(f.y) - 5 + i * 7;
+        PIX.rect(x, Math.round(f.x) - 5, gy, 13, 7, P.K);
+        PIX.rect(x, Math.round(f.x) - 4, gy + 1, 11, 5, i ? sh : skin);
+        PIX.rect(x, Math.round(f.x) - 4, gy + 4, 11, 1, P.K);
+      }
+    }
+    x.restore();
+    /* pointed at the lens: a bore seen end-on, staring back at you */
     if (pose.aimSelf) {
       const t = DUEL.muzzleTip();
-      PIX.disc(x, t.x, t.y, 7, P.K);
-      PIX.disc(x, t.x, t.y, 5, P.T);
-      PIX.disc(x, t.x, t.y, 3, P.Z);
-      PIX.rect(x, t.x - 5, t.y - 5, 3, 1, 'rgba(255,255,255,.18)');
+      const ty = t.y + pose.bob;
+      PIX.disc(x, t.x, ty, 9, P.K);
+      PIX.disc(x, t.x, ty, 7, P.t);
+      PIX.disc(x, t.x, ty, 5, P.K);
+      PIX.disc(x, t.x, ty, 3, P.Z);
+      PIX.rect(x, t.x - 6, ty - 6, 4, 1, 'rgba(255,255,255,.22)');
+      PIX.rect(x, t.x - 7, ty - 4, 2, 3, 'rgba(255,255,255,.12)');
     }
   },
 
@@ -909,10 +1030,10 @@ const DUEL = {
     const r = DUEL.cv.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width * DUEL.W - DUEL.OX;
     const py = (e.clientY - r.top) / r.height * DUEL.H - DUEL.OY;
-    if (px > 100 && px < 262 && py < 132) {
+    if (px > 100 && px < 262 && py < 130) {
       if (DUEL.aim === 'foe') DUEL.onFire();
       else DUEL.setAim('foe');
-    } else if (px < 128 && py > 110) {
+    } else if (py > DUEL.FY - 46) {           /* your own end of the felt */
       if (DUEL.aim === 'self') DUEL.onFire();
       else DUEL.setAim('self');
     }

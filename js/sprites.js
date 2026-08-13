@@ -1368,6 +1368,87 @@ SPR.outerColor = function (d) {
   return PIX.PAL[(g && g.col) || 'T'] || PIX.PAL.T;
 };
 
+/* ============================================================
+   FIRST PERSON — your own two hands on your side of the felt.
+
+   Deliberately the SAME hand the rest of the cast has, only
+   nearer and flipped so the digits point away from the lens. A
+   bespoke giant hand was tried twice and read as furniture at
+   every size; and your hands should look like a frog's hands.
+   ============================================================ */
+
+/* one step up the palette — the near field needs a rim light or the
+   whole thing silts up into a single green mass */
+const LIGHTER = {
+  K: 'k', k: 'T', W: 'Y', w: 'W', q: 'w',
+  G: 'Y', g: 'G', h: 'g', H: 'h',
+  R: 'O', r: 'R', d: 'r', D: 'd',
+  F: 'N', f: 'F', e: 'f', E: 'e',
+  S: 'M', s: 'S', t: 's', T: 't',
+  B: 'W', b: 'B', u: 'b', U: 'u',
+  N: 'L', n: 'N', P: 'W', p: 'P', V: 'L', v: 'V', X: 'v',
+  O: 'Y', o: 'O', Y: 'W', L: 'W', l: 'L', M: 'W', m: 'M', Z: 'K',
+};
+
+/* a stepped tapered tube between two points: the one primitive every
+   near-field limb is built from. Ink pass, then fill pass, stepped along
+   whichever axis it travels furthest on — so it can run diagonally
+   without ever laying down an anti-aliased edge. */
+SPR.povTube = function (ctx, x0, y0, x1, y1, w0, w1, col, dk, lt, stripe) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const horiz = Math.abs(dx) >= Math.abs(dy);
+  const span = Math.abs(horiz ? dx : dy);
+  if (!span) return;
+  const st = (horiz ? dx : dy) < 0 ? -1 : 1;
+  const at = (i) => {
+    const t = i / span, e = t * t * 0.32 + t * 0.68;
+    return {
+      a: (horiz ? x0 : y0) + i * st,
+      b: Math.round(horiz ? y0 + dy * e : x0 + dx * e),
+      w: Math.max(3, Math.round(w0 + (w1 - w0) * t)),
+    };
+  };
+  const bar = (a, lo, len, col) => horiz
+    ? PIX.rect(ctx, a, lo, 1, len, col)
+    : PIX.rect(ctx, lo, a, len, 1, col);
+  for (let i = -1; i <= span + 1; i++) {
+    const q = at(U.clamp(i, 0, span));
+    bar(q.a, q.b - (q.w >> 1) - 1, q.w + 2, PIX.PAL.K);
+  }
+  for (let i = 0; i <= span; i++) {
+    const q = at(i), hw = q.w >> 1, roll = Math.max(2, (q.w * 0.28) | 0);
+    bar(q.a, q.b - hw, q.w, col);
+    if (dk) bar(q.a, q.b + hw - roll, roll, dk);
+    if (lt) bar(q.a, q.b - hw, 2, lt);
+    if (stripe && q.w > 12) [-4, 3].forEach(o => bar(q.a, q.b + o, 1, stripe));
+  }
+};
+
+/* the shirt cuff at the wrist — a band, not a big pale box */
+SPR.povCuff = function (ctx, cx, cy, d, sgn) {
+  const P = PIX.PAL, INK = P.K;
+  const cuffC = P[d.cuff] || SPR.cuffColor(d);
+  PIX.rect(ctx, cx - 12, cy - 4, 25, 9, INK);
+  PIX.rect(ctx, cx - 11, cy - 3, 23, 7, cuffC);
+  PIX.rect(ctx, cx - 11, cy + 1, 23, 3, 'rgba(0,0,0,.34)');
+  PIX.rect(ctx, cx - 11, cy - 3, 23, 1, 'rgba(255,255,255,.20)');
+  PIX.rect(ctx, cx + sgn * 7, cy - 1, 4, 4, INK);
+  PIX.rect(ctx, cx + sgn * 7, cy - 1, 3, 3, P.G);
+};
+
+/* your hand, near the lens: the cast's hand, upside down so the digits
+   reach away from you across the felt */
+SPR.povHand = function (ctx, cx, cy, d, sgn, k, grip) {
+  ctx.save();
+  ctx.translate(Math.round(cx), Math.round(cy));
+  ctx.scale(k, -k);
+  SPR.frogHand(ctx, 0, 0, d, sgn, { noCuff: true, grip: !!grip });
+  ctx.restore();
+};
+
+/* a forearm entering from off-frame, in your pinstripe sleeve */
+SPR.povSleeve = SPR.povTube;
+
 const FROG_DEFS = {
   player:    { skin: ['F', 'f', 'e'], fat: false, suit: 'T', shirt: 'W', tie: 'd',
                costume: 'pinstripe', braces: true,
