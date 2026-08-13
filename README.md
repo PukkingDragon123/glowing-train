@@ -31,6 +31,14 @@ with their tongue out), suits with lapels, cuffs and three-finger hands, and eve
 drawn right on the frog. Works on phones — the buttons grow to thumb size. Sounds are
 synthesized with WebAudio. Runs are seeded. Unlocks persist in localStorage.
 
+Every screen change goes behind a **rack of card backs** that sweeps shut, changes the
+world behind it, and keeps going off the other side. Sit down and the room is dark: you
+can see the mark's eyes across the felt before the lamp above the table stutters, catches,
+and the camera settles in on the green. A boss doesn't get a menu — **bars close over the
+top and bottom of the frame** and he crosses the room while his name lands like a stamp.
+Clear an ante and the night's take **rains past the lens**. Die and the lights iris shut.
+Tap through any of it.
+
 ## The run
 
 ![The blind select](docs/screen-blinds.png)
@@ -51,11 +59,16 @@ tags taken, and what the night has cost so far.
 
 ![The table](docs/screen-duel.png)
 
+![Sitting down](docs/screen-sitdown.png)
+
 You're not a sprite on the far side of the table; **you are the camera**. What you see of
-yourself is your own two frog hands on the near edge of the felt and your sleeve coming
-in from the bottom of the frame with the iron in your right fist. Aim at the mark and the
-barrel swings out across the table. Aim at yourself and it turns back at the lens —
-you're looking down your own muzzle.
+yourself is your own two frog hands on your end of the felt, your pinstripe forearms
+coming up out of the bottom of the frame, and the iron in your right fist. The table is
+built to match: the far half is an ellipse under the lamp, the near half dips off the
+bottom of the shot the way your own edge of a card table actually does, going dark as it
+comes toward you — and your glass, your ashtray with the cigar still going and your
+hearts all sit on it. Aim at the mark and the barrel swings out across the felt. Aim at
+yourself and it turns back at the lens: a bore, staring.
 
 ![Down your own barrel](docs/screen-self.png)
 
@@ -149,6 +162,10 @@ Eight bosses, one per ante, each with a house rule and signature tells:
 | 7 | **DON BUFO** | nine hearts of blubber, no trick |
 | 8 | **THE BULLFROG** | gets back up once — then hits for 2 |
 
+Pay the badges after a boss and the ante closes out on its own screen:
+
+![Ante cleared](docs/screen-ante.png)
+
 ## Trinkets & the iron
 
 **32 trinket cards** (5 slots, four rarities) loot out of pockets — passives like BAD
@@ -189,6 +206,7 @@ js/engine.js      pure rules: the duel, the mark's brain, the loot, the heat (no
 js/ui.js          screens: title, duel frame, collection, help, keys
 js/fx.js          the effects engine: smoke, gore, chip arcs, slow-mo, ambient dust
 js/duel.js        the drawn table scene: expressions, blood, the fall, the corpse
+js/cine.js        the wipe, the sit-down, the boss cut-in, the ante interstitial
 js/cops.js        Swamp PD: the walk-in, the bribe handoff, the shakedown, the bust
 js/loot.js        the take: pockets, the badges bar, bribes, protection money
 js/main.js        boot (+ ?debug harness)
