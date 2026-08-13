@@ -41,6 +41,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     mk('unlock all', () => { META.unlockAll(); });
     document.body.appendChild(bar);
-    window.G2 = () => G; window.E = E; window.UI = UI; window.DUEL = DUEL; window.LOOT = LOOT; // console access
+    window.G2 = () => G; window.E = E; window.UI = UI; window.DUEL = DUEL; window.LOOT = LOOT;
+    window.CINE = CINE; window.COPS = COPS; // console access
   }
 });

@@ -242,9 +242,9 @@ const LOOT = {
     (res.learned || []).forEach((t, i) => setTimeout(() => UI.tellToast(t), 300 + i * 700));
     const fresh = META.check();
     fresh.forEach((t, i) => setTimeout(() => UI.unlockToast(t), 600 + i * 700));
-    if (res.won) { UI.render(); return; }
+    if (res.won) { UI.goto(); return; }
     if (res.heatDue) { LOOT.heatOverlay(res.heatDue); return; }
-    UI.render(); // next blind is already dealt
+    UI.goto();      // next blind is already dealt
   },
 
   /* after a boss: Swamp PD wants protection, or the marker */
@@ -267,11 +267,14 @@ const LOOT = {
       { scale: 3, shadow: null, color: PIX.PAL.K }));
     pay.onclick = async () => {
       pay.disabled = true;
+      const cleared = G.ante;
       const ok = E.payHeat();
       if (ok) { SFX.coin(); UI.chipTick(-cost); await COPS.paid(); }
       else { SFX.lose(); await COPS.bust(); }
       LOOT.retireCallout();
-      UI.render();
+      o.className = 'hidden'; o.innerHTML = '';
+      if (ok) await CINE.anteClear(cleared, G.chips);
+      UI.goto();
     };
     card.appendChild(pay);
     o.appendChild(card);

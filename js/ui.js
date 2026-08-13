@@ -63,6 +63,17 @@ const UI = {
       case 'over':       UI.buildEnd(app, false); break;
       case 'won':        UI.buildEnd(app, true); break;
     }
+    /* card backs drifting behind the quiet screens */
+    CINE.ambient(G.phase === 'title' || G.phase === 'collection' || G.phase === 'blind');
+  },
+
+  /* Every screen change goes behind the card-rack wipe. fn does whatever
+     moves the game on; the render happens while the rack is shut, so the
+     player never sees a screen assemble itself. */
+  goto(fn, opts) {
+    /* a second press while the rack is shut must not advance twice */
+    if (CINE.busy) return Promise.resolve();
+    return CINE.transition(() => { if (fn) fn(); UI.render(); }, opts);
   },
 
   /* small builders */
@@ -183,14 +194,14 @@ const UI = {
     deal.id = 'btn-deal';
     deal.appendChild(PIX.el('gun_snub', 2));
     deal.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
-    deal.onclick = () => { SFX.chak(); E.newRun(inp.value); UI.render(); };
+    deal.onclick = () => { SFX.chak(); UI.goto(() => E.newRun(inp.value)); };
     wrap.appendChild(deal);
 
     const row2 = U.el('div', 'end-btns');
     const coll = U.el('button', 'pixbtn');
     coll.id = 'btn-collection';
     coll.appendChild(UI.txt('COLLECTION', { scale: 3, shadow: null }));
-    coll.onclick = () => { G.phase = 'collection'; UI.render(); };
+    coll.onclick = () => { UI.goto(() => { G.phase = 'collection'; }); };
     row2.appendChild(coll);
     const hlp = U.el('button', 'pixbtn');
     hlp.appendChild(UI.txt('HOUSE RULES', { scale: 3, shadow: null }));
@@ -259,7 +270,7 @@ const UI = {
         }
       } else {
         const art = U.el('div', 'bc-art dim');
-        art.appendChild(SPR.clone(SPR.cardBack(), 4));
+        art.appendChild(SPR.clone(SPR.cardBack(), 6));
         card.appendChild(art);
       }
 
@@ -292,7 +303,7 @@ const UI = {
     sit.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
     const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
     sit.appendChild(kh);
-    sit.onclick = () => { SFX.chak(); E.sitDown(); UI.render(); };
+    sit.onclick = () => { SFX.chak(); UI.goto(() => E.sitDown()); };
     btns.appendChild(sit);
 
     if (E.canSkip()) {
@@ -304,10 +315,11 @@ const UI = {
       const k2 = U.el('span', 'key-hint'); k2.textContent = 'S';
       skip.appendChild(k2);
       skip.onclick = () => {
-        const t = E.skipBlind();
+        let t = null;
         SFX.deal();
-        UI.render();
-        if (t) setTimeout(() => UI.tagToast(t), 120);
+        UI.goto(() => { t = E.skipBlind(); }).then(() => {
+          if (t) UI.tagToast(t);
+        });
       };
       btns.appendChild(skip);
     }
@@ -800,16 +812,16 @@ const UI = {
     if (won) {
       const endless = U.el('button', 'pixbtn gold primary');
       endless.appendChild(UI.txt('KEEP PLAYING — ENDLESS', { scale: 4, shadow: null, color: PIX.PAL.K }));
-      endless.onclick = () => { E.goEndless(); UI.render(); };
+      endless.onclick = () => { UI.goto(() => E.goEndless()); };
       btns.appendChild(endless);
     }
     const again = U.el('button', 'pixbtn' + (won ? '' : ' gold primary'));
     again.appendChild(UI.txt('AGAIN', { scale: 3, shadow: null, color: won ? PIX.PAL.W : PIX.PAL.K }));
-    again.onclick = () => { E.newRun(''); UI.render(); };
+    again.onclick = () => { UI.goto(() => E.newRun('')); };
     btns.appendChild(again);
     const title = U.el('button', 'pixbtn');
     title.appendChild(UI.txt('TITLE', { scale: 3, shadow: null }));
-    title.onclick = () => { G.phase = 'title'; UI.render(); };
+    title.onclick = () => { UI.goto(() => { G.phase = 'title'; }); };
     btns.appendChild(title);
     wrap.appendChild(btns);
 
@@ -829,7 +841,7 @@ const UI = {
     const back = U.el('button', 'pixbtn primary');
     back.id = 'btn-back';
     back.appendChild(UI.txt('BACK', { scale: 3, shadow: null }));
-    back.onclick = () => { G.phase = 'title'; UI.render(); };
+    back.onclick = () => { UI.goto(() => { G.phase = 'title'; }); };
     head.appendChild(back);
     wrap.appendChild(head);
 

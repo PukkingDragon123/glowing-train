@@ -33,6 +33,7 @@ const DUEL = {
   youFall: false,
 
   corpse: false, pool: 0, jiggle: 0,
+  dark: 0, lamp: 1,       // the room's lights, for the sit-down cinematic
   oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
 
   /* ---------------- gun poses (world space) ---------------- */
@@ -144,6 +145,7 @@ const DUEL = {
     DUEL.opp = { recoil: 0, flash: 0, fall: -1, gone: false };
     DUEL.youFall = false;
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
+    DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     document.querySelectorAll('.mark-speech, .cop-callout').forEach(n => n.remove());
     DUEL.setPose('rest', true);
     FX.reset(); FX.ambient(true);
@@ -319,12 +321,12 @@ const DUEL = {
     /* --- lamp cone over the swirl --- */
     const sway = Math.sin(DUEL.t / 90) * 3;
     x.save();
-    x.globalAlpha = 0.13;
+    x.globalAlpha = 0.13 * DUEL.lamp;
     x.fillStyle = '#ffd75e';
     x.beginPath();
     x.moveTo(180 + sway, 16 - DUEL.OY); x.lineTo(46 + sway * 2, 152); x.lineTo(314 + sway * 2, 152);
     x.closePath(); x.fill();
-    x.globalAlpha = 0.09;
+    x.globalAlpha = 0.09 * DUEL.lamp;
     x.beginPath();
     x.moveTo(180 + sway, 16 - DUEL.OY); x.lineTo(98 + sway * 2, 152); x.lineTo(262 + sway * 2, 152);
     x.closePath(); x.fill();
@@ -479,7 +481,8 @@ const DUEL = {
     x.beginPath(); x.moveTo(180 + sway, lampY + 5); x.lineTo(162 + sway, lampY + 20); x.lineTo(198 + sway, lampY + 20); x.closePath(); x.fill();
     x.fillStyle = P.g;
     x.beginPath(); x.moveTo(180 + sway, lampY + 8); x.lineTo(165 + sway, lampY + 19); x.lineTo(195 + sway, lampY + 19); x.closePath(); x.fill();
-    PIX.rect(x, 176 + sway, lampY + 19, 8, 3, P.Y);
+    PIX.rect(x, 176 + sway, lampY + 19, 8, 3, DUEL.lamp > 0.4 ? P.Y : P.T);
+    if (DUEL.lamp > 0.6) DUEL.drawMoths(x, 180 + sway, lampY + 22);
 
     x.restore();
 
@@ -498,6 +501,20 @@ const DUEL = {
       x.globalAlpha = 1;
     }
 
+    if (DUEL.dark > 0.002) {
+      x.globalAlpha = Math.min(1, DUEL.dark);
+      x.fillStyle = '#05080a';
+      x.fillRect(0, 0, W, H);
+      x.globalAlpha = 1;
+      /* he is already sitting there in the dark, waiting for you */
+      if (DUEL.dark > 0.4 && !DUEL.opp.gone && DUEL.t % 90 > 6) {
+        const gy = DUEL.OY + 40 + Math.round(Math.sin(DUEL.t / 34) * 1.4);
+        x.globalAlpha = Math.min(1, (DUEL.dark - 0.35) * 2.4);
+        PIX.rect(x, DUEL.OX + 165, gy, 3, 2, P.Y);
+        PIX.rect(x, DUEL.OX + 193, gy, 3, 2, P.Y);
+        x.globalAlpha = 1;
+      }
+    }
     FX.drawScreen(x, W, H);
     COPS.drawOverlay(x, W, H);
   },
@@ -593,6 +610,28 @@ const DUEL = {
      with the iron in your right hand. Aim at yourself and the barrel
      swings back at the lens.
      ============================================================ */
+  /* two moths working the lamp. Nothing depends on them; a hanging bulb
+     over a card table with nothing circling it looks switched off. */
+  moths: [],
+  drawMoths(x, lx, ly) {
+    const P = PIX.PAL;
+    if (!DUEL.moths.length) {
+      DUEL.moths = [
+        { r: 13, a: 0, sp: 0.031, dy: 5, ry: 4 },
+        { r: 21, a: 2.4, sp: -0.021, dy: 11, ry: 7 },
+      ];
+    }
+    DUEL.moths.forEach((m, i) => {
+      m.a += m.sp;
+      const mx = Math.round(lx + Math.cos(m.a) * m.r);
+      const my = Math.round(ly + m.dy + Math.sin(m.a * 1.6) * m.ry);
+      const flap = (DUEL.t + i * 3) % 8 < 4;
+      PIX.rect(x, mx - 1, my, 3, 2, P.w);
+      if (flap) { PIX.rect(x, mx - 3, my - 2, 2, 3, P.q); PIX.rect(x, mx + 2, my - 2, 2, 3, P.q); }
+      else { PIX.rect(x, mx - 2, my - 1, 2, 2, P.w); PIX.rect(x, mx + 2, my - 1, 2, 2, P.w); }
+    });
+  },
+
   /* the table's centre row. It follows the UI rail so the near edge always
      lands in shot, but never so far up that the felt eats the mark's hands. */
   TY() { return U.clamp(DUEL.FY - 26, 138, 158); },
@@ -806,15 +845,21 @@ const DUEL = {
   async intro() {
     const opp = G.duel.opp;
     UI.syncDuel();
+    DUEL.hurry = false;
     if (opp.boss) {
+      /* he crosses the room under letterbox bars before you get a choice */
+      await CINE.bossEntrance(opp);
       await UI.bossIntro(opp);
+      CINE.pushIn(1.06, 620);
+      await CINE.lowerThird(E.blindName(), opp.name, opp.rule, PIX.PAL.R);
     } else {
-      UI.blindBanner();
-      await U.sleep(1050);
+      /* the lamp clicks on over your table and the camera settles */
+      await CINE.sitDown(opp, E.blindName());
     }
     SFX.spin();
     await UI.loadBanner();
     DUEL.busy = false;
+    DUEL.hurry = false;
     UI.syncDuel();
   },
 
@@ -991,9 +1036,9 @@ const DUEL = {
     await U.sleep(500);
     DUEL.youFall = true;
     SFX.lose();
-    await U.sleep(1100);
+    await U.sleep(900);
     META.check();
-    UI.render();
+    await CINE.iris(() => UI.render());
   },
 
   /* loot fx: the corpse jiggles, the take flies out of it */

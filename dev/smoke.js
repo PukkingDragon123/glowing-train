@@ -31,6 +31,9 @@ fs.mkdirSync(SHOTS, { recursive: true });
     console.log('shot:', name);
   };
   const click = (sel) => page.locator(sel).first().click({ timeout: 6000 });
+  /* every screen change goes behind the card-rack wipe — let it finish */
+  const wiped = () => page.waitForFunction(
+    () => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
   const state = () => page.evaluate(() => ({
     phase: G2().phase, ante: G2().ante, blind: G2().blind,
     turn: G2().duel ? G2().duel.turn : null,
@@ -86,8 +89,15 @@ fs.mkdirSync(SHOTS, { recursive: true });
     if (await heat.count() > 0) {
       await shot(shotName ? shotName + '-heat' : 'heat');
       await heat.click();
+      /* the cop pockets it (slow — he salutes and walks out), then the
+         ante-clear interstitial comes up */
+      await page.waitForSelector('.ante-card.in', { timeout: 20000 });
+      await page.waitForTimeout(500);
+      await shot(shotName ? shotName + '-ante-clear' : 'ante-clear');
+      await wiped();
       await page.waitForTimeout(400);
     }
+    await wiped();
   }
 
   try {
@@ -97,15 +107,18 @@ fs.mkdirSync(SHOTS, { recursive: true });
 
     /* collection round-trip */
     await click('#btn-collection');
-    await page.waitForTimeout(400);
+    await wiped();
+    await page.waitForTimeout(300);
     await shot('02-collection');
     await click('#btn-back');
-    await page.waitForTimeout(300);
+    await wiped();
+    await page.waitForTimeout(200);
 
     /* deal in */
     await page.fill('#seed-input', 'SMOKE-7');
     await click('#btn-deal');
     await page.waitForSelector('#btn-sit', { timeout: 10000 });
+    await wiped();
     await shot('02b-blind-select');
     /* the run panel */
     await click('#btn-run');
@@ -114,7 +127,10 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.keyboard.press('Escape');
     await page.waitForTimeout(200);
     await click('#btn-sit');
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
+    await wiped();
+    await page.waitForTimeout(900);
+    await shot('03-cine-sitdown');
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
     await shot('03-duel-small');
 
     /* the two aim poses */
@@ -164,6 +180,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
 
     /* big blind — sit down, then finish it */
     await click('#btn-sit');
+    await wiped();
     await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
     await shot('07d-duel-mobile-check');
     await winDuel();
@@ -173,10 +190,13 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForSelector('#btn-sit', { timeout: 20000 });
     await shot('08a-boss-select');
     await click('#btn-sit');
+    await wiped();
+    await page.waitForTimeout(1100);
+    await shot('08-cine-boss-cut');
     await page.waitForSelector('#duel-overlay:not(.hidden) .primary', { timeout: 25000 });
     await shot('08-boss-intro');
     await click('#duel-overlay .primary');           // SIT DOWN
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
+    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 30000 });
     await shot('09-boss-duel');
     await winDuel();
     await page.locator('button', { hasText: '+20⛁' }).click();
@@ -194,10 +214,12 @@ fs.mkdirSync(SHOTS, { recursive: true });
       trinkets: Object.keys(TRINKETS).length,
       itemsUsed: META.stats().itemsUsed,
       bribes: META.stats().bribesPaid,
+      cine: typeof CINE !== 'undefined' && typeof CINE.transition === 'function',
     }));
     console.log('systems:', JSON.stringify(sys));
     if (!sys.fx) errors.push('[systems] FX not loaded');
     if (!sys.cops) errors.push('[systems] COPS not loaded');
+    if (!sys.cine) errors.push('[systems] CINE not loaded');
     if (sys.items < 8) errors.push('[systems] ITEMS table too small');
     if (fin.ante !== 2) errors.push('[flow] expected ante 2, got ' + fin.ante);
     if (fin.phase !== 'blind') errors.push('[flow] expected the blind select, got ' + fin.phase);

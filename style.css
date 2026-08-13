@@ -1493,7 +1493,8 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 .blind-row { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
 .blind-card {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; justify-content: center;
   background: var(--felt-panel);
   border: 3px solid var(--line); border-radius: 16px;
   box-shadow: 0 6px 0 rgba(0,0,0,.4), inset 0 0 0 3px rgba(0,0,0,.22);
@@ -1529,6 +1530,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   padding: 3px 8px;
 }
 .blind-btns { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.blind-btns .pixbtn { flex: 0 0 auto; }
 .pixbtn.ghost { background: transparent; box-shadow: 0 4px 0 rgba(0,0,0,.35); border-style: dashed; }
 
 /* ============================================================
@@ -1574,4 +1576,157 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   .blind-card:not(.now) .bc-art canvas { width: 44px; height: auto; }
   .ri-grid { grid-template-columns: repeat(2, 1fr); }
   .ri-row { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/* ============================================================
+   19  CINEMATICS
+   The card-rack wipe, the iris, the lower-third plaque, the boss
+   cut-in, the ante-clear interstitial, and the cards that drift
+   across the menus. All of it decoration; none of it takes input
+   except the taps DUEL.sleep() already listens for.
+   ============================================================ */
+
+#cine-root, #cine-stage {
+  position: fixed; inset: 0;
+  pointer-events: none; overflow: hidden;
+}
+#cine-root { z-index: 152; }              /* the wipe goes over everything */
+#cine-stage { z-index: 149; }             /* cut-ins sit under it, over the bars */
+#cine-root.hidden, #cine-stage.hidden { display: none; }
+
+/* ---- the rack of card backs ---- */
+.wcol {
+  position: absolute; top: -6%; height: 112%;
+  background-repeat: repeat;
+  image-rendering: pixelated;
+  box-shadow: 0 0 0 2px var(--ink) inset;
+  transition: transform 190ms steps(6);
+}
+.wcol.wu { transform: translateY(-118%); }
+.wcol.wd { transform: translateY(118%); }
+#cine-root.shut .wcol { transform: translateY(0); }
+#cine-root.open .wcol { transition-duration: 210ms; }
+#cine-root.open .wcol.wu { transform: translateY(118%); }
+#cine-root.open .wcol.wd { transform: translateY(-118%); }
+
+/* ---- the lights going out ---- */
+.iris-lid {
+  position: absolute; inset: -20%;
+  background: #05080a;
+  clip-path: circle(85% at 50% 50%);
+  transition: clip-path 540ms steps(9);
+}
+#cine-root.shut .iris-lid { clip-path: circle(0% at 50% 50%); }
+#cine-root.open .iris-lid { transition-duration: 460ms; clip-path: circle(90% at 50% 50%); }
+
+/* ---- the lower-third plaque ---- */
+.cine-plate {
+  position: absolute; left: 0; bottom: 31%;
+  display: flex; align-items: stretch;
+  transform: translateX(-104%);
+  transition: transform 260ms cubic-bezier(.2, .9, .25, 1);
+  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, .5));
+}
+.cine-plate.in { transform: translateX(0); }
+.cine-plate.out { transform: translateX(-104%); transition-duration: 240ms; }
+.cine-plate-bar {
+  width: 12px; background: var(--gold);
+  border: var(--bd) solid var(--ink); border-left: 0;
+}
+.cine-plate-body {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 26px 12px 16px;
+  background: linear-gradient(180deg, var(--felt-mid), var(--felt-ink));
+  border: var(--bd) solid var(--ink); border-left: 0;
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+
+/* ---- the boss cut-in ---- */
+#cine-bars {
+  position: fixed; inset: 0; z-index: 148; pointer-events: none;
+}
+#cine-bars i {
+  position: absolute; left: 0; right: 0; height: 13%;
+  background: #05080a;
+  transform: scaleY(0);
+  transition: transform 280ms steps(7);
+}
+#cine-bars .bar-t { top: 0; transform-origin: top; }
+#cine-bars .bar-b { bottom: 0; transform-origin: bottom; }
+#cine-bars.on i { transform: scaleY(1); }
+
+.boss-sil {
+  position: absolute; top: 50%; right: 0; width: 46%;
+  display: flex; align-items: center; justify-content: center;
+  transform: translate(122%, -50%);
+  transition: transform 520ms cubic-bezier(.16, .9, .2, 1), opacity 300ms;
+  filter: drop-shadow(-10px 0 0 rgba(209, 59, 69, .45));
+}
+.boss-sil canvas { display: block; }
+.boss-sil.in { transform: translate(0, -50%); }
+.boss-sil.out { transform: translate(-26%, -50%); opacity: 0; transition-duration: 300ms; }
+.boss-slug {
+  position: absolute; left: 6%; top: 42%; max-width: 48%;
+  display: flex; flex-direction: column; gap: 8px;
+  animation: slug-land .26s steps(4) both;
+}
+.boss-slug.out { animation: none; opacity: 0; transition: opacity .25s; }
+@keyframes slug-land {
+  0% { transform: translateX(-14px) scale(1.5); opacity: 0; }
+  60% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+
+/* ---- ante cleared ---- */
+#cine-stage.ante-cut { background: rgba(5, 12, 9, .74); }
+.ante-card {
+  position: absolute; left: 50%; top: 40%;
+  transform: translate(-50%, -50%) scale(.8);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 26px 44px;
+  background: linear-gradient(180deg, var(--felt-mid), var(--felt-ink));
+  border: var(--bd-thick) solid var(--ink);
+  border-radius: var(--r-lg);
+  box-shadow: 0 0 0 3px var(--gold) inset, 0 10px 0 rgba(0, 0, 0, .5);
+  opacity: 0;
+  transition: transform 240ms cubic-bezier(.2, 1.5, .4, 1), opacity 180ms;
+}
+.ante-card.in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.ante-card.out { transform: translate(-50%, -60%) scale(.9); opacity: 0; transition-duration: 260ms; }
+.ante-chip {
+  position: absolute; top: -8%;
+  background-repeat: no-repeat; background-size: 100% 100%;
+  image-rendering: pixelated;
+  transform: scale(var(--sp, 1));
+  animation: chip-rain 1.2s linear infinite;
+}
+@keyframes chip-rain {
+  0% { transform: translateY(0) scale(var(--sp, 1)); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(120vh) scale(var(--sp, 1)); opacity: 1; }
+}
+
+/* ---- cards drifting behind the menus ---- */
+#cine-amb {
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none; overflow: hidden; display: none;
+}
+#cine-amb.on { display: block; }
+.drift-card {
+  position: absolute; left: -12%;
+  background-repeat: no-repeat; background-size: 100% 100%;
+  image-rendering: pixelated;
+  opacity: .16;
+  animation: drift linear infinite;
+}
+@keyframes drift {
+  0% { transform: translateX(0) rotate(0deg); }
+  100% { transform: translateX(130vw) rotate(var(--spin, 20deg)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wcol, .iris-lid, .cine-plate, #cine-bars i, .boss-sil { transition-duration: 1ms !important; }
+  .boss-slug, .ante-chip, .drift-card { animation: none !important; }
+  .ante-chip { display: none; }
+  #cine-amb { display: none !important; }
 }
