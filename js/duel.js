@@ -34,6 +34,10 @@ const DUEL = {
 
   corpse: false, pool: 0, jiggle: 0,
   dark: 0, lamp: 1,       // the room's lights, for the sit-down cinematic
+  cocked: false,          // the hammer, back and waiting
+  kick: 0,                // recoil: the iron jumps the bore line and comes back
+  cyl: 0, cylT: 0,        // which chamber is under it, and the turn in progress
+  smoke: [],              // wisps off the muzzle and out of the cylinder gap
   oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
 
   /* ---------------- gun poses (world space) ---------------- */
@@ -43,17 +47,30 @@ const DUEL = {
      is derived from that so its grip always lands inside your hand. His
      are plain sprite placements across the felt. */
   POSES: {
-    rest:     { mine: 1, hx: 294, hy: 172, rot: 0.26, flip: true, sc: 1.5 },
-    youFoe:   { mine: 1, hx: 288, hy: 163, rot: 0.58, flip: true, sc: 1.6 },
-    youSelf:  { mine: 1, hx: 270, hy: 138, rot: -1.22, flip: true, sc: 1.75 },
-    oppYou:   { x: 226, y: 102, rot: 0.34, flip: true, sc: 1.25 },
-    oppSelf:  { x: 224, y: 84, rot: -1.15, flip: false, sc: 1.25 },
+    rest:     { mine: 1, hx: 296, hy: 174, rot: 0.22, flip: true, sc: 0.8 },
+    youFoe:   { mine: 1, hx: 290, hy: 166, rot: 0.52, flip: true, sc: 0.85 },
+    youSelf:  { mine: 1, hx: 272, hy: 142, rot: -1.24, flip: true, sc: 0.9 },
+    oppYou:   { x: 222, y: 100, rot: 0.34, flip: true, sc: 0.8 },
+    oppSelf:  { x: 220, y: 82, rot: -1.18, flip: false, sc: 0.8 },
   },
 
-  /* the sprite's grip sits at local (10, 13) in every iron we draw */
+  /* the iron reports its own anchors, so nothing here guesses where your
+     fist closes or where the flash comes out */
+  ironArt() { return SPR.gunMaster(E.gun().id, DUEL.cocked, Math.round(DUEL.cyl)); },
+
+  /* take a point in sprite space out to world space through the current pose */
+  ironPoint(lxp, lyp) {
+    const g = DUEL.gun, m = DUEL.ironArt();
+    const lx = (lxp - m.width / 2) * g.sc, ly = (lyp - m.height / 2) * g.sc;
+    const fx = g.flip ? -1 : 1;
+    const c = Math.cos(g.rot), s = Math.sin(g.rot);
+    return { x: g.x + (lx * c * fx - ly * s), y: g.y + (lx * s * fx + ly * c) };
+  },
+
   ironFromGrip(hx, hy, rot, sc, flip) {
-    const m = PIX.make(GUN_SPRITES[E.gun().id], 1);
-    const lx = (10 - m.width / 2) * sc, ly = (13 - m.height / 2) * sc;
+    const m = DUEL.ironArt();
+    const gp = m.grip || [10, 13];
+    const lx = (gp[0] - m.width / 2) * sc, ly = (gp[1] - m.height / 2) * sc;
     const fx = flip ? -1 : 1;
     const c = Math.cos(rot), s = Math.sin(rot);
     return { x: hx - (lx * c * fx - ly * s), y: hy - (lx * s * fx + ly * c) };
@@ -112,12 +129,29 @@ const DUEL = {
   },
 
   muzzleTip() {
+    const m = DUEL.ironArt();
+    const mz = m.muzzle || [m.width, m.height / 2];
+    return DUEL.ironPoint(mz[0] + 1, mz[1]);
+  },
+
+  /* which way the barrel is looking, in world radians */
+  boreAngle() {
     const g = DUEL.gun;
-    const m = PIX.make(GUN_SPRITES[E.gun().id], 1);
-    const lx = (m.width / 2) * g.sc, ly = -3 * g.sc;
-    const fx = g.flip ? -1 : 1;
-    const c = Math.cos(g.rot), s = Math.sin(g.rot);
-    return { x: g.x + (lx * c * fx - ly * s), y: g.y + (lx * s * fx + ly * c) };
+    return g.rot + (g.flip ? Math.PI : 0);
+  },
+
+  /* Recoil, as one offset both the fist and the iron use: straight back
+     down the bore line plus muzzle rise, so the whole hand moves together
+     instead of the gun sliding out of your fingers. */
+  kickOff() {
+    const k = DUEL.kick;
+    if (!k) return { dx: 0, dy: 0, drot: 0 };
+    const a = DUEL.boreAngle();
+    return {
+      dx: -Math.cos(a) * k * 7,
+      dy: -Math.sin(a) * k * 7 - k * 3,
+      drot: (DUEL.gun.flip ? 1 : -1) * k * 0.34,
+    };
   },
 
   /* ================= lifecycle ================= */
@@ -146,6 +180,7 @@ const DUEL = {
     DUEL.youFall = false;
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
+    DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
     document.querySelectorAll('.mark-speech, .cop-callout').forEach(n => n.remove());
     DUEL.setPose('rest', true);
     FX.reset(); FX.ambient(true);
@@ -254,6 +289,12 @@ const DUEL = {
     if (DUEL.exprTimer > 0 && --DUEL.exprTimer === 0) DUEL.exprName = DUEL.exprBase();
     if (DUEL.corpse && DUEL.pool < 26) DUEL.pool += 0.12;
     if (DUEL.muzzle && ++DUEL.muzzle.t > 7) DUEL.muzzle = null;
+    if (DUEL.cylT > 0) { DUEL.cylT = Math.max(0, DUEL.cylT - 0.14); DUEL.cyl += 0.14; }
+    if (DUEL.kick > 0.002) DUEL.kick *= 0.79; else DUEL.kick = 0;
+    DUEL.smoke = DUEL.smoke.filter(w => {
+      w.t++; w.x += w.vx; w.y += w.vy; w.vy *= 0.97; w.r += 0.14;
+      return w.t < w.life;
+    });
     if (DUEL.ghost) { DUEL.ghost.y -= 0.55; DUEL.ghost.t++; if (DUEL.ghost.t > 150) DUEL.ghost = null; }
     DUEL.parts = DUEL.parts.filter(p => (p.t++, p.x += p.vx, p.y += p.vy, p.vy += p.g, p.t < p.life));
     DUEL.casings = DUEL.casings.filter(c => {
@@ -446,18 +487,8 @@ const DUEL = {
       x.restore();
     });
 
-    /* --- muzzle flash --- */
-    if (DUEL.muzzle) {
-      const m = DUEL.muzzle;
-      const r = m.t < 3 ? 8 + m.t * 3 : 18 - m.t;
-      x.save(); x.translate(m.x, m.y);
-      for (let i = 0; i < 7; i++) {
-        const a = m.ang + (i / 7) * Math.PI * 2 + m.t * 0.3;
-        PIX.rect(x, Math.cos(a) * r - 1, Math.sin(a) * r - 1, 3, 3, i % 2 ? P.Y : P.O);
-      }
-      PIX.disc(x, 0, 0, Math.max(2, r * 0.45), P.Y);
-      x.restore();
-    }
+    /* --- powder smoke, off the muzzle and out of the cylinder gap --- */
+    DUEL.drawSmoke(x);
 
     /* --- particles --- */
     DUEL.parts.forEach(p => {
@@ -473,6 +504,8 @@ const DUEL = {
     /* --- you: first person — your hands, your sleeve, your iron --- */
     const myPose = DUEL.drawYou(x);
     DUEL.drawYourIron(x, myPose);
+    /* the flash is light: it goes over the iron and your hand both */
+    DUEL.drawMuzzle(x, myPose ? myPose.bob : 0);
 
     /* --- the lamp itself --- */
     const lampY = -DUEL.OY;   // hangs from the real top of the screen
@@ -757,12 +790,13 @@ const DUEL = {
     if (!pose || DUEL.corpse) return;
     const P = PIX.PAL;
     const g = DUEL.gun, f = DUEL.fist;
-    const gm = PIX.make(GUN_SPRITES[E.gun().id], 1);
+    const gm = DUEL.ironArt();
+    const kk = DUEL.kickOff();
     x.save();
     x.translate(0, pose.mine ? pose.bob : 0);
     x.save();
-    x.translate(Math.round(g.x), Math.round(g.y));
-    x.rotate(g.rot);
+    x.translate(Math.round(g.x + kk.dx), Math.round(g.y + kk.dy));
+    x.rotate(g.rot + kk.drot);
     if (g.flip) x.scale(-1, 1);
     x.drawImage(gm, -gm.width / 2 * g.sc, -gm.height / 2 * g.sc, gm.width * g.sc, gm.height * g.sc);
     if (G.duel && G.duel.sawArmed) {
@@ -773,27 +807,79 @@ const DUEL = {
     x.restore();
     /* two digits closed over the grip, so the iron is held and not glued on */
     if (pose.mine) {
-      const c = SPR.povInk ? null : null;
       const d = DUEL.myDef(), skin = P[d.skin[0]], sh = P[d.skin[1]];
+      const fx = Math.round(f.x + kk.dx), fy0 = Math.round(f.y + kk.dy);
       for (let i = 0; i < 2; i++) {
-        const gy = Math.round(f.y) - 5 + i * 7;
-        PIX.rect(x, Math.round(f.x) - 5, gy, 13, 7, P.K);
-        PIX.rect(x, Math.round(f.x) - 4, gy + 1, 11, 5, i ? sh : skin);
-        PIX.rect(x, Math.round(f.x) - 4, gy + 4, 11, 1, P.K);
+        const gy = fy0 - 5 + i * 7;
+        PIX.rect(x, fx - 5, gy, 13, 7, P.K);
+        PIX.rect(x, fx - 4, gy + 1, 11, 5, i ? sh : skin);
+        PIX.rect(x, fx - 4, gy + 4, 11, 1, P.K);
       }
     }
     x.restore();
     /* pointed at the lens: a bore seen end-on, staring back at you */
     if (pose.aimSelf) {
       const t = DUEL.muzzleTip();
-      const ty = t.y + pose.bob;
-      PIX.disc(x, t.x, ty, 9, P.K);
-      PIX.disc(x, t.x, ty, 7, P.t);
-      PIX.disc(x, t.x, ty, 5, P.K);
-      PIX.disc(x, t.x, ty, 3, P.Z);
-      PIX.rect(x, t.x - 6, ty - 6, 4, 1, 'rgba(255,255,255,.22)');
-      PIX.rect(x, t.x - 7, ty - 4, 2, 3, 'rgba(255,255,255,.12)');
+      const ty = t.y + pose.bob + kk.dy;
+      const tx = t.x + kk.dx;
+      PIX.disc(x, tx, ty, 10, P.K);
+      PIX.disc(x, tx, ty, 8, P.t);
+      PIX.disc(x, tx, ty, 7, P.s);
+      PIX.disc(x, tx, ty, 5, P.K);
+      PIX.disc(x, tx, ty, 3, P.Z);
+      PIX.rect(x, tx - 6, ty - 6, 4, 1, 'rgba(255,255,255,.26)');
+      PIX.rect(x, tx - 7, ty - 4, 2, 3, 'rgba(255,255,255,.14)');
     }
+  },
+
+  /* ============================================================
+     THE FLASH. Not a radial star — a revolver throws a flame
+     CONE down the bore with two short petals off the sides, and
+     it lights the felt in front of it for three frames.
+     ============================================================ */
+  drawMuzzle(x, bob) {
+    const m = DUEL.muzzle;
+    if (!m) return;
+    const P = PIX.PAL;
+    const k = Math.max(0, 1 - m.t / 7);
+    if (k <= 0) return;
+    const kk = DUEL.kickOff();
+    const mx = m.x + kk.dx, my = m.y + (bob || 0) + kk.dy;
+    const c = Math.cos(m.ang), s = Math.sin(m.ang);
+    const len = (13 + m.t * 4) * k + 5;
+
+    /* the light it throws, first, so the flame sits on top of it */
+    x.globalAlpha = 0.22 * k;
+    SPR.ellipse(x, mx + c * 14, my + s * 14 + 5, 36, 13, P.Y);
+    x.globalAlpha = 1;
+
+    /* the cone: hottest at the crown, red at the tip */
+    const bands = [[1.00, 1.2, P.r], [0.78, 2.1, P.o], [0.52, 3.4, P.O],
+                   [0.26, 4.8, P.Y], [0.00, 5.4, P.W]];
+    bands.forEach(([d, w, col]) => {
+      PIX.disc(x, mx + c * len * d, my + s * len * d, Math.max(1, w * k), col);
+    });
+    /* two petals off the cylinder gap side, while it is still bright */
+    if (m.t < 3) {
+      for (let i = -1; i <= 1; i += 2) {
+        const px = mx - s * i * 8 * k, py = my + c * i * 8 * k;
+        PIX.disc(x, px, py, 2.4 * k, P.O);
+        PIX.disc(x, (mx + px) / 2, (my + py) / 2, 3 * k, P.Y);
+      }
+    }
+  },
+
+  /* powder smoke: thick and white at first, then thin grey drifting up */
+  drawSmoke(x) {
+    const P = PIX.PAL;
+    DUEL.smoke.forEach(w => {
+      const f = 1 - w.t / w.life;
+      x.globalAlpha = f * 0.30;
+      PIX.disc(x, w.x, w.y, w.r, f > 0.55 ? P.w : P.q);
+      x.globalAlpha = f * 0.16;
+      PIX.disc(x, w.x - 1, w.y - 1, w.r * 0.55, P.W);
+    });
+    x.globalAlpha = 1;
   },
 
   /* the mark says something — a pixel bubble pinned over his head */
@@ -876,24 +962,56 @@ const DUEL = {
     DUEL.busy = true;
     DUEL.hurry = false;
     DUEL.setPose(DUEL.aim === 'foe' ? 'youFoe' : 'youSelf');
-    await DUEL.sleep(160);
-    SFX.chak();
-    await DUEL.sleep(150);
+    await DUEL.sleep(140);
+    await DUEL.cockIt();
     const ev = E.pull(DUEL.aim);
     await DUEL.playShot(ev);
     await DUEL.afterPull(ev);
   },
 
+  /* Thumb the hammer back, let the cylinder index a chamber, then let it
+     fall. Three beats, because that is how many a revolver has. */
+  async cockIt() {
+    DUEL.cocked = true;
+    DUEL.cylT = 1;
+    SFX.tone(2200, 0.025, 'square', 0.05);
+    SFX.tone(1500, 0.04, 'square', 0.06, 0.03);
+    await DUEL.sleep(190);
+    SFX.click();
+    await DUEL.sleep(110);
+    DUEL.cocked = false;                     // the hammer drops on the primer
+    await DUEL.sleep(50);
+  },
+
+  /* smoke off the muzzle and out of the cylinder gap, which is where it
+     really comes from on a revolver */
+  puffSmoke(x, y, ang, n, spread) {
+    for (let i = 0; i < n; i++) {
+      const a = ang + (Math.random() - 0.5) * (spread || 0.9);
+      const sp = 0.5 + Math.random() * 1.5;
+      DUEL.smoke.push({
+        x: x + (Math.random() - 0.5) * 3, y: y + (Math.random() - 0.5) * 3,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.22,
+        r: 1.5 + Math.random() * 2.5, t: 0, life: 44 + Math.random() * 40,
+      });
+    }
+  },
+
   async playShot(ev) {
     const tip = DUEL.muzzleTip();
+    const ang = DUEL.boreAngle();
     if (ev.live) {
       SFX.shot();
-      FX.muzzleFlash(tip.x, tip.y, DUEL.gun.rot + (DUEL.gun.flip ? Math.PI : 0));
+      DUEL.muzzle = { x: tip.x, y: tip.y, ang, t: 0, len: 1 };
+      DUEL.kick = 1;                          // the iron jumps, then comes back
+      FX.muzzleFlash(tip.x, tip.y, ang);
       FX.casing(DUEL.gun.x, DUEL.gun.y - 6, DUEL.gun.flip ? -1 : 1);
-      FX.smokeRing(tip.x, tip.y, DUEL.gun.flip ? -1 : 1);
       FX.cordite(tip.x, tip.y, 8);
+      DUEL.puffSmoke(tip.x, tip.y, ang, 9, 0.7);
+      const gap = DUEL.ironPoint(28, 9);      // the cylinder gap, top of the frame
+      DUEL.puffSmoke(gap.x, gap.y, -Math.PI / 2, 5, 1.5);
       FX.screen.shake(ev.dmg >= 2 ? 16 : 10);
-      FX.screen.flash(PIX.PAL.Y, 0.45);
+      FX.screen.flash(PIX.PAL.Y, 0.26);
       if (ev.fizzled) {
         await U.sleep(160);
         UI.stampBig('FIZZLE', PIX.PAL.N); SFX.dud();
@@ -930,6 +1048,7 @@ const DUEL = {
       }
     } else {
       SFX.dud();
+      DUEL.kick = 0.16;
       FX.cordite(tip.x, tip.y, 5);
       UI.stampBig('click', PIX.PAL.w, true);
       if (ev.by === 'opp' && ev.target === 'self') DUEL.setExpr('smug', 60);

@@ -31,6 +31,19 @@ with their tongue out), suits with lapels, cuffs and three-finger hands, and eve
 drawn right on the frog. Works on phones — the buttons grow to thumb size. Sounds are
 synthesized with WebAudio. Runs are seeded. Unlocks persist in localStorage.
 
+**Every button is an arcade button** — a socket bolted into the panel with a moulded
+cap sitting in it, a glint on the crown, and a press that drops the cap into the socket
+and takes the label down with it. None of that is CSS: `js/btn.js` paints each button's
+face as pixel art on its own canvas at whatever size it ends up, so the same button reads
+identically at 360px and 1920.
+
+The irons are built out of parts rather than drawn as flat art, which means the duel can
+**cock the hammer and index the cylinder** frame by frame. Thumb it back, watch the
+flutes scroll a chamber round, and the hammer drops: a directional flame cone off the
+crown, powder smoke out of the muzzle *and* the cylinder gap, the iron kicking straight
+back down the bore line with your fist still wrapped round it, and the case spinning out
+onto the felt.
+
 Every screen change goes behind a **rack of card backs** that sweeps shut, changes the
 world behind it, and keeps going off the other side. Sit down and the room is dark: you
 can see the mark's eyes across the felt before the lamp above the table stutters, catches,
@@ -166,6 +179,17 @@ Pay the badges after a boss and the ante closes out on its own screen:
 
 ![Ante cleared](docs/screen-ante.png)
 
+## The irons
+
+Five guns, none of them flat art. Each is assembled from parts — frame, top strap,
+cylinder, ejector shroud, rib, front sight, hammer, guard, checkered walnut — so the
+scene can pose one, cock it, and turn the cylinder without needing a sprite sheet.
+Left to right below: hammer down, hammer back, one chamber round, two.
+
+![The irons](docs/screen-irons.png)
+
+![The hammer drops](docs/screen-shot.png)
+
 ## Trinkets & the iron
 
 **32 trinket cards** (5 slots, four rarities) loot out of pockets — passives like BAD
@@ -200,10 +224,11 @@ js/pixfont.js     hand-drawn 5×7 typeface (every numeral in the game)
 js/pix.js         pixel engine: palette, sprite compiler, draw helpers
 js/data.js        content: traits, trinkets, guns, the mob, blinds, loot tuning
 js/meta.js        persistence: stats, unlocks, learned tells (localStorage)
-js/sprites.js     ALL the art: frog rig v2 (expressions, tells, bodies), cards, guns
+js/sprites.js     ALL the art: frog rig v2, the iron rig (hammer + cylinder), cards
 js/bg.js          the swirling paint background
 js/engine.js      pure rules: the duel, the mark's brain, the loot, the heat (no DOM)
 js/ui.js          screens: title, duel frame, collection, help, keys
+js/btn.js         the arcade buttons: sockets, moulded caps, pixel-art faces
 js/fx.js          the effects engine: smoke, gore, chip arcs, slow-mo, ambient dust
 js/duel.js        the drawn table scene: expressions, blood, the fall, the corpse
 js/cine.js        the wipe, the sit-down, the boss cut-in, the ante interstitial

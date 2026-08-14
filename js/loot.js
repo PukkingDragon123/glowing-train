@@ -76,7 +76,7 @@ const LOOT = {
       b.appendChild(lab);
       const val = U.el('span', 'pocket-val');
       if (p.taken) {
-        if (p.gun) val.appendChild(PIX.el(GUN_SPRITES[GUNS[G.gunIdx].id], 2));
+        if (p.gun) val.appendChild(SPR.gunEl(GUNS[G.gunIdx].id, 2));
         else if (p.card) val.appendChild(SPR.trinketCardEl(p.card, 2));
         else if (p.item) val.appendChild(SPR.itemCardEl(p.item, 2));
         if (p.lint && !p.card) val.appendChild(UI.txt('LINT', { scale: 3, color: PIX.PAL.q }));
@@ -112,6 +112,7 @@ const LOOT = {
     /* bribe button */
     const bribe = document.getElementById('btn-bribe');
     bribe.innerHTML = '';
+    BTN.paint(bribe);                      // innerHTML just evicted its face
     const cost = E.bribeCost();
     bribe.appendChild(UI.txt('BRIBE', { scale: 3, shadow: null }));
     bribe.appendChild(UI.txt(cost === 0 ? 'FREE' : String(cost),

@@ -299,7 +299,7 @@ const UI = {
     const btns = U.el('div', 'blind-btns');
     const sit = U.el('button', 'pixbtn gold primary big-deal');
     sit.id = 'btn-sit';
-    sit.appendChild(PIX.el(GUN_SPRITES[E.gun().id], 3));
+    sit.appendChild(SPR.gunEl(E.gun().id, 2));
     sit.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
     const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
     sit.appendChild(kh);
@@ -632,7 +632,7 @@ const UI = {
     const g = E.gun();
     const spr = U.el('span', 'has-tip gun-spr');
     spr.dataset.tipGun = g.id;
-    spr.appendChild(PIX.el(GUN_SPRITES[g.id], 4));
+    spr.appendChild(SPR.gunEl(g.id, 2));
     p.appendChild(spr);
     const mk = (kind, key, label, need) => {
       if (G.gunIdx < need) return;
@@ -872,7 +872,7 @@ const UI = {
       const owned = meta.gunsOwned[g.id];
       const w = U.el('span', 'has-tip coll-gun');
       w.dataset.tipGun = g.id;
-      const el = PIX.el(GUN_SPRITES[g.id], 4);
+      const el = SPR.gunEl(g.id, 2);
       if (!owned) el.style.filter = 'brightness(0) opacity(.45)';
       w.appendChild(el);
       gg.appendChild(w);

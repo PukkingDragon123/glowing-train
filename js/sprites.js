@@ -1478,6 +1478,19 @@ const FROG_DEFS = {
                costume: 'cop', flatcap: true, warts: true },
 };
 
+/* a stepped rounded rect — an ellipse reads as a blob at gun scale, and a
+   plain rect reads as a brick; the irons and the buttons both want this */
+SPR.rrect = function (ctx, x0, y0, w, h, r, col) {
+  ctx.fillStyle = col;
+  for (let y = 0; y < h; y++) {
+    const d = Math.min(y, h - 1 - y);
+    let inset = 0;
+    if (d < r) inset = r - Math.round(Math.sqrt(Math.max(0, r * r - (r - d) * (r - d))));
+    const ww = w - inset * 2;
+    if (ww > 0) ctx.fillRect(Math.round(x0 + inset), Math.round(y0 + y), Math.round(ww), 1);
+  }
+};
+
 SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
   ctx.fillStyle = col;
   for (let y = -ry; y <= ry; y++) {
@@ -2692,96 +2705,315 @@ SPR.frogEl = function (id, scale, cls, expr) {
 };
 
 /* ============================================================
-   THE GUNS — side views, pointing right.
+   THE IRONS.
+
+   Built out of parts rather than drawn as fixed art, because the
+   duel needs to cock the hammer and index the cylinder frame by
+   frame — a revolver whose cylinder never turns isn't a revolver.
+   Every gun is a side view pointing RIGHT and reports its own
+   grip and muzzle anchors, so duel.js never guesses where your
+   fist closes or where the flash comes out.
    ============================================================ */
 
-PIX.def('gun_snub', `
-..............................
-......KKKKKKKKKKKKK...........
-....KKSSSSSSSSSSSSSKK.........
-...KSSMMSSSSSSSSSSSSSKKKK.....
-..KSsKKKKKKKsSSSSSSSSSSSK.....
-..KSsKtttttKsSSMMSSKKKKK......
-..KSsKtOtOtKsSSSSSK...........
-..KSsKtttttKsSSSSK............
-..KSsKKKKKKKsSSSK.............
-...KSSSSSSSSSSSK..............
-....KKKKbbKKKKK...............
-.......KbBBbK.................
-.......KbBbbK.................
-........KbbbK.................
-........KbbK..................
-........KKKK..................`);
+const GUN_FINISH = {
+  /* bone as a highlight blows out at gun scale — the top of a barrel is
+     bright steel, not white paint */
+  steel:  { hi: 'M', lit: 'S', mid: 's', dk: 't', deep: 'T' },
+  blued:  { hi: 'S', lit: 's', mid: 't', dk: 'T', deep: 'k' },
+  gold:   { hi: 'Y', lit: 'G', mid: 'g', dk: 'h', deep: 'H' },
+};
 
-PIX.def('gun_colt', `
-..........................................
-......KKKKKKKKKKKKKKKKKKKKKKKKKKKKK.......
-....KKSSSSSSSSSSSSSSSSSSSSSSSSSSSSSKK.....
-...KSSMMSSSSSSSSSSSSSSSSSSSSSSMMSSSSK.....
-..KSsKKKKKKKsSSSSSSSSSSSSSSSSSSSSSSSK.....
-..KSsKtttttKsSSMMSSKKKKKKKKKKKKKKKK.......
-..KSsKtOtOtKsSSSSSK.......................
-..KSsKtttttKsSSSSK........................
-..KSsKKKKKKKsSSSK.........................
-...KSSSSSSSSSSSK..........................
-....KKKKbbKKKKK...........................
-.......KbBBbK.............................
-.......KbBbbK.............................
-........KbbbK.............................
-........KbbK..............................
-........KKKK..............................`);
+const GUN_RIGS = {
+  snub:   { kind: 'revolver', barrel: 13, finish: 'steel', wood: 'b', chambers: 5, rib: false },
+  colt:   { kind: 'revolver', barrel: 31, finish: 'blued', wood: 'u', chambers: 6, rib: true },
+  sawn:   { kind: 'sawn', barrel: 30, finish: 'blued', wood: 'b' },
+  tommy:  { kind: 'smg', barrel: 30, finish: 'blued', wood: 'u' },
+  golden: { kind: 'revolver', barrel: 27, finish: 'gold', wood: 'b', chambers: 6, rib: true, engrave: true },
+};
 
-PIX.def('gun_sawn', `
-....................................
-..KKKKKKKKKKKKKKKKKKKKKKKKK.........
-.KSSSSSSSSSSSSSSSSSSSSSSSSSK........
-.KsKKKKKKKKKKKKKKKKKKKKKKKsK........
-.KSSMMSSSSSSSSSSSSSSSSSSSSSK........
-.KsKKKKKKKKKKKKKKKKKKKKKKKsK........
-.KSSSSSSSSSSSSSSSSSSSSSSSSSK........
-..KKKKbbbbbbKKKKKKKKKKKKKKK.........
-....KbbBBBBbbbK.....................
-.....KbbBBBbbbK.....................
-......KKbbBbbK......................
-........KKbbbK......................
-..........KKKK......................`);
+/* the metal on a round part: light on top, dark underneath, so a barrel
+   reads as a tube and a cylinder reads as a drum */
+function gunRound(ctx, x, y, w, h, F) {
+  const P = PIX.PAL;
+  const band = Math.max(1, h >> 2);
+  PIX.rect(ctx, x, y, w, band, P[F.lit]);
+  PIX.rect(ctx, x, y, w, 1, P[F.hi]);
+  PIX.rect(ctx, x, y + h - band, w, band, P[F.dk]);
+  PIX.rect(ctx, x, y + h - 1, w, 1, P[F.deep]);
+}
 
-PIX.def('gun_tommy', `
-..............................................
-........KK....................................
-.......KssK...KKKKKKKKKKKKKKKKKKKKKKKKK.......
-......KKssKKKSSSSSSSSSSSSSSSSSSSSSSSSSSK......
-.....KSSSSSSSSSSMMSSSSSSSSSSSSSSSSSSMMSK......
-....KSSSSSSSSSSSSSSSSSSSSSSSSSSSKKKKKKK.......
-....KSKKKKKKKKbbbbKKKKKKbbbKKKKK..............
-....KSK.....KbBBbbbK...KbBbbK.................
-...KKKK....KbbBBbbK....KbbbbK.................
-...KttK....KbbbbbK.....KbbbK..................
-...KttttK..KKKKKK......KKKK...................
-....KKttttK...................................
-......KKKKttK.................................
-.........KKKK.................................`);
+/* ONE silhouette, not a pile of boxes.
 
-PIX.def('gun_golden', `
-..........................................
-......KKKKKKKKKKKKKKKKKKKKKKKKKKKKK.......
-....KKGGGGGGGGGGGGGGGGGGGGGGGGGGGGGKK.....
-...KGGYYGGGGGGGGGGGGGGGGGGGGGGYYGGGGK.....
-..KGgKKKKKKKgGGGGGGGGGGGGGGGGGGGGGGGK.....
-..KGgKhhhhhKgGGYYGGKKKKKKKKKKKKKKKK.......
-..KGgKhYhYhKgGGGGGK.......................
-..KGgKhhhhhKgGGGGK........................
-..KGgKKKKKKKgGGGK.........................
-...KGGGGGGGGGGGK..........................
-....KKKKhhKKKKK...........................
-.......KhGGhK.............................
-.......KhGhhK.............................
-........KhhhK.............................
-........KhhK..............................
-........KKKK..............................`);
+   Every metal part goes down twice: an ink pass grown 1px in every
+   direction, then a fill pass. Where two parts touch, the second one's
+   fill buries the first one's outline, so the frame, barrel, cylinder and
+   trigger guard read as a single machined object instead of separate
+   rectangles with seams between them. */
+function gunPlate(ctx, parts, fill) {
+  const INK = PIX.PAL.K;
+  parts.forEach(p => SPR.rrect(ctx, p[0] - 1, p[1] - 1, p[2] + 2, p[3] + 2, (p[4] || 0) + 1, INK));
+  parts.forEach(p => SPR.rrect(ctx, p[0], p[1], p[2], p[3], p[4] || 0, fill));
+}
 
-const GUN_SPRITES = { snub: 'gun_snub', colt: 'gun_colt', sawn: 'gun_sawn',
-  tommy: 'gun_tommy', golden: 'gun_golden' };
+/* a walnut grip panel: rows leaning back and down, checkered in the middle */
+function gunGrip(ctx, rig, x0, y0, len, lean) {
+  const P = PIX.PAL, INK = P.K;
+  const wood = P[rig.wood] || P.b;
+  const woodD = P[DARKER[rig.wood] || 'u'] || P.u;
+  const woodL = P[LIGHTER[rig.wood] || 'B'] || P.B;
+  const span = [];
+  for (let i = 0; i < len; i++) {
+    const t = i / (len - 1);
+    const round = t > 0.82 ? Math.round((t - 0.82) * 26) : 0;
+    span.push([Math.round(x0 - t * lean) + round, Math.round(x0 + 10 - t * lean * 0.3) - round]);
+  }
+  span.forEach(([lx, rx], i) => PIX.rect(ctx, lx - 1, y0 + i - 1, rx - lx + 2, 3, INK));
+  span.forEach(([lx, rx], i) => {
+    PIX.rect(ctx, lx, y0 + i, rx - lx, 1, wood);
+    PIX.rect(ctx, lx, y0 + i, 2, 1, woodL);
+    PIX.rect(ctx, rx - 2, y0 + i, 2, 1, woodD);
+    if (i > 2 && i < len - 4) {
+      for (let cx = lx + 3; cx < rx - 3; cx += 2) {
+        if (((cx + i) & 3) === 0) PIX.rect(ctx, cx, y0 + i, 1, 1, woodD);
+      }
+    }
+  });
+  /* the medallion every mob revolver has screwed into the panel */
+  const mid = span[(len * 0.42) | 0];
+  const mx = Math.round((mid[0] + mid[1]) / 2), my = y0 + ((len * 0.42) | 0);
+  PIX.disc(ctx, mx, my, 3, INK);
+  PIX.disc(ctx, mx, my, 2, P.g);
+  PIX.rect(ctx, mx - 1, my - 1, 1, 1, P.G);
+}
+
+/* knock a rounded hole through whatever has been drawn: the inside of a
+   trigger guard is air, and air has to be cleared, not painted */
+function gunPunch(ctx, x, y, w, h, r) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  SPR.rrect(ctx, x, y, w, h, r, '#000');
+  ctx.restore();
+}
+
+/* ---- the revolver: snub, long colt, the golden gun ---- */
+function gunRevolver(ctx, rig, F, cocked, cyl) {
+  const P = PIX.PAL, INK = P.K, mid = P[F.mid];
+  const CX = 13, CW = 15, CT = 8, CH = 18;          // the cylinder
+  const BX = CX + CW;                               // barrel meets the frame here
+  const MX = BX + rig.barrel;                       // the muzzle
+  const SY = rig.rib ? 4 : 7;                       // front sight sits on the rib
+
+  /* --- the whole machined body in one silhouette --- */
+  const parts = [
+    [7, 6, BX - 5, 5, 1],                           // frame + top strap
+    [BX - 2, 11, MX - BX + 2, 8, 1],                // barrel
+    [BX + 2, 19, MX - BX - 5, 4, 1],                // ejector shroud
+    [MX - 5, SY, 4, 5, 1],                          // front sight blade
+    [CX, CT, CW, CH, 4],                            // cylinder
+    [4, 6, 11, 22, 3],                              // standing breech / sideplate
+    [12, 25, 18, 12, 5],                            // trigger guard bow
+    [11, 22, 12, 6, 1],                             // frame bottom into the guard
+  ];
+  if (rig.rib) parts.push([BX - 2, 8, MX - BX + 2, 3, 1]);
+  if (cocked) { parts.push([0, 3, 9, 5, 1]); parts.push([5, 5, 6, 6, 1]); }
+  else parts.push([4, 2, 9, 6, 1]);
+  gunPlate(ctx, parts, mid);
+  gunPunch(ctx, 15, 27, 12, 7, 3);                  // inside of the guard
+
+  /* --- shading, part by part, over the flat plate --- */
+  gunRound(ctx, BX - 2, 11, MX - BX + 2, 8, F);
+  PIX.rect(ctx, MX - 3, 11, 3, 8, P[F.dk]);         // the crown
+  PIX.rect(ctx, MX - 1, 11, 1, 8, P[F.deep]);
+  PIX.rect(ctx, MX - 3, 11, 3, 1, P[F.lit]);
+  gunRound(ctx, BX + 2, 19, MX - BX - 5, 4, F);
+  gunRound(ctx, 7, 6, BX - 5, 5, F);
+  if (rig.rib) {
+    gunRound(ctx, BX - 2, 8, MX - BX + 2, 3, F);
+    for (let x = BX + 1; x < MX - 4; x += 3) PIX.rect(ctx, x, 9, 1, 1, P[F.deep]);
+  }
+  PIX.rect(ctx, MX - 4, SY, 2, 4, P[F.lit]);
+  PIX.rect(ctx, 10, 7, 4, 2, INK);                  // the rear sight notch
+  PIX.rect(ctx, 11, 7, 2, 1, P[F.deep]);
+
+  /* the cylinder. Its flutes scroll UP as it indexes: seen side-on, a
+     cylinder turning about the bore axis moves its grooves vertically. */
+  PIX.rect(ctx, CX + 2, CT + 1, CW - 4, 2, P[F.lit]);
+  PIX.rect(ctx, CX + 3, CT + 1, CW - 6, 1, P[F.hi]);
+  PIX.rect(ctx, CX + 2, CT + CH - 3, CW - 4, 2, P[F.dk]);
+  PIX.rect(ctx, CX + 3, CT + CH - 2, CW - 6, 1, P[F.deep]);
+  const n = rig.chambers || 6, per = 6;
+  const off = Math.round(((cyl || 0) % n) / n * per);
+  for (let gy = CT + 3 - per + off; gy < CT + CH - 4; gy++) {
+    if (gy < CT + 3 || (gy - CT - 3 + per - off) % per !== 0) continue;
+    PIX.rect(ctx, CX + 2, gy, CW - 4, 1, P[F.dk]);
+    PIX.rect(ctx, CX + 2, gy + 1, CW - 4, 1, P[F.deep]);
+  }
+  /* its own hard edges, or the drum disappears into the frame behind it */
+  PIX.rect(ctx, CX + CW - 1, CT + 3, 1, CH - 6, INK);
+  PIX.rect(ctx, CX + CW - 3, CT + 3, 2, CH - 6, P[F.lit]);   // front face of the drum
+  PIX.rect(ctx, CX, CT + 3, 1, CH - 6, INK);
+  PIX.rect(ctx, CX + 1, CT + 3, 1, CH - 6, P[F.dk]);
+  if (rig.engrave) for (let gy = CT + 4; gy < CT + CH - 4; gy += 5) {
+    PIX.rect(ctx, CX + 5, gy, 5, 1, P[F.hi]);
+  }
+
+  /* the breech, its screw, and the hammer's checkered spur */
+  PIX.rect(ctx, 5, 7, 9, 2, P[F.lit]);
+  PIX.rect(ctx, 5, 24, 9, 3, P[F.dk]);
+  PIX.disc(ctx, 9, 17, 3, P[F.dk]);
+  PIX.rect(ctx, 8, 17, 3, 1, P[F.deep]);
+  if (cocked) {
+    PIX.rect(ctx, 1, 4, 7, 1, P[F.lit]);
+    for (let x = 1; x < 8; x += 2) PIX.rect(ctx, x, 4, 1, 1, P[F.deep]);
+    PIX.rect(ctx, 6, 6, 5, 4, P[F.dk]);
+  } else {
+    PIX.rect(ctx, 5, 3, 7, 1, P[F.lit]);
+    for (let x = 5; x < 12; x += 2) PIX.rect(ctx, x, 3, 1, 1, P[F.deep]);
+    PIX.rect(ctx, 5, 6, 7, 2, P[F.dk]);
+  }
+
+  /* trigger, hanging in the cleared bow */
+  PIX.rect(ctx, 18, 26, 4, 9, INK);
+  PIX.rect(ctx, 19, 27, 2, 7, P[F.lit]);
+  PIX.rect(ctx, 19, 32, 2, 2, P[F.dk]);
+
+  /* --- the grip, over the frame's tang so there is no seam --- */
+  gunGrip(ctx, rig, 6, 24, 17, 3);
+
+  return { grip: [11, 33], muzzle: [MX, 15], W: MX + 3, H: 44 };
+}
+
+/* ---- the sawn-off: two tubes, a splinter forend, no stock left ---- */
+function gunSawn(ctx, rig, F) {
+  const P = PIX.PAL, INK = P.K, mid = P[F.mid];
+  const BX = 15, MX = BX + rig.barrel;
+  gunPlate(ctx, [
+    [BX - 2, 8, MX - BX + 2, 6, 1],                 // over/under, top tube
+    [BX - 2, 15, MX - BX + 2, 6, 1],                // bottom tube
+    [4, 7, 13, 19, 2],                              // receiver
+    [5, 3, 8, 5, 1],                                // top lever
+    [6, 24, 16, 11, 5],                             // guard
+  ], mid);
+  gunPunch(ctx, 9, 26, 10, 7, 3);
+  gunRound(ctx, BX - 2, 8, MX - BX + 2, 6, F);
+  gunRound(ctx, BX - 2, 15, MX - BX + 2, 6, F);
+  /* the lower tube lives in the upper one's shadow, and there is a hard
+     black seam between them — otherwise it reads as one fat barrel */
+  PIX.rect(ctx, BX - 2, 15, MX - BX + 2, 4, P[F.dk]);
+  PIX.rect(ctx, BX - 2, 15, MX - BX + 2, 1, P[F.mid]);
+  PIX.rect(ctx, BX - 2, 20, MX - BX + 2, 1, P[F.deep]);
+  PIX.rect(ctx, BX - 2, 14, MX - BX + 2, 1, INK);
+  PIX.rect(ctx, MX - 3, 8, 3, 13, P[F.dk]);         // the muzzles
+  PIX.rect(ctx, MX - 1, 8, 1, 13, P[F.deep]);
+  PIX.rect(ctx, MX - 3, 8, 3, 1, P[F.lit]);
+  PIX.rect(ctx, MX - 6, 5, 3, 4, INK);              // the bead, on a stalk
+  PIX.rect(ctx, MX - 5, 5, 1, 3, P[F.hi]);
+  PIX.rect(ctx, 5, 8, 11, 2, P[F.lit]);
+  PIX.rect(ctx, 5, 22, 11, 3, P[F.dk]);
+  PIX.rect(ctx, 6, 4, 6, 2, P[F.lit]);
+  PIX.disc(ctx, 15, 21, 3, P[F.dk]);                // the hinge pin
+  /* the splinter forend clamped under the tubes */
+  const wood = P[rig.wood] || P.b, woodD = P[DARKER[rig.wood] || 'u'];
+  for (let i = 0; i < 6; i++) {
+    const w = 22 - i * 3;
+    PIX.rect(ctx, BX + 5, 21 + i, w + 2, 1, INK);
+    PIX.rect(ctx, BX + 6, 21 + i, w, 1, i > 3 ? woodD : wood);
+    PIX.rect(ctx, BX + 6, 21 + i, 2, 1, P[LIGHTER[rig.wood] || 'B']);
+  }
+  PIX.rect(ctx, 12, 25, 4, 8, INK);
+  PIX.rect(ctx, 13, 26, 2, 6, P[F.lit]);
+  gunGrip(ctx, rig, 1, 23, 15, 4);
+  return { grip: [6, 31], muzzle: [MX, 14], W: MX + 3, H: 40 };
+}
+
+/* ---- the tommy gun: receiver, drum, foregrip, cut-down stock ---- */
+function gunSmg(ctx, rig, F) {
+  const P = PIX.PAL, INK = P.K, mid = P[F.mid];
+  const BX = 24, MX = BX + rig.barrel;
+  gunPlate(ctx, [
+    [BX - 3, 10, MX - BX - 5, 7, 1],                // finned barrel
+    [MX - 9, 8, 9, 11, 2],                          // Cutts compensator
+    [5, 9, 21, 13, 2],                              // receiver
+    [8, 5, 5, 5, 1],                                // rear sight
+    [16, 20, 10, 4, 1],                             // magazine well
+    [7, 22, 14, 10, 4],                             // guard
+  ], mid);
+  gunPunch(ctx, 10, 24, 8, 6, 3);
+  gunRound(ctx, BX - 3, 10, MX - BX - 5, 7, F);
+  for (let x = BX; x < MX - 11; x += 3) PIX.rect(ctx, x, 11, 1, 5, P[F.deep]);
+  gunRound(ctx, MX - 9, 8, 9, 11, F);
+  for (let y = 10; y < 18; y += 2) PIX.rect(ctx, MX - 8, y, 7, 1, P[F.deep]);
+  PIX.rect(ctx, 6, 10, 19, 2, P[F.lit]);
+  PIX.rect(ctx, 6, 19, 19, 3, P[F.dk]);
+  PIX.rect(ctx, 9, 6, 3, 3, P[F.deep]);
+  PIX.rect(ctx, 21, 12, 4, 4, P[F.deep]);           // ejection port
+  /* the drum, under the well */
+  PIX.disc(ctx, 21, 30, 11, INK);
+  PIX.disc(ctx, 21, 30, 10, P[F.mid]);
+  PIX.disc(ctx, 21, 29, 9, P[F.lit]);
+  PIX.disc(ctx, 21, 30, 6, P[F.dk]);
+  PIX.disc(ctx, 21, 30, 3, P[F.lit]);
+  PIX.disc(ctx, 21, 30, 1, P[F.deep]);
+  for (let a = 0; a < 8; a++) {
+    const ang = a / 8 * Math.PI * 2;
+    PIX.rect(ctx, 21 + Math.round(Math.cos(ang) * 8) - 1,
+      30 + Math.round(Math.sin(ang) * 8) - 1, 2, 2, P[F.deep]);
+  }
+  /* foregrip out front, cut-down stock behind */
+  const wood = P[rig.wood] || P.u, woodL = P[LIGHTER[rig.wood] || 'B'];
+  /* the vertical foregrip, out under the barrel where a hand goes */
+  const FGX = MX - 17;
+  for (let i = 0; i < 12; i++) {
+    const w = i < 2 ? 9 : i > 9 ? 9 : 7;
+    PIX.rect(ctx, FGX - (w >> 1) - 1, 18 + i, w + 2, 1, INK);
+    PIX.rect(ctx, FGX - (w >> 1), 18 + i, w, 1, wood);
+    PIX.rect(ctx, FGX - (w >> 1), 18 + i, 2, 1, woodL);
+    if (i > 2 && i < 9 && (i & 1)) PIX.rect(ctx, FGX - 1, 18 + i, 3, 1, P[DARKER[rig.wood] || 'U']);
+  }
+  /* the stock, sawn short but still a stock */
+  for (let i = 0; i < 15; i++) {
+    const w = 11 - ((i / 3) | 0);
+    PIX.rect(ctx, 0, 16 + i, w + 1, 1, INK);
+    PIX.rect(ctx, 0, 16 + i, w, 1, wood);
+    PIX.rect(ctx, 0, 16 + i, 2, 1, woodL);
+    PIX.rect(ctx, w - 3, 16 + i, 2, 1, P[DARKER[rig.wood] || 'U']);
+  }
+  PIX.rect(ctx, 12, 23, 4, 8, INK);
+  PIX.rect(ctx, 13, 24, 2, 6, P[F.lit]);
+  return { grip: [13, 28], muzzle: [MX, 13], W: MX + 3, H: 44 };
+}
+
+/* build (and cache) one iron. cocked/cyl only matter for revolvers. */
+SPR.gunMaster = function (id, cocked, cyl) {
+  const rig = GUN_RIGS[id] || GUN_RIGS.snub;
+  const key = 'gun:' + id + ':' + (cocked ? 1 : 0) + ':' + (cyl || 0);
+  return SPR.cached(key, () => {
+    const F = GUN_FINISH[rig.finish] || GUN_FINISH.steel;
+    /* build into a generous scratch canvas, then crop to what it reported */
+    const scratch = document.createElement('canvas');
+    scratch.width = 140; scratch.height = 50;
+    const sctx = scratch.getContext('2d');
+    sctx.imageSmoothingEnabled = false;
+    const info = rig.kind === 'sawn' ? gunSawn(sctx, rig, F)
+      : rig.kind === 'smg' ? gunSmg(sctx, rig, F)
+        : gunRevolver(sctx, rig, F, cocked, cyl);
+    const cv = document.createElement('canvas');
+    cv.width = info.W; cv.height = info.H;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(scratch, 0, 0);
+    cv.grip = info.grip;
+    cv.muzzle = info.muzzle;
+    return cv;
+  });
+};
+
+/* the resting sprite, for menus and anything that doesn't animate */
+SPR.gunSprite = function (id) { return SPR.gunMaster(id, false, 0); };
+SPR.gunEl = function (id, scale, cls) { return SPR.clone(SPR.gunMaster(id, false, 0), scale, cls); };
+
+const GUN_SPRITES = { snub: 'snub', colt: 'colt', sawn: 'sawn',
+  tommy: 'tommy', golden: 'golden' };
 
 /* padlock for locked stations */
 PIX.def('ic_lock', `

@@ -789,8 +789,9 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .fire-btn:not(:disabled) { box-shadow: 0 var(--depth) 0 var(--btn-deep), inset 0 2px 0 rgba(255, 255, 255, .12), 0 0 22px rgba(209, 59, 69, .3); }
 
 /* ---- the iron ---- */
-#gun-panel { display: flex; align-items: center; gap: var(--gap-sm); min-width: 170px; justify-content: flex-end; pointer-events: auto; }
+#gun-panel { display: flex; align-items: center; gap: var(--gap-sm); min-width: 0; justify-content: flex-end; pointer-events: auto; }
 .gun-spr { display: inline-flex; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .4)); }
+.gun-spr canvas { max-width: 132px; height: auto; }
 .gun-act { padding: 10px 12px; min-width: var(--hit); min-height: var(--hit); }
 
 /* ============================================================
@@ -952,13 +953,14 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 /* the two decisions stay pinned to the bottom of the panel even when the
    pocket list has to scroll — WALK OUT must never fall below the fold */
 #loot-actions {
-  display: flex; gap: var(--gap-sm); justify-content: space-between;
+  display: flex; flex-direction: column; gap: var(--gap-sm);
   position: sticky; bottom: calc(-1 * var(--gap-sm)); z-index: 2;
   margin: 2px calc(-1 * var(--gap-sm)) calc(-1 * var(--gap-sm));
   padding: 10px var(--gap-sm) var(--gap-sm);
   background: linear-gradient(180deg, rgba(10, 31, 22, 0), rgba(10, 31, 22, .96) 34%);
 }
-#loot-actions .pixbtn { flex: 1; min-height: var(--hit); }
+#loot-actions .pixbtn { width: 100%; }
+#loot-actions .pixbtn.pxb { padding: 10px 16px 17px; min-height: 52px; }
 
 #card-swap {
   display: flex; flex-direction: column; gap: var(--gap-sm); padding: var(--gap-sm);
@@ -1493,7 +1495,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 .blind-row { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
 .blind-card {
-  flex: 0 0 auto;
+  flex: 0 0 auto; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; gap: 8px; justify-content: center;
   background: var(--felt-panel);
   border: 3px solid var(--line); border-radius: 16px;
@@ -1570,8 +1572,13 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .ri-foot b { color: var(--gold-hi); }
 
 @media (max-width: 860px), (pointer: coarse) and (max-width: 1100px) {
-  .blind-row { gap: 8px; }
-  .blind-card { min-width: 0; flex: 1 1 30%; padding: 10px 8px; }
+  .blind-row { gap: 8px; align-items: stretch; }
+  .blind-card { min-width: 0; flex: 0 1 auto; padding: 10px 8px; }
+  .blind-card.now { flex: 1 1 auto; }
+  /* the chairs you are not sitting in shrink to a face-down card and a
+     purse — their names used to spill straight across the current one */
+  .blind-card:not(.now) { max-width: 96px; }
+  .blind-card:not(.now) .bc-tag, .blind-card:not(.now) .bc-purse canvas:first-child { display: none; }
   .blind-card:not(.now) .bc-art { min-height: 54px; }
   .blind-card:not(.now) .bc-art canvas { width: 44px; height: auto; }
   .ri-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1729,4 +1736,63 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   .boss-slug, .ante-chip, .drift-card { animation: none !important; }
   .ante-chip { display: none; }
   #cine-amb { display: none !important; }
+}
+
+/* ============================================================
+   20  ARCADE BUTTONS
+   js/btn.js paints the face of every .pixbtn as pixel art on its
+   own canvas, so everything CSS used to do here — gradient, radius,
+   border, depth shadow — has to get out of the way. The element
+   keeps only its box and its label; the button itself is drawn.
+   ============================================================ */
+
+.pixbtn.pxb {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px 24px 22px;
+  min-height: 60px;
+  transition: filter .1s;
+}
+.pixbtn.pxb > canvas.btn-face {
+  position: absolute; left: 0; top: 0; z-index: 0;
+  pointer-events: none;
+  image-rendering: pixelated;
+  /* the panel rule that lets pixel words shrink must not squash the face */
+  max-width: none; min-width: 0;
+}
+.pixbtn.pxb > *:not(.btn-face):not(.key-hint) { position: relative; z-index: 1; }
+/* the cap sinks and the label rides down with it */
+.pixbtn.pxb.pxb-down > *:not(.btn-face):not(.key-hint) { transform: translateY(8px); }
+.pixbtn.pxb:active:not(:disabled) { transform: none; box-shadow: none; }
+.pixbtn.pxb:hover:not(:disabled) { filter: brightness(1.14); }
+.pixbtn.pxb:disabled { filter: grayscale(.55) brightness(.7); opacity: .7; box-shadow: none; }
+.pixbtn.pxb.sel { outline: none; filter: brightness(1.1); }
+/* the key cap is stamped onto the socket lip, not hung off the corner */
+.pixbtn.pxb > .key-hint {
+  position: absolute; bottom: 1px; right: 6px; left: auto; top: auto;
+  z-index: 2; background: none; border: 0; padding: 0;
+  color: rgba(255, 255, 255, .34); font-size: var(--fs-xs);
+}
+.pixbtn.pxb.gold > .key-hint { color: rgba(0, 0, 0, .42); }
+
+/* tighter variants: the topbar rail and the small gun tricks */
+.pixbtn.pxb.tb-btn { padding: 8px 14px 15px; min-height: 44px; }
+.pixbtn.pxb.gun-act { padding: 8px 12px 15px; min-height: 44px; }
+.pixbtn.pxb.aim-btn { padding: 14px 20px 22px; }
+.pixbtn.pxb.ghost { border-style: none; }
+
+@media (max-width: 860px), (pointer: coarse) and (max-width: 1100px) {
+  .pixbtn.pxb { padding: 11px 16px 18px; min-height: 52px; }
+  .pixbtn.pxb.tb-btn, .pixbtn.pxb.gun-act { padding: 6px 10px 12px; min-height: 38px; }
+  .pixbtn.pxb.pxb-down > *:not(.btn-face):not(.key-hint) { transform: translateY(6px); }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .pixbtn.pxb { padding: 8px 14px 15px; min-height: 44px; }
+}
+
+/* the logo is the first thing to go when the rail runs out of room */
+@media (max-width: 560px) {
+  #topbar > .tb-side:first-child { display: none; }
 }

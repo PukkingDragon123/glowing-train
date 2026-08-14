@@ -10,6 +10,7 @@ window.addEventListener('DOMContentLoaded', () => {
   BG.init();
   UI.initTooltip();
   UI.initKeys();
+  BTN.init();
 
   // Audio contexts must wake on a user gesture.
   document.addEventListener('pointerdown', () => SFX.init(), { once: true });
@@ -42,6 +43,6 @@ window.addEventListener('DOMContentLoaded', () => {
     mk('unlock all', () => { META.unlockAll(); });
     document.body.appendChild(bar);
     window.G2 = () => G; window.E = E; window.UI = UI; window.DUEL = DUEL; window.LOOT = LOOT;
-    window.CINE = CINE; window.COPS = COPS; // console access
+    window.CINE = CINE; window.COPS = COPS; window.BTN = BTN; // console access
   }
 });
