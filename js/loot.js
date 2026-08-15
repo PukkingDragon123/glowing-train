@@ -19,7 +19,7 @@ const LOOT = {
     panel.id = 'loot-panel';
 
     const head = U.el('div', 'loot-head');
-    head.appendChild(UI.txt('THE TAKE', { scale: 4, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    head.appendChild(UI.txt('THE TAKE', { scale: 3, color: PIX.PAL.G, outline: PIX.PAL.K }));
     const who = U.el('span', 'has-tip');
     who.dataset.tipOppTells = '1';
     who.appendChild(UI.txt(G.duel.opp.name, { scale: 3, color: PIX.PAL.w }));
@@ -36,6 +36,14 @@ const LOOT = {
     bar.appendChild(fill);
     heatWrap.appendChild(bar);
     panel.appendChild(heatWrap);
+
+    /* the tools you can put into him, and which one is in your hand */
+    const tools = U.el('div'); tools.id = 'loot-tools';
+    panel.appendChild(tools);
+
+    const hint = U.el('div', 'loot-hint');
+    hint.appendChild(UI.txt('TAP HIM TO SEARCH', { scale: 3, color: PIX.PAL.q }));
+    panel.appendChild(hint);
 
     const list = U.el('div'); list.id = 'pocket-list';
     panel.appendChild(list);
@@ -72,30 +80,62 @@ const LOOT = {
     L.pockets.forEach((p, i) => {
       const b = U.el('button', 'pocket-btn' + (p.taken ? ' taken' : ''));
       const lab = U.el('span', 'pocket-lab');
-      lab.appendChild(UI.txt(p.label, { scale: 3, color: p.taken ? PIX.PAL.q : PIX.PAL.W }));
+      lab.appendChild(UI.txt(p.label, { scale: 2, color: p.taken ? PIX.PAL.q : PIX.PAL.W }));
       b.appendChild(lab);
       const val = U.el('span', 'pocket-val');
       if (p.taken) {
-        if (p.gun) val.appendChild(SPR.gunEl(GUNS[G.gunIdx].id, 2));
-        else if (p.card) val.appendChild(SPR.trinketCardEl(p.card, 2));
-        else if (p.item) val.appendChild(SPR.itemCardEl(p.item, 2));
-        if (p.lint && !p.card) val.appendChild(UI.txt('LINT', { scale: 3, color: PIX.PAL.q }));
+        if (p.gun) val.appendChild(SPR.gunEl(GUNS[G.gunIdx].id, 1));
+        else if (p.card) val.appendChild(SPR.trinketCardEl(p.card, 1));
+        else if (p.item) val.appendChild(SPR.itemCardEl(p.item, 1));
+        if (p.lint && !p.card) val.appendChild(UI.txt('LINT', { scale: 2, color: PIX.PAL.q }));
         else if (p.chips > 0) {
-          val.appendChild(UI.txt('+' + p.chips, { scale: 3, color: PIX.PAL.G }));
-          val.appendChild(UI.icon('ic_chip', 3));
+          val.appendChild(UI.txt('+' + p.chips, { scale: 2, color: PIX.PAL.G }));
+          val.appendChild(UI.icon('ic_chip', 2));
         }
-      } else {
+      }
+      if (!p.taken) {
         keyN++;
-        if (p.bulge) b.classList.add('rq-rare');
+        if (p.bulge && p.seen) b.classList.add('rq-rare');
         const k = U.el('span', 'key-hint tk'); k.textContent = keyN;
         b.appendChild(k);
-        val.appendChild(UI.txt('?', { scale: 3, color: PIX.PAL.q }));
-        b.disabled = !E.canRifle();
-        b.onclick = () => LOOT.rifle(i);
+        val.appendChild(UI.txt('?', { scale: 2, color: PIX.PAL.q }));
+      } else if (p.slit) {
+        val.appendChild(UI.txt('SLIT', { scale: 2, color: PIX.PAL.q }));
       }
+      b.disabled = DUEL.busy || !E.canSearch(i);
+      b.onclick = () => DUEL.searchAt(i);
       b.appendChild(val);
       list.appendChild(b);
     });
+
+    /* the tool rack */
+    const tools = document.getElementById('loot-tools');
+    if (tools) {
+      tools.innerHTML = '';
+      const chip = (cls, glyphEl, label, on, fn) => {
+        const b = U.el('button', 'tool-chip' + cls);
+        if (glyphEl) b.appendChild(glyphEl);
+        b.appendChild(UI.txt(label, { scale: 2, color: on ? PIX.PAL.K : PIX.PAL.w }));
+        if (fn) b.onclick = fn; else b.disabled = true;
+        return b;
+      };
+      tools.appendChild(chip(L.tool ? '' : ' on', null, 'BARE HANDS', !L.tool,
+        L.tool ? () => { L.tool = null; SFX.click(); LOOT.sync(); } : null));
+      G.items.forEach((id, i) => {
+        if (!ITEM_PHASE_OK(id, 'loot')) return;
+        const armed = L.tool === id;
+        tools.appendChild(chip((armed ? ' on' : '') + ' has-tip',
+          SPR.itemGlyphEl(id, 3, 'tool-ico'), ITEMS[id].name, armed,
+          DUEL.busy ? null : () => UI.onUseItem(i)));
+      });
+    }
+    const hint = document.querySelector('.loot-hint');
+    if (hint) {
+      hint.innerHTML = '';
+      hint.appendChild(UI.txt(L.tool === 'shiv' ? 'SHIV OUT — PICK AN EMPTY POCKET'
+        : E.canRifle() ? 'TAP HIM TO SEARCH' : 'THE BADGES ARE COUNTING',
+        { scale: 2, color: L.tool ? PIX.PAL.N : E.canRifle() ? PIX.PAL.q : PIX.PAL.R }));
+    }
 
     /* heat */
     const heat = E.heatUp();
@@ -201,25 +241,30 @@ const LOOT = {
     if (cc) { cc.classList.add('out'); setTimeout(() => cc.remove(), 340); }
   },
 
-  rifle(i) {
+  /* the take itself — called by DUEL.searchAt once the hand is in there */
+  take(i, sx, sy) {
     const before = G.chips;
     const p = E.rifle(i);
     if (!p) return;
-    DUEL.lootFx(p);
+    DUEL.lootFx(p, sx, sy);
     if (G.chips > before) UI.chipTick(G.chips - before);
     if (p.gun) UI.stampSmall('HIS IRON IS YOURS — ' + E.gun().name);
     if (p.card) SFX.jackpot();
+    if (p.lint) UI.stampSmall('NOTHING BUT LINT');
     LOOT.sync();
   },
 
-  /* rifle by number key: nth untaken pocket */
+  /* kept for anything that wants the old one-call behaviour */
+  rifle(i) { DUEL.searchAt(i); },
+
+  /* search by number key: nth untaken pocket */
   rifleKey(n) {
     if (G.phase !== 'loot') return;
     let seen = 0;
     for (let i = 0; i < G.loot.pockets.length; i++) {
       if (G.loot.pockets[i].taken) continue;
       seen++;
-      if (seen === n) { LOOT.rifle(i); return; }
+      if (seen === n) { DUEL.searchAt(i); return; }
     }
   },
 

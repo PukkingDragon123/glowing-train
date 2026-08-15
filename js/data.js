@@ -323,6 +323,14 @@ const ITEMS = {
     desc: 'Kick it under the table: the mark\'s next shot AT YOU misses entirely, live or not.',
     glyph: ['.....oO.', '.qq..u..', 'qqqq.u..', '.ttttt..', 'tSttttT.', 'ttttttT.', 'tttttTT.', '.tttTT..'] },
 
+  shiv: { id: 'shiv', name: 'THE SHIV', rarity: 'uncommon', use: 'loot',
+    desc: 'Arm it, then go back into a pocket you have already emptied and slit the lining. Whatever fell through is yours, and the badges never see you do it.',
+    glyph: ['......SM', '.....SS.', '....SS..', '...SS...', '..SS....', '.buub...', 'bBBBb...', '.KKK....'] },
+
+  loupe: { id: 'loupe', name: 'JEWELLER\'S LOUPE', rarity: 'rare', use: 'loot',
+    desc: 'Screw it into your eye: every bulge on him shows at once, and you get one more pocket before the badges start counting.',
+    glyph: ['..hhhh..', '.hLLLLh.', 'hLWWLLLh', 'hLWLLLLh', 'hLLLLLLh', '.hLLLLh.', '..hhhh..', '...KK...'] },
+
   lucky1: { id: 'lucky1', name: "SAINT'S MEDAL", rarity: 'legendary', use: 'duel',
     desc: 'Kiss it once: the shell under the hammer BECOMES a blank. The count knows.',
     glyph: ['.dd.dd..', '.dd.dd..', '..MMM...', '.MMWMM..', '.MWWWM..', '.MMWMM..', '..MMM...'] },

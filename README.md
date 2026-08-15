@@ -121,12 +121,28 @@ the ones you haven't earned yet stay `???`.
 
 ![Going through his pockets](docs/screen-loot.png)
 
-There is no shop. Kill the mark — he sprawls across the felt, legs, splayed hand,
-wounds where your lead landed, a pool that keeps spreading — and **go through his
-pockets** while the corpse is warm: hat, jacket, vest, hand, boot — a bulge means
-something better than chips. Every rifle brings **the badges** closer; three and they're
-at the door. **Bribe** them to keep digging (the price climbs) or walk with what you've
-got. Trinket cards and guns come out of corpses — **boss holsters carry your next iron**.
+![Your hand is in his coat](docs/screen-search.png)
+
+There is no shop. Kill the mark — he sprawls across the felt, legs, splayed hand, wounds
+where your lead landed, a pool that keeps spreading — and then **you go through him
+yourself**. His pockets aren't a list of buttons next to a corpse: they're places *on*
+him. Hat, coat, vest, his hand, his boot, his mouth. Point at one and it lights up; tap
+it and your arm goes out across the felt, shrinking with the distance, digs — cloth
+shifting, dust off the lining, his weight rocking under your hand — and comes back with
+whatever was in there. Nothing detonates. You're going through a dead frog's coat.
+
+Every pocket you go into brings **the badges** closer; three and they're at the door.
+**Bribe** them to keep digging (the price climbs) or walk with what you've got. Trinket
+cards and guns come out of corpses — **boss holsters carry your next iron**.
+
+### What you brought with you
+
+| Tool | At the corpse |
+|---|---|
+| 🔧 **PLIERS** | yank the gold tooth free — the badges don't count it |
+| 🔪 **THE SHIV** | arm it, then go back into a pocket you already emptied and slit the lining |
+| 🔍 **JEWELLER'S LOUPE** | every bulge on him shows at once, and you get one more pocket for free |
+| 📁 **FILE FOLDER** | hand them somebody else's paperwork: the heat here clears, free |
 
 The badges are not an abstraction: a cop **walks in from the right**, stands over the
 body tapping his nightstick in his palm, and waits. Bribe him and the chips arc across
@@ -157,6 +173,8 @@ belt loops, keys **6–8**:
 | 💥 **HOLLOW POINT** | your next live hit deals +2 |
 | 💨 **SMOKE BOMB** | the mark's next shot at you misses entirely |
 | 🍀 **LUCKY PENNY** | force the shell under the hammer to be a blank |
+| 🔪 **THE SHIV** | slit the lining of a pocket you already emptied — no heat |
+| 🔍 **LOUPE** | every bulge on the corpse shows, and one more free pocket |
 
 ## The mob
 

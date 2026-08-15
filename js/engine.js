@@ -47,7 +47,7 @@ const E = {
   itemRoom() { return G.items.length < E.maxItems(); },
   giveItem(id) { if (!E.itemRoom()) return false; G.items.push(id); return true; },
   freePockets() { return LOOT_TUNING.freePockets + (E.has('pockets') ? 1 : 0)
-    + (G.tagPocket ? 1 : 0)
+    + (G.tagPocket ? 1 : 0) + ((G.loot && G.loot.bonusFree) || 0)
     - (G.duel && G.duel.opp.traits.some(t => TRAITS[t] && TRAITS[t].hot) ? 1 : 0); },
 
   /* damage outside the shell cycle (knuckles, shiv): flat, no gun/trinket bonuses */
@@ -547,6 +547,13 @@ const E = {
       }
       case 'brassKnuckle': r.dmg = E.freeHit(1); break;
       case 'fileFolder': G.loot.sinceBribe = 0; r.cleared = true; break;
+      /* the shiv is not spent when you take it out — it is spent when you
+         put it into a lining, so arming it is the whole of the use here */
+      case 'shiv': G.loot.tool = 'shiv'; r.armed = true; break;
+      case 'loupe':
+        G.loot.pockets.forEach(p => { p.seen = true; });
+        G.loot.bonusFree = (G.loot.bonusFree || 0) + 1;
+        r.seen = true; break;
     }
     r.over = G.duel ? G.duel.over : null;
     return r;
@@ -670,7 +677,8 @@ const E = {
     /* something square shows through the cloth */
     pockets.forEach(p => { p.bulge = !!(p.card || p.gun || p.item); });
 
-    G.loot = { pockets, sinceBribe: 0, bribes: 0, pendingCard: null, pendingItem: null, done: false };
+    G.loot = { pockets, sinceBribe: 0, bribes: 0, pendingCard: null, pendingItem: null,
+      done: false, tool: null, bonusFree: 0 };
     G.phase = 'loot';
     return G.loot;
   },
@@ -685,10 +693,27 @@ const E = {
       G.loot.sinceBribe >= E.freePockets() && E.lootLeft() > 0;
   },
 
+  /* can this pocket be gone into right now, and with what */
+  canSearch(i) {
+    const p = G.loot && G.loot.pockets[i];
+    if (!p || G.phase !== 'loot' || G.loot.done || G.loot.pendingCard) return false;
+    if (p.taken) return G.loot.tool === 'shiv' && !p.slit;   // the lining is still there
+    return G.loot.sinceBribe < E.freePockets();
+  },
+
   rifle(i) {
-    if (!E.canRifle()) return null;
-    const p = G.loot.pockets[i];
-    if (!p || p.taken) return null;
+    const p = G.loot && G.loot.pockets[i];
+    if (!p || !E.canSearch(i)) return null;
+    /* SLITTING THE LINING: a pocket you already emptied, opened up with the
+       shiv. Small take, and the badges never see your hands do it. */
+    if (p.taken) {
+      G.loot.tool = null;
+      p.slit = true;
+      const found = 1 + Math.ceil(p.chips * 0.5);
+      G.chips += found;
+      META.bump('looted');
+      return { id: p.id, label: p.label, chips: found, slit: true, taken: true };
+    }
     p.taken = true;
     G.loot.sinceBribe++;
     G.chips += p.chips;

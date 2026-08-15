@@ -38,6 +38,8 @@ const DUEL = {
   kick: 0,                // recoil: the iron jumps the bore line and comes back
   cyl: 0, cylT: 0,        // which chamber is under it, and the turn in progress
   smoke: [],              // wisps off the muzzle and out of the cylinder gap
+  reach: null,            // your arm out over the corpse, going through a pocket
+  hoverSpot: -1,
   oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
 
   /* ---------------- gun poses (world space) ---------------- */
@@ -181,6 +183,7 @@ const DUEL = {
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
+    DUEL.reach = null; DUEL.hoverSpot = -1;
     document.querySelectorAll('.mark-speech, .cop-callout').forEach(n => n.remove());
     DUEL.setPose('rest', true);
     FX.reset(); FX.ambient(true);
@@ -201,6 +204,7 @@ const DUEL = {
       DUEL.opp.fall = 1; DUEL.opp.gone = true;
       DUEL.corpse = true; DUEL.pool = 20;
       LOOT.overlay();
+      DUEL.busy = false;
     } else {
       DUEL.intro();
     }
@@ -460,25 +464,8 @@ const DUEL = {
     DUEL.chipStack(x, 262, TY + 6, 3, P.g, P.G);
     DUEL.myProps(x, DUEL.FY);
 
-    /* --- his hands resting on the felt (over the table edge) --- */
-    if (!DUEL.opp.gone && DUEL.opp.fall < 0 && G.duel) {
-      const def = G.duel.opp.def;
-      /* land the hands exactly where the sleeves end (the sprite tells us) */
-      const body = SPR.bodyCustom(DUEL.oppKey, def);
-      const w = body.wrist || { dx: def.fat ? 38 : 30, dy: 56, h: 60 };
-      const hy = 130 - (w.h - w.dy);
-      const hbob = Math.round(Math.sin(DUEL.t / 34) * 0.8);
-      /* drum his fingers when it is his turn and he is thinking about it */
-      const think = G.duel.turn === 'opp' && !G.duel.over;
-      [-1, 1].forEach(sgn => {
-        const drum = think ? Math.round(Math.sin(DUEL.t / 5 + sgn) * 0.9) : 0;
-        SPR.ellipse(x, 180 + sgn * w.dx, hy + 8 + hbob, 9, 3, 'rgba(0,0,0,.32)');
-        SPR.frogHand(x, 180 + sgn * w.dx, hy + hbob + drum, def, sgn, { link: true });
-      });
-    }
-
     /* --- the corpse, when it's time to go through him --- */
-    if (DUEL.corpse) DUEL.drawCorpse(x);
+    if (DUEL.corpse) { DUEL.drawCorpse(x); DUEL.drawSpots(x); }
 
     /* --- casings --- */
     DUEL.casings.forEach(c => {
@@ -665,6 +652,114 @@ const DUEL = {
     });
   },
 
+  /* ============================================================
+     GOING THROUGH HIM.
+
+     The pockets are not a list of buttons that happen to sit next to a
+     corpse — they are places ON him. Each one is a spot you can see,
+     point at and put your hand into, and your hand really goes there:
+     out across the felt, shrinking with the distance, digging, and
+     coming back with whatever was in it.
+     ============================================================ */
+  SPOTS: {
+    hat:     [268, 130],      // knocked off, lying on the felt
+    jacket:  [172, 116],      // inside the coat
+    shirt:   [198, 126],
+    vest:    [198, 126],
+    hand:    [150, 155],      // the splayed hand, rings and all
+    boot:    [280, 110],      // the cocked shoe
+    tooth:   [134, 138],      // his mouth
+    holster: [166, 140],      // under the arm
+  },
+  spotPos(p) { return DUEL.SPOTS[p.id] || [180, 128]; },
+
+  /* the nearest searchable spot to a world point, or -1 */
+  spotAt(px, py) {
+    if (G.phase !== 'loot' || !G.loot) return -1;
+    let best = -1, bd = 15 * 15;
+    G.loot.pockets.forEach((p, i) => {
+      const sp = DUEL.spotPos(p);
+      const d = (px - sp[0]) * (px - sp[0]) + (py - sp[1]) * (py - sp[1]);
+      if (d < bd && E.canSearch(i)) { bd = d; best = i; }
+    });
+    return best;
+  },
+
+  drawSpots(x) {
+    if (G.phase !== 'loot' || !G.loot || DUEL.reach) return;
+    const P = PIX.PAL;
+    const pulse = DUEL.t % 44 < 22;
+    G.loot.pockets.forEach((p, i) => {
+      const sp = DUEL.spotPos(p), sx = sp[0], sy = sp[1];
+      const can = E.canSearch(i);
+      if (p.taken && !can) {
+        /* turned out and empty: the lining hanging out of it */
+        PIX.rect(x, sx - 5, sy - 3, 11, 7, P.K);
+        PIX.rect(x, sx - 4, sy - 2, 9, 5, p.slit ? P.q : P.w);
+        if (p.slit) PIX.rect(x, sx - 4, sy, 9, 1, P.K);
+        return;
+      }
+      const hot = DUEL.hoverSpot === i;
+      const col = !can ? P.q : (p.bulge && p.seen) ? P.G : hot ? P.Y : P.W;
+      const r = hot ? 10 : 8;
+      /* four corner brackets — a place to put your hand, not a button */
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => {
+        const cx = sx + o[0] * r, cy = sy + o[1] * r;
+        const bx = o[0] > 0 ? cx - 3 : cx, by = o[1] > 0 ? cy - 3 : cy;
+        PIX.rect(x, bx - 1, cy - 1, 6, 3, P.K);
+        PIX.rect(x, cx - 1, by - 1, 3, 6, P.K);
+        PIX.rect(x, bx, cy, 4, 1, col);
+        PIX.rect(x, cx, by, 1, 4, col);
+      });
+      if (can && pulse) {
+        PIX.rect(x, sx - 1, sy - 4, 3, 9, P.K);
+        PIX.rect(x, sx - 4, sy - 1, 9, 3, P.K);
+        PIX.rect(x, sx, sy - 3, 1, 7, col);
+        PIX.rect(x, sx - 3, sy, 7, 1, col);
+      }
+      if (p.bulge && p.seen && !p.taken) {          // the loupe showed you this
+        PIX.disc(x, sx + r + 4, sy - r - 2, 3, P.K);
+        PIX.disc(x, sx + r + 4, sy - r - 2, 2, P.G);
+      }
+    });
+  },
+
+  /* put your hand in. The arm goes out, it digs, it comes back. */
+  async searchAt(i) {
+    if (DUEL.busy || G.phase !== 'loot') return;
+    if (!E.canSearch(i)) { SFX.jamSfx(); return; }
+    const P = PIX.PAL;
+    const p = G.loot.pockets[i];
+    const sp = DUEL.spotPos(p), sx = sp[0], sy = sp[1];
+    const slit = p.taken;
+    DUEL.busy = true;
+    DUEL.hurry = false;
+    DUEL.hoverSpot = -1;
+    DUEL.reach = { x: sx, y: sy, dig: 0 };
+    DUEL.fist.tx = sx + 5; DUEL.fist.ty = sy + 11;
+    LOOT.sync();
+    SFX.chak();
+    await DUEL.sleep(300);
+    /* rummaging: cloth shifting, dust off the lining, his weight rocking */
+    for (let n = 0; n < 5; n++) {
+      DUEL.reach.dig = 1;
+      DUEL.jiggle = 1.1;
+      DUEL.puff(sx, sy - 2, 2, [P.q, P.w, P.k], 1.1, -0.4);
+      SFX.tick();
+      await DUEL.sleep(95);
+      DUEL.reach.dig = 0;
+      await DUEL.sleep(45);
+    }
+    if (slit) { SFX.jamSfx(); UI.stampSmall('THE LINING GIVES'); }
+    LOOT.take(i, sx, sy);
+    await DUEL.sleep(260);
+    DUEL.reach = null;
+    DUEL.setPose('rest');
+    await DUEL.sleep(220);
+    DUEL.busy = false;
+    LOOT.sync();
+  },
+
   /* the table's centre row. It follows the UI rail so the near edge always
      lands in shot, but never so far up that the felt eats the mark's hands. */
   TY() { return U.clamp(DUEL.FY - 26, 138, 158); },
@@ -774,12 +869,17 @@ const DUEL = {
     SPR.povCuff(x, lhx, FY - 4, def, -1);
     SPR.povHand(x, lhx, lhy, def, -1, HK, false);
 
-    /* --- your gun hand --- */
-    const fx = Math.round(f.x), fy = Math.round(f.y);
-    SPR.ellipse(x, fx, fy + 12, 16, 5, 'rgba(0,0,0,.42)');
-    SPR.povSleeve(x, 330, FY + 24, fx - 3, fy + 8, 32, 21, sC, sD, sL, sS);
-    SPR.povCuff(x, fx, fy + 8, def, 1);
-    SPR.povHand(x, fx, fy, def, 1, HK, mine);
+    /* --- your gun hand, or the one that is out over him --- */
+    const dig = DUEL.reach ? DUEL.reach.dig * (DUEL.t % 4 < 2 ? 1 : -1) * 2 : 0;
+    const fx = Math.round(f.x) + dig, fy = Math.round(f.y) + (dig ? 1 : 0);
+    /* it shrinks as it reaches away from you — that is the whole depth cue */
+    const away = U.clamp((FY - 6 - fy) / 72, 0, 1);
+    const hk = HK - away * 0.75, sh = hk / HK;
+    SPR.ellipse(x, fx, fy + 12 * sh, 16 * sh, 5 * sh, 'rgba(0,0,0,.42)');
+    SPR.povSleeve(x, 330, FY + 24, fx - 3, fy + Math.round(8 * sh),
+      32, Math.max(10, Math.round(21 - away * 11)), sC, sD, sL, sS);
+    SPR.povCuff(x, fx, fy + Math.round(8 * sh), def, 1);
+    SPR.povHand(x, fx, fy, def, 1, hk, mine && !DUEL.corpse);
 
     x.restore();
     return { aimSelf, aimFoe, mine, bob: Math.round(bob) + drop };
@@ -1130,8 +1230,7 @@ const DUEL = {
     DUEL.setPose('rest');
     await U.sleep(350);
     DUEL.opp.fall = 0;
-    FX.bloodBurst(180, 88, 3);
-    FX.gib(180, 88, 6);
+    FX.bloodBurst(180, 88, 2);
     FX.screen.shake(16);
     FX.screen.slowmo(900, 0.65);
     SFX.lose(); SFX.cluck();
@@ -1142,7 +1241,9 @@ const DUEL = {
     DUEL.corpse = true;
     DUEL.pool = 4;
     await U.sleep(700);
+    DUEL.setPose('rest');
     LOOT.overlay();
+    DUEL.busy = false;          // the corpse is yours to go through now
   },
 
   /* you die */
@@ -1161,17 +1262,19 @@ const DUEL = {
   },
 
   /* loot fx: the corpse jiggles, the take flies out of it */
-  lootFx(pocket) {
-    DUEL.jiggle = 3;
+  /* What coming out of a pocket looks like: cloth settling, dust off the
+     lining, and the take arcing back across the felt to your end. Nothing
+     detonates — you are going through a dead frog's coat, not defusing it. */
+  lootFx(pocket, sx, sy) {
+    DUEL.jiggle = 1.4;
     const P = PIX.PAL;
-    if (pocket.id === 'tooth') {
-      FX.bloodBurst(150, 124, 1.5);
-      FX.gib(150, 124, 3);
-      FX.chipToss(150, 120, 60, 100, 1, PIX.PAL.G);
-      SFX.hurt();
+    const px = sx === undefined ? 175 : sx, py = sy === undefined ? 128 : sy;
+    DUEL.puff(px, py, 7, [P.q, P.w, P.k], 1.3, -0.5);      // dust out of the lining
+    if (pocket.id === 'tooth') { FX.bloodBurst(px, py, 0.7); SFX.jamSfx(); }
+    if (pocket.chips > 0) {
+      FX.chipToss(px, py, 300, DUEL.FY - 20, Math.min(10, pocket.chips + 1), P.G);
     }
-    if (pocket.chips > 0) FX.chipToss(175, 128, 60, 100, Math.min(10, pocket.chips + 1), PIX.PAL.G);
-    if (pocket.gun) { FX.screen.flash(PIX.PAL.W, 0.6); FX.chipRain(14); SFX.jackpot(); }
+    if (pocket.gun) { FX.screen.flash(PIX.PAL.W, 0.4); FX.chipRain(10); SFX.jackpot(); }
     SFX.coin();
   },
 
@@ -1188,7 +1291,35 @@ const DUEL = {
 
   /* tap the mark to aim at him, tap again to FIRE; same for yourself.
      any tap during an animation fast-forwards it. */
+  sceneXY(e) {
+    const r = DUEL.cv.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) / r.width * DUEL.W - DUEL.OX,
+      y: (e.clientY - r.top) / r.height * DUEL.H - DUEL.OY,
+    };
+  },
+
+  /* light the spot under the pointer, so it is obvious he can be gone through */
+  sceneMove(e) {
+    if (!DUEL.cv) return;
+    if (G.phase !== 'loot' || DUEL.busy) {
+      if (DUEL.hoverSpot !== -1) DUEL.hoverSpot = -1;
+      return;
+    }
+    const q = DUEL.sceneXY(e);
+    const i = DUEL.spotAt(q.x, q.y);
+    if (i !== DUEL.hoverSpot) { DUEL.hoverSpot = i; if (i >= 0) SFX.tick(); }
+    DUEL.cv.style.cursor = i >= 0 ? 'pointer' : 'crosshair';
+  },
+
   sceneClick(e) {
+    if (G.phase === 'loot') {
+      if (DUEL.busy) { DUEL.hurry = true; return; }
+      const q = DUEL.sceneXY(e);
+      const i = DUEL.spotAt(q.x, q.y);
+      if (i >= 0) DUEL.searchAt(i);
+      return;
+    }
     if (G.phase !== 'duel') return;
     if (DUEL.busy) { DUEL.hurry = true; return; }
     const r = DUEL.cv.getBoundingClientRect();

@@ -64,11 +64,15 @@ fs.mkdirSync(SHOTS, { recursive: true });
 
   /* rifle pockets until the badges arrive, bribe once, then walk out */
   async function lootAndGo(shotName) {
+    /* the pockets are places on the corpse now: the panel rows are the
+       fallback, and each one plays the reach-and-dig before it pays out */
     for (let i = 0; i < 5; i++) {
+      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
       const btn = page.locator('.pocket-btn:not(.taken):not(:disabled)');
       if (await btn.count() === 0) break;
       await btn.first().click();
-      await page.waitForTimeout(400);
+      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
+      await page.waitForTimeout(150);
       /* full rack / full belt? leave the find */
       const skip = page.locator('#card-swap button.pixbtn');
       if (await skip.count() > 0) { await skip.last().click(); await page.waitForTimeout(200); }
@@ -162,6 +166,24 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await shot('05-loot');
     /* give ourselves bribe money and test one bribe if the badges are up */
     await page.locator('button', { hasText: '+20⛁' }).click();
+    /* the corpse itself is clickable: take one pocket by tapping HIM */
+    const spot = await page.evaluate(() => {
+      const i = G2().loot.pockets.findIndex((p, n) => E.canSearch(n));
+      if (i < 0) return null;
+      const s = DUEL.spotPos(G2().loot.pockets[i]);
+      const r = DUEL.cv.getBoundingClientRect();
+      return { x: r.left + (s[0] + DUEL.OX) / DUEL.W * r.width,
+               y: r.top + (s[1] + DUEL.OY) / DUEL.H * r.height };
+    });
+    if (spot) {
+      await page.mouse.move(spot.x, spot.y);
+      await page.waitForTimeout(120);
+      await shot('05b-search-spot');
+      await page.mouse.click(spot.x, spot.y);
+      await page.waitForTimeout(600);
+      await shot('05c-searching');
+      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
+    }
     await lootAndGo('06-loot-done');
 
     /* mobile layout check (on the blind select, then in the duel) */

@@ -39,6 +39,26 @@ SPR.itemCard = function (id) {
 };
 SPR.itemCardEl = function (id, scale, cls) { return SPR.clone(SPR.itemCard(id), scale, cls); };
 
+/* just the glyph off an item card — the tool rack wants the tool, not its card */
+SPR.itemGlyph = function (id) {
+  return SPR.cached('iglyph_' + id, () => {
+    const P = PIX.PAL;
+    const rows = ((ITEMS[id] || {}).glyph || []).filter(r => r && r.length);
+    const w = Math.max.apply(null, rows.map(r => r.length).concat([1]));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = Math.max(1, rows.length);
+    const ctx = cv.getContext('2d');
+    rows.forEach((row, j) => {
+      for (let i = 0; i < row.length; i++) {
+        const c = row[i];
+        if (c !== '.' && c !== ' ') { ctx.fillStyle = P[c] || P.W; ctx.fillRect(i, j, 1, 1); }
+      }
+    });
+    return cv;
+  });
+};
+SPR.itemGlyphEl = function (id, scale, cls) { return SPR.clone(SPR.itemGlyph(id), scale, cls); };
+
 const UI = {
 
   /* ================= router ================= */
@@ -46,6 +66,7 @@ const UI = {
   render() {
     const app = document.getElementById('app');
     app.innerHTML = '';
+    document.body.classList.toggle('at-corpse', G.phase === 'loot');
     UI.closeModal();
     if (G.phase !== 'duel' && G.phase !== 'loot') DUEL.stop();
     BG.set({
@@ -411,6 +432,8 @@ const UI = {
     const cv = U.el('canvas'); cv.id = 'scene'; cv.className = 'pix';
     cv.width = DUEL.W; cv.height = DUEL.H;
     cv.onclick = (e) => DUEL.sceneClick(e);
+    cv.onpointermove = (e) => DUEL.sceneMove(e);
+    cv.onpointerleave = () => { DUEL.hoverSpot = -1; };
     holder.appendChild(cv);
 
     const stampB = U.el('div'); stampB.id = 'stamp-big'; holder.appendChild(stampB);
@@ -463,6 +486,9 @@ const UI = {
     if (!d) return;
 
     UI.syncChips();
+    /* at a corpse there is nothing to aim at and no drum to read: the rail
+       keeps your rack and your belt and drops everything else */
+    document.body.classList.toggle('at-corpse', G.phase === 'loot');
 
     /* strip */
     const strip = document.getElementById('shell-strip');
@@ -618,6 +644,8 @@ const UI = {
       else if (r.type === 'smokeBomb') FX.cordite(120, 150, 14);
       else if (r.type === 'hollowPoint') FX.sparks(150, 140, 8, 1.4);
       else if (r.type === 'coinFlip') FX.floatText(120, 130, r.heads ? 'HEADS' : 'TAILS', r.heads ? PIX.PAL.G : PIX.PAL.R);
+      else if (r.type === 'shiv') UI.stampSmall('SHIV OUT — PICK AN EMPTY POCKET', 'good');
+      else if (r.type === 'loupe') { FX.sparks(180, 120, 12, 1.3); UI.stampSmall('EVERY BULGE SHOWS'); }
     }
     if (r.chips) UI.chipTick(r.chips);
     if (G.phase === 'loot') { LOOT.sync(); UI.syncItems(); return; }

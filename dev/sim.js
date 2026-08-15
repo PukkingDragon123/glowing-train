@@ -102,6 +102,20 @@ function driver() {
         continue;
       }
       useItemIf('pliers', G.loot.pockets.some(p => p.id === 'tooth' && !p.taken));
+      /* the loupe pays for itself early: it shows every bulge AND buys a pocket */
+      useItemIf('loupe', E.lootLeft() >= 3 && !G.loot.pockets.some(p => p.seen));
+      /* the shiv goes into the fattest pocket already turned out */
+      if (G.loot.tool !== 'shiv') {
+        useItemIf('shiv', !E.canRifle() &&
+          G.loot.pockets.some(p => p.taken && !p.slit && p.chips >= 4));
+      }
+      if (G.loot.tool === 'shiv') {
+        const lin = G.loot.pockets
+          .map((p, i) => ({ p, i })).filter(x => x.p.taken && !x.p.slit)
+          .sort((a, b) => b.p.chips - a.p.chips)[0];
+        if (lin) { E.rifle(lin.i); continue; }
+        G.loot.tool = null;
+      }
       if (E.canRifle()) {
         const cand = G.loot.pockets
           .map((p, i) => ({ p, i }))
