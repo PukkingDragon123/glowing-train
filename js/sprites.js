@@ -1312,7 +1312,14 @@ SPR.frogHand = function (ctx, x, y, d, sgn, opts) {
   /* back of the hand */
   PIX.disc(ctx, x, y - 1, 6, INK);
   PIX.disc(ctx, x, y - 1, 5, skin);
-  PIX.rect(ctx, x - sgn * 2 - 1, y - 4, 3, 2, 'rgba(255,255,255,.22)');  // knuckle light
+  /* the same freckling the rest of him has, seeded the same way */
+  const hr = SPR.defRng(d);
+  for (let i = 0; i < 5; i++) {
+    const a = hr() * Math.PI * 2, rr = Math.sqrt(hr()) * 3.4;
+    PIX.rect(ctx, Math.round(x + Math.cos(a) * rr), Math.round(y - 1 + Math.sin(a) * rr), 1, 1, shade);
+  }
+  PIX.rect(ctx, x - sgn * 2 - 1, y - 4, 3, 2, 'rgba(255,255,255,.30)');  // knuckle, wet
+  PIX.rect(ctx, x - sgn * 2 - 1, y - 5, 2, 1, 'rgba(255,255,255,.16)');
   SPR.ellipse(ctx, x, y + 2, 5, 2, shade);                              // palm heel
 
   /* four fingers — outer two shorter, splayed like a fan, fat toe pads */
@@ -1478,6 +1485,14 @@ const FROG_DEFS = {
                costume: 'cop', flatcap: true, warts: true },
 };
 
+/* Every frog is freckled the same way every time you meet him: the
+   scatter is seeded off his own def, not off Math.random. */
+SPR.defRng = function (d) {
+  const key = (d.skin || []).join('') + '|' + (d.costume || '') + '|' + (d.suit || '') +
+    '|' + (d.shirt || '') + '|' + (d.tie || '') + (d.fat ? 'F' : '') + (d.hat || '');
+  return U.mulberry32(U.hashSeed(key));
+};
+
 /* a stepped rounded rect — an ellipse reads as a blob at gun scale, and a
    plain rect reads as a brick; the irons and the buttons both want this */
 SPR.rrect = function (ctx, x0, y0, w, h, r, col) {
@@ -1595,6 +1610,35 @@ SPR.buildFrog = function (d, expr) {
     SPR.ellipse(ctx, cx + rx - 5, headY + 6, 6, 5, shade);
     PIX.rect(ctx, cx - 7, headY + 11, 15, 1, dark);
   }
+  /* ---- the skin itself: mottling, and the wet look ----
+     A frog is not a flat colour. Every one gets a stable scatter of
+     darker mottling seeded off his own def, so the same frog is
+     freckled the same way every time you see him, and a wet
+     specular arc over the crown that is what actually sells "amphibian"
+     rather than "green man". */
+  const rng = SPR.defRng(d);
+  for (let i = 0; i < (fat ? 15 : 11); i++) {
+    const a = rng() * Math.PI * 2, rr = Math.sqrt(rng());
+    const mx2 = Math.round(cx + Math.cos(a) * rx * rr * 0.92);
+    const my2 = Math.round(headY + Math.sin(a) * ry * rr * 0.92);
+    if (my2 < headY - ry + 3) continue;                 // not up over the brow
+    const big = rng() < 0.3;
+    PIX.disc(ctx, mx2, my2, big ? 2 : 1, shade);
+    if (big) PIX.rect(ctx, mx2 - 1, my2 - 1, 1, 1, dark);
+  }
+  /* the wet crown, and a second slick on each bulb */
+  for (let i = -6; i <= 6; i++) {
+    const t = i / 6;
+    PIX.rect(ctx, cx + i * 2, headY - ry + 2 + Math.round(t * t * 3), 2, 1, 'rgba(255,255,255,.13)');
+  }
+  [-ex, ex].forEach(o => {
+    PIX.rect(ctx, cx + o - 3, ey - er + 2, 3, 1, 'rgba(255,255,255,.18)');
+    PIX.rect(ctx, cx + o - 3, ey - er + 3, 1, 1, 'rgba(255,255,255,.10)');
+  });
+  /* the throat, which is a different skin from the top of him */
+  SPR.ellipse(ctx, cx, headY + ry - 3, rx - 6, 4, shade);
+  SPR.ellipse(ctx, cx, headY + ry - 4, rx - 8, 3, skin);
+
   /* nostrils, because a face without them is a balloon */
   PIX.rect(ctx, cx - 3, headY - 1, 2, 2, dark);
   PIX.rect(ctx, cx + 2, headY - 1, 2, 2, dark);
@@ -1711,12 +1755,21 @@ SPR.buildFrog = function (d, expr) {
   PIX.rect(ctx, cx + 3, headY - 4, 1, 2, dark);
 
   /* ============================================================
-     THE MOUTH. A frog's is nearly as wide as its head, so all seven
-     of these are the same wide line bent different ways — corners
-     up or down does more work than any amount of teeth.
+     THE MOUTH. A frog's is nearly as wide as its head, and a frog
+     has NO TEETH — so all seven of these are the same wide line bent
+     different ways, and what shows inside an open one is gum, a pale
+     maxillary ridge along the top jaw, and tongue. Corners up or
+     down does more work than a mouthful of enamel ever did.
      ============================================================ */
   const mw = rx - 4, my = headY + 3;
-  const gum = P.D, tongue = P.r, tongueLo = P.d;
+  const gum = P.D, gumLit = P.d, tongue = P.r, tongueLo = P.d;
+  /* the one bit of hardware in there: a gold stud set in his lip */
+  const goldStud = (gx, gy) => {
+    if (!d.goldtooth) return;
+    PIX.rect(ctx, gx - 1, gy - 1, 4, 4, P.K);
+    PIX.rect(ctx, gx, gy, 2, 2, P.G);
+    PIX.rect(ctx, gx, gy, 1, 1, P.Y);
+  };
 
   /* one bent line: lift raises the CORNERS, sag drops the middle */
   const line = (lift, sag, col, th, yoff) => {
@@ -1731,22 +1784,32 @@ SPR.buildFrog = function (d, expr) {
   const maw = (h, tongueOut) => {
     SPR.ellipse(ctx, cx, my + 2, mw - 2, h + 1, P.K);
     SPR.ellipse(ctx, cx, my + 2, mw - 3, h, gum);
+    /* the pale ridge along the upper jaw — this is what a frog has
+       instead of a top row of teeth */
+    for (let i = -mw + 4; i <= mw - 4; i++) {
+      const t = Math.abs(i) / (mw - 3);
+      PIX.rect(ctx, cx + i, my + 2 - Math.round((h + 1) * Math.sqrt(Math.max(0, 1 - t * t))), 1, 1, gumLit);
+    }
     SPR.ellipse(ctx, cx, my + h, mw - 6, Math.max(1, h - 2), tongueLo);
     SPR.ellipse(ctx, cx, my + h - 1, mw - 7, Math.max(1, h - 3), tongue);
+    PIX.rect(ctx, cx - 1, my + h - 2, 1, Math.max(1, h - 1), tongueLo);   // the groove down it
     if (tongueOut) {
-      PIX.rect(ctx, cx + 1, my + h - 1, 5, 5, P.K);
-      PIX.rect(ctx, cx + 2, my + h - 1, 3, 4, tongue);
-      PIX.rect(ctx, cx + 2, my + h + 2, 3, 1, tongueLo);
+      PIX.rect(ctx, cx + 1, my + h - 1, 5, 6, P.K);
+      PIX.rect(ctx, cx + 2, my + h - 1, 3, 5, tongue);
+      PIX.rect(ctx, cx + 3, my + h, 1, 3, tongueLo);
+      PIX.rect(ctx, cx + 2, my + h + 3, 3, 1, tongueLo);
     }
   };
 
   switch (expr) {
     case 'grin': {
       maw(3, false);
-      /* the upper lip riding over it, and the one tooth he is proud of */
+      /* the upper lip riding over it, and the corners creased back */
       line(5, -1, P.K, 2, -3);
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 3, my - 1, 2, 3); }
-      else { ctx.fillStyle = P.W; ctx.fillRect(cx - 4, my - 1, 3, 2); ctx.fillRect(cx + 2, my - 1, 3, 2); }
+      line(5, -1, shade, 1, -1);
+      PIX.rect(ctx, cx - mw, my - 3, 2, 3, P.K);
+      PIX.rect(ctx, cx + mw - 1, my - 3, 2, 3, P.K);
+      goldStud(cx + 3, my - 2);
       break;
     }
     case 'smug': {
@@ -1757,7 +1820,12 @@ SPR.buildFrog = function (d, expr) {
         ctx.fillRect(cx + i, my + 1 - Math.round(t * t * 5), 1, 2);
       }
       PIX.rect(ctx, cx + mw - 2, my - 5, 3, 3, P.K);
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 5, my - 3, 2, 2); }
+      for (let i = -mw + 1; i <= mw - 1; i++) {
+        const t = (i + mw) / (2 * mw);
+        ctx.fillStyle = shade;
+        ctx.fillRect(cx + i, my + 3 - Math.round(t * t * 5), 1, 1);
+      }
+      goldStud(cx + mw - 6, my - 3);
       break;
     }
     case 'worry': {
@@ -1775,17 +1843,19 @@ SPR.buildFrog = function (d, expr) {
       /* corners hauled down hard, lower lip pushed out under it */
       line(-6, -1);
       line(-6, -1, shade, 1, 2);
-      PIX.rect(ctx, cx - 4, my + 3, 9, 2, P.K);
-      PIX.rect(ctx, cx - 3, my + 3, 7, 1, shade);
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 3, my - 1, 2, 2); }
+      PIX.rect(ctx, cx - 5, my + 3, 11, 3, P.K);
+      PIX.rect(ctx, cx - 4, my + 3, 9, 2, shade);
+      PIX.rect(ctx, cx - 4, my + 3, 9, 1, skin);
+      goldStud(cx + 3, my - 1);
       break;
     }
     case 'pain': {
-      /* pulled open sideways, teeth gritted along the top of it */
+      /* hauled open sideways, the jaw ridge showing, no teeth to grit */
       maw(2, false);
-      ctx.fillStyle = P.W;
-      for (let i = -mw + 4; i <= mw - 4; i += 2) ctx.fillRect(cx + i, my - 1, 1, 3);
       line(-2, -3, P.K, 2, -3);
+      line(-2, -3, shade, 1, -1);
+      PIX.rect(ctx, cx - mw, my - 2, 2, 5, P.K);
+      PIX.rect(ctx, cx + mw - 1, my - 2, 2, 5, P.K);
       break;
     }
     case 'dead': {
@@ -1797,7 +1867,7 @@ SPR.buildFrog = function (d, expr) {
     default: {                                    // neutral: a wide frog frown
       line(-2, 0);
       line(-2, 0, shade, 1, 2);
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 5, my + 1, 2, 2); }
+      goldStud(cx + mw - 6, my + 1);
     }
   }
 

@@ -28,10 +28,19 @@ lamp and the mark sit right on the casino floor, and the UI is felt and gold tri
 sprite is drawn by the game at boot from one parameterized frog rig: eye bulbs that are
 part of the skull rather than stuck on top of it, brows that do the acting, and a mouth
 nearly as wide as the head that bends seven ways — they grin when you get hit, sweat when
-they're losing, bare their teeth when it hurts, and die with the tongue out. Suits with
-lapels, cuffs and frog hands, and every tell drawn right on the frog. Works on phones —
-the buttons grow to thumb size. Sounds are synthesized with WebAudio. Runs are seeded.
-Unlocks persist in localStorage.
+they're losing, haul it open sideways when it hurts, and die with the tongue out.
+
+**No teeth anywhere.** Frogs don't have any, so an open mouth shows gum, the pale
+maxillary ridge along the top jaw, and tongue — and the GOLD TOOTH tell is a stud set in
+his lip. Every frog is also freckled: a mottle scatter seeded off his own def, so the
+same frog is speckled the same way every time you meet him, with a wet slick over the
+crown and each eye bulb. Suits with lapels, cuffs and frog hands, and every tell drawn
+right on the frog. Works on phones — the buttons grow to thumb size. Sounds are
+synthesized with WebAudio. Runs are seeded. Unlocks persist in localStorage.
+
+The table is dressed to match: baize with a visible nap, grain running round the wooden
+rail, and behind him **the house** — two more tables with somebody still sitting at them,
+cigarette haze crossing the room, and dust turning over in the lamp cone.
 
 That tongue is a **nine-point verlet chain anchored in his mouth**, not an animation
 curve. Flies work the room; when one drifts inside range he snaps at it and the whole

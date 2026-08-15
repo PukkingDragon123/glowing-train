@@ -389,6 +389,8 @@ const DUEL = {
     x.closePath(); x.fill();
     x.restore();
 
+    if (DUEL.room !== 'back') DUEL.drawHouse(x);
+
     /* --- table shadow, grounding it on the swirl --- */
     x.globalAlpha = 0.35;
     SPR.ellipse(x, 182, 158, 168, 42, '#050308');
@@ -481,11 +483,37 @@ const DUEL = {
     SPR.ellipse(x, 180, TY, 164, 38, P.K);
     SPR.ellipse(x, 180, TY - 1, 161, 36, P.b);
     SPR.ellipse(x, 180, TY + 1, 158, 34, P.u);
+    /* grain running round the rail, and the tacks catching it */
+    x.save();
+    x.beginPath();
+    x.ellipse(180, TY, 161, 36, 0, 0, Math.PI * 2);
+    x.clip();
+    for (let i = -160; i < 160; i += 5) {
+      PIX.rect(x, 180 + i, TY - 38, 1, 76, i % 15 === 0 ? 'rgba(0,0,0,.20)' : 'rgba(0,0,0,.10)');
+    }
+    for (let i = -150; i < 150; i += 23) {
+      PIX.rect(x, 180 + i + 2, TY - 34 + ((i * 7) % 60), 6, 1, 'rgba(255,255,255,.07)');
+    }
+    x.restore();
     SPR.ellipse(x, 180, TY - 2, 154, 32, P.K);
     SPR.ellipse(x, 180, TY - 3, 151, 31, P.e);
     DUEL.nearFelt(x, TY);
+    /* the weave: baize is not a flat green, it is a nap you can see */
+    x.save();
+    x.beginPath();
+    x.ellipse(180, TY - 3, 150, 30, 0, 0, Math.PI * 2);
+    x.clip();
+    x.globalAlpha = 0.16;
+    for (let yy = TY - 34; yy < TY + 34; yy += 2) {
+      PIX.rect(x, 26, yy, 308, 1, PIX.PAL.E);
+      PIX.rect(x, 26 + ((yy & 2) ? 1 : 0), yy + 1, 308, 1, PIX.PAL.f);
+    }
+    x.globalAlpha = 1;
+    x.restore();
     x.globalAlpha = 0.35;
     SPR.ellipse(x, 180, TY - 16, 92, 12, P.f);
+    x.globalAlpha = 0.18;
+    SPR.ellipse(x, 180, TY - 19, 62, 8, P.F);
     x.globalAlpha = 1;
 
     /* --- blood on the felt --- */
@@ -1187,6 +1215,55 @@ const DUEL = {
     LOOT.sync();
   },
 
+  /* ============================================================
+     THE HOUSE. Whatever is behind him: the rail of the pit, other
+     tables with somebody still sitting at them, and the smoke every
+     room like this is full of. All of it silhouette — it is not the
+     thing you are looking at, it is the reason the thing you ARE
+     looking at feels like it is somewhere.
+     ============================================================ */
+  drawHouse(x) {
+    const P = PIX.PAL, FY = DUEL.FY;
+    const HZ = DUEL.TY() - 46;
+    /* the far wall, falling off toward the floor instead of ending on a line */
+    for (let yy = -DUEL.OY; yy < HZ; yy++) {
+      const t = U.clamp((yy + DUEL.OY) / Math.max(1, HZ + DUEL.OY), 0, 1);
+      x.globalAlpha = 0.20 + t * 0.34;
+      PIX.rect(x, -60, yy, 480, 1, '#050c09');
+    }
+    x.globalAlpha = 1;
+    PIX.rect(x, -60, HZ - 3, 480, 3, 'rgba(0,0,0,.5)');
+    PIX.rect(x, -60, HZ - 2, 480, 1, 'rgba(162,112,74,.16)');
+    /* two more tables further back, each with somebody still at it */
+    const DK = 'rgba(3,8,6,.80)';
+    [[54, 22], [306, 26]].forEach((t, i) => {
+      const tx = t[0], ty = HZ - 5;
+      SPR.ellipse(x, tx, ty, t[1], 7, 'rgba(0,0,0,.55)');
+      SPR.ellipse(x, tx, ty - 1, t[1] - 2, 5, 'rgba(24,70,54,.30)');
+      const bob = Math.round(Math.sin(DUEL.t / (52 + i * 17)));
+      /* head, hat brim, crown, shoulders — a frog, not a smudge */
+      const hy = ty - 16 + bob;
+      SPR.ellipse(x, tx, hy, 8, 6, DK);
+      PIX.disc(x, tx - 6, hy - 4, 3, DK);
+      PIX.disc(x, tx + 6, hy - 4, 3, DK);
+      PIX.rect(x, tx - 11, hy - 8, 23, 2, DK);
+      PIX.rect(x, tx - 7, hy - 13, 15, 5, DK);
+      SPR.ellipse(x, tx, ty - 4 + bob, 15, 7, DK);
+      /* a chip stack and a glass on his table */
+      PIX.rect(x, tx + t[1] - 9, ty - 6, 5, 5, DK);
+      PIX.rect(x, tx - t[1] + 5, ty - 7, 3, 6, DK);
+    });
+    /* cigarette haze — wide and low-contrast, or it reads as bars */
+    x.globalAlpha = 0.035;
+    for (let i = 0; i < 5; i++) {
+      const hx = ((DUEL.t * (0.10 + i * 0.035) + i * 150) % 620) - 130;
+      SPR.ellipse(x, hx, HZ - 34 + i * 11, 118, 9, i & 1 ? P.w : P.q);
+    }
+    x.globalAlpha = 1;
+    /* dust turning over in the lamp cone */
+    if (DUEL.t % 22 === 0) FX.dust && FX.dust(120 + Math.random() * 120, HZ + 10);
+  },
+
   /* the table's centre row. It follows the UI rail so the near edge always
      lands in shot, but never so far up that the felt eats the mark's hands. */
   TY() { return U.clamp(DUEL.FY - 26, 138, 158); },
@@ -1208,9 +1285,18 @@ const DUEL = {
       span(y, hf + 11, P.K);
       span(y, hf + 10, P.u);                              // roll of the rail
       span(y, hf + 7, P.b);                               // its lit top
+      if (y % 3 === 0) {                                  // grain across the wood
+        PIX.rect(x, 180 - hf - 9, y, 8, 1, 'rgba(0,0,0,.16)');
+        PIX.rect(x, 180 + hf + 1, y, 8, 1, 'rgba(0,0,0,.16)');
+      }
       span(y, hf + 1, P.K);
       /* the felt goes off toward you: the lamp does not reach this end */
       span(y, hf, t < 0.26 ? P.e : t < 0.50 ? P.E : t < 0.72 ? '#0b2318' : '#071810');
+      /* the nap runs on down your end too, just darker */
+      if (y % 2 === 0) {
+        PIX.rect(x, 180 - hf, y, hf * 2, 1, 'rgba(0,0,0,.10)');
+        PIX.rect(x, 180 - hf + 1, y, hf * 2 - 2, 1, 'rgba(255,255,255,.02)');
+      }
       if (y % 2 === 0 && t > 0.20 && t < 0.30) span(y, hf, P.E);
       if (y % 2 === 0 && t > 0.44 && t < 0.56) span(y, hf, '#0b2318');
       if (y % 2 === 0 && t > 0.66 && t < 0.78) span(y, hf, '#071810');
