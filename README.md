@@ -25,11 +25,18 @@ Arms sit *under* the coat and end in four-fingered frog hands resting on the fel
 
 The whole game plays **fullscreen over a Balatro-style paint swirl** — the table, the
 lamp and the mark sit right on the casino floor, and the UI is felt and gold trim. Every
-sprite is drawn by the game at boot from one parameterized frog rig: big cartoon heads,
-seven facial expressions (they grin when you get hit, sweat when they're losing, and die
-with their tongue out), suits with lapels, cuffs and three-finger hands, and every tell
-drawn right on the frog. Works on phones — the buttons grow to thumb size. Sounds are
-synthesized with WebAudio. Runs are seeded. Unlocks persist in localStorage.
+sprite is drawn by the game at boot from one parameterized frog rig: eye bulbs that are
+part of the skull rather than stuck on top of it, brows that do the acting, and a mouth
+nearly as wide as the head that bends seven ways — they grin when you get hit, sweat when
+they're losing, bare their teeth when it hurts, and die with the tongue out. Suits with
+lapels, cuffs and frog hands, and every tell drawn right on the frog. Works on phones —
+the buttons grow to thumb size. Sounds are synthesized with WebAudio. Runs are seeded.
+Unlocks persist in localStorage.
+
+That tongue is a **nine-point verlet chain anchored in his mouth**, not an animation
+curve. Flies work the room; when one drifts inside range he snaps at it and the whole
+length whips out after the tip with momentum and sag, then comes back slack with the fly
+stuck to the end of it.
 
 **Every button is an arcade button** — a socket bolted into the panel with a moulded
 cap sitting in it, a glint on the crown, and a press that drops the cap into the socket
