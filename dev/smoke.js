@@ -58,8 +58,26 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await settle();
       await page.waitForTimeout(250);
     }
-    /* the corpse → the loot panel */
+    /* the corpse → haul him out back → the loot panel */
+    await page.waitForSelector('#btn-haul', { timeout: 25000 });
+    await page.waitForTimeout(500);           // let the card finish popping in
+    await shot('05a-haul');
+    const hb = await page.locator('#btn-haul').boundingBox();
+    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    await page.mouse.down();
+    await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 15000 })
+      .catch(async () => {                    // fall back to clicking him out back
+        await page.mouse.up();
+        for (let k = 0; k < 4; k++) {
+          await page.locator('#btn-haul').click({ timeout: 4000 }).catch(() => {});
+          await page.waitForTimeout(200);
+        }
+        await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 15000 });
+      });
+    await page.mouse.up();
+    await page.waitForFunction(() => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
     await page.waitForSelector('#loot-panel', { timeout: 25000 });
+    await page.waitForTimeout(300);
   }
 
   /* rifle pockets until the badges arrive, bribe once, then walk out */

@@ -678,7 +678,7 @@ const E = {
     pockets.forEach(p => { p.bulge = !!(p.card || p.gun || p.item); });
 
     G.loot = { pockets, sinceBribe: 0, bribes: 0, pendingCard: null, pendingItem: null,
-      done: false, tool: null, bonusFree: 0 };
+      done: false, tool: null, bonusFree: 0, dragged: false };
     G.phase = 'loot';
     return G.loot;
   },

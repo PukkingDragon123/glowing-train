@@ -19,6 +19,7 @@ const BG = (() => {
     casino: ['#12240f', '#1a3a24', '#2a1018', '#123227'],
     dead:   ['#16090d', '#200d14', '#0f0609', '#1a0a10'],
     win:    ['#1f1a08', '#2e2609', '#171204', '#3a2e0e'],
+    back:   ['#141218', '#1b1721', '#0f0e12', '#221d19'],
   };
   let cols = MODES.title.map(hex2rgb);
   let target = cols;

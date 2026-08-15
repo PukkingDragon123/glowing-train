@@ -1521,8 +1521,11 @@ SPR.buildFrog = function (d, expr) {
   const rx = fat ? 20 : 15;              // BIG cartoon head
   const ry = fat ? 14 : 12;
   const headY = 25;
-  const ex = fat ? 12 : 9, ey = 11;      // eye bulbs
-  const er = 6;
+  /* Eye bulbs ride ON the skull rather than defining its width — set them
+     as wide as the head and the whole top squares off into a plateau. */
+  const er = fat ? 6 : 5;
+  const ex = fat ? 11 : 8;
+  const ey = headY - ry;
 
   /* ---- the costume at the neck: BACK layers (the head covers most) ---- */
   const C = SPR.costumeOf(d);
@@ -1566,73 +1569,111 @@ SPR.buildFrog = function (d, expr) {
     PIX.rect(ctx, cx - sw, gTop + 3, 3, 1, P.s);
   }
 
-  /* head */
-  SPR.ellipse(ctx, cx, headY, rx + 1, ry + 1, P.K);
-  SPR.ellipse(ctx, cx, headY, rx, ry, skin);
+  /* ============================================================
+     HEAD AND EYES, AS ONE SILHOUETTE.
+
+     A frog's eyes are part of its skull, not two balls stuck on top
+     of it. Drawing them as separate discs left a hard notch where
+     each one met the head. So: an ink pass over head AND both bulbs
+     first, then a fill pass over the same three shapes — the second
+     pass buries the internal outlines and what is left is one
+     creature with a lumpy top.
+     ============================================================ */
+  const EY = ey;
+  [P.K, skin].forEach((col, pass) => {
+    const g = pass ? 0 : 1;
+    SPR.ellipse(ctx, cx, headY, rx + g, ry + g, col);
+    PIX.disc(ctx, cx - ex, EY, er + g, col);
+    PIX.disc(ctx, cx + ex, EY, er + g, col);
+  });
+  /* the shelf under each bulb, and the jowl under the whole head */
+  [-ex, ex].forEach(o => SPR.ellipse(ctx, cx + o, EY + er - 1, er - 1, 2, shade));
   SPR.ellipse(ctx, cx, headY + 6, rx - 2, 5, shade);
+  PIX.rect(ctx, cx - 2, EY + er - 2, 5, 2, shade);          // the dip between them
   if (fat) {
     SPR.ellipse(ctx, cx - rx + 5, headY + 6, 6, 5, shade);
     SPR.ellipse(ctx, cx + rx - 5, headY + 6, 6, 5, shade);
     PIX.rect(ctx, cx - 7, headY + 11, 15, 1, dark);
   }
+  /* nostrils, because a face without them is a balloon */
+  PIX.rect(ctx, cx - 3, headY - 1, 2, 2, dark);
+  PIX.rect(ctx, cx + 2, headY - 1, 2, 2, dark);
+  if (d.warts) {
+    [[-rx + 6, headY + 2], [rx - 7, headY - 1], [3, headY + 7]]
+      .forEach(o => { PIX.disc(ctx, cx + o[0], o[1], 2, shade); PIX.disc(ctx, cx + o[0], o[1] - 1, 1, skin); });
+  }
   if (d.spots) {
     [[-rx + 5, headY - 2], [rx - 7, headY + 3], [-4, headY + 8], [7, headY - 4]]
-      .forEach(([sx, sy]) => PIX.disc(ctx, cx + sx, sy, 2, shade));
+      .forEach(sp => PIX.disc(ctx, cx + sp[0], sp[1], 2, shade));
   }
 
-  /* --- eyes, by expression --- */
+  /* ---- the eyeball itself, and the brow that does the acting ---- */
+  const EX = {
+    /*            lid   pupil  brow-in  brow-out  brow-y */
+    neutral: { lid: 2, pup: 3, bi: 0, bo: 0, by: 0 },
+    smug:    { lid: 2, pup: 3, bi: 2, bo: -1, by: 0 },
+    worry:   { lid: 0, pup: 2, bi: -2, bo: 1, by: -1 },
+    grin:    { lid: 1, pup: 4, bi: -1, bo: -1, by: -1 },
+    angry:   { lid: 1, pup: 3, bi: 2, bo: -2, by: 1 },
+    pain:    { lid: 0, pup: 0, bi: 2, bo: -1, by: 0 },
+    dead:    { lid: 0, pup: 0, bi: 0, bo: 0, by: 0 },
+  };
+  const X = EX[expr] || EX.neutral;
+
   const drawEye = (off, side) => {
-    PIX.disc(ctx, cx + off, ey, er + 1, P.K);
-    PIX.disc(ctx, cx + off, ey, er, skin);
     if (expr === 'dead') {                       // X X
+      ctx.fillStyle = P.k;
+      PIX.disc(ctx, cx + off, EY, er - 1, P.w);
       ctx.fillStyle = P.K;
-      for (let i = -2; i <= 2; i++) {
-        ctx.fillRect(cx + off + i, ey + i, 1, 1);
-        ctx.fillRect(cx + off + i, ey - i, 1, 1);
+      for (let i = -3; i <= 3; i++) {
+        ctx.fillRect(cx + off + i, EY + i, 1, 1);
+        ctx.fillRect(cx + off + i, EY - i, 1, 1);
       }
       return;
     }
-    if (expr === 'pain') {                       // squeezed shut
-      ctx.fillStyle = P.K;
-      for (let i = 0; i <= 4; i++) {
-        ctx.fillRect(cx + off - 2 + i, ey - 2 + Math.abs(2 - i), 1, 1);
-        ctx.fillRect(cx + off - 2 + i, ey + 2 - Math.abs(2 - i), 1, 1);
+    if (expr === 'pain') {                       // screwed shut, a hard line
+      PIX.rect(ctx, cx + off - er + 1, EY - 1, er * 2 - 1, 2, P.K);
+      PIX.rect(ctx, cx + off - er + 2, EY, er * 2 - 3, 1, dark);
+      for (let i = 0; i < 3; i++) {              // crow's feet
+        PIX.rect(ctx, cx + off + side * (er - 1 + i), EY - 3 + i * 2, 2, 1, dark);
       }
       return;
     }
-    PIX.disc(ctx, cx + off, ey + 1, er - 2, P.W);
-    if (d.goldEyes) PIX.disc(ctx, cx + off, ey + 1, er - 3, P.G);
-    ctx.fillStyle = P.K;
+    /* sclera, iris, pupil, catchlight */
+    PIX.disc(ctx, cx + off, EY + 1, er - 2, P.W);
+    const iris = d.goldEyes ? P.G : d.spiral ? P.N : P.g;
+    PIX.disc(ctx, cx + off, EY + 1, er - 3, iris);
     if (d.spiral) {
-      ctx.fillRect(cx + off - 1, ey, 3, 1); ctx.fillRect(cx + off + 1, ey + 1, 1, 1);
-      ctx.fillRect(cx + off - 1, ey + 2, 2, 1);
-    } else if (expr === 'worry') {
-      ctx.fillRect(cx + off - 1, ey + 1, 2, 2);  // tiny scared pupil
-    } else if (expr === 'smug') {
-      ctx.fillRect(cx + off + (side < 0 ? 1 : -3), ey + 1, 2, 3);
+      ctx.fillStyle = P.K;
+      ctx.fillRect(cx + off - 1, EY, 3, 1); ctx.fillRect(cx + off + 1, EY + 1, 1, 1);
+      ctx.fillRect(cx + off - 1, EY + 2, 2, 1);
     } else {
-      ctx.fillRect(cx + off - 1, ey, 3, 4);      // big cartoon pupil
-      ctx.fillStyle = P.W; ctx.fillRect(cx + off, ey + 1, 1, 1);
-      ctx.fillStyle = P.K;
+      /* a frog pupil is a horizontal slot; a scared one shrinks to a dot */
+      const pw = Math.max(1, X.pup), ph = expr === 'worry' ? 2 : 3;
+      const px = cx + off + (expr === 'smug' ? -side * 2 : 0);
+      PIX.rect(ctx, px - (pw >> 1), EY - (ph >> 1) + 1, pw, ph, P.K);
+      PIX.rect(ctx, px - (pw >> 1) - 1, EY + 1, 1, 1, P.K);
+      PIX.rect(ctx, px + (pw >> 1), EY + 1, 1, 1, P.K);
+      PIX.rect(ctx, px - 1, EY - 1, 1, 1, P.W);          // catchlight
     }
-    if (expr === 'neutral' || expr === 'smug') { // heavy mobster lids
-      PIX.disc(ctx, cx + off, ey - (expr === 'smug' ? 1 : 3), er - 2, skin);
-      PIX.rect(ctx, cx + off - er + 2, ey - (expr === 'smug' ? 0 : 2), er * 2 - 3, 1, shade);
+    /* the heavy lid, coming DOWN off the top of the bulb */
+    if (X.lid > 0) {
+      PIX.disc(ctx, cx + off, EY - er + X.lid - 1, er, skin);
+      PIX.rect(ctx, cx + off - er + 1, EY - er + X.lid + 1, er * 2 - 1, 1, shade);
     }
-    if (expr === 'angry') {                      // V brows
-      ctx.fillStyle = P.K;
-      for (let i = 0; i < er - 1; i++) {
-        ctx.fillRect(cx + off + (side < 0 ? -er + 2 + i : er - 3 - i), ey - er + 1 + Math.floor(i * 0.8), 2, 1);
-      }
+    /* and the brow, which is where the whole expression actually lives */
+    const bi = X.bi, bo = X.bo;
+    for (let i = 0; i < er * 2 + 1; i++) {
+      const t = i / (er * 2);
+      const inner = side < 0 ? 1 - t : t;
+      const dy = Math.round(bi * inner + bo * (1 - inner));
+      const bx = cx + off - er + i, by = EY - er + 1 + X.by + dy;
+      PIX.rect(ctx, bx, by, 1, 3, P.K);
+      PIX.rect(ctx, bx, by + 1, 1, 1, dark);
     }
-    if (expr === 'worry') {                      // brow up, whites wide
-      ctx.fillStyle = dark;
-      ctx.fillRect(cx + off - 3, ey - er - 1, 7, 1);
-    }
-    if (d.lashes && expr !== 'dead') {
-      PIX.rect(ctx, cx + off - er + 1, ey - er + 2, 1, 2, P.K);
-      PIX.rect(ctx, cx + off, ey - er - 1, 1, 2, P.K);
-      PIX.rect(ctx, cx + off + er - 1, ey - er + 2, 1, 2, P.K);
+    if (d.lashes) {
+      PIX.rect(ctx, cx + off - er + 1, EY - er + 2, 1, 2, P.K);
+      PIX.rect(ctx, cx + off + er - 1, EY - er + 2, 1, 2, P.K);
     }
   };
   drawEye(-ex, -1); drawEye(ex, 1);
@@ -1669,70 +1710,97 @@ SPR.buildFrog = function (d, expr) {
   PIX.rect(ctx, cx - 3, headY - 4, 1, 2, dark);
   PIX.rect(ctx, cx + 3, headY - 4, 1, 2, dark);
 
-  /* --- mouth, by expression (2px cartoon lines) --- */
-  const mw = rx - 4, my = headY + 4;
-  const curve = (dir, depth) => {
-    ctx.fillStyle = P.K;
-    for (let x = -mw; x <= mw; x++) {
-      const b = Math.round(Math.pow(Math.abs(x) / mw, 2) * depth);
-      ctx.fillRect(cx + x, my + dir * b, 1, 2);
+  /* ============================================================
+     THE MOUTH. A frog's is nearly as wide as its head, so all seven
+     of these are the same wide line bent different ways — corners
+     up or down does more work than any amount of teeth.
+     ============================================================ */
+  const mw = rx - 4, my = headY + 3;
+  const gum = P.D, tongue = P.r, tongueLo = P.d;
+
+  /* one bent line: lift raises the CORNERS, sag drops the middle */
+  const line = (lift, sag, col, th, yoff) => {
+    ctx.fillStyle = col || P.K;
+    for (let i = -mw; i <= mw; i++) {
+      const t = Math.abs(i) / mw, tt = t * t;
+      const y = my + (yoff || 0) + Math.round(sag * (1 - tt) - lift * tt);
+      ctx.fillRect(cx + i, y, 1, th || 2);
     }
   };
+  /* the inside of an open mouth: gum, then a tongue lying in it */
+  const maw = (h, tongueOut) => {
+    SPR.ellipse(ctx, cx, my + 2, mw - 2, h + 1, P.K);
+    SPR.ellipse(ctx, cx, my + 2, mw - 3, h, gum);
+    SPR.ellipse(ctx, cx, my + h, mw - 6, Math.max(1, h - 2), tongueLo);
+    SPR.ellipse(ctx, cx, my + h - 1, mw - 7, Math.max(1, h - 3), tongue);
+    if (tongueOut) {
+      PIX.rect(ctx, cx + 1, my + h - 1, 5, 5, P.K);
+      PIX.rect(ctx, cx + 2, my + h - 1, 3, 4, tongue);
+      PIX.rect(ctx, cx + 2, my + h + 2, 3, 1, tongueLo);
+    }
+  };
+
   switch (expr) {
     case 'grin': {
-      curve(-1, 5);
-      ctx.fillStyle = P.W;
-      for (let x = -mw + 2; x <= mw - 2; x++) {
-        const b = Math.round(Math.pow(Math.abs(x) / mw, 2) * 5);
-        ctx.fillRect(cx + x, my - b + 2, 1, 2);
-      }
-      ctx.fillStyle = P.K;
-      for (let x = -mw + 3; x <= mw - 3; x += 4) ctx.fillRect(cx + x, my, 1, 3);
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 3, my + 1, 2, 2); }
+      maw(3, false);
+      /* the upper lip riding over it, and the one tooth he is proud of */
+      line(5, -1, P.K, 2, -3);
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 3, my - 1, 2, 3); }
+      else { ctx.fillStyle = P.W; ctx.fillRect(cx - 4, my - 1, 3, 2); ctx.fillRect(cx + 2, my - 1, 3, 2); }
       break;
     }
     case 'smug': {
+      /* one corner up, the other flat: a mobster's half smile */
       ctx.fillStyle = P.K;
-      for (let x = -mw + 2; x <= mw - 1; x++) {
-        const t = (x + mw) / (2 * mw);
-        ctx.fillRect(cx + x, my + 2 - Math.round(t * t * 4), 1, 2);
+      for (let i = -mw; i <= mw; i++) {
+        const t = (i + mw) / (2 * mw);
+        ctx.fillRect(cx + i, my + 1 - Math.round(t * t * 5), 1, 2);
       }
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 4, my - 1, 2, 2); }
+      PIX.rect(ctx, cx + mw - 2, my - 5, 3, 3, P.K);
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 5, my - 3, 2, 2); }
       break;
     }
     case 'worry': {
+      /* a line that cannot hold still */
       ctx.fillStyle = P.K;
-      for (let x = -mw + 2; x <= mw - 2; x++) {
-        ctx.fillRect(cx + x, my + 1 + ((x & 2) ? 1 : 0), 1, 2);
+      for (let i = -mw + 1; i <= mw - 1; i++) {
+        ctx.fillRect(cx + i, my + ((i & 2) ? 1 : -1), 1, 2);
       }
-      PIX.rect(ctx, cx - rx + 3, ey - 2, 2, 3, P.L);   // flop sweat
-      PIX.rect(ctx, cx - rx + 3, ey - 3, 1, 1, P.L);
+      PIX.rect(ctx, cx - rx + 3, ey - 1, 2, 4, P.L);      // flop sweat
+      PIX.rect(ctx, cx - rx + 3, ey - 2, 1, 1, P.W);
+      PIX.rect(ctx, cx + rx - 5, ey + 2, 2, 3, P.L);
       break;
     }
     case 'angry': {
-      PIX.rect(ctx, cx - mw + 1, my, mw * 2 - 1, 4, P.K);
+      /* corners hauled down hard, lower lip pushed out under it */
+      line(-6, -1);
+      line(-6, -1, shade, 1, 2);
+      PIX.rect(ctx, cx - 4, my + 3, 9, 2, P.K);
+      PIX.rect(ctx, cx - 3, my + 3, 7, 1, shade);
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 3, my - 1, 2, 2); }
+      break;
+    }
+    case 'pain': {
+      /* pulled open sideways, teeth gritted along the top of it */
+      maw(2, false);
       ctx.fillStyle = P.W;
-      ctx.fillRect(cx - mw + 2, my + 1, mw * 2 - 3, 2);
-      ctx.fillStyle = P.K;
-      for (let x = -mw + 3; x <= mw - 2; x += 3) ctx.fillRect(cx + x, my + 1, 1, 2);
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + 2, my + 1, 2, 2); }
+      for (let i = -mw + 4; i <= mw - 4; i += 2) ctx.fillRect(cx + i, my - 1, 1, 3);
+      line(-2, -3, P.K, 2, -3);
       break;
     }
-    case 'pain':
     case 'dead': {
-      SPR.ellipse(ctx, cx, my + 2, 4, 3, P.K);
-      SPR.ellipse(ctx, cx, my + 2, 2, 1, P.D);
-      if (expr === 'dead') {                      // tongue out
-        PIX.rect(ctx, cx + 3, my + 3, 4, 3, P.K);
-        PIX.rect(ctx, cx + 4, my + 3, 3, 2, P.R);
-      }
+      /* slack, hanging open, and the tongue is out of it for good */
+      maw(3, true);
+      line(-1, -2, P.K, 2, -3);
       break;
     }
-    default: {                                    // neutral droop
-      curve(1, 4);
-      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 5, my + 3, 2, 1); }
+    default: {                                    // neutral: a wide frog frown
+      line(-2, 0);
+      line(-2, 0, shade, 1, 2);
+      if (d.goldtooth) { ctx.fillStyle = P.G; ctx.fillRect(cx + mw - 5, my + 1, 2, 2); }
     }
   }
+
   if (d.lips && expr !== 'dead' && expr !== 'pain') {
     ctx.fillStyle = P[d.lips] || P.R;
     for (let x = -4; x <= 4; x++) {

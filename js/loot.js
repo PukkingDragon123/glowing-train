@@ -8,6 +8,56 @@
 
 const LOOT = {
 
+  /* ============================================================
+     Before anything else: he is lying in the middle of the room
+     with the lamp on him. Get him out back first.
+     ============================================================ */
+  haulPrompt() {
+    const o = document.getElementById('duel-overlay');
+    if (!o) return;
+    o.className = 'haul-in';
+    o.innerHTML = '';
+    const card = U.el('div', 'haul-card pop');
+    card.appendChild(UI.txt('HE IS STILL ON THE TABLE', { scale: 3, color: PIX.PAL.q }));
+    card.appendChild(UI.txt('DRAG HIM OUT BACK', { scale: 5, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    card.appendChild(UI.txt('grab his collar and pull', { scale: 2, color: PIX.PAL.w }));
+    const b = U.el('button', 'pixbtn gold primary');
+    b.id = 'btn-haul';
+    b.appendChild(UI.txt('HAUL HIM', { scale: 3, shadow: null, color: PIX.PAL.K }));
+    const kh = U.el('span', 'key-hint'); kh.textContent = 'HOLD';
+    b.appendChild(kh);
+    /* holding the button hauls too — one thumb, or a mouse that will not drag */
+    let iv = 0;
+    const start = () => {
+      if (iv) return;
+      DUEL.haul = DUEL.haul || { on: false, prog: 0 };
+      SFX.jamSfx();
+      iv = setInterval(() => {
+        if (G.phase !== 'loot' || !DUEL.haul || DUEL.room === 'back') { stop(); return; }
+        DUEL.haul.on = true;
+        DUEL.jiggle = 1.4;
+        DUEL.haul.prog = Math.min(1, DUEL.haul.prog + 0.045);
+        if (DUEL.haul.prog >= 1) { stop(); DUEL.haulDone(); }
+      }, 55);
+    };
+    const stop = () => { clearInterval(iv); iv = 0; if (DUEL.haul) DUEL.haul.on = false; };
+    b.addEventListener('pointerdown', start);
+    b.addEventListener('pointerup', stop);
+    b.addEventListener('pointerleave', stop);
+    b.addEventListener('pointercancel', stop);
+    /* and a plain click still moves him, so no input method is locked out */
+    b.onclick = () => {
+      if (DUEL.room === 'back' || DUEL.busy) return;
+      DUEL.haul = DUEL.haul || { on: false, prog: 0 };
+      DUEL.haul.prog = Math.min(1, DUEL.haul.prog + 0.34);
+      DUEL.jiggle = 2;
+      SFX.jamSfx();
+      if (DUEL.haul.prog >= 1) { stop(); DUEL.haulDone(); }
+    };
+    card.appendChild(b);
+    o.appendChild(card);
+  },
+
   /* the loot panel rides the duel scene's overlay */
   overlay() {
     const o = document.getElementById('duel-overlay');

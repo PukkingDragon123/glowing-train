@@ -95,6 +95,10 @@ Take turns with the mark across the felt:
 - Empty drum reloads with a fresh mix. Zero hearts ends somebody. Lose, and the swamp
   keeps your marker.
 
+![The tongue goes out](docs/screen-tongue.png)
+
+![Seven ways to feel about it](docs/screen-faces.png)
+
 ## Tells & the little black book
 
 Every mook and capo is **procedurally generated** — face, build, suit, and 0–3 **tells**

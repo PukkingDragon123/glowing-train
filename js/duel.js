@@ -39,6 +39,10 @@ const DUEL = {
   cyl: 0, cylT: 0,        // which chamber is under it, and the turn in progress
   smoke: [],              // wisps off the muzzle and out of the cylinder gap
   reach: null,            // your arm out over the corpse, going through a pocket
+  room: 'table',          // 'table' while he is on the felt, 'back' once you drag him
+  haul: null,             // { on, prog } — dragging him off the felt
+  tongue: null,           // a verlet chain, anchored in his mouth
+  flies: [],              // what it goes out for
   hoverSpot: -1,
   oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
 
@@ -184,6 +188,12 @@ const DUEL = {
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
     DUEL.reach = null; DUEL.hoverSpot = -1;
+    DUEL.initTongue();
+    /* G.loot survives from the LAST corpse until the next one is opened, so
+       this has to ask what phase we are actually in — otherwise the next
+       duel gets played standing in the back room */
+    DUEL.room = (G.phase === 'loot' && G.loot && G.loot.dragged) ? 'back' : 'table';
+    DUEL.haul = null;
     document.querySelectorAll('.mark-speech, .cop-callout').forEach(n => n.remove());
     DUEL.setPose('rest', true);
     FX.reset(); FX.ambient(true);
@@ -203,8 +213,8 @@ const DUEL = {
     if (G.phase === 'loot') {
       DUEL.opp.fall = 1; DUEL.opp.gone = true;
       DUEL.corpse = true; DUEL.pool = 20;
-      LOOT.overlay();
       DUEL.busy = false;
+      if (G.loot && G.loot.dragged) LOOT.overlay(); else LOOT.haulPrompt();
     } else {
       DUEL.intro();
     }
@@ -295,6 +305,8 @@ const DUEL = {
     if (DUEL.muzzle && ++DUEL.muzzle.t > 7) DUEL.muzzle = null;
     if (DUEL.cylT > 0) { DUEL.cylT = Math.max(0, DUEL.cylT - 0.14); DUEL.cyl += 0.14; }
     if (DUEL.kick > 0.002) DUEL.kick *= 0.79; else DUEL.kick = 0;
+    DUEL.stepFlies();
+    DUEL.stepTongue();
     DUEL.smoke = DUEL.smoke.filter(w => {
       w.t++; w.x += w.vx; w.y += w.vy; w.vy *= 0.97; w.r += 0.14;
       return w.t < w.life;
@@ -429,6 +441,9 @@ const DUEL = {
       }
     }
 
+    /* --- the room's flies, and what goes out for them --- */
+    if (!DUEL.opp.gone && DUEL.opp.fall < 0) { DUEL.drawFlies(x); DUEL.drawTongue(x); }
+
     /* --- ghost on the way out --- */
     if (DUEL.ghost) {
       x.save();
@@ -439,6 +454,25 @@ const DUEL = {
     }
 
     COPS.draw(x, DUEL.t);
+
+    if (DUEL.room === 'back') {
+      DUEL.drawBackRoom(x);
+      DUEL.drawCorpse(x);
+      DUEL.drawSpots(x);
+      DUEL.drawSmoke(x);
+      DUEL.parts.forEach(p => {
+        x.globalAlpha = Math.max(0, 1 - p.t / p.life);
+        x.fillStyle = p.col;
+        x.fillRect(Math.round(p.x), Math.round(p.y), p.s || 2, p.s || 2);
+      });
+      x.globalAlpha = 1;
+      FX.drawFront(x, DUEL.t);
+      DUEL.drawYou(x);
+      x.restore();
+      FX.drawScreen(x, W, H);
+      COPS.drawOverlay(x, W, H);
+      return;
+    }
 
     /* --- the table: the far half is an ellipse, the near half runs off the
        bottom of the frame, because that is where your own edge of the felt
@@ -539,85 +573,274 @@ const DUEL = {
     COPS.drawOverlay(x, W, H);
   },
 
-  /* belly-up on the felt: body, lolled head, splayed arm, legs, wounds */
+  /* ============================================================
+     THE BODY.
+
+     He is not an exploded sprite. He is a frog lying on his back
+     with his head lolled toward you — built limb by limb out of the
+     same tapered tubes the near arms use, ink pass then fill pass so
+     the whole thing is one silhouette, with his own suit on it and
+     his own face still on the front of his head.
+
+     Everything is in HIS local space, origin at the middle of his
+     chest, so the same body works on the felt and on the back room
+     floor and the search spots come along with him.
+     ============================================================ */
+  corpseAt() {
+    if (DUEL.room === 'back') return { x: 186, y: DUEL.FY - 40 };
+    const p = DUEL.haul ? DUEL.haul.prog : 0;
+    return { x: 196 - p * 26, y: 130 + p * 30 };
+  },
+
+  /* ============================================================
+     HAULING HIM OUT BACK.
+
+     You do not go through a body in the middle of the room with the
+     lamp on it. Get a grip on his collar and drag — the felt is
+     slick, he is heavy, and he only moves while you are pulling.
+     ============================================================ */
+  haulStart(px, py) {
+    if (G.phase !== 'loot' || DUEL.room !== 'back' && G.loot.dragged) return false;
+    if (DUEL.room === 'back' || DUEL.busy) return false;
+    const at = DUEL.corpseAt();
+    if (Math.abs(px - at.x) > 70 || Math.abs(py - at.y) > 40) return false;
+    DUEL.haul = DUEL.haul || { on: false, prog: 0 };
+    DUEL.haul.on = true;
+    DUEL.haul.lx = px; DUEL.haul.ly = py;
+    SFX.jamSfx();
+    return true;
+  },
+
+  haulMove(px, py) {
+    const h = DUEL.haul;
+    if (!h || !h.on) return;
+    /* only pulling TOWARD you counts — shoving him about does nothing */
+    const dy = py - h.ly, dx = px - h.lx;
+    h.lx = px; h.ly = py;
+    const pull = Math.max(0, dy) + Math.max(0, -dx) * 0.5;
+    if (pull <= 0) return;
+    const was = h.prog;
+    h.prog = Math.min(1, h.prog + pull / 130);
+    DUEL.jiggle = 1.6;
+    if ((h.prog * 8 | 0) !== (was * 8 | 0)) {
+      SFX.tick();
+      DUEL.puff(DUEL.corpseAt().x + 30, DUEL.corpseAt().y + 12, 2, [PIX.PAL.q, PIX.PAL.e], 1, -0.2);
+    }
+    if (h.prog >= 1) DUEL.haulDone();
+  },
+
+  haulEnd() { if (DUEL.haul) DUEL.haul.on = false; },
+
+  async haulDone() {
+    if (DUEL.busy || DUEL.room === 'back') return;
+    DUEL.busy = true;
+    DUEL.haul.on = false;
+    SFX.chak();
+    UI.stampBig('OUT BACK', PIX.PAL.G, true);
+    await CINE.transition(() => {
+      G.loot.dragged = true;
+      DUEL.room = 'back';
+      BG.set('back');
+      LOOT.overlay();
+    });
+    DUEL.busy = false;
+    LOOT.sync();
+  },
+
+  /* ============================================================
+     THE BACK ROOM. Concrete, crates, one bulb on a wire, a drain
+     in the floor and a door you came through. Nobody is looking.
+     ============================================================ */
+  drawBackRoom(x) {
+    const P = PIX.PAL, FY = DUEL.FY;
+    const HZ = FY - 96;                       // where the wall meets the floor
+    /* the back wall, block-laid */
+    PIX.rect(x, -60, -DUEL.OY, 480, HZ + DUEL.OY, '#241f28');
+    for (let y = -DUEL.OY; y < HZ; y += 9) {
+      PIX.rect(x, -60, y, 480, 1, '#1b1721');
+      for (let bx = -60 + ((y / 9 | 0) % 2 ? 0 : 17); bx < 420; bx += 34) {
+        PIX.rect(x, bx, y, 1, 9, '#1b1721');
+      }
+    }
+    /* the floor, running away under him */
+    for (let y = HZ; y < DUEL.H - DUEL.OY + 2; y++) {
+      const t = (y - HZ) / Math.max(1, FY + 20 - HZ);
+      const col = t < 0.3 ? '#2c2b30' : t < 0.62 ? '#26252b' : '#1d1c22';
+      PIX.rect(x, -60, y, 480, 1, col);
+      if (y % 7 === 0) PIX.rect(x, -60, y, 480, 1, 'rgba(0,0,0,.20)');
+    }
+    PIX.rect(x, -60, HZ - 1, 480, 2, P.K);
+    /* the drain he is lying next to */
+    SPR.ellipse(x, 268, FY - 30, 13, 5, P.K);
+    SPR.ellipse(x, 268, FY - 31, 11, 4, '#15141a');
+    for (let i = -2; i <= 2; i++) PIX.rect(x, 262 + i * 3, FY - 34, 1, 6, '#3a3842');
+    /* the door you came through */
+    PIX.rect(x, 296, HZ - 54, 46, 55, P.K);
+    PIX.rect(x, 298, HZ - 52, 42, 53, '#3b2f26');
+    PIX.rect(x, 300, HZ - 50, 38, 4, '#4a3b2e');
+    PIX.rect(x, 300, HZ - 24, 38, 4, '#4a3b2e');
+    PIX.disc(x, 304, HZ - 26, 2, P.g);
+    /* crates stacked against the wall */
+    const crate = (cx2, cy2, w, h) => {
+      PIX.rect(x, cx2, cy2, w, h, P.K);
+      PIX.rect(x, cx2 + 1, cy2 + 1, w - 2, h - 2, P.u);
+      PIX.rect(x, cx2 + 1, cy2 + 1, w - 2, 2, P.b);
+      PIX.rect(x, cx2 + 1, cy2 + (h >> 1), w - 2, 2, P.U);
+      PIX.rect(x, cx2 + (w >> 1) - 1, cy2 + 1, 2, h - 2, P.U);
+    };
+    crate(36, HZ - 30, 34, 30);
+    crate(42, HZ - 54, 26, 24);
+    crate(76, HZ - 22, 26, 22);
+    /* a mop in a bucket */
+    PIX.rect(x, 118, HZ - 4, 16, 12, P.K);
+    PIX.rect(x, 119, HZ - 3, 14, 10, P.t);
+    PIX.rect(x, 119, HZ - 3, 14, 2, P.s);
+    PIX.rect(x, 124, HZ - 34, 3, 31, P.K);
+    PIX.rect(x, 124, HZ - 34, 2, 30, P.b);
+    PIX.rect(x, 120, HZ - 38, 11, 6, P.K);
+    PIX.rect(x, 121, HZ - 37, 9, 4, P.w);
+    /* one bulb on a wire, swinging a little */
+    const sway = Math.sin(DUEL.t / 90) * 4;
+    x.save();
+    x.globalAlpha = 0.10 * DUEL.lamp;
+    x.fillStyle = '#ffd75e';
+    x.beginPath();
+    x.moveTo(186 + sway, 6 - DUEL.OY);
+    x.lineTo(96 + sway * 2, FY + 10);
+    x.lineTo(276 + sway * 2, FY + 10);
+    x.closePath(); x.fill();
+    x.restore();
+    PIX.rect(x, 186 + sway * 0.4, -DUEL.OY, 1, HZ - 66 + DUEL.OY, P.T);
+    PIX.disc(x, 186 + sway, HZ - 62, 5, P.K);
+    PIX.disc(x, 186 + sway, HZ - 62, 4, DUEL.lamp > 0.4 ? P.Y : P.t);
+    PIX.rect(x, 184 + sway, HZ - 68, 4, 4, P.s);
+  },
+
   drawCorpse(x) {
-    const P = PIX.PAL;
-    const opp = G.duel.opp;
-    const key = DUEL.oppKey;
-    const body = SPR.bodyCustom(key, opp.def);
-    const head = SPR.frogCustom(key, opp.def, 'dead');
-    const skin = P[opp.def.skin[0]], shade = P[opp.def.skin[1]];
-    const suitCol = opp.def.suit === 'stripes' ? P.t : (P[opp.def.suit] || P.T);
+    const P = PIX.PAL, INK = P.K;
+    const opp = G.duel.opp, d = opp.def;
+    const at = DUEL.corpseAt();
     const jig = DUEL.jiggle * Math.sin(DUEL.t * 1.7);
+    const suit = SPR.outerColor(d);
+    const suitD = 'rgba(0,0,0,.36)';
+    const suitL = 'rgba(255,255,255,.08)';
+    const cuff = SPR.cuffColor(d);
+    const skin = P[d.skin[0]] || P.F, skinD = P[d.skin[1]] || P.f;
+    const trou = P.k;
 
-    /* the pool first — it keeps spreading */
-    SPR.ellipse(x, 178, 145, DUEL.pool * 2.6, DUEL.pool * 0.58, P.D);
-    SPR.ellipse(x, 174, 144, DUEL.pool * 2.1, DUEL.pool * 0.42, P.d);
-
-    x.save();
-    x.translate(190, 132 + jig);
-    x.rotate(0.06 + jig * 0.01);
-
-    /* legs kicked out stage-right: trousers + shoes, one leg cocked */
-    x.fillStyle = P.K;
-    x.beginPath(); x.moveTo(48, -10); x.lineTo(92, -22); x.lineTo(98, -14); x.lineTo(52, -1); x.closePath(); x.fill();
-    x.beginPath(); x.moveTo(48, -2); x.lineTo(86, 4); x.lineTo(86, 13); x.lineTo(48, 8); x.closePath(); x.fill();
-    x.fillStyle = suitCol;
-    x.beginPath(); x.moveTo(49, -8); x.lineTo(90, -20); x.lineTo(94, -14); x.lineTo(51, -3); x.closePath(); x.fill();
-    x.beginPath(); x.moveTo(49, -1); x.lineTo(84, 5); x.lineTo(84, 11); x.lineTo(49, 6); x.closePath(); x.fill();
-    // shoes
-    PIX.rect(x, 90, -26, 12, 7, P.K); PIX.rect(x, 91, -25, 10, 5, P.u); PIX.rect(x, 98, -25, 3, 5, P.U);
-    PIX.rect(x, 84, 2, 13, 7, P.K); PIX.rect(x, 85, 3, 11, 5, P.u); PIX.rect(x, 93, 3, 3, 5, P.U);
-
-    /* body lying on its back */
-    x.save();
-    x.rotate(-Math.PI / 2 + 0.18);
-    x.drawImage(body, -body.width / 2 + 24, -20);
-    x.restore();
-
-    /* wounds along the torso */
-    DUEL.wounds.forEach((w, i) => {
-      const wx = -10 + i * 12 + (w.x % 8), wy = -6 + (w.y % 10);
-      PIX.disc(x, wx, wy, w.big ? 3 : 2, P.K);
-      PIX.disc(x, wx, wy, w.big ? 2 : 1, P.D);
-    });
-
-    /* an arm splayed toward you, three fingers open */
-    x.fillStyle = P.K;
-    x.beginPath(); x.moveTo(-18, 4); x.lineTo(-34, 22); x.lineTo(-26, 28); x.lineTo(-12, 10); x.closePath(); x.fill();
-    x.fillStyle = suitCol;
-    x.beginPath(); x.moveTo(-17, 6); x.lineTo(-31, 21); x.lineTo(-26, 25); x.lineTo(-13, 10); x.closePath(); x.fill();
-    PIX.rect(x, -36, 20, 5, 3, P.W);              // cuff
-    PIX.disc(x, -38, 26, 5, P.K);
-    PIX.disc(x, -38, 25, 4, skin);
-    [[-4, 3], [0, 5], [4, 3]].forEach(([fx, fy]) => {
-      PIX.rect(x, -38 + fx - 1, 25 + fy, 2, 4, P.K);
-      PIX.rect(x, -38 + fx - 1, 25 + fy, 2, 3, skin);
-    });
-    if (opp.def.rings) { PIX.rect(x, -41, 24, 2, 2, P.G); PIX.rect(x, -36, 23, 2, 2, P.G); }
-
-    /* dead head lolled at the left end */
-    x.save();
-    x.translate(-52, -2);
-    x.rotate(-0.5);
-    x.drawImage(head, -Math.round(head.width * 1.4 / 2), -Math.round(head.height * 1.4 / 2),
-      Math.round(head.width * 1.4), Math.round(head.height * 1.4));
-    x.restore();
-    x.restore();
-
-    /* his hat, knocked clean off */
-    if (opp.def.hat || opp.def.flatcap) {
-      SPR.ellipse(x, 268, 132, 12, 4, P.K);
-      SPR.ellipse(x, 268, 131, 10, 3, P.T);
-      PIX.disc(x, 268, 127, 6, P.K);
-      PIX.disc(x, 268, 128, 5, P.T);
+    /* out back there is one bulb and it is right over him */
+    if (DUEL.room === 'back') {
+      x.globalAlpha = 0.13 * DUEL.lamp;
+      SPR.ellipse(x, at.x, at.y + 6, 96, 30, PIX.PAL.Y);
+      x.globalAlpha = 0.09 * DUEL.lamp;
+      SPR.ellipse(x, at.x, at.y + 4, 66, 20, PIX.PAL.Y);
+      x.globalAlpha = 1;
     }
 
-    /* flies */
+    /* the pool, first and underneath: it keeps creeping outward */
+    SPR.ellipse(x, at.x - 4, at.y + 12, DUEL.pool * 2.4, DUEL.pool * 0.5, P.D);
+    SPR.ellipse(x, at.x - 8, at.y + 11, DUEL.pool * 1.8, DUEL.pool * 0.34, P.d);
+
+    x.save();
+    x.translate(at.x, at.y + jig);
+
+    /* --- the limbs, behind the torso so their roots never show --- */
+    /* far arm, thrown up over his head */
+    SPR.povTube(x, -16, -9, -36, -20, 10, 8, suit, suitD, suitL);
+    PIX.rect(x, -40, -23, 8, 5, INK);
+    PIX.rect(x, -39, -22, 6, 3, cuff);
+    PIX.disc(x, -43, -20, 4, INK);
+    PIX.disc(x, -43, -20, 3, skin);
+    /* near arm, flung out toward you, fingers open */
+    SPR.povTube(x, -15, 9, -30, 24, 11, 9, suit, suitD, suitL);
+    PIX.rect(x, -34, 21, 8, 6, INK);
+    PIX.rect(x, -33, 22, 6, 4, cuff);
+    PIX.disc(x, -35, 28, 5, INK);
+    PIX.disc(x, -35, 28, 4, skin);
+    [[-5, 3], [-1, 5], [3, 4]].forEach(f => {
+      PIX.rect(x, -35 + f[0] - 1, 28 + f[1] - 1, 3, 6, INK);
+      PIX.rect(x, -35 + f[0], 28 + f[1] - 1, 1, 5, skin);
+      PIX.disc(x, -35 + f[0], 28 + f[1] + 4, 2, INK);
+      PIX.disc(x, -35 + f[0], 28 + f[1] + 4, 1, skin);
+    });
+    if (d.rings) { PIX.rect(x, -38, 26, 3, 2, P.G); PIX.rect(x, -33, 25, 3, 2, P.G); }
+    /* legs, one cocked over the other */
+    SPR.povTube(x, 19, -5, 44, -16, 12, 9, trou, 'rgba(0,0,0,.4)', suitL);
+    SPR.povTube(x, 19, 6, 46, 11, 13, 10, trou, 'rgba(0,0,0,.4)', suitL);
+    [[47, -18], [50, 9]].forEach((sh, i) => {
+      PIX.rect(x, sh[0] - 2, sh[1] - 3, 12, 8, INK);
+      PIX.rect(x, sh[0] - 1, sh[1] - 2, 10, 6, P.u);
+      PIX.rect(x, sh[0] - 1, sh[1] - 2, 10, 2, P.b);
+      PIX.rect(x, sh[0] + 7, sh[1] - 2, 2, 6, P.U);
+      if (i) PIX.rect(x, sh[0] + 1, sh[1] - 3, 4, 1, P.W);       // sole showing
+    });
+
+    /* --- the torso, lying flat: one slab with his suit on it --- */
+    SPR.rrect(x, -28, -17, 56, 34, 8, INK);
+    SPR.rrect(x, -27, -16, 54, 32, 7, suit);
+    SPR.rrect(x, -27, 6, 54, 10, 6, 'rgba(0,0,0,.26)');
+    PIX.rect(x, -25, -14, 50, 2, 'rgba(255,255,255,.10)');
+    /* the shirt and tie down the middle of him */
+    PIX.rect(x, -14, -16, 11, 32, INK);
+    PIX.rect(x, -13, -15, 9, 30, P[d.shirt] || P.W);
+    PIX.rect(x, -13, -15, 9, 2, 'rgba(0,0,0,.16)');
+    if (d.tie) {
+      PIX.rect(x, -11, -9, 5, 20, INK);
+      PIX.rect(x, -10, -8, 3, 18, P[d.tie] || P.d);
+      PIX.rect(x, -10, -8, 3, 1, 'rgba(255,255,255,.18)');
+    }
+    /* two lapels folded back off the shirt, not a fan of stripes */
+    [-1, 1].forEach(sgn => {
+      for (let i = 0; i < 9; i++) {
+        const w = 9 - i;
+        PIX.rect(x, -4, sgn > 0 ? -3 + i * 2 : -3 - i * 2 - 1, w + 1, 2, INK);
+        PIX.rect(x, -4, sgn > 0 ? -3 + i * 2 : -3 - i * 2, w, 1, suit);
+        PIX.rect(x, -4, sgn > 0 ? -3 + i * 2 : -3 - i * 2, w, 1,
+          sgn > 0 ? 'rgba(0,0,0,.22)' : 'rgba(255,255,255,.08)');
+      }
+    });
+    PIX.rect(x, 8, -3, 3, 3, P.G);                                // his stickpin
+
+    /* the wounds your lead put in him, and what runs out of them */
+    DUEL.wounds.forEach((w, i) => {
+      const wx = -12 + (i * 11) % 34, wy = -9 + ((w.y | 0) % 18);
+      PIX.disc(x, wx, wy, w.big ? 3 : 2, INK);
+      PIX.disc(x, wx, wy, w.big ? 2 : 1, P.D);
+      PIX.rect(x, wx - 1, wy + 2, 2, 6 + (i % 3) * 3, P.d);
+    });
+
+    /* --- the head, lolled back toward you, face still on the front --- */
+    x.save();
+    x.translate(-40, -2);
+    x.rotate(-0.42);
+    const head = SPR.frogCustom(DUEL.oppKey + ':dead', d, 'dead');
+    const hk = 1.1;
+    x.drawImage(head, -Math.round(head.width * hk / 2), -Math.round(head.height * hk / 2),
+      Math.round(head.width * hk), Math.round(head.height * hk));
+    x.restore();
+    /* his collar, closing the gap between head and chest */
+    PIX.rect(x, -30, -11, 10, 21, INK);
+    PIX.rect(x, -29, -10, 8, 19, suit);
+    PIX.rect(x, -29, -10, 2, 19, 'rgba(255,255,255,.09)');
+
+    x.restore();
+
+    /* his hat, knocked clean off and lying beside him */
+    if (d.hat || d.flatcap) {
+      const hx = at.x + 58, hy = at.y + 6;
+      SPR.ellipse(x, hx, hy + 2, 15, 5, P.K);
+      SPR.ellipse(x, hx, hy, 14, 4, P[d.hatCol] || P.T);
+      SPR.ellipse(x, hx, hy - 1, 12, 3, 'rgba(255,255,255,.08)');
+      PIX.disc(x, hx - 1, hy - 4, 7, P.K);
+      PIX.disc(x, hx - 1, hy - 4, 6, P[d.hatCol] || P.T);
+      PIX.rect(x, hx - 8, hy - 3, 15, 2, P[d.band] || P.d);
+    }
+
+    /* flies, because he has been down a while */
     for (let i = 0; i < 3; i++) {
       const a = DUEL.t / (14 + i * 3) + i * 2.1;
-      const fx = 180 + Math.cos(a) * (18 + i * 9) + Math.sin(DUEL.t / 7 + i) * 2;
-      const fy = 116 + Math.sin(a * 1.3) * 8;
+      const fx = at.x + Math.cos(a) * (22 + i * 11) + Math.sin(DUEL.t / 7 + i) * 2;
+      const fy = at.y - 22 + Math.sin(a * 1.3) * 9;
       PIX.rect(x, fx, fy, 2, 2, P.K);
       if (DUEL.t % 4 < 2) { PIX.rect(x, fx - 1, fy - 1, 1, 1, P.q); PIX.rect(x, fx + 2, fy - 1, 1, 1, P.q); }
     }
@@ -653,6 +876,172 @@ const DUEL = {
   },
 
   /* ============================================================
+     THE TONGUE.
+
+     A verlet chain of nine points anchored in his mouth. It is not
+     an animation curve: it has momentum and it sags, so when it
+     snaps out at a fly the whole length whips after the tip and
+     comes back slack. Every frog in the room does this; it is the
+     one thing they are all still good at.
+     ============================================================ */
+  TN: 9,
+  initTongue() {
+    const m = DUEL.mouthAt();
+    DUEL.tongue = { pts: [], mode: 'idle', tx: m.x, ty: m.y, fly: null, cool: 120 };
+    for (let i = 0; i < DUEL.TN; i++) {
+      DUEL.tongue.pts.push({ x: m.x, y: m.y, px: m.x, py: m.y });
+    }
+    DUEL.flies = [];
+    for (let i = 0; i < 4; i++) {
+      DUEL.flies.push({
+        cx: 100 + i * 56, cy: 34 + (i % 3) * 26, r: 14 + (i % 3) * 8,
+        x: 100 + i * 56, y: 34 + (i % 3) * 26, a: i * 1.7, sp: 0.026 + i * 0.005, alive: true,
+      });
+    }
+  },
+
+  /* where his mouth is in world space, bobbing with him */
+  mouthAt() {
+    return { x: 180, y: 58 + Math.round(Math.sin(DUEL.t / 34) * 1.4) };
+  },
+
+  stepFlies() {
+    if (!DUEL.flies.length) return;
+    DUEL.flies.forEach(f => {
+      if (!f.alive) {
+        if (--f.respawn <= 0) { f.alive = true; f.cx = 100 + Math.random() * 160; f.cy = 20 + Math.random() * 70; }
+        return;
+      }
+      /* each one works its own patch of the room, so the tongue has to travel */
+      f.a += f.sp;
+      f.cx += Math.cos(f.a * 0.31) * 0.5;
+      f.cy += Math.sin(f.a * 0.23) * 0.34;
+      f.cx = U.clamp(f.cx, 96, 268);
+      f.cy = U.clamp(f.cy, 18, 96);
+      f.x = f.cx + Math.cos(f.a * 2.1) * f.r;
+      f.y = f.cy + Math.sin(f.a * 3.1) * f.r * 0.55;
+    });
+  },
+
+  stepTongue() {
+    const T = DUEL.tongue;
+    if (!T) return;
+    const alive = !DUEL.opp.gone && DUEL.opp.fall < 0 && G.phase === 'duel';
+    const m = DUEL.mouthAt();
+    const pts = T.pts, n = pts.length, tip = pts[n - 1];
+
+    if (!alive) {
+      if (T.mode !== 'idle') { T.mode = 'idle'; T.fly = null; }
+      pts.forEach(p => { p.x = m.x; p.y = m.y; p.px = m.x; p.py = m.y; });
+      return;
+    }
+
+    /* idle: wait, then go for whatever is closest and worth the trip */
+    if (T.mode === 'idle' && --T.cool <= 0) {
+      let best = null, bd = 120 * 120;
+      DUEL.flies.forEach(f => {
+        if (!f.alive) return;
+        const d = (f.x - m.x) * (f.x - m.x) + (f.y - m.y) * (f.y - m.y);
+        if (d < bd) { bd = d; best = f; }
+      });
+      if (best) {
+        T.mode = 'out'; T.fly = best; T.tx = best.x; T.ty = best.y;
+        SFX.tone(1500, 0.05, 'sine', 0.05, 0, -900);
+      } else T.cool = 40;
+    }
+
+    /* verlet: momentum, a little drag, and gravity once it is out */
+    const out = T.mode !== 'idle';
+    pts.forEach((p, i) => {
+      if (!i) return;
+      const vx = (p.x - p.px) * 0.88, vy = (p.y - p.py) * 0.88;
+      p.px = p.x; p.py = p.y;
+      p.x += vx; p.y += vy + (out ? 0.24 : 0.05);
+    });
+
+    if (T.mode === 'out') {
+      T.tx = T.fly.x; T.ty = T.fly.y;
+      tip.x += (T.tx - tip.x) * 0.30;
+      tip.y += (T.ty - tip.y) * 0.30;
+      if (Math.abs(tip.x - T.tx) < 4 && Math.abs(tip.y - T.ty) < 4) {
+        T.mode = 'back';
+        T.fly.alive = false; T.fly.respawn = 260 + ((Math.random() * 200) | 0);
+        SFX.tick();
+      }
+    } else if (T.mode === 'back') {
+      tip.x += (m.x - tip.x) * 0.26;
+      tip.y += (m.y - tip.y) * 0.26;
+      if (Math.abs(tip.x - m.x) < 5 && Math.abs(tip.y - m.y) < 5) {
+        T.mode = 'idle'; T.fly = null;
+        T.cool = 200 + ((Math.random() * 260) | 0);
+        SFX.cluck();
+        if (DUEL.exprTimer <= 0) DUEL.setExpr('grin', 26);
+      }
+    }
+
+    /* one constraint: the chain always spans mouth→tip, evenly. The sag
+       comes out of the verlet, not out of the spacing. */
+    const dx = tip.x - m.x, dy = tip.y - m.y;
+    const seg = Math.max(0.4, Math.sqrt(dx * dx + dy * dy) / (n - 1));
+    for (let k = 0; k < 3; k++) {
+      pts[0].x = m.x; pts[0].y = m.y;
+      for (let i = 1; i < n; i++) {
+        const a = pts[i - 1], b = pts[i];
+        const ex = b.x - a.x, ey = b.y - a.y;
+        const d = Math.sqrt(ex * ex + ey * ey) || 1;
+        const f = (d - seg) / d * (i === n - 1 ? 0.5 : 0.62);
+        b.x -= ex * f; b.y -= ey * f;
+        if (i > 1) { a.x += ex * f * 0.5; a.y += ey * f * 0.5; }
+      }
+    }
+  },
+
+  drawFlies(x) {
+    const P = PIX.PAL;
+    DUEL.flies.forEach((f, i) => {
+      if (!f.alive) return;
+      const fx = Math.round(f.x), fy = Math.round(f.y);
+      PIX.rect(x, fx, fy, 2, 2, P.K);
+      if ((DUEL.t + i) % 4 < 2) {
+        PIX.rect(x, fx - 2, fy - 2, 2, 2, P.q);
+        PIX.rect(x, fx + 2, fy - 2, 2, 2, P.q);
+      } else {
+        PIX.rect(x, fx - 2, fy, 2, 1, P.w);
+        PIX.rect(x, fx + 2, fy, 2, 1, P.w);
+      }
+    });
+  },
+
+  drawTongue(x) {
+    const T = DUEL.tongue;
+    if (!T || T.mode === 'idle') return;
+    const P = PIX.PAL, pts = T.pts, n = pts.length;
+    /* ink pass down the whole length, then the meat of it, then a gloss */
+    for (let pass = 0; pass < 3; pass++) {
+      const w = pass === 0 ? 5 : pass === 1 ? 3 : 1;
+      const col = pass === 0 ? P.K : pass === 1 ? P.r : P.R;
+      for (let i = 1; i < n; i++) {
+        const a = pts[i - 1], b = pts[i];
+        const steps = Math.max(1, Math.ceil(Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y))));
+        for (let s2 = 0; s2 <= steps; s2++) {
+          const t = s2 / steps;
+          const px = Math.round(a.x + (b.x - a.x) * t) - (w >> 1);
+          const py = Math.round(a.y + (b.y - a.y) * t) - (w >> 1);
+          PIX.rect(x, px, py, w, w, col);
+        }
+      }
+    }
+    const tip = pts[n - 1];
+    PIX.disc(x, tip.x, tip.y, 4, P.K);
+    PIX.disc(x, tip.x, tip.y, 3, P.r);
+    PIX.rect(x, tip.x - 2, tip.y - 2, 2, 1, P.R);
+    /* the fly stuck to the end of it on the way back */
+    if (T.mode === 'back' && T.fly) {
+      PIX.rect(x, tip.x - 1, tip.y - 1, 2, 2, P.K);
+    }
+  },
+
+  /* ============================================================
      GOING THROUGH HIM.
 
      The pockets are not a list of buttons that happen to sit next to a
@@ -661,17 +1050,21 @@ const DUEL = {
      out across the felt, shrinking with the distance, digging, and
      coming back with whatever was in it.
      ============================================================ */
+  /* offsets in HIS space, so they travel with the body */
   SPOTS: {
-    hat:     [268, 130],      // knocked off, lying on the felt
-    jacket:  [172, 116],      // inside the coat
-    shirt:   [198, 126],
-    vest:    [198, 126],
-    hand:    [150, 155],      // the splayed hand, rings and all
-    boot:    [280, 110],      // the cocked shoe
-    tooth:   [134, 138],      // his mouth
-    holster: [166, 140],      // under the arm
+    hat:     [58, 2],         // knocked off, lying beside him
+    jacket:  [-11, -8],       // inside the coat
+    shirt:   [9, 4],
+    vest:    [9, 4],
+    hand:    [-35, 30],       // the splayed hand, rings and all
+    boot:    [51, -18],       // the cocked shoe
+    tooth:   [-44, -5],       // his mouth
+    holster: [19, 11],        // under the arm
   },
-  spotPos(p) { return DUEL.SPOTS[p.id] || [180, 128]; },
+  spotPos(p) {
+    const o = DUEL.SPOTS[p.id] || [0, 0], at = DUEL.corpseAt();
+    return [at.x + o[0], at.y + o[1]];
+  },
 
   /* the nearest searchable spot to a world point, or -1 */
   spotAt(px, py) {
@@ -687,6 +1080,7 @@ const DUEL = {
 
   drawSpots(x) {
     if (G.phase !== 'loot' || !G.loot || DUEL.reach) return;
+    if (!G.loot.dragged) { DUEL.drawHaul(x); return; }
     const P = PIX.PAL;
     const pulse = DUEL.t % 44 < 22;
     G.loot.pockets.forEach((p, i) => {
@@ -722,6 +1116,39 @@ const DUEL = {
         PIX.disc(x, sx + r + 4, sy - r - 2, 2, P.G);
       }
     });
+  },
+
+  /* the grip you have on his collar, and how far you have got him */
+  drawHaul(x) {
+    const P = PIX.PAL;
+    const at = DUEL.corpseAt();
+    const h = DUEL.haul || { prog: 0, on: false };
+    const gx = at.x - 34, gy = at.y - 4;
+    /* the handful of collar */
+    const pulse = h.on ? 0 : (DUEL.t % 50 < 25 ? 1 : 0);
+    const col = h.on ? P.Y : P.W;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => {
+      const cx2 = gx + o[0] * 12, cy2 = gy + o[1] * 12;
+      const bx = o[0] > 0 ? cx2 - 4 : cx2, by = o[1] > 0 ? cy2 - 4 : cy2;
+      PIX.rect(x, bx - 1, cy2 - 1, 7, 3, P.K);
+      PIX.rect(x, cx2 - 1, by - 1, 3, 7, P.K);
+      PIX.rect(x, bx, cy2, 5, 1, col);
+      PIX.rect(x, cx2, by, 1, 5, col);
+    });
+    if (pulse) {
+      PIX.rect(x, gx - 1, gy + 3, 3, 8, P.K);
+      PIX.rect(x, gx - 4, gy + 8, 9, 4, P.K);
+      PIX.rect(x, gx, gy + 4, 1, 6, col);
+      PIX.rect(x, gx - 3, gy + 9, 7, 2, col);
+    }
+    /* how far he has come, drawn as a drag track on the felt behind him */
+    if (h.prog > 0.02) {
+      const w = Math.round(58 * h.prog);
+      PIX.rect(x, gx - 30, gy + 26, 62, 6, P.K);
+      PIX.rect(x, gx - 29, gy + 27, 60, 4, '#0b2318');
+      PIX.rect(x, gx - 29, gy + 27, w, 4, P.G);
+      PIX.rect(x, gx - 29, gy + 27, w, 1, P.Y);
+    }
   },
 
   /* put your hand in. The arm goes out, it digs, it comes back. */
@@ -846,6 +1273,14 @@ const DUEL = {
     x.save();
     x.translate(0, Math.round(bob) + drop);
     if (DUEL.youFall) x.rotate(-0.04);
+
+    if (DUEL.room === 'back') {
+      /* no table back here: just the floor coming toward you, going dark */
+      for (let yy = FY - 12; yy < DUEL.H - DUEL.OY + 2; yy++) {
+        const t = (yy - (FY - 12)) / 40;
+        PIX.rect(x, -60, yy, 480, 1, t < 0.34 ? '#1d1c22' : t < 0.66 ? '#161519' : '#0f0e12');
+      }
+    }
 
     /* your hearts, on your own end of the felt */
     const mx = E.maxHP(), thr = G.hearts === 1 && DUEL.t % 40 < 20 ? 1 : 0;
@@ -1242,8 +1677,8 @@ const DUEL = {
     DUEL.pool = 4;
     await U.sleep(700);
     DUEL.setPose('rest');
-    LOOT.overlay();
-    DUEL.busy = false;          // the corpse is yours to go through now
+    DUEL.busy = false;          // he is yours now — but not here
+    LOOT.haulPrompt();
   },
 
   /* you die */
@@ -1302,6 +1737,11 @@ const DUEL = {
   /* light the spot under the pointer, so it is obvious he can be gone through */
   sceneMove(e) {
     if (!DUEL.cv) return;
+    if (DUEL.haul && DUEL.haul.on) {
+      const q = DUEL.sceneXY(e);
+      DUEL.haulMove(q.x, q.y);
+      return;
+    }
     if (G.phase !== 'loot' || DUEL.busy) {
       if (DUEL.hoverSpot !== -1) DUEL.hoverSpot = -1;
       return;
@@ -1312,9 +1752,20 @@ const DUEL = {
     DUEL.cv.style.cursor = i >= 0 ? 'pointer' : 'crosshair';
   },
 
+  sceneDown(e) {
+    if (G.phase !== 'loot' || DUEL.busy) return;
+    if (G.loot && !G.loot.dragged) {
+      const q = DUEL.sceneXY(e);
+      if (DUEL.haulStart(q.x, q.y)) { DUEL.cv.setPointerCapture && DUEL.cv.setPointerCapture(e.pointerId); }
+    }
+  },
+
+  sceneUp() { DUEL.haulEnd(); },
+
   sceneClick(e) {
     if (G.phase === 'loot') {
       if (DUEL.busy) { DUEL.hurry = true; return; }
+      if (G.loot && !G.loot.dragged) return;      // he is not out back yet
       const q = DUEL.sceneXY(e);
       const i = DUEL.spotAt(q.x, q.y);
       if (i >= 0) DUEL.searchAt(i);

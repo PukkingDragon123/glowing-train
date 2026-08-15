@@ -73,7 +73,8 @@ const UI = {
       title: 'title', collection: 'title',
       duel: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'round',
       blind: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'casino',
-      loot: 'casino', over: 'dead', won: 'win',
+      loot: G.phase === 'loot' && G.loot && G.loot.dragged ? 'back' : 'casino',
+      over: 'dead', won: 'win',
     }[G.phase] || 'round');
     switch (G.phase) {
       case 'title':      UI.buildTitle(app); break;
@@ -432,8 +433,11 @@ const UI = {
     const cv = U.el('canvas'); cv.id = 'scene'; cv.className = 'pix';
     cv.width = DUEL.W; cv.height = DUEL.H;
     cv.onclick = (e) => DUEL.sceneClick(e);
+    cv.onpointerdown = (e) => DUEL.sceneDown(e);
     cv.onpointermove = (e) => DUEL.sceneMove(e);
-    cv.onpointerleave = () => { DUEL.hoverSpot = -1; };
+    cv.onpointerup = () => DUEL.sceneUp();
+    cv.onpointercancel = () => DUEL.sceneUp();
+    cv.onpointerleave = () => { DUEL.sceneUp(); DUEL.hoverSpot = -1; };
     holder.appendChild(cv);
 
     const stampB = U.el('div'); stampB.id = 'stamp-big'; holder.appendChild(stampB);
