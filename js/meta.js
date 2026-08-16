@@ -17,6 +17,7 @@ const META = {
         selfBlanks: 0, liveTaken: 0, activesUsed: 0, flawless: 0,
         clutchWins: 0, oppSelfKills: 0, maxDmgOneDuel: 0,
         bestAnte: 0, bossKills: 0, looted: 0, bribesPaid: 0, heatPaid: 0, itemsUsed: 0, skips: 0,
+        loreSeen: 0,
       },
       bossSeen: {},   // boss id -> kills
       gunsOwned: { snub: true },

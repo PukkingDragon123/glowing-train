@@ -138,6 +138,15 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await click('#btn-deal');
     await page.waitForSelector('#btn-sit', { timeout: 10000 });
     await wiped();
+    /* the lore reel plays over the board on a fresh run */
+    await page.waitForTimeout(900);
+    await shot('01b-lore-1');
+    await page.waitForTimeout(2400);
+    await shot('01b-lore-2');
+    await page.keyboard.press('Escape');            // any key gets you out of it
+    await page.waitForFunction(
+      () => !document.querySelector('#cine-stage.lore-cut'), null, { timeout: 20000 });
+    await page.waitForTimeout(300);
     await shot('02b-blind-select');
     /* the board: turn a clue over, watch the string reach a poster, name him */
     const ev1 = page.locator('.ev.live').first();

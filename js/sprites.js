@@ -3659,3 +3659,174 @@ KTWWWWWWTK
 KTWqqWWWTK
 KTWWWWWWTK
 .KKKKKKKK.`);
+
+/* ============================================================
+   LORE PANELS.
+
+   Five rooms, drawn the way you remember rooms: the shapes are
+   right and the details are gone. No faces — everybody in these
+   is a silhouette, because that is how it comes back to you at
+   four in the morning.
+
+   Each panel is 180x108 and gets scaled up whole.
+   ============================================================ */
+
+const LORE_W = 180, LORE_H = 108;
+
+/* a seated frog, as a shape only */
+function loreSit(ctx, x, y, k, col, hat) {
+  SPR.ellipse(ctx, x, y - 16 * k, 11 * k, 10 * k, col);          // head
+  PIX.disc(ctx, x - 7 * k, y - 24 * k, 4 * k, col);              // bulbs
+  PIX.disc(ctx, x + 7 * k, y - 24 * k, 4 * k, col);
+  SPR.rrect(ctx, x - 13 * k, y - 8 * k, 26 * k, 14 * k, 5 * k, col);
+  if (hat) {
+    SPR.ellipse(ctx, x, y - 28 * k, 16 * k, 3 * k, col);
+    SPR.rrect(ctx, x - 8 * k, y - 38 * k, 16 * k, 11 * k, 4 * k, col);
+  }
+}
+
+/* a standing frog in a coat, as a shape only */
+function loreStand(ctx, x, y, k, col, hat) {
+  SPR.ellipse(ctx, x, y - 44 * k, 10 * k, 9 * k, col);
+  PIX.disc(ctx, x - 6 * k, y - 51 * k, 4 * k, col);
+  PIX.disc(ctx, x + 6 * k, y - 51 * k, 4 * k, col);
+  SPR.rrect(ctx, x - 12 * k, y - 36 * k, 24 * k, 36 * k, 6 * k, col);
+  PIX.rect(ctx, x - 16 * k, y - 34 * k, 5 * k, 24 * k, col);      // arms down at his sides
+  PIX.rect(ctx, x + 12 * k, y - 34 * k, 5 * k, 24 * k, col);
+  if (hat) {
+    SPR.ellipse(ctx, x, y - 55 * k, 15 * k, 3 * k, col);
+    SPR.rrect(ctx, x - 8 * k, y - 64 * k, 16 * k, 10 * k, 4 * k, col);
+  }
+}
+
+function loreRain(ctx, seed, n, col) {
+  const r = U.mulberry32(seed);
+  for (let i = 0; i < n; i++) {
+    const x = Math.round(r() * LORE_W), y = Math.round(r() * LORE_H);
+    PIX.rect(ctx, x, y, 1, 3 + Math.round(r() * 4), col);
+  }
+}
+
+SPR.lorePanel = function (name) {
+  return SPR.cached('lore_' + name, () => {
+    const P = PIX.PAL;
+    const cv = document.createElement('canvas');
+    cv.width = LORE_W; cv.height = LORE_H;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+
+    if (name === 'home') {
+      /* the kitchen, lit by one bulb, before any of it */
+      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#2a1d14');
+      for (let y = 0; y < 74; y += 6) PIX.rect(c, 0, y, LORE_W, 1, 'rgba(0,0,0,.16)');
+      PIX.rect(c, 0, 74, LORE_W, LORE_H - 74, '#1a120c');
+      PIX.rect(c, 22, 14, 40, 34, '#0d1520');                     // the window
+      PIX.rect(c, 24, 16, 36, 30, '#16243a');
+      PIX.rect(c, 41, 16, 2, 30, '#0d1520');
+      PIX.rect(c, 24, 30, 36, 2, '#0d1520');
+      /* the bulb and its cone */
+      PIX.rect(c, 118, 0, 2, 16, '#4a3a28');
+      PIX.disc(c, 119, 18, 4, '#ffd75e');
+      c.globalAlpha = 0.14; c.fillStyle = '#ffd75e';
+      c.beginPath(); c.moveTo(119, 20); c.lineTo(80, 82); c.lineTo(160, 82); c.closePath(); c.fill();
+      c.globalAlpha = 1;
+      SPR.rrect(c, 84, 66, 74, 8, 3, '#3a2a1a');                  // the table
+      PIX.rect(c, 92, 74, 4, 14, '#2a1d12');
+      PIX.rect(c, 146, 74, 4, 14, '#2a1d12');
+      loreSit(c, 100, 68, 0.8, '#0d0a08', false);                 // two small ones
+      loreSit(c, 142, 68, 0.8, '#0d0a08', false);
+      loreSit(c, 121, 70, 1.0, '#0d0a08', true);                  // and one in a hat
+      PIX.disc(c, 121, 60, 3, '#e0a63c');                         // supper on the table
+      return cv;
+    }
+
+    if (name === 'door') {
+      /* what came through it */
+      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#120d0a');
+      PIX.rect(c, 58, 8, 64, 100, '#241a12');
+      PIX.rect(c, 62, 12, 56, 96, '#e8c86a');                     // the light behind them
+      c.globalAlpha = 0.5;
+      PIX.rect(c, 62, 12, 56, 96, '#ff9d3c');
+      c.globalAlpha = 1;
+      loreStand(c, 78, 106, 0.78, '#0a0705', true);
+      loreStand(c, 100, 108, 0.86, '#0a0705', true);
+      loreStand(c, 120, 106, 0.78, '#0a0705', true);
+      /* the flash, off the one in the middle */
+      PIX.disc(c, 112, 62, 9, '#fff3b0');
+      PIX.disc(c, 112, 62, 5, '#ffffff');
+      for (let i = 0; i < 7; i++) {
+        const a = i / 7 * Math.PI * 2;
+        PIX.rect(c, Math.round(112 + Math.cos(a) * 14), Math.round(62 + Math.sin(a) * 14), 2, 2, '#fff3b0');
+      }
+      return cv;
+    }
+
+    if (name === 'after') {
+      /* the same room, an hour later, and one of you left standing in it */
+      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#0f141c');
+      for (let y = 0; y < 74; y += 6) PIX.rect(c, 0, y, LORE_W, 1, 'rgba(0,0,0,.22)');
+      PIX.rect(c, 0, 74, LORE_W, LORE_H - 74, '#080b10');
+      PIX.rect(c, 22, 14, 40, 34, '#070a10');
+      PIX.rect(c, 24, 16, 36, 30, '#101b2c');
+      /* the bulb, still swinging */
+      PIX.rect(c, 114, 0, 2, 18, '#2a2a30');
+      PIX.disc(c, 115, 20, 4, '#6b6f7a');
+      SPR.rrect(c, 84, 66, 74, 8, 3, '#1a1a22');
+      PIX.rect(c, 92, 74, 4, 14, '#141419');
+      /* the chair gone over */
+      PIX.rect(c, 60, 84, 22, 4, '#141419');
+      PIX.rect(c, 60, 88, 4, 12, '#141419');
+      /* what is on the boards */
+      SPR.ellipse(c, 108, 92, 22, 5, '#2a0a12');
+      SPR.ellipse(c, 104, 91, 13, 3, '#571220');
+      loreStand(c, 143, 100, 0.72, '#05070a', true);              // you, in the doorway
+      loreRain(c, 7, 26, 'rgba(127,215,255,.10)');
+      return cv;
+    }
+
+    if (name === 'tower') {
+      /* the house, from the street, in the rain */
+      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#080c14');
+      for (let i = 0; i < 40; i++) {
+        PIX.disc(c, (i * 41) % LORE_W, (i * 17) % 40, 1, 'rgba(200,220,255,.10)');
+      }
+      PIX.rect(c, 54, 10, 72, 98, '#161b28');                     // the tower
+      PIX.rect(c, 54, 10, 4, 98, '#20273a');
+      PIX.rect(c, 122, 10, 4, 98, '#0e1220');
+      for (let f = 0; f < 8; f++) {                               // eight floors of it
+        const y = 96 - f * 11;
+        const lit = f < 3 ? '#e0a63c' : f < 6 ? '#a5741f' : '#6e4c12';
+        PIX.rect(c, 58, y, 64, 2, '#0a0d14');
+        for (let w = 0; w < 5; w++) PIX.rect(c, 62 + w * 12, y - 6, 7, 5, lit);
+      }
+      PIX.rect(c, 60, 4, 60, 8, '#12101d');                       // the sign on the roof
+      PIX.rect(c, 62, 5, 56, 6, '#ff6a5e');
+      PIX.rect(c, 66, 6, 4, 4, '#fff3b0');
+      PIX.rect(c, 74, 6, 4, 4, '#fff3b0');
+      PIX.rect(c, 82, 6, 4, 4, '#fff3b0');
+      SPR.ellipse(c, 90, 108, 46, 6, 'rgba(224,166,60,.14)');     // wet street
+      loreStand(c, 90, 108, 0.6, '#04060a', true);
+      loreRain(c, 11, 70, 'rgba(127,215,255,.16)');
+      return cv;
+    }
+
+    /* 'stairs' — the bottom of the only staircase that matters */
+    PIX.rect(c, 0, 0, LORE_W, LORE_H, '#0b0f16');
+    for (let s = 0; s < 9; s++) {
+      const y = 100 - s * 9, w = 108 - s * 8;
+      PIX.rect(c, 90 - w / 2, y, w, 5, '#1d2330');
+      PIX.rect(c, 90 - w / 2, y, w, 1, '#2b3346');
+      PIX.rect(c, 90 - w / 2, y + 5, w, 4, '#101520');
+    }
+    c.globalAlpha = 0.20; c.fillStyle = '#ffd75e';
+    c.beginPath(); c.moveTo(90, 12); c.lineTo(40, 108); c.lineTo(140, 108); c.closePath(); c.fill();
+    c.globalAlpha = 1;
+    PIX.rect(c, 70, 6, 40, 16, '#e8c86a');                        // the door at the top
+    PIX.rect(c, 74, 8, 32, 14, '#ffd75e');
+    loreStand(c, 90, 104, 0.9, '#05070b', true);
+    /* the iron, in his hand, held low */
+    PIX.rect(c, 106, 84, 12, 4, '#05070b');
+    PIX.rect(c, 116, 82, 4, 8, '#05070b');
+    return cv;
+  });
+};

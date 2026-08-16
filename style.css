@@ -2007,3 +2007,33 @@ body.heard #siren-wash { opacity: 1; }
   .ev { width: 118px; min-height: 62px; }
   .cork { padding: 14px 10px 12px; gap: 12px; }
 }
+
+/* ============================================================
+   22. THE LORE
+   Five rooms and one line each, under the bars. No faces.
+   ============================================================ */
+
+#cine-stage.lore-cut {
+  display: flex; align-items: center; justify-content: center;
+  background: #05060a;                       /* the rest of the game is not in this room */
+}
+.lore-card {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  opacity: 0; transform: scale(1.04);
+  transition: opacity .34s steps(6), transform 2.4s linear;
+}
+.lore-card.in { opacity: 1; transform: scale(1); }
+.lore-card.out { opacity: 0; transition: opacity .3s steps(5); }
+.lore-card canvas { image-rendering: pixelated; box-shadow: 0 10px 0 rgba(0,0,0,.5); }
+.lore-line { display: flex; }
+.lore-tail { gap: 10px; }
+
+.climb-art { position: relative; display: flex; }
+.climb-art canvas { image-rendering: pixelated; }
+.climb-pip {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  background: rgba(255,215,94,.30);
+  box-shadow: 0 0 0 2px rgba(255,215,94,.6) inset;
+  animation: siren .6s steps(2) infinite;
+}
+.ante-card.climb { gap: 10px; }

@@ -362,7 +362,10 @@ const LOOT = {
       else { SFX.lose(); await COPS.bust(); }
       LOOT.retireCallout();
       o.className = 'hidden'; o.innerHTML = '';
-      if (ok) await CINE.anteClear(cleared, G.chips);
+      if (ok) {
+        await CINE.anteClear(cleared, G.chips);
+        await CINE.climb(cleared);      // and one more floor of the house behind you
+      }
       UI.goto();
     };
     card.appendChild(pay);

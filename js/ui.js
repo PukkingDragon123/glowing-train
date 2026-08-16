@@ -229,7 +229,16 @@ const UI = {
     deal.id = 'btn-deal';
     deal.appendChild(PIX.el('gun_snub', 2));
     deal.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
-    deal.onclick = () => { SFX.chak(); UI.goto(() => E.newRun(inp.value)); };
+    deal.onclick = () => {
+      SFX.chak();
+      /* the whole story the first time, the last two panels after that —
+         a story you cannot get out of is a wall, so any tap skips it */
+      const seen = META.stats().loreSeen > 0;
+      UI.goto(() => E.newRun(inp.value)).then(() => {
+        META.bump('loreSeen'); META.save();
+        return CINE.lore(seen);
+      });
+    };
     wrap.appendChild(deal);
 
     const row2 = U.el('div', 'end-btns');

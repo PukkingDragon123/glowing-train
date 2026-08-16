@@ -1,12 +1,27 @@
 # SHELL & DEBT
 
 **Russian roulette with the frog mob, in hand-drawn pixel art.** You are 'Lucky' Verde.
-You owe the Bullfrog everything, and the only way to clear the marker is at the table:
-a revolver, a mix of **LIVE** and **blank** shells, and whoever's sitting across from you.
-Eight antes. Three blinds each. Kill the mark, **loot the corpse before the badges
-arrive** — the last chair belongs to the Bullfrog himself.
+They ate at six; at seven the door came in; the house took everything but you. The house
+is eight floors high and they are all upstairs.
+
+Work the cork board until you know which frog in the room is the one you came for, call
+him out, and sit down: a revolver, a mix of **LIVE** and **blank** shells, and a table
+between you. Kill him, drag him out back and **go through his pockets before the noise
+brings the badges**. Then one more floor. The top one belongs to the Bullfrog.
 
 ![Title — the frog mob](docs/screen-title.png)
+
+## How you got here
+
+![At seven, the door came in](docs/screen-lore.png)
+
+Five rooms, one line each, no faces — because that is how it comes back to you at four
+in the morning. They ate at six. At seven the door came in. The house took everything
+but you, and the house is eight floors high. It plays once at the top of a run, any tap
+skips it, and after that you only get the last two panels: the tower, and the stairs.
+
+Between antes the camera goes back outside and shows you the building with one more
+floor of it behind you.
 
 ## Play it
 
@@ -73,16 +88,47 @@ top and bottom of the frame** and he crosses the room while his name lands like 
 Clear an ante and the night's take **rains past the lens**. Die and the lights iris shut.
 Tap through any of it.
 
-## The run
+## The board
 
-![The blind select](docs/screen-blinds.png)
+![The board](docs/screen-blinds.png)
 
-Eight antes, three chairs each — **SMALL**, **BIG**, then the **BOSS**. Before every one
-you get the select screen: who's sitting there, how many hearts he has, what his purse
-is worth, and which of his tells you can already read. Then either sit down, or
-**skip for a tag** — walk past the chair and take a favour instead of a corpse (a fat
-envelope, an inside man at the precinct, a care package, dutch courage, a gunrunner).
-No purse, no pockets, no cards: that's the trade. Bosses can never be skipped.
+Eight floors, three chairs each. Before every one you are standing in front of a cork
+board with **three wanted posters pinned to it**. Three frogs are drinking in this room
+and exactly one of them is the bounty. Nobody is going to point him out.
+
+What you have is a **case file**: a scale off a glass, a matchbook scratched by a ring,
+a cigar burned down in an ashtray, a doorman who remembers a hat. Every clue is true and
+every clue cuts the field. You get a limited number of **looks** into the file — turn one
+over and **red string** runs from it across the cork to whoever it rules out, and their
+poster gets stamped NOT HIM and goes grey.
+
+When the string only reaches one poster, click it and say the name:
+
+- **Right** — he walks over without his hand near his coat. The purse pays **25% more**
+  and you have read every tell he carries.
+- **Wrong** — the whole room heard you. He sits down with **an extra heart** and a
+  faster trigger.
+- **Neither** — just sit down and take whoever comes. No bonus, no penalty.
+
+You can still **skip for a tag** — walk past the chair and take a favour instead of a
+corpse (a fat envelope, an inside man at the precinct, a care package, dutch courage,
+a gunrunner). Bosses can never be skipped, and a boss is never a mystery: his poster has
+been on your wall since the night they did it.
+
+### The case room
+
+Tools are bought once, with money, and kept for the whole run:
+
+| Tool | What it buys you |
+|---|---|
+| 🔍 **JEWELLER LOUPE** | one more look at the evidence, every board |
+| 📓 **BAR LEDGER** | he writes down who drinks what — one more look again |
+| 📷 **A MAN INSIDE** | one clue is already turned over when you walk in |
+| 📸 **PRESS CAMERA** | a picture for the file: naming him right pays 20% more |
+
+![The case room](docs/screen-case.png)
+
+![That is him](docs/screen-called.png)
 
 `TAB` opens **the run** at any time — every trinket and item spelled out, your iron,
 tags taken, and what the night has cost so far.
@@ -101,10 +147,27 @@ coming up out of the bottom of the frame, and the iron in your right fist. The t
 built to match: the far half is an ellipse under the lamp, the near half dips off the
 bottom of the shot the way your own edge of a card table actually does, going dark as it
 comes toward you — and your glass, your ashtray with the cigar still going and your
-hearts all sit on it. Aim at the mark and the barrel swings out across the felt. Aim at
-yourself and it turns back at the lens: a bore, staring.
+hearts all sit on it.
+
+**There are no aim buttons.** Every turn starts with the iron down and pointed at
+nothing, and you shoot by pointing at a head:
+
+- **Click his face** — the iron comes up and a sight picture lands on him. **Click it
+  again** and it goes off.
+- **Click your own end of the table** — the camera swings round behind you. You are in
+  profile, the muzzle dented into your temple, and he is small and dim across the felt
+  still watching. Click your own head to pull, anywhere else to stand down.
 
 ![Down your own barrel](docs/screen-self.png)
+
+Nobody at this table talks. When the mark has an opinion, one of his hands comes up out
+of the dark under the felt and says it — a flat hand over his own eyes when you put the
+muzzle to your head and it clicks, one digit raised at the lamp when you hit him and he
+is still upright, a shrug when he watches you take a live one. Then it goes back down.
+
+What lands on him stays on him: every hit spatters where the lead went in, runs downhill
+while he sits there, and does not wipe off between pulls. What he puts on you goes on
+your own face, and you see it every time the camera comes round.
 
 The drum loads with a posted mix — say **2 LIVE, 3 blank** — in an order nobody knows.
 Take turns with the mark across the felt:
@@ -156,9 +219,20 @@ it and your arm goes out across the felt, shrinking with the distance, digs — 
 shifting, dust off the lining, his weight rocking under your hand — and comes back with
 whatever was in there. Nothing detonates. You're going through a dead frog's coat.
 
-Every pocket you go into brings **the badges** closer; three and they're at the door.
-**Bribe** them to keep digging (the price climbs) or walk with what you've got. Trinket
-cards and guns come out of corpses — **boss holsters carry your next iron**.
+You do not do it under the lamp. The kill **blacks out** and you come up in the back
+room with the door shut, the body on the floor and a bare bulb on a wire.
+
+Two meters run the whole time you are back there:
+
+- **TIME** — a clock, in real seconds, and it does not stop for you. It gets shorter
+  every ante.
+- **NOISE** — every pocket makes some, and a boot or a gold tooth makes a lot. It bleeds
+  away if you hold still. Cross the red line and somebody at the door has heard enough.
+
+Get heard and a cop comes through the back door and stands over the body tapping his
+nightstick. **Bribe** him to keep going (the price climbs) or walk with what you have.
+Run the clock out and you leave with what is in your hands. Trinket cards and guns come
+out of corpses — **boss holsters carry your next iron**.
 
 ### What you brought with you
 
@@ -169,10 +243,9 @@ cards and guns come out of corpses — **boss holsters carry your next iron**.
 | 🔍 **JEWELLER'S LOUPE** | every bulge on him shows at once, and you get one more pocket for free |
 | 📁 **FILE FOLDER** | hand them somebody else's paperwork: the heat here clears, free |
 
-The badges are not an abstraction: a cop **walks in through the back door**, stands over the
-body tapping his nightstick in his palm, and waits. Bribe him and the chips arc across
-the felt into his glove one at a time — he pockets them, tips his cap and leaves. Refuse
-and he folds his arms and stays.
+The badges are not an abstraction. Bribe him and the chips arc across the floor into his
+glove one at a time — he pockets them, tips his cap and leaves. Refuse and he folds his
+arms and stays.
 
 ![Swamp PD](docs/screen-cops.png)
 
@@ -267,7 +340,7 @@ style.css         pixel skin: chunky panels, CRT overlay
 js/util.js        seeded RNG (mulberry32), helpers, procedural WebAudio SFX
 js/pixfont.js     hand-drawn 5×7 typeface (every numeral in the game)
 js/pix.js         pixel engine: palette, sprite compiler, draw helpers
-js/data.js        content: traits, trinkets, guns, the mob, blinds, loot tuning
+js/data.js        content: traits, trinkets, guns, the mob, detective tools, tuning
 js/meta.js        persistence: stats, unlocks, learned tells (localStorage)
 js/sprites.js     ALL the art: frog rig v2, the iron rig (hammer + cylinder), cards
 js/bg.js          the swirling paint background
@@ -275,10 +348,11 @@ js/engine.js      pure rules: the duel, the mark's brain, the loot, the heat (no
 js/ui.js          screens: title, duel frame, collection, help, keys
 js/btn.js         the arcade buttons: sockets, moulded caps, pixel-art faces
 js/fx.js          the effects engine: smoke, gore, chip arcs, slow-mo, ambient dust
+js/case.js        the board: suspects, evidence, the red string, the case room
 js/duel.js        the drawn table scene: expressions, blood, the fall, the corpse
-js/cine.js        the wipe, the sit-down, the boss cut-in, the ante interstitial
+js/cine.js        the wipe, the sit-down, the boss cut-in, the lore reel, the climb
 js/cops.js        Swamp PD: the walk-in, the bribe handoff, the shakedown, the bust
-js/loot.js        the take: pockets, the badges bar, bribes, protection money
+js/loot.js        the take: pockets, the time and noise meters, bribes, protection
 js/main.js        boot (+ ?debug harness)
 dev/sim.js        headless balance & fuzz harness (node dev/sim.js)
 dev/smoke.js      full browser smoke test (playwright-core)
@@ -299,10 +373,11 @@ node dev/sim.js      # 500 bot runs + 200 random-action fuzz runs against the re
 node dev/smoke.js    # drives the full UI in headless Chromium, fails on any console error
 ```
 
-Current curve (counting bot that plays its belt and sometimes skips): ~85% clear ante 1,
-~39% reach the Bullfrog, ~10% walk out clean, ~4.4 items burned and ~1 blind skipped
-per run. Humans who can't read a
-top hat do worse. That's the point.
+Current curve (counting bot that plays its belt and sometimes skips, and never works the
+board): ~82% clear ante 1, ~35% reach the Bullfrog, ~9% walk out clean, ~2.6 items burned
+and ~1 chair skipped per run. A player who reads the board and names the right frog does
+better than the bot; a player who can't tell a top hat from a bowler does worse. That's
+the point.
 
 ---
 

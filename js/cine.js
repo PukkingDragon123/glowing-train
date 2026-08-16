@@ -287,6 +287,112 @@ const CINE = {
   },
 
   /* ============================================================
+     HOW YOU CAME TO BE HERE.
+     Five rooms, one line each, no faces. It plays once at the
+     top of a run and any tap skips the rest of it — a story you
+     cannot get out of is not a story, it is a wall.
+     ============================================================ */
+  LORE: [
+    ['home',   'THEY ATE AT SIX. ALL OF THEM.'],
+    ['door',   'AT SEVEN, THE DOOR CAME IN.'],
+    ['after',  'THE HOUSE TOOK EVERYTHING BUT YOU.'],
+    ['tower',  'THE HOUSE IS EIGHT FLOORS HIGH.'],
+    ['stairs', 'THEY ARE ALL UPSTAIRS.'],
+  ],
+
+  loreSkip: false,
+
+  async lore(short) {
+    const root = CINE.stage();
+    root.className = 'lore-cut';
+    root.innerHTML = '';
+    CINE.loreSkip = false;
+    CINE.letterbox(true);
+    const bail = () => { CINE.loreSkip = true; };
+    window.addEventListener('pointerdown', bail);
+    window.addEventListener('keydown', bail);
+
+    const hold = async (ms) => {
+      const step = 40;
+      for (let t = 0; t < ms; t += step) {
+        if (CINE.loreSkip) return;
+        await U.sleep(step);
+      }
+    };
+
+    try {
+      const reel = short ? CINE.LORE.slice(3) : CINE.LORE;
+      for (const [art, line] of reel) {
+        if (CINE.loreSkip) break;
+        root.innerHTML = "";
+        const card = U.el('div', 'lore-card');
+        const k = U.clamp(Math.floor(Math.min(window.innerWidth * 0.92 / 180,
+          window.innerHeight * 0.66 / 108)), 2, 7);
+        card.appendChild(SPR.clone(SPR.lorePanel(art), k));
+        const cap = U.el('div', 'lore-line');
+        cap.appendChild(UI.txt(line, { scale: 3, color: PIX.PAL.w, outline: PIX.PAL.K }));
+        card.appendChild(cap);
+        root.appendChild(card);
+        await U.sleep(20);
+        card.classList.add('in');
+        SFX.tone(90 + Math.random() * 20, 0.5, 'sine', 0.10, 0, -30);
+        await hold(2100);
+        card.classList.add('out');
+        await U.sleep(CINE.loreSkip ? 40 : 320);
+      }
+      if (short) return;
+      const tail = U.el('div', 'lore-card lore-tail');
+      tail.appendChild(UI.txt('SHELL & DEBT', { scale: 7, color: PIX.PAL.R, outline: PIX.PAL.K }));
+      tail.appendChild(UI.txt('ONE FLOOR AT A TIME', { scale: 3, color: PIX.PAL.q }));
+      root.innerHTML = '';
+      root.appendChild(tail);
+      await U.sleep(20);
+      tail.classList.add('in');
+      SFX.lose();
+      await hold(1500);
+    } finally {
+      window.removeEventListener('pointerdown', bail);
+      window.removeEventListener('keydown', bail);
+      root.innerHTML = '';
+      root.className = 'hidden';
+      CINE.letterbox(false);
+    }
+  },
+
+  /* ============================================================
+     THE CLIMB. Between antes: the house from the street with one
+     more floor of it behind you.
+     ============================================================ */
+  async climb(ante) {
+    const root = CINE.stage();
+    root.className = 'ante-cut';
+    root.innerHTML = '';
+    const card = U.el('div', 'ante-card climb');
+    card.appendChild(UI.txt('FLOOR ' + Math.min(ante, 8) + ' OF 8', { scale: 4, color: PIX.PAL.q }));
+    const art = U.el('div', 'climb-art');
+    const k = U.clamp(Math.floor(Math.min(window.innerWidth * 0.5 / 180,
+      window.innerHeight * 0.42 / 108)), 2, 6);
+    art.appendChild(SPR.clone(SPR.lorePanel('tower'), k));
+    /* the floor you have just cleared, marked on the front of the house */
+    const pip = U.el('i', 'climb-pip');
+    pip.style.bottom = (10 + Math.min(ante - 1, 7) * 11) * k + 'px';
+    pip.style.width = (64 * k) + 'px';
+    pip.style.height = (7 * k) + 'px';
+    art.appendChild(pip);
+    card.appendChild(art);
+    card.appendChild(UI.txt('ONE MORE BETWEEN YOU AND THE TOP', { scale: 3, color: PIX.PAL.w }));
+    root.appendChild(card);
+    await U.sleep(20);
+    card.classList.add('in');
+    SFX.chak();
+    await DUEL.sleep(1500);
+    card.classList.add('out');
+    await U.sleep(300);
+    root.innerHTML = '';
+    root.className = 'hidden';
+  },
+
+  /* ============================================================
      AMBIENCE. Card backs drifting across the menus, because an
      empty swirl behind a title screen is a wasted swirl.
      ============================================================ */
