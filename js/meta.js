@@ -23,6 +23,7 @@ const META = {
       gunsOwned: { snub: true },
       unlocked: {},   // trinket id -> true (only gated ones live here)
       tells: {},      // trait id -> true, once you've looted a frog that had it
+      tutor: {},      // which of the handler's lines you have already heard
     };
   },
 
@@ -38,6 +39,7 @@ const META = {
         Object.assign(META.d.gunsOwned, saved.gunsOwned || {});
         Object.assign(META.d.unlocked, saved.unlocked || {});
         Object.assign(META.d.tells, saved.tells || {});
+        Object.assign(META.d.tutor, saved.tutor || {});
       }
     } catch (e) { /* node / private mode: memory only */ }
     return META.d;

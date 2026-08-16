@@ -192,7 +192,27 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.keyboard.press('Escape');            // any key gets you out of it
     await page.waitForFunction(
       () => !document.querySelector('#cine-stage.lore-cut'), null, { timeout: 20000 });
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(400);
+
+    /* the handler: he says his piece once, and a click gets rid of each line */
+    await page.waitForFunction(
+      () => document.querySelector('#tutor-root:not(.hidden)'), null, { timeout: 15000 })
+      .catch(() => {});
+    if (await page.locator('#tutor-root:not(.hidden)').count() > 0) {
+      await shot('01c-handler');
+      for (let i = 0; i < 8; i++) {
+        if (await page.locator('#tutor-root:not(.hidden)').count() === 0) break;
+        await page.locator('#tutor-root').click({ position: { x: 30, y: 30 } });
+        await page.waitForTimeout(320);
+      }
+    }
+    /* and once on the board, in the middle of the thing he is talking about */
+    await page.waitForTimeout(500);
+    if (await page.locator('#tutor-root:not(.hidden)').count() > 0) {
+      await shot('01d-handler-board');
+    }
+    await page.evaluate(() => TUTOR.skipAll());
+    await page.waitForTimeout(200);
     await shot('02b-blind-select');
     /* the board: turn a clue over, watch the string reach a poster, name him */
     const ev1 = page.locator('.ev.live').first();

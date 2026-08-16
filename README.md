@@ -115,20 +115,27 @@ corpse (a fat envelope, an inside man at the precinct, a care package, dutch cou
 a gunrunner). Bosses can never be skipped, and a boss is never a mystery: his poster has
 been on your wall since the night they did it.
 
-### The case room
+There is **nothing to buy and nothing to own**. The looks you get into the file are the
+looks the job gives you — four at ante 1, down to one by the end — and the board gets
+harder as you climb: three faces on the wall, then four, then five, and the decoys are
+built to answer most of the same questions the same way. At most one clue halves the
+field; the rest cross off a single face each, so it always takes several looks and
+sometimes it takes a guess.
 
-Tools are bought once, with money, and kept for the whole run:
-
-| Tool | What it buys you |
-|---|---|
-| 🔍 **JEWELLER LOUPE** | one more look at the evidence, every board |
-| 📓 **BAR LEDGER** | he writes down who drinks what — one more look again |
-| 📷 **A MAN INSIDE** | one clue is already turned over when you walk in |
-| 📸 **PRESS CAMERA** | a picture for the file: naming him right pays 20% more |
-
-![The case room](docs/screen-case.png)
+When the file runs dry you can still **grease a palm** — somebody in the room will turn
+one more card over for money, and the price goes up every time you ask.
 
 ![That is him](docs/screen-called.png)
+
+### The handler
+
+![The handler](docs/screen-handler.png)
+
+Somebody has to tell you how this works once, and then never again. He is a frog in a
+bad coat who hands you the file, says the three things that will keep you alive — turn a
+card over, click his face, do the floor before you leave — and goes. Every line is one
+click to dismiss, each one is marked read in the save, and a second run is silent. If you
+want him back, the title screen has **BRIEF ME AGAIN**.
 
 `TAB` opens **the run** at any time — every trinket and item spelled out, your iron,
 tags taken, and what the night has cost so far.
@@ -219,15 +226,21 @@ it and your arm goes out across the felt, shrinking with the distance, digs — 
 shifting, dust off the lining, his weight rocking under your hand — and comes back with
 whatever was in there. Nothing detonates. You're going through a dead frog's coat.
 
-You do not do it under the lamp. The kill **blacks out** and you come up in the back
-room with the door shut, the body on the floor and a bare bulb on a wire.
+You never watch him fall. The shot goes off and the next thing that happens is **on the
+lens in front of you** — one splat, then four, then eight, then the frame is gone — and
+it comes off the way a sleeve comes off glass. Behind the red you are already out back
+with the door shut, the body on the floor and a bare bulb on a wire.
 
-Two meters run the whole time you are back there:
+Three meters run the whole time you are back there:
 
 - **TIME** — a clock, in real seconds, and it does not stop for you. It gets shorter
   every ante.
 - **NOISE** — every pocket makes some, and a boot or a gold tooth makes a lot. It bleeds
   away if you hold still. Cross the red line and somebody at the door has heard enough.
+- **THE TRAIL** — dragging a frog through a doorway leaves stains from the door to where
+  he stopped. Tap one and your arm goes out with a rag: three passes, a couple of seconds
+  off the clock, a little noise. Walk out over the rest and somebody finds it in the
+  morning — chips out of your pocket now, and dearer protection for the rest of the run.
 
 Get heard and a cop comes through the back door and stands over the body tapping his
 nightstick. **Bribe** him to keep going (the price climbs) or walk with what you have.
@@ -352,7 +365,8 @@ js/case.js        the board: suspects, evidence, the red string, the case room
 js/duel.js        the drawn table scene: expressions, blood, the fall, the corpse
 js/cine.js        the wipe, the sit-down, the boss cut-in, the lore reel, the climb
 js/cops.js        Swamp PD: the walk-in, the bribe handoff, the shakedown, the bust
-js/loot.js        the take: pockets, the time and noise meters, bribes, protection
+js/loot.js        the take: pockets, the three meters, bribes, protection
+js/tutor.js       the handler: the opening, and the three lines that keep you alive
 js/main.js        boot (+ ?debug harness)
 dev/sim.js        headless balance & fuzz harness (node dev/sim.js)
 dev/smoke.js      full browser smoke test (playwright-core)
@@ -373,11 +387,11 @@ node dev/sim.js      # 500 bot runs + 200 random-action fuzz runs against the re
 node dev/smoke.js    # drives the full UI in headless Chromium, fails on any console error
 ```
 
-Current curve (counting bot that plays its belt and sometimes skips, and never works the
-board): ~82% clear ante 1, ~35% reach the Bullfrog, ~9% walk out clean, ~2.6 items burned
-and ~1 chair skipped per run. A player who reads the board and names the right frog does
-better than the bot; a player who can't tell a top hat from a bowler does worse. That's
-the point.
+Current curve (counting bot that plays its belt, mops the floor and sometimes skips, but
+never works the board): ~83% clear ante 1, ~40% reach the Bullfrog, ~8% walk out clean,
+~2.6 items burned and ~1 chair skipped per run. A player who reads the board and names
+the right frog does better than the bot; a player who can't tell a top hat from a bowler,
+or who walks out over the trail, does worse. That's the point.
 
 ---
 

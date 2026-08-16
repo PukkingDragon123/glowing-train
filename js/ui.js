@@ -87,6 +87,7 @@ const UI = {
     }
     /* card backs drifting behind the quiet screens */
     CINE.ambient(G.phase === 'title' || G.phase === 'collection' || G.phase === 'blind');
+    if (typeof TUTOR !== 'undefined' && TUTOR.armed()) setTimeout(() => TUTOR.check(), 260);
   },
 
   /* Every screen change goes behind the card-rack wipe. fn does whatever
@@ -237,7 +238,7 @@ const UI = {
       UI.goto(() => E.newRun(inp.value)).then(() => {
         META.bump('loreSeen'); META.save();
         return CINE.lore(seen);
-      });
+      }).then(() => TUTOR.open());
     };
     wrap.appendChild(deal);
 
@@ -251,6 +252,16 @@ const UI = {
     hlp.appendChild(UI.txt('HOUSE RULES', { scale: 3, shadow: null }));
     hlp.onclick = () => UI.showHelp();
     row2.appendChild(hlp);
+
+    /* the handler said his piece once; this is how you get him back */
+    if (META.load().tutor && META.load().tutor.opening) {
+      const again = U.el('button', 'pixbtn ghost has-tip');
+      again.id = 'btn-tutor';
+      again.dataset.tipText = 'Have the handler walk you through it again on your next run.';
+      again.appendChild(UI.txt('BRIEF ME AGAIN', { scale: 3, shadow: null }));
+      again.onclick = () => { TUTOR.replay(); SFX.bank(); UI.stampSmall('HE WILL BE WAITING'); };
+      row2.appendChild(again);
+    }
     wrap.appendChild(row2);
 
     if (s.runs > 0) {
@@ -717,6 +728,7 @@ const UI = {
     UI.syncTrinkets();
     UI.syncItems();
     UI.syncGunPanel();
+    if (typeof TUTOR !== 'undefined' && TUTOR.armed()) TUTOR.check();
   },
 
   syncTrinkets() {

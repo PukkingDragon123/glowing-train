@@ -114,6 +114,7 @@ const LOOT = {
     document.body.classList.toggle('loud', !heat && L.noise > 0.68);
     /* the bribe button and the search rows only care about caught/not */
     if (LOOT._wasCaught !== heat) { LOOT._wasCaught = heat; LOOT.sync(); }
+    if (typeof TUTOR !== 'undefined' && TUTOR.armed() && DUEL.t % 40 === 0) TUTOR.check();
   },
 
   sync() {
