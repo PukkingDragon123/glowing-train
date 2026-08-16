@@ -12,7 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const jsdir = path.join(__dirname, '..', 'js') + path.sep;
-const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'engine.js']
+const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'case.js', 'engine.js']
   .map(f => fs.readFileSync(jsdir + f, 'utf8')).join('\n;\n');
 
 function driver() {

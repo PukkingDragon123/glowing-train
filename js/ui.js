@@ -101,6 +101,19 @@ const UI = {
   /* small builders */
   txt(str, opts) { return PIXFONT.render(str, Object.assign({ scale: 3, shadow: PIX.PAL.K }, opts)); },
   num(n, opts) { return UI.txt(U.fmt(Math.round(n)), opts); },
+  /* PIXFONT renders one canvas per string, so a long line has to be broken
+     into lines before it is drawn or it just runs off whatever holds it */
+  wrap(str, per, opts) {
+    const box = U.el('div', 'txt-lines');
+    let line = '';
+    const push = () => { if (line) box.appendChild(UI.txt(line, opts)); line = ''; };
+    str.split(' ').forEach(w => {
+      if (line && (line + ' ' + w).length > per) push();
+      line = line ? line + ' ' + w : w;
+    });
+    push();
+    return box;
+  },
   put(holder, canvas) { if (!holder) return; holder.innerHTML = ''; holder.appendChild(canvas); },
   icon(name, scale, tipKey, tipVal) {
     const w = U.el('span', 'picon' + (tipKey ? ' has-tip' : ''));
@@ -241,68 +254,127 @@ const UI = {
     app.appendChild(wrap);
   },
 
-  /* ================= the blind select ================= */
+  /* ================= the board ================= */
+
+  /* A wanted poster: his face, his name, and the pin that holds it up. */
+  posterEl(s, i, out, called) {
+    const p = U.el('div', 'poster' + (out ? ' out' : '') + (called ? ' called' : ''));
+    p.dataset.sus = i;
+    p.appendChild(U.el('i', 'poster-pin'));
+    const hd = U.el('div', 'po-head');
+    hd.appendChild(UI.txt('WANTED', { scale: 3, color: PIX.PAL.K, shadow: null }));
+    p.appendChild(hd);
+    const art = U.el('div', 'po-art');
+    art.appendChild(SPR.clone(SPR.frogCustom('sus:' + s.name, s.def), 4));
+    p.appendChild(art);
+    const nm = U.el('div', 'po-name');
+    /* long names get set smaller rather than running off the paper */
+    nm.appendChild(UI.txt(s.name, { scale: s.name.length > 9 ? 2 : 3, color: PIX.PAL.K, shadow: null }));
+    p.appendChild(nm);
+    if (out) {
+      const x = U.el('div', 'po-stamp');
+      x.appendChild(UI.txt('NOT HIM', { scale: 3, color: PIX.PAL.r, shadow: null }));
+      p.appendChild(x);
+    }
+    return p;
+  },
 
   buildBlindSelect(app) {
     const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
     const opp = G.duel.opp;
-    const wrap = U.el('div', 'blind-wrap');
+    if (!G.case) CASE.build();
+    const c = G.case;
+    const wrap = U.el('div', 'board-wrap');
 
-    const head = U.el('div', 'blind-head');
-    head.appendChild(UI.txt('ANTE ' + G.ante + (G.endless ? ' - ENDLESS' : ' OF ' + ANTES),
-      { scale: 3, color: PIX.PAL.G, outline: PIX.PAL.K }));
+    const head = U.el('div', 'board-head');
+    head.appendChild(UI.txt('ANTE ' + G.ante + (G.endless ? ' · ENDLESS' : ' OF ' + ANTES),
+      { scale: 3, color: PIX.PAL.q }));
+    head.appendChild(UI.txt(c.known ? 'YOU KNOW THIS ONE' : 'THREE IN THE ROOM · ONE OF THEM IS HIM',
+      { scale: 4, color: c.known ? PIX.PAL.R : PIX.PAL.W, outline: PIX.PAL.K }));
+    const pay = U.el('div', 'board-purse');
+    pay.appendChild(UI.txt('PURSE ' + BLIND_PURSE(G.ante, G.blind), { scale: 3, color: PIX.PAL.G }));
+    pay.appendChild(UI.icon('ic_chip', 3));
+    head.appendChild(pay);
     wrap.appendChild(head);
 
-    const row = U.el('div', 'blind-row');
-    for (let i = 0; i < 3; i++) {
-      const isNow = i === G.blind, done = i < G.blind;
-      const card = U.el('div', 'blind-card' + (isNow ? ' now' : done ? ' done' : '') + (i === 2 ? ' boss' : ''));
-      const tag = U.el('div', 'bc-tag');
-      tag.appendChild(UI.txt(BLIND_NAMES[i], { scale: 3, color: i === 2 ? PIX.PAL.R : PIX.PAL.w }));
-      card.appendChild(tag);
+    /* ---- the cork, the posters, and the string between them ---- */
+    const board = U.el('div', 'cork');
+    board.id = 'cork';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'strings');
+    svg.id = 'cork-strings';
+    board.appendChild(svg);
 
-      if (isNow) {
-        const art = U.el('div', 'bc-art');
-        art.appendChild(SPR.clone(SPR.frogCustom((opp.boss || opp.name) + ':sel', opp.def), 5));
-        card.appendChild(art);
-        const nm = U.el('div', 'bc-name has-tip');
-        nm.dataset.tipOppTells = '1';
-        nm.appendChild(UI.txt(opp.name, { scale: 3, color: opp.boss ? PIX.PAL.R : PIX.PAL.W }));
-        card.appendChild(nm);
-        if (opp.rule) {
-          const rl = U.el('div', 'bc-rule');
-          rl.appendChild(UI.txt(opp.rule, { scale: 3, color: PIX.PAL.G }));
-          card.appendChild(rl);
-        }
-        const st = U.el('div', 'bc-stats');
-        for (let h = 0; h < opp.maxHP; h++) st.appendChild(PIX.el('ic_heart', 3));
-        card.appendChild(st);
-        if (opp.traits && opp.traits.length) {
-          const tl = U.el('div', 'bc-tells');
-          opp.traits.forEach(t => {
-            const known = META.knowsTell(t);
-            const chip = U.el('span', 'bc-tell has-tip' + (known ? '' : ' unknown'));
-            chip.appendChild(UI.txt(known ? TRAITS[t].name : '???',
-              { scale: 3, color: known ? PIX.PAL.N : PIX.PAL.q }));
-            chip.dataset.tipText = known ? TRAITS[t].desc
-              : TRAITS[t].hint + ' - you have not read this tell yet.';
-            tl.appendChild(chip);
-          });
-          card.appendChild(tl);
-        }
-      } else {
-        const art = U.el('div', 'bc-art dim');
-        art.appendChild(SPR.clone(SPR.cardBack(), 6));
-        card.appendChild(art);
+    const row = U.el('div', 'poster-row');
+    const stand = c.known ? [true] : CASE.standing();
+    c.suspects.forEach((s, i) => {
+      const out = !stand[i];
+      const called = c.done && c.accused === i;
+      const p = UI.posterEl(s, i, out, called);
+      if (c.known) p.classList.add('solo');
+      if (!c.done && !out) {
+        p.classList.add('live');
+        p.onclick = () => {
+          SFX.chak();
+          const right = CASE.accuse(i);
+          UI.render();
+          UI.callOut(right);
+        };
       }
+      if (c.done && c.accused === i) {
+        const st = U.el('div', 'po-stamp big');
+        st.appendChild(UI.wrap(c.right ? 'THAT IS HIM' : 'WRONG MAN', 7,
+          { scale: 3, color: c.right ? PIX.PAL.G : PIX.PAL.R, shadow: null }));
+        p.appendChild(st);
+      }
+      row.appendChild(p);
+    });
+    board.appendChild(row);
 
-      const pay = U.el('div', 'bc-purse');
-      pay.appendChild(UI.txt(String(BLIND_PURSE(G.ante, i)), { scale: 3, color: PIX.PAL.G }));
-      pay.appendChild(UI.icon('ic_chip', 3));
-      card.appendChild(pay);
-      row.appendChild(card);
+    /* ---- the case file: evidence you can turn over ---- */
+    if (!c.known) {
+      const file = U.el('div', 'casefile');
+      const fh = U.el('div', 'cf-head');
+      fh.appendChild(UI.txt('CASE FILE', { scale: 3, color: PIX.PAL.W }));
+      fh.appendChild(UI.txt(c.done ? 'CLOSED'
+        : c.looks + (c.looks === 1 ? ' LOOK LEFT' : ' LOOKS LEFT'),
+        { scale: 3, color: c.looks > 0 && !c.done ? PIX.PAL.G : PIX.PAL.q }));
+      file.appendChild(fh);
+      const cards = U.el('div', 'ev-row');
+      c.clues.forEach((cl, i) => {
+        const ev = U.el('div', 'ev' + (cl.seen ? ' up' : ''));
+        ev.dataset.clue = i;
+        if (cl.seen) {
+          ev.appendChild(PIX.el(cl.icon, 3));
+          ev.appendChild(UI.wrap(cl.text, 10, { scale: 2, color: PIX.PAL.K, shadow: null }));
+        } else {
+          ev.appendChild(SPR.clone(SPR.cardBack(), 3));
+          if (!c.done && c.looks > 0) {
+            ev.classList.add('live');
+            ev.onclick = () => { if (CASE.flip(i)) { SFX.deal(); UI.render(); } };
+          }
+        }
+        cards.appendChild(ev);
+      });
+      file.appendChild(cards);
+      board.appendChild(file);
     }
-    wrap.appendChild(row);
+    wrap.appendChild(board);
+
+    /* ---- his tells, once you have named him ---- */
+    if (c.done && c.right && opp.traits && opp.traits.length) {
+      const tl = U.el('div', 'tell-row');
+      opp.traits.forEach(t => {
+        const known = META.knowsTell(t);
+        const chip = U.el('span', 'bc-tell has-tip' + (known ? '' : ' unknown'));
+        chip.appendChild(UI.txt(known ? TRAITS[t].name : '???',
+          { scale: 3, color: known ? PIX.PAL.N : PIX.PAL.q }));
+        chip.dataset.tipText = known ? TRAITS[t].desc
+          : TRAITS[t].hint + ' - you have not read this tell yet.';
+        tl.appendChild(chip);
+      });
+      wrap.appendChild(tl);
+    }
 
     if (G.tagsTaken.length) {
       const tr = U.el('div', 'tag-row');
@@ -327,6 +399,15 @@ const UI = {
     sit.appendChild(kh);
     sit.onclick = () => { SFX.chak(); UI.goto(() => E.sitDown()); };
     btns.appendChild(sit);
+
+    if (!c.known) {
+      const shop = U.el('button', 'pixbtn cop has-tip');
+      shop.id = 'btn-tools';
+      shop.dataset.tipText = 'Buy what a detective buys. Tools are kept for the whole run.';
+      shop.appendChild(UI.txt('CASE ROOM', { scale: 3, shadow: null }));
+      shop.onclick = () => UI.showTools();
+      btns.appendChild(shop);
+    }
 
     if (E.canSkip()) {
       const skip = U.el('button', 'pixbtn ghost has-tip');
@@ -355,6 +436,84 @@ const UI = {
     wrap.appendChild(btns);
 
     app.appendChild(wrap);
+    requestAnimationFrame(UI.drawStrings);
+  },
+
+  /* Red string, pinned from a clue to every poster it rules out. This is
+     the whole point of the board: you can SEE the field closing. */
+  drawStrings() {
+    const svg = document.getElementById('cork-strings');
+    const cork = document.getElementById('cork');
+    if (!svg || !cork || !G.case || G.case.known) return;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const R = cork.getBoundingClientRect();
+    svg.setAttribute('viewBox', '0 0 ' + Math.round(R.width) + ' ' + Math.round(R.height));
+    const at = (el, fx, fy) => {
+      const r = el.getBoundingClientRect();
+      return [r.left - R.left + r.width * fx, r.top - R.top + r.height * fy];
+    };
+    const posters = cork.querySelectorAll('.poster');
+    cork.querySelectorAll('.ev.up').forEach(ev => {
+      const cl = G.case.clues[+ev.dataset.clue];
+      if (!cl) return;
+      const a = at(ev, 0.5, 0.04);
+      posters.forEach((p, i) => {
+        if (cl.keeps[i]) return;
+        const b = at(p, 0.5, 0.94);
+        const ln = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 + 14;   // the sag in the string
+        ln.setAttribute('d', 'M' + a[0] + ' ' + a[1] + ' Q' + mx + ' ' + my + ' ' + b[0] + ' ' + b[1]);
+        ln.setAttribute('class', 'str');
+        svg.appendChild(ln);
+      });
+    });
+  },
+
+  /* the moment you say a name out loud */
+  callOut(right) {
+    UI.stampBig(right ? 'CALLED OUT' : 'WRONG MAN', right ? PIX.PAL.G : PIX.PAL.R, true);
+    if (right) { SFX.jackpot(); FX.chipRain && FX.chipRain(8); }
+    else { SFX.backfire(); UI.shake(); }
+  },
+
+  /* ================= the case room ================= */
+
+  showTools() {
+    const rows = TOOL_IDS.map(id => {
+      const t = TOOLS[id];
+      const owned = !!(G.tools && G.tools[id]);
+      const can = CASE.canBuy(id);
+      return '<div class="tool-row' + (owned ? ' owned' : '') + '">' +
+        '<b>' + t.name + '</b><span>' + t.desc + '</span>' +
+        (owned
+          ? '<em class="tool-have">IN THE BAG</em>'
+          : '<button class="pixbtn gold tool-buy' + (can ? '' : ' off') + '" data-tool="' + id + '"' +
+            (can ? '' : ' disabled') + '></button>') +
+        '</div>';
+    }).join('');
+    UI.modal(
+      '<button class="pixbtn m-close" id="mm-close"></button>' +
+      '<div class="ri-head"><h3>THE CASE ROOM</h3><span class="ri-seed">' + G.chips + ' CHIPS</span></div>' +
+      '<p class="ri-foot">Tools are bought once and kept for the run. Every one of them ' +
+      'is another thing you know before you have to say a name out loud.</p>' +
+      '<div class="ri-sec">' + rows + '</div>'
+    );
+    const c = document.querySelector('#mm-close');
+    c.appendChild(UI.txt('X', { scale: 3, color: PIX.PAL.W, shadow: null }));
+    c.onclick = () => UI.closeModal();
+    document.querySelectorAll('.tool-buy').forEach(b => {
+      /* the price goes on in the pixel font, like every other number */
+      b.appendChild(UI.txt(String(TOOLS[b.dataset.tool].cost),
+        { scale: 3, color: PIX.PAL.K, shadow: null }));
+      b.appendChild(PIX.el('ic_chip', 2));
+      b.onclick = () => {
+        if (!CASE.buy(b.dataset.tool)) { SFX.dud(); return; }
+        SFX.bank();
+        UI.closeModal();
+        UI.render();
+        UI.showTools();
+      };
+    });
   },
 
   tagToast(t) {
@@ -1009,7 +1168,7 @@ const UI = {
   PANEL_TIPS: {
     chips: () => `<b>CHIPS</b> — the only money down here. It comes out of corpses, and it goes to bribes and Swamp PD protection.`,
     ante: () => `<b>ANTE ${G.ante}</b> of ${ANTES}. Every ante is three blinds: small, big, then one of the Bullfrog's people. After the boss, Swamp PD wants <b>${HEAT_COST(G.ante)}⛁</b>.`,
-    blind: () => `<b>${E.blindName()}</b> — put the mark across the table down, then go through his pockets.`,
+    blind: () => `<b>${E.blindName()}</b> — three frogs in the room, one of them is the bounty. Turn evidence over until the string only reaches one poster, name him, then sit down. Name him right and the purse pays more; name him wrong and he sits down ready for you.`,
     purse: () => `<b>THE TAKE</b> — roughly ${E.purse()} chips sewn into this mark, plus 1 per heart you keep, plus whatever his tells promise.`,
     heat: () => `<b>THE BADGES</b> — every pocket you rifle brings them closer. When they're at the door: bribe (${G.loot ? E.bribeCost() : '?'}⛁) or walk.`,
     counts: () => E.countsHidden()

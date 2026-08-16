@@ -26,7 +26,8 @@ const E = {
       duel: null, loot: null,
       endless: false, wonRun: false, busted: false,
       tag: null, tagsTaken: [], skipped: 0,
-      run: { duelsWon: 0, shots: 0, damage: 0 },
+      tools: {}, case: null, caseBonus: false, caseMiss: false,
+      run: { duelsWon: 0, shots: 0, damage: 0, called: 0, misnamed: 0 },
     };
     META.bump('runs');
     /* grandpa's keepsake: one common card so you never walk in empty-handed */
@@ -220,7 +221,9 @@ const E = {
     G.trinkets.forEach(t => { t.used = {}; });
     /* DUTCH COURAGE rides along for exactly one duel */
     if (G.tag === 'nerve') { G.hearts += 1; G.duel.bonusHeart = true; G.tag = null; }
-    G.phase = 'blind';                       // the select screen sits you down
+    G.phase = 'blind';                       // the board sits you down
+    G.caseBonus = false; G.caseMiss = false;
+    CASE.build();
     return E.reload();
   },
 
@@ -646,6 +649,10 @@ const E = {
     for (const t of d.opp.traits) sub += TRAITS[t].chips || 0;
     if (E.has('swarm') && d.heartsLost > 0) sub += 2 * d.heartsLost;
     let mult = 1;
+    /* you named him before he sat down: the room paid for that */
+    if (G.caseBonus) {
+      mult *= 1 + CASE_TUNING.hit + (G.tools && G.tools.camera ? TOOLS.camera.bonus : 0);
+    }
     if (E.has('feather') && d.selfBlanks > 0) mult *= 1 + 0.1 * d.selfBlanks;
     if (E.has('ring')) mult *= 1.5;
     if (G.gunIdx >= 4) mult *= 1.5;

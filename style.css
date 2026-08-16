@@ -1888,3 +1888,122 @@ body.heard #siren-wash { opacity: 1; }
 
 /* the aim rail is gone: you point at what you mean to shoot */
 #aim-controls { display: none; }
+
+/* ============================================================
+   21. THE BOARD
+   Cork, paper, pins and red string. The blind select is a
+   detective's wall now: three faces, one of them the one you
+   came for, and a file you can only look into so many times.
+   ============================================================ */
+
+.board-wrap {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px;
+  padding: 16px; min-height: 0; position: relative; z-index: 2;
+  overflow-y: auto; scrollbar-width: none;
+}
+.board-wrap::-webkit-scrollbar { display: none; }
+.board-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.board-purse { display: inline-flex; align-items: center; gap: 5px; }
+
+/* the cork itself: a board somebody has been staring at for weeks */
+.cork {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 18px 20px 16px;
+  border: var(--bd) solid #2a1a10;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(37deg, rgba(0,0,0,.10) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-51deg, rgba(255,255,255,.05) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #6b4426, #4d301a);
+  box-shadow: inset 0 0 0 4px rgba(0,0,0,.30), 0 10px 0 rgba(0,0,0,.45);
+  max-width: min(94vw, 900px);
+}
+.strings { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+.strings .str { fill: none; stroke: #b8232f; stroke-width: 3; stroke-linecap: round; opacity: .85; }
+
+.poster-row { display: flex; gap: 16px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+
+/* every poster is a sheet of paper somebody pinned up in a hurry */
+.poster {
+  position: relative; flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 168px; padding: 16px 10px 10px;
+  background: linear-gradient(180deg, #e8dcbe, #cdbe9a);
+  border: var(--bd) solid #2a1a10;
+  box-shadow: 0 5px 0 rgba(0,0,0,.4);
+  transform: rotate(-1.2deg);
+  transition: transform .1s, filter .1s;
+}
+.poster:nth-child(3) { transform: rotate(1.6deg); }
+.poster:nth-child(4) { transform: rotate(-.6deg); }
+.poster.solo { width: 208px; transform: none; }
+.poster.live { cursor: pointer; }
+.poster.live:hover { transform: rotate(0deg) translateY(-5px); filter: brightness(1.07); }
+/* the stamp keeps its ink when the paper behind it goes grey */
+.poster.out > *:not(.po-stamp) { filter: grayscale(.9) brightness(.6); }
+.poster.out { background: linear-gradient(180deg, #cfc7b4, #b3ab98); }
+.poster.called { box-shadow: 0 5px 0 rgba(0,0,0,.4), 0 0 40px rgba(255,215,94,.45); }
+
+.poster-pin {
+  position: absolute; top: -9px; left: 50%; margin-left: -7px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 32%, #ff8a7e, #a11d28 70%);
+  border: 2px solid #2a1a10; z-index: 4;
+}
+.po-head { border-bottom: 3px solid #2a1a10; padding-bottom: 3px; width: 88%; display: flex; justify-content: center; }
+.po-art { display: flex; align-items: flex-end; justify-content: center; min-height: 76px; }
+.po-name { display: flex; }
+.po-stamp {
+  position: absolute; left: 50%; top: 52%;
+  transform: translate(-50%, -50%) rotate(-11deg);
+  border: 4px solid currentColor; padding: 2px 8px; border-radius: 4px;
+  color: var(--red); opacity: .92; pointer-events: none;
+}
+.po-stamp.big { top: 50%; transform: translate(-50%, -50%) rotate(-7deg); }
+
+/* the file, pinned along the bottom rail */
+.casefile { display: flex; flex-direction: column; gap: 8px; align-items: center; width: 100%; }
+.cf-head { display: flex; gap: 14px; align-items: center; }
+.ev-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.ev {
+  position: relative; width: 136px; min-height: 74px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 6px 5px;
+  background: rgba(10,10,14,.55);
+  border: var(--bd) solid #2a1a10; border-radius: 4px;
+  transition: transform .1s;
+}
+.ev.live { cursor: pointer; }
+.ev.live:hover { transform: translateY(-4px); }
+.ev.up {
+  background: linear-gradient(180deg, #ded2b4, #bdae8c);
+  box-shadow: 0 4px 0 rgba(0,0,0,.4);
+  transform: rotate(.8deg);
+}
+.ev.up:nth-child(even) { transform: rotate(-1.1deg); }
+.txt-lines { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.po-stamp { text-shadow: 0 0 6px rgba(0,0,0,.6); background: rgba(20,16,12,.35); }
+
+.tell-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+/* the case room */
+.tool-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center;
+  padding: 8px 0; border-bottom: 2px solid rgba(0,0,0,.35);
+}
+.tool-row b { grid-column: 1; color: var(--bone); }
+.tool-row span { grid-column: 1; color: var(--dust); font-size: 12px; }
+.tool-row .tool-buy, .tool-row .tool-have { grid-column: 2; grid-row: 1 / span 2; }
+.tool-row.owned { opacity: .6; }
+.tool-have { color: var(--felt-hi); font-style: normal; letter-spacing: 1px; }
+.tool-buy.off { opacity: .45; }
+.tool-buy { display: inline-flex; align-items: center; gap: 5px; }
+
+@media (max-width: 720px) {
+  .poster { width: 124px; padding: 12px 6px 8px; }
+  .po-art { min-height: 60px; }
+  .ev { width: 118px; min-height: 62px; }
+  .cork { padding: 14px 10px 12px; gap: 12px; }
+}

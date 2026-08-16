@@ -139,6 +139,26 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForSelector('#btn-sit', { timeout: 10000 });
     await wiped();
     await shot('02b-blind-select');
+    /* the board: turn a clue over, watch the string reach a poster, name him */
+    const ev1 = page.locator('.ev.live').first();
+    if (await ev1.count() > 0) { await ev1.click(); await page.waitForTimeout(400); }
+    await shot('02b2-board-clue');
+    /* the case room, with money in the pocket so a tool can actually be bought */
+    for (let i = 0; i < 3; i++) {
+      await page.locator('button', { hasText: '+20⛁' }).click();
+      await page.waitForTimeout(80);
+    }
+    await click('#btn-tools');
+    await page.waitForTimeout(300);
+    await shot('02b3-case-room');
+    const buy = page.locator('.tool-buy:not([disabled])').first();
+    if (await buy.count() > 0) { await buy.click(); await page.waitForTimeout(400); }
+    await shot('02b3b-tool-bought');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(250);
+    const pos = page.locator('.poster.live').first();
+    if (await pos.count() > 0) { await pos.click(); await page.waitForTimeout(800); }
+    await shot('02b4-board-called');
     /* the run panel */
     await click('#btn-run');
     await page.waitForTimeout(350);

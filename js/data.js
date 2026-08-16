@@ -107,6 +107,31 @@ const MOOK_TRAIT_POOL = Object.keys(TRAITS);
    never be skipped.
    ------------------------------------------------------------ */
 
+/* ------------------------------------------------------------
+   DETECTIVE TOOLS — bought once, with money, and kept for the
+   rest of the run. Every one of them buys you information about
+   the board before you have to name a frog out loud.
+   ------------------------------------------------------------ */
+
+const TOOLS = {
+  loupe:   { id: 'loupe',   name: 'JEWELLER LOUPE', cost: 24, icon: 'ev_print', looks: 1,
+    desc: 'One more look at the evidence on every board.' },
+  ledger:  { id: 'ledger',  name: 'BAR LEDGER',     cost: 38, icon: 'ev_note',  looks: 1,
+    desc: 'He writes down who drinks what. One more look again.' },
+  snitch:  { id: 'snitch',  name: 'A MAN INSIDE',   cost: 52, icon: 'ev_photo', free: 1,
+    desc: 'One clue is already turned over when you walk in.' },
+  camera:  { id: 'camera',  name: 'PRESS CAMERA',   cost: 68, icon: 'ev_photo', bonus: 0.2,
+    desc: 'A picture for the file: naming him right pays 20% more.' },
+};
+const TOOL_IDS = Object.keys(TOOLS);
+
+/* what naming him right, or wrong, is worth */
+const CASE_TUNING = {
+  hit: 0.25,        // purse multiplier on top, for calling the right frog
+  missHearts: 1,    // he is ready for you: one more heart on him
+  missAggro: 0.1,
+};
+
 const TAGS = {
   purse:  { id: 'purse',  name: 'FAT ENVELOPE', icon: 'ic_chip',
     desc: 'Somebody owed you: +10 chips, right now.' },
