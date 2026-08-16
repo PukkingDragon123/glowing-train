@@ -409,13 +409,20 @@ const UI = {
     sit.onclick = () => { SFX.chak(); UI.goto(() => E.sitDown()); };
     btns.appendChild(sit);
 
-    if (!c.known) {
-      const shop = U.el('button', 'pixbtn cop has-tip');
-      shop.id = 'btn-tools';
-      shop.dataset.tipText = 'Buy what a detective buys. Tools are kept for the whole run.';
-      shop.appendChild(UI.txt('CASE ROOM', { scale: 3, shadow: null }));
-      shop.onclick = () => UI.showTools();
-      btns.appendChild(shop);
+    if (!c.known && !c.done) {
+      /* No shop and nothing to own. When the file runs dry you can still put
+         something in somebody's hand for one more look, and it costs more
+         every time you ask. */
+      const g = U.el('button', 'pixbtn cop has-tip');
+      g.id = 'btn-grease';
+      g.disabled = !CASE.canGrease();
+      g.dataset.tipText = 'Somebody in this room will turn one more card over ' +
+        'for money. The price goes up every time you ask.';
+      g.appendChild(UI.txt('GREASE A PALM', { scale: 3, shadow: null }));
+      g.appendChild(UI.txt(String(CASE.greaseCost()), { scale: 3, color: PIX.PAL.G, shadow: null }));
+      g.appendChild(PIX.el('ic_chip', 2));
+      g.onclick = () => { if (CASE.grease()) { SFX.coin(); UI.render(); } else SFX.dud(); };
+      btns.appendChild(g);
     }
 
     if (E.canSkip()) {
@@ -483,46 +490,6 @@ const UI = {
     UI.stampBig(right ? 'CALLED OUT' : 'WRONG MAN', right ? PIX.PAL.G : PIX.PAL.R, true);
     if (right) { SFX.jackpot(); FX.chipRain && FX.chipRain(8); }
     else { SFX.backfire(); UI.shake(); }
-  },
-
-  /* ================= the case room ================= */
-
-  showTools() {
-    const rows = TOOL_IDS.map(id => {
-      const t = TOOLS[id];
-      const owned = !!(G.tools && G.tools[id]);
-      const can = CASE.canBuy(id);
-      return '<div class="tool-row' + (owned ? ' owned' : '') + '">' +
-        '<b>' + t.name + '</b><span>' + t.desc + '</span>' +
-        (owned
-          ? '<em class="tool-have">IN THE BAG</em>'
-          : '<button class="pixbtn gold tool-buy' + (can ? '' : ' off') + '" data-tool="' + id + '"' +
-            (can ? '' : ' disabled') + '></button>') +
-        '</div>';
-    }).join('');
-    UI.modal(
-      '<button class="pixbtn m-close" id="mm-close"></button>' +
-      '<div class="ri-head"><h3>THE CASE ROOM</h3><span class="ri-seed">' + G.chips + ' CHIPS</span></div>' +
-      '<p class="ri-foot">Tools are bought once and kept for the run. Every one of them ' +
-      'is another thing you know before you have to say a name out loud.</p>' +
-      '<div class="ri-sec">' + rows + '</div>'
-    );
-    const c = document.querySelector('#mm-close');
-    c.appendChild(UI.txt('X', { scale: 3, color: PIX.PAL.W, shadow: null }));
-    c.onclick = () => UI.closeModal();
-    document.querySelectorAll('.tool-buy').forEach(b => {
-      /* the price goes on in the pixel font, like every other number */
-      b.appendChild(UI.txt(String(TOOLS[b.dataset.tool].cost),
-        { scale: 3, color: PIX.PAL.K, shadow: null }));
-      b.appendChild(PIX.el('ic_chip', 2));
-      b.onclick = () => {
-        if (!CASE.buy(b.dataset.tool)) { SFX.dud(); return; }
-        SFX.bank();
-        UI.closeModal();
-        UI.render();
-        UI.showTools();
-      };
-    });
   },
 
   tagToast(t) {

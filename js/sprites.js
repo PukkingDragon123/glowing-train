@@ -1443,14 +1443,97 @@ SPR.povCuff = function (ctx, cx, cy, d, sgn) {
   PIX.rect(ctx, cx + sgn * 7, cy - 1, 3, 3, P.G);
 };
 
-/* your hand, near the lens: the cast's hand, upside down so the digits
-   reach away from you across the felt */
+/* ============================================================
+   YOUR OWN HAND, NEAR THE LENS.
+
+   The far-field hand rig scaled up read as a bunch of grapes:
+   round pads, round knuckles, round palm. Nothing this close to
+   the camera should be a circle. This one is BLOCKS — every
+   part is an axis-aligned rectangle, ink pass then fill pass,
+   so it stays a drawing at any size.
+
+   Origin is the WRIST. Digits reach away from you, up the
+   screen. sgn +1 is your right hand, -1 your left; the whole
+   thing mirrors about the wrist.
+   ============================================================ */
+SPR.povPaw = function (ctx, cx, cy, d, sgn, k, grip) {
+  const P = PIX.PAL, INK = P.K;
+  const skin = P[d.skin[0]] || P.F, shade = P[d.skin[1]] || P.f, dark = P[d.skin[2]] || P.e;
+  const flip = sgn < 0 ? -1 : 1;
+  const R = (x, y, w, h, col) => {
+    const x0 = flip < 0 ? -(x + w) : x;
+    PIX.rect(ctx, cx + Math.round(x0 * k), cy + Math.round(y * k),
+      Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)), col);
+  };
+
+  /* One hand, four ways to hold it. 'grip' is a legacy boolean from the
+     table rig; everything else names a pose. */
+  const mode = grip === true ? 'grip' : (grip || 'open');
+  const LEN = mode === 'grip' ? [6, 8, 8, 6]
+    : mode === 'flat' ? [13, 14, 14, 12]
+      : mode === 'one' ? [4, 17, 4, 4]                 // the one he means
+        : [10, 14, 13, 9];
+  const DX = mode === 'flat' ? [-11, -6, -1, 4] : [-11, -5, 1, 7];
+  const tips = LEN.map(l => -14 - l);
+
+  /* ---- one ink silhouette under the lot ---- */
+  const mass = (col, g) => {
+    R(-11 - g, -14 - g, 22 + g * 2, 18 + g * 2, col);              // back of the hand
+    R(-9 - g, 3 - g, 18 + g * 2, 7 + g * 2, col);                  // wrist
+    DX.forEach((dx, i) => {
+      R(dx - g, tips[i] - g, 5 + g * 2, LEN[i] + 3 + g * 2, col);  // the digit
+      R(dx - 1 - g, tips[i] - 4 - g, 7 + g * 2, 5 + g * 2, col);   // and its pad
+    });
+    R(10 - g, -9 - g, 7 + g * 2, 9 + g * 2, col);                  // thumb, two steps
+    R(14 - g, -14 - g, 6 + g * 2, 7 + g * 2, col);
+  };
+  mass(INK, 1);
+  mass(skin, 0);
+
+  /* ---- webbing: a stepped wedge between every pair of digits ---- */
+  for (let i = 0; i < 3; i++) {
+    const a = DX[i] + 5, w = DX[i + 1] - a;
+    if (w <= 0) { R(DX[i + 1] - 1, tips[i + 1], 1, LEN[i + 1] + 3, 'rgba(0,0,0,.28)'); continue; }
+    for (let r = 0; r < 4; r++) R(a, -14 - r, w, 1, r < 2 ? dark : shade);
+  }
+
+  /* ---- the light. It is over the table and behind you, so the near
+     edge of every part is lit and the far edge rolls off. ---- */
+  R(-11, -14, 3, 18, 'rgba(255,255,255,.13)');
+  R(6, -14, 5, 18, 'rgba(0,0,0,.26)');
+  R(-11, 1, 22, 3, 'rgba(0,0,0,.20)');
+  DX.forEach((dx, i) => {
+    R(dx, tips[i], 2, LEN[i] + 3, 'rgba(255,255,255,.12)');
+    R(dx + 3, tips[i], 2, LEN[i] + 3, 'rgba(0,0,0,.22)');
+    R(dx - 1, tips[i] - 4, 7, 1, 'rgba(255,255,255,.16)');
+    R(dx - 1, tips[i], 7, 1, 'rgba(0,0,0,.24)');
+  });
+  R(10, -9, 2, 9, 'rgba(255,255,255,.12)');
+  R(15, -14, 5, 1, 'rgba(255,255,255,.14)');
+
+  /* ---- knuckles: three squared ridges across the back of it ---- */
+  for (let i = 0; i < 4; i++) {
+    R(DX[i], -16, 5, 2, shade);
+    R(DX[i], -17, 5, 1, 'rgba(255,255,255,.16)');
+  }
+  R(-11, -12, 22, 1, 'rgba(0,0,0,.16)');
+
+  /* ---- freckling, seeded off him, in blocks and not dots ---- */
+  const rng = SPR.defRng(d);
+  for (let i = 0; i < 7; i++) {
+    R(Math.round(-9 + rng() * 16), Math.round(-11 + rng() * 13), 2, 2, shade);
+  }
+  if (d.rings) {
+    R(DX[0] - 1, tips[0] + 5, 7, 3, INK);
+    R(DX[0] - 1, tips[0] + 5, 7, 2, P.G);
+    R(DX[3] - 1, tips[3] + 4, 7, 3, INK);
+    R(DX[3] - 1, tips[3] + 4, 7, 2, P.g);
+  }
+};
+
+/* kept as the name every call site already uses */
 SPR.povHand = function (ctx, cx, cy, d, sgn, k, grip) {
-  ctx.save();
-  ctx.translate(Math.round(cx), Math.round(cy));
-  ctx.scale(k, -k);
-  SPR.frogHand(ctx, 0, 0, d, sgn, { noCuff: true, grip: !!grip });
-  ctx.restore();
+  SPR.povPaw(ctx, cx, cy, d, sgn, k, grip);
 };
 
 /* a forearm entering from off-frame, in your pinstripe sleeve */
@@ -1465,56 +1548,10 @@ SPR.povSleeve = SPR.povTube;
    Drawn upright, digits pointing UP, origin at the wrist.
    ============================================================ */
 SPR.frogGesture = function (ctx, cx, cy, d, kind, sgn) {
-  const P = PIX.PAL, INK = P.K;
-  const skin = P[d.skin[0]] || P.F, shade = P[d.skin[1]] || P.f, dark = P[d.skin[2]] || P.e;
-  sgn = sgn || 1;
-
-  if (kind === 'flat') {
-    /* the whole hand, laid over his own face, digits together */
-    SPR.rrect(ctx, cx - 12, cy - 30, 24, 38, 9, INK);
-    SPR.rrect(ctx, cx - 10, cy - 28, 20, 34, 8, skin);
-    for (let i = 0; i < 3; i++) {
-      PIX.rect(ctx, cx - 10 + i * 7, cy - 28, 1, 22, 'rgba(0,0,0,.30)');
-    }
-    PIX.rect(ctx, cx - 10, cy - 28, 20, 3, 'rgba(255,255,255,.16)');
-    SPR.rrect(ctx, cx + sgn * 9 - 6, cy - 12, 14, 16, 6, INK);      // the thumb, down the side
-    SPR.rrect(ctx, cx + sgn * 9 - 5, cy - 11, 12, 14, 5, shade);
-    SPR.ellipse(ctx, cx, cy + 4, 10, 5, shade);
-    return;
-  }
-
-  if (kind === 'finger') {
-    /* the digit, first, so the fist closes over the base of it */
-    SPR.rrect(ctx, cx - 6, cy - 42, 13, 30, 5, INK);
-    SPR.rrect(ctx, cx - 5, cy - 41, 11, 28, 4, skin);
-    PIX.rect(ctx, cx - 5, cy - 41, 4, 26, 'rgba(255,255,255,.14)');
-    PIX.disc(ctx, cx, cy - 40, 6, INK);
-    PIX.disc(ctx, cx, cy - 40, 5, skin);
-    PIX.rect(ctx, cx - 4, cy - 43, 3, 2, 'rgba(255,255,255,.30)');
-    /* the fist under it */
-    SPR.rrect(ctx, cx - 15, cy - 18, 31, 30, 10, INK);
-    SPR.rrect(ctx, cx - 13, cy - 16, 27, 26, 9, skin);
-    SPR.rrect(ctx, cx - 13, cy - 2, 27, 12, 7, shade);
-    for (let i = 0; i < 3; i++) {
-      PIX.rect(ctx, cx - 13, cy - 10 + i * 7, 27, 1, 'rgba(0,0,0,.28)');
-      PIX.rect(ctx, cx - 13, cy - 11 + i * 7, 27, 1, 'rgba(255,255,255,.08)');
-    }
-    SPR.rrect(ctx, cx - sgn * 15 - 4, cy - 8, 12, 14, 5, INK);      // knuckle of the thumb
-    SPR.rrect(ctx, cx - sgn * 15 - 3, cy - 7, 10, 12, 4, dark);
-    return;
-  }
-
-  /* 'palm' — open, tilted back: the shrug */
-  SPR.ellipse(ctx, cx, cy - 6, 13, 12, INK);
-  SPR.ellipse(ctx, cx, cy - 6, 11, 10, skin);
-  SPR.ellipse(ctx, cx, cy - 1, 10, 6, shade);
-  for (let i = -1; i < 3; i++) {
-    const fx = cx + sgn * (i * 7 - 4), len = 13 - Math.abs(i) * 2;
-    SPR.rrect(ctx, fx - 4, cy - 12 - len, 9, len + 6, 4, INK);
-    SPR.rrect(ctx, fx - 3, cy - 11 - len, 7, len + 4, 3, i < 1 ? skin : shade);
-    PIX.rect(ctx, fx - 3, cy - 11 - len, 3, len + 2, 'rgba(255,255,255,.12)');
-  }
-  PIX.rect(ctx, cx - 8, cy - 14, 16, 2, 'rgba(255,255,255,.14)');
+  /* All three are the same blocky paw held differently — a flat hand over
+     his eyes, one digit up, or an open palm. Nothing here is a circle. */
+  const mode = kind === 'flat' ? 'flat' : kind === 'finger' ? 'one' : 'open';
+  SPR.povPaw(ctx, cx, cy, d, sgn || 1, 1, mode);
 };
 
 /* ============================================================
@@ -1537,8 +1574,8 @@ SPR.frogFist = function (ctx, cx, cy, d, o) {
     SPR.rrect(ctx, cx - 13 - len, fy, len + 6, 8, 3, i < 2 ? skin : shade);
     PIX.rect(ctx, cx - 13 - len, fy, len + 6, 2, 'rgba(255,255,255,.16)');
     PIX.rect(ctx, cx - 13 - len, fy + 6, len + 6, 2, 'rgba(0,0,0,.30)');
-    PIX.disc(ctx, cx - 13 - len, fy + 4, 4, INK);              // the knuckle of it
-    PIX.disc(ctx, cx - 13 - len, fy + 4, 3, i < 2 ? skin : shade);
+    PIX.rect(ctx, cx - 16 - len, fy + 1, 7, 7, INK);           // the knuckle of it
+    PIX.rect(ctx, cx - 15 - len, fy + 2, 5, 5, i < 2 ? skin : shade);
   }
 
   /* the back of the hand, one mass over the top of the digits */
@@ -1554,7 +1591,7 @@ SPR.frogFist = function (ctx, cx, cy, d, o) {
   }
   const rng = SPR.defRng(d);
   for (let i = 0; i < 7; i++) {
-    PIX.disc(ctx, Math.round(cx - 12 + rng() * 26), Math.round(cy - 12 + rng() * 30), 2, shade);
+    PIX.rect(ctx, Math.round(cx - 12 + rng() * 24), Math.round(cy - 12 + rng() * 28), 2, 2, shade);
   }
 
   /* the thumb, laid over the top of the grip and pointing away */
@@ -1562,15 +1599,15 @@ SPR.frogFist = function (ctx, cx, cy, d, o) {
   SPR.rrect(ctx, cx - 20, cy - 22, 34, 11, 5, skin);
   PIX.rect(ctx, cx - 20, cy - 22, 34, 2, 'rgba(255,255,255,.20)');
   PIX.rect(ctx, cx - 20, cy - 14, 34, 3, 'rgba(0,0,0,.22)');
-  PIX.disc(ctx, cx - 21, cy - 17, 6, INK);
-  PIX.disc(ctx, cx - 21, cy - 17, 5, skin);
+  PIX.rect(ctx, cx - 26, cy - 22, 10, 10, INK);
+  PIX.rect(ctx, cx - 25, cy - 21, 8, 8, skin);
   PIX.rect(ctx, cx - 24, cy - 20, 3, 2, 'rgba(255,255,255,.25)');
 
   if (d.rings) {
     PIX.rect(ctx, cx - 24, cy - 4, 5, 6, INK);
     PIX.rect(ctx, cx - 24, cy - 3, 4, 4, P.G);
   }
-  if (o.wet) SPR.ellipse(ctx, cx + 2, cy - 6, 8, 5, 'rgba(255,255,255,.10)');
+  if (o.wet) PIX.rect(ctx, cx - 6, cy - 10, 14, 4, 'rgba(255,255,255,.10)');
   void dark;
 };
 

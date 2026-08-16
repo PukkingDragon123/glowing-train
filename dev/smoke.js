@@ -152,19 +152,20 @@ fs.mkdirSync(SHOTS, { recursive: true });
     const ev1 = page.locator('.ev.live').first();
     if (await ev1.count() > 0) { await ev1.click(); await page.waitForTimeout(400); }
     await shot('02b2-board-clue');
-    /* the case room, with money in the pocket so a tool can actually be bought */
+    /* spend the file down, then pay somebody to turn one more over */
+    for (let i = 0; i < 4; i++) {
+      const e = page.locator('.ev.live').first();
+      if (await e.count() === 0) break;
+      await e.click();
+      await page.waitForTimeout(200);
+    }
     for (let i = 0; i < 3; i++) {
       await page.locator('button', { hasText: '+20⛁' }).click();
       await page.waitForTimeout(80);
     }
-    await click('#btn-tools');
-    await page.waitForTimeout(300);
-    await shot('02b3-case-room');
-    const buy = page.locator('.tool-buy:not([disabled])').first();
-    if (await buy.count() > 0) { await buy.click(); await page.waitForTimeout(400); }
-    await shot('02b3b-tool-bought');
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(250);
+    const grease = page.locator('#btn-grease:not([disabled])');
+    if (await grease.count() > 0) { await grease.click(); await page.waitForTimeout(300); }
+    await shot('02b3-greased');
     const pos = page.locator('.poster.live').first();
     if (await pos.count() > 0) { await pos.click(); await page.waitForTimeout(800); }
     await shot('02b4-board-called');

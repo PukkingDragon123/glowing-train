@@ -1352,13 +1352,16 @@ const DUEL = {
        edges instead and they read as concrete beams. Dark suit cloth with a
        rim light and a pinstripe, or they vanish into the felt. */
     const sC = P.T, sD = P.k, sL = P.t, sS = 'rgba(100,109,132,.34)';
-    const HK = 1.7;
+    const HK = 1.05;
 
     /* --- your off hand, flat on your own end of the felt --- */
-    const lhx = 76, lhy = FY - 12;
-    SPR.ellipse(x, lhx + 3, FY - 2, 17, 5, 'rgba(0,0,0,.45)');
-    SPR.povSleeve(x, 42, FY + 24, lhx - 3, FY - 2, 30, 20, sC, sD, sL, sS);
-    SPR.povCuff(x, lhx, FY - 4, def, -1);
+    const lhx = 66, lhy = FY - 12;
+    /* the shadow it throws is a stepped block, not a soft oval */
+    for (let i = 0; i < 4; i++) {
+      PIX.rect(x, lhx - 17 + i * 2, FY - 3 + i, 34 - i * 4, 1, 'rgba(0,0,0,.38)');
+    }
+    SPR.povSleeve(x, 40, FY + 26, lhx - 2, FY + 2, 30, 21, sC, sD, sL, sS);
+    SPR.povCuff(x, lhx, FY - 2, def, -1);
     SPR.povHand(x, lhx, lhy, def, -1, HK, false);
 
     /* --- your gun hand, or the one that is out over him --- */
@@ -1366,11 +1369,14 @@ const DUEL = {
     const fx = Math.round(f.x) + dig, fy = Math.round(f.y) + (dig ? 1 : 0);
     /* it shrinks as it reaches away from you — that is the whole depth cue */
     const away = U.clamp((FY - 6 - fy) / 72, 0, 1);
-    const hk = HK - away * 0.75, sh = hk / HK;
-    SPR.ellipse(x, fx, fy + 12 * sh, 16 * sh, 5 * sh, 'rgba(0,0,0,.42)');
-    SPR.povSleeve(x, 330, FY + 24, fx - 3, fy + Math.round(8 * sh),
-      32, Math.max(10, Math.round(21 - away * 11)), sC, sD, sL, sS);
-    SPR.povCuff(x, fx, fy + Math.round(8 * sh), def, 1);
+    const hk = HK - away * 0.5, sh = hk / HK;
+    for (let i = 0; i < 4; i++) {
+      PIX.rect(x, fx - Math.round(16 * sh) + i * 2, Math.round(fy + 11 * sh) + i,
+        Math.round(32 * sh) - i * 4, 1, 'rgba(0,0,0,.34)');
+    }
+    SPR.povSleeve(x, 332, FY + 26, fx - 2, fy + Math.round(10 * sh),
+      32, Math.max(11, Math.round(21 - away * 9)), sC, sD, sL, sS);
+    SPR.povCuff(x, fx, fy + Math.round(9 * sh), def, 1);
     SPR.povHand(x, fx, fy, def, 1, hk, mine && !DUEL.corpse);
 
     x.restore();

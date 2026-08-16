@@ -189,9 +189,6 @@ function SKIN_WORD(letter) {
 
 const CASE = {
 
-  /* how many looks a run gets before it has bought anything */
-  BASE_LOOKS: 2,
-
   /* Build the board for whoever is sitting down next. The real mark is
      already rolled by the engine — the decoys are built to look like him
      from across a dark room, so the clues have to do the work. */
@@ -203,23 +200,29 @@ const CASE = {
        the night they did it — there is nothing to work out, only a door. */
     if (opp.boss) {
       G.case = {
-        suspects: [real], clues: [], looks: 0, known: true,
+        suspects: [real], clues: [], looks: 0, known: true, grease: 0,
         accused: 0, right: true, done: true, realIdx: 0,
       };
       G.caseBonus = false;
       return G.case;
     }
 
+    /* more faces on the wall as you climb, and fewer looks to sort them */
+    const want = CASE_TUNING.suspects(G.ante);
     const suspects = [real];
     const usedNames = { [opp.name]: 1 };
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < want - 1; i++) {
       let s = null;
-      for (let tries = 0; tries < 24 && !s; tries++) {
+      for (let tries = 0; tries < 30 && !s; tries++) {
         const traits = E.rollTraits();
         const def = E.traitsToDef(E.mookDef(rng() < 0.5 ? 'mook' : 'capo'), traits);
-        /* a decoy that answers every question the same way is not a decoy */
-        const same = CLUE_TESTS.every(t => t.of({ def }) === t.of(real));
-        if (same) continue;
+        /* A decoy has to LOOK like him or it is not a decoy: it must answer
+           at least half the questions the same way, and differ on at least
+           one — otherwise the board is either trivial or unsolvable. */
+        let same = 0;
+        CLUE_TESTS.forEach(t => { if (t.of({ def }) === t.of(real)) same++; });
+        if (same === CLUE_TESTS.length) continue;
+        if (same < CLUE_TESTS.length * 0.55) continue;
         const pool = (rng() < 0.5 ? MOOK_NAMES : CAPO_NAMES).filter(n => !usedNames[n]);
         const name = pool.length ? U.pick(rng, pool) : 'JOHN DOE ' + i;
         usedNames[name] = 1;
@@ -241,29 +244,24 @@ const CASE = {
       if (!text) return;
       clues.push({ id: t.id, icon: t.icon, text, keeps, cut, seen: false });
     });
-    /* the sharpest first, then the rest, so an early look is worth taking */
-    clues.sort((a, b) => b.cut - a.cut || (rng() < 0.5 ? -1 : 1));
-    const deck = clues.slice(0, 5);
+
+    /* THE FILE IS NOT A SOLUTION. Keep the blunt clues — the ones that only
+       cross off one face — and no more than one clue that cuts the board in
+       half, so it always takes several looks and sometimes takes a guess. */
+    U.shuffle(rng, clues);
+    const wide = clues.filter(c => c.cut >= suspects.length - 1);
+    const rest = clues.filter(c => c.cut < suspects.length - 1);
+    const deck = rest.concat(wide.slice(0, 1));
     U.shuffle(rng, deck);
 
     G.case = {
-      suspects, clues: deck,
-      looks: CASE.looksFor(),
+      suspects, clues: deck.slice(0, Math.max(4, suspects.length + 1)),
+      looks: CASE_TUNING.looks(G.ante),
+      grease: 0,
       accused: -1, right: null, done: false,
       realIdx: suspects.findIndex(s => s.real),
     };
-    /* a man inside has already turned one over for you */
-    let free = 0;
-    TOOL_IDS.forEach(id => { if (G.tools && G.tools[id]) free += TOOLS[id].free || 0; });
-    for (let i = 0; i < free && i < deck.length; i++) deck[i].seen = true;
     return G.case;
-  },
-
-  /* your looks: the base, plus whatever the case room has bought */
-  looksFor() {
-    let n = CASE.BASE_LOOKS;
-    TOOL_IDS.forEach(id => { if (G.tools && G.tools[id]) n += TOOLS[id].looks || 0; });
-    return n;
   },
 
   /* which suspects the clues you HAVE TURNED OVER still allow */
@@ -272,25 +270,21 @@ const CASE = {
     return c.suspects.map((s, i) => c.clues.every(cl => !cl.seen || cl.keeps[i]));
   },
 
-  /* the case room: tools are bought once and kept for the run */
-  canBuy(id) {
-    const t = TOOLS[id];
-    return !!t && !(G.tools && G.tools[id]) && G.chips >= t.cost;
+  /* what one more look off the books costs, and whether you can cover it */
+  greaseCost() {
+    const c = G.case;
+    return CASE_TUNING.greaseBase + CASE_TUNING.greaseStep * ((c && c.grease) || 0);
   },
-
-  buy(id) {
-    if (!CASE.canBuy(id)) return false;
-    const t = TOOLS[id];
-    G.chips -= t.cost;
-    G.tools[id] = true;
-    /* a tool bought at this board works at this board */
-    if (G.case && !G.case.done) {
-      G.case.looks += t.looks || 0;
-      for (let i = 0; i < (t.free || 0); i++) {
-        const cl = G.case.clues.find(c => !c.seen);
-        if (cl) cl.seen = true;
-      }
-    }
+  canGrease() {
+    const c = G.case;
+    return !!c && !c.done && !c.known && c.looks <= 0 &&
+      c.clues.some(cl => !cl.seen) && G.chips >= CASE.greaseCost();
+  },
+  grease() {
+    if (!CASE.canGrease()) return false;
+    G.chips -= CASE.greaseCost();
+    G.case.grease++;
+    G.case.looks++;
     return true;
   },
 
@@ -316,14 +310,18 @@ const CASE = {
     if (c.right) {
       G.caseBonus = true;
       G.run.called++;
-      /* the tells you named are tells you have read */
       (c.suspects[i].traits || []).forEach(t => META.learnTrait(t));
     } else {
+      /* THE PUNISHMENT. You said a name and it was the wrong one: the frog
+         you actually came for heard it, the room charged you for the show,
+         and he is the one holding the iron first. */
       G.caseMiss = true;
       G.run.misnamed++;
+      G.chips = Math.max(0, G.chips - CASE_TUNING.missChips);
       G.duel.opp.hp += CASE_TUNING.missHearts;
       G.duel.opp.maxHP += CASE_TUNING.missHearts;
-      G.duel.opp.aggro = Math.min(0.9, G.duel.opp.aggro + CASE_TUNING.missAggro);
+      G.duel.opp.aggro = Math.min(0.92, G.duel.opp.aggro + CASE_TUNING.missAggro);
+      G.duel.turn = 'opp';
     }
     return c.right;
   },
