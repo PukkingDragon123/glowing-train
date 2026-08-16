@@ -46,6 +46,9 @@ const DUEL = {
   tongue: null,           // a verlet chain, anchored in his mouth
   flies: [],              // what it goes out for
   hoverSpot: -1, hoverFace: false,
+  react: null,               // what his hand came up out of the dark to say
+  myGore: 0,                 // what is on YOUR face, and stays there
+  blood: [],                 // what is on HIS, in his own space, and grows
   blink: 0, blinkNext: 90,   // he is alive; every so often the lids come down
   view: 'table', viewT: 0,   // the camera: across the felt, or round on yourself
   oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
@@ -191,7 +194,7 @@ const DUEL = {
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
-    DUEL.reach = null; DUEL.hoverSpot = -1;
+    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = [];
     DUEL.view = 'table'; DUEL.viewT = 0;
     DUEL.initTongue();
     /* G.loot survives from the LAST corpse until the next one is opened, so
@@ -327,6 +330,7 @@ const DUEL = {
     const vt = DUEL.view === 'self' ? 1 : 0;
     DUEL.viewT += (vt - DUEL.viewT) * 0.18;
     if (Math.abs(DUEL.viewT - vt) < 0.004) DUEL.viewT = vt;
+    if (DUEL.react && ++DUEL.react.t >= DUEL.react.life) DUEL.react = null;
     if (DUEL.blink > 0) DUEL.blink--;
     else if (--DUEL.blinkNext <= 0) {
       DUEL.blink = 7;
@@ -448,6 +452,7 @@ const DUEL = {
         x.rotate(o.recoil * 0.06);
       }
       x.drawImage(comp.cv, -comp.cv.width / 2, -comp.cv.height);
+      DUEL.drawGore(x);
       /* wounds where the lead landed */
       DUEL.wounds.forEach(w => {
         PIX.disc(x, w.x, w.y, w.big ? 3 : 2, P.K);
@@ -460,6 +465,7 @@ const DUEL = {
         x.globalAlpha = 1;
       }
       x.restore();
+      if (o.fall < 0) DUEL.drawReact(x);
       if (G.duel && G.duel.opp.def.cigar && DUEL.opp.fall < 0 && DUEL.t % 26 === 0) FX.emberDrift(198, 62);
       const opp = G.duel && G.duel.opp;
       if (opp && o.fall < 0 && DUEL.exprName === 'worry' && DUEL.t % 55 === 0) {
@@ -1557,6 +1563,23 @@ const DUEL = {
     x.drawImage(rim, -SPR.PROF_OX - 3, -SPR.PROF_OY - 3);
     x.drawImage(pv, -SPR.PROF_OX, -SPR.PROF_OY);
 
+    /* ---- what the night has put on your own face ---- */
+    if (DUEL.myGore > 0) {
+      const gr = U.mulberry32(1337);
+      for (let i = 0; i < Math.min(9, DUEL.myGore * 3); i++) {
+        const bx = Math.round(-40 + gr() * 60), by = Math.round(-18 + gr() * 26);
+        const rr = 1 + gr() * 2.4;
+        PIX.disc(x, bx, by, rr + 0.6, INK);
+        PIX.disc(x, bx, by, rr, P.D);
+        const run = 3 + gr() * 12;
+        PIX.rect(x, bx - 1, by, 3, run + 1, INK);
+        PIX.rect(x, bx, by, 1, run, P.d);
+      }
+      /* and a split lip that has not stopped */
+      PIX.rect(x, -34, 12, 12, 3, P.D);
+      PIX.rect(x, -30, 15, 2, 9, P.d);
+    }
+
     /* ---- the iron, its muzzle in your temple ---- */
     const gm = DUEL.ironArt();
     const mz = gm.muzzle || [gm.width, gm.height / 2];
@@ -1604,6 +1627,110 @@ const DUEL = {
   selfHead() {
     const hx = 236, hy = DUEL.FY - 62;
     return { x0: hx - 66, x1: hx + 60, y0: hy - 84, y1: hy + 40 };
+  },
+
+  /* ============================================================
+     GORE.
+     Not a body coming apart — a frog with a hole in him, in a
+     room with one lamp. It lands where the lead landed, it runs
+     downhill from there, and it does not wipe off between pulls.
+     ============================================================ */
+  gore(n) {
+    const w = DUEL.wounds[DUEL.wounds.length - 1] || { x: 0, y: -60 };
+    for (let i = 0; i < n * 3; i++) {
+      DUEL.blood.push({
+        x: w.x + (Math.random() - 0.5) * 26,
+        y: w.y + (Math.random() - 0.5) * 16,
+        r: 1 + Math.random() * 2.2,
+        run: 2 + Math.random() * 7,
+        grow: 0,
+      });
+    }
+    /* and it keeps running while he sits there */
+    DUEL.blood.forEach(b => { b.run = Math.min(15, b.run + Math.random() * 2.5); });
+    if (DUEL.blood.length > 60) DUEL.blood.splice(0, DUEL.blood.length - 60);
+  },
+
+  drawGore(x) {
+    const P = PIX.PAL;
+    DUEL.blood.forEach(b => {
+      const run = Math.min(b.run, b.grow += 0.35);
+      PIX.disc(x, b.x, b.y, b.r + 0.6, P.K);
+      PIX.disc(x, b.x, b.y, b.r, P.D);
+      if (run > 1) {
+        PIX.rect(x, b.x - 1, b.y, 2, run + 1, P.K);
+        PIX.rect(x, b.x, b.y, 1, run, P.d);
+        PIX.disc(x, b.x, b.y + run, 1.4, P.d);      // the bead at the bottom of it
+      }
+    });
+  },
+
+  /* ============================================================
+     WHAT HE SAYS WITHOUT SAYING IT.
+     His arms live under the table. When he has an opinion, one
+     comes up out of the dark, holds it long enough for you to
+     read, and goes back down.
+     ============================================================ */
+  REACTS: {
+    shrug:    { life: 78, snd: 'tick' },
+    facepalm: { life: 88, snd: 'dud' },
+    finger:   { life: 84, snd: 'chak' },
+  },
+
+  reactAt(kind) {
+    if (!DUEL.REACTS[kind] || DUEL.opp.gone || DUEL.opp.fall >= 0) return;
+    DUEL.react = { kind, t: 0, life: DUEL.REACTS[kind].life };
+    const s = DUEL.REACTS[kind].snd;
+    if (SFX[s]) SFX[s]();
+  },
+
+  drawReact(x) {
+    const r = DUEL.react;
+    if (!r || !G.duel) return;
+    const d = G.duel.opp.def;
+    /* up fast, hold, down slower — an arm, not a lift */
+    const k = r.t < 10 ? r.t / 10
+      : r.t > r.life - 16 ? Math.max(0, (r.life - r.t) / 16) : 1;
+    if (k <= 0) return;
+    const ease = k * k * (3 - 2 * k);
+    const P = PIX.PAL;
+    /* the sleeve has to be the colour of the coat he is wearing, not of his
+       suit letter — on a green frog in a green suit the arm vanishes */
+    const C = SPR.costumeOf(d);
+    const O = C.overcoat || C.jacket || C.gown || C.shirt || null;
+    const cl = (O && O.col) || d.suit;
+    const sC = P[cl] || P.T, sD = 'rgba(0,0,0,.45)', sL = P[LIGHTER[cl]] || P.t;
+    const TOP = 130;                                   // the table edge he comes up over
+
+    /* one arm, or two */
+    const arms = r.kind === 'shrug' ? [-1, 1] : [-1];
+    arms.forEach(sgn => {
+      const rest = { x: 180 + sgn * 34, y: TOP - 4 };
+      let tip;
+      if (r.kind === 'facepalm') tip = { x: 180 + sgn * 3, y: 54 };
+      else if (r.kind === 'finger') tip = { x: 180 + sgn * 46, y: 72 };
+      else tip = { x: 180 + sgn * 54, y: 84 };
+      const hx = Math.round(rest.x + (tip.x - rest.x) * ease);
+      const hy = Math.round(rest.y + (tip.y - rest.y) * ease);
+      /* the sleeve starts ABOVE the far rail: below it the felt eats the arm */
+      SPR.povTube(x, rest.x + sgn * 4, TOP + 16, hx, hy + 11, 18, 13, sC, sD, sL);
+      /* a cuff at the wrist, or the hand and the sleeve read as one green post */
+      SPR.povCuff(x, hx, hy + 6, d, sgn);
+      x.save();
+      x.translate(hx, hy);
+      if (r.kind === 'shrug') x.rotate(sgn * 0.55);
+      x.scale(r.kind === 'facepalm' ? 0.95 : 0.8, r.kind === 'facepalm' ? 0.95 : 0.8);
+      /* a shadow under the hand or it disappears into a green frog */
+      x.globalAlpha = 0.4;
+      x.translate(2, 3);
+      SPR.frogGesture(x, 0, 0, { skin: ['K', 'K', 'K'] },
+        r.kind === 'facepalm' ? 'flat' : r.kind === 'finger' ? 'finger' : 'palm', sgn);
+      x.translate(-2, -3);
+      x.globalAlpha = 1;
+      SPR.frogGesture(x, 0, 0, d, r.kind === 'facepalm' ? 'flat'
+        : r.kind === 'finger' ? 'finger' : 'palm', sgn);
+      x.restore();
+    });
   },
 
   /* the sight picture: brackets on his face, tight and red when it is armed */
@@ -1755,6 +1882,7 @@ const DUEL = {
       if (ev.fizzled) {
         await U.sleep(160);
         UI.stampBig('FIZZLE', PIX.PAL.N); SFX.dud();
+        DUEL.reactAt('facepalm');            // he cannot believe he watched that
       } else if (ev.victim === 'foe') {
         DUEL.opp.recoil = 1; DUEL.opp.flash = 1;
         DUEL.setExpr('pain', 55);
@@ -1775,6 +1903,9 @@ const DUEL = {
         });
         UI.stampBig(ev.dmg >= 2 ? '-' + ev.dmg + ' CRUNCH' : 'HIT', PIX.PAL.R);
         SFX.hurt();
+        DUEL.gore(ev.dmg >= 2 ? 3 : 2);
+        /* still upright, and he has something to say about it */
+        if (G.duel.opp.hp > 0) setTimeout(() => DUEL.reactAt('finger'), 520);
       } else if (ev.victim === 'you') {
         FX.screen.vignette(PIX.PAL.d, 0.95);
         FX.screen.chroma(3);
@@ -1785,14 +1916,18 @@ const DUEL = {
         UI.flash('go-back');
         UI.stampBig('-' + ev.dmg, PIX.PAL.R);
         SFX.hurt();
+        DUEL.myGore += ev.dmg;                // it goes on your face and stays there
+        if (ev.by === 'opp') setTimeout(() => DUEL.reactAt('shrug'), 560);
       }
     } else {
       SFX.dud();
       DUEL.kick = 0.16;
       FX.cordite(tip.x, tip.y, 5);
       UI.stampBig('click', PIX.PAL.w, true);
-      if (ev.by === 'opp' && ev.target === 'self') DUEL.setExpr('smug', 60);
+      if (ev.by === 'opp' && ev.target === 'self') { DUEL.setExpr('smug', 60); DUEL.reactAt('shrug'); }
       if (ev.by === 'you' && ev.target === 'foe' && !ev.croakHeal) DUEL.setExpr('smug', 45);
+      /* you put it against your own head and it clicked: he has seen luck before */
+      if (ev.by === 'you' && ev.target === 'self') DUEL.reactAt('facepalm');
       if (ev.croakHeal) { DUEL.setExpr('grin', 60); await U.sleep(240); UI.stampBig('HE SWALLOWS IT', PIX.PAL.F); }
     }
     if (ev.rosary) { await U.sleep(300); UI.stampBig('THE ROSARY CRUMBLES', PIX.PAL.G); SFX.bank(); }

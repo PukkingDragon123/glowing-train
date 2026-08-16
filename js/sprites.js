@@ -1457,6 +1457,67 @@ SPR.povHand = function (ctx, cx, cy, d, sgn, k, grip) {
 SPR.povSleeve = SPR.povTube;
 
 /* ============================================================
+   GESTURES.
+   Nobody at this table talks. What a frog has instead is one
+   hand, which he keeps under the felt until he wants to say
+   something with it: palms up, flat over the eyes, or one digit
+   raised at you across the lamp.
+   Drawn upright, digits pointing UP, origin at the wrist.
+   ============================================================ */
+SPR.frogGesture = function (ctx, cx, cy, d, kind, sgn) {
+  const P = PIX.PAL, INK = P.K;
+  const skin = P[d.skin[0]] || P.F, shade = P[d.skin[1]] || P.f, dark = P[d.skin[2]] || P.e;
+  sgn = sgn || 1;
+
+  if (kind === 'flat') {
+    /* the whole hand, laid over his own face, digits together */
+    SPR.rrect(ctx, cx - 12, cy - 30, 24, 38, 9, INK);
+    SPR.rrect(ctx, cx - 10, cy - 28, 20, 34, 8, skin);
+    for (let i = 0; i < 3; i++) {
+      PIX.rect(ctx, cx - 10 + i * 7, cy - 28, 1, 22, 'rgba(0,0,0,.30)');
+    }
+    PIX.rect(ctx, cx - 10, cy - 28, 20, 3, 'rgba(255,255,255,.16)');
+    SPR.rrect(ctx, cx + sgn * 9 - 6, cy - 12, 14, 16, 6, INK);      // the thumb, down the side
+    SPR.rrect(ctx, cx + sgn * 9 - 5, cy - 11, 12, 14, 5, shade);
+    SPR.ellipse(ctx, cx, cy + 4, 10, 5, shade);
+    return;
+  }
+
+  if (kind === 'finger') {
+    /* the digit, first, so the fist closes over the base of it */
+    SPR.rrect(ctx, cx - 6, cy - 42, 13, 30, 5, INK);
+    SPR.rrect(ctx, cx - 5, cy - 41, 11, 28, 4, skin);
+    PIX.rect(ctx, cx - 5, cy - 41, 4, 26, 'rgba(255,255,255,.14)');
+    PIX.disc(ctx, cx, cy - 40, 6, INK);
+    PIX.disc(ctx, cx, cy - 40, 5, skin);
+    PIX.rect(ctx, cx - 4, cy - 43, 3, 2, 'rgba(255,255,255,.30)');
+    /* the fist under it */
+    SPR.rrect(ctx, cx - 15, cy - 18, 31, 30, 10, INK);
+    SPR.rrect(ctx, cx - 13, cy - 16, 27, 26, 9, skin);
+    SPR.rrect(ctx, cx - 13, cy - 2, 27, 12, 7, shade);
+    for (let i = 0; i < 3; i++) {
+      PIX.rect(ctx, cx - 13, cy - 10 + i * 7, 27, 1, 'rgba(0,0,0,.28)');
+      PIX.rect(ctx, cx - 13, cy - 11 + i * 7, 27, 1, 'rgba(255,255,255,.08)');
+    }
+    SPR.rrect(ctx, cx - sgn * 15 - 4, cy - 8, 12, 14, 5, INK);      // knuckle of the thumb
+    SPR.rrect(ctx, cx - sgn * 15 - 3, cy - 7, 10, 12, 4, dark);
+    return;
+  }
+
+  /* 'palm' — open, tilted back: the shrug */
+  SPR.ellipse(ctx, cx, cy - 6, 13, 12, INK);
+  SPR.ellipse(ctx, cx, cy - 6, 11, 10, skin);
+  SPR.ellipse(ctx, cx, cy - 1, 10, 6, shade);
+  for (let i = -1; i < 3; i++) {
+    const fx = cx + sgn * (i * 7 - 4), len = 13 - Math.abs(i) * 2;
+    SPR.rrect(ctx, fx - 4, cy - 12 - len, 9, len + 6, 4, INK);
+    SPR.rrect(ctx, fx - 3, cy - 11 - len, 7, len + 4, 3, i < 1 ? skin : shade);
+    PIX.rect(ctx, fx - 3, cy - 11 - len, 3, len + 2, 'rgba(255,255,255,.12)');
+  }
+  PIX.rect(ctx, cx - 8, cy - 14, 16, 2, 'rgba(255,255,255,.14)');
+};
+
+/* ============================================================
    A HAND CLOSED AROUND SOMETHING.
    The splayed hand is wrong for a grip: four digits fanned out
    over a gun butt read as a shrub. This is the back of a fist,
