@@ -58,6 +58,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
     null, { timeout: 25000 });
 
   /* win the current duel deterministically via the ?debug rig */
+  let sawBlood = false;
   async function winDuel() {
     for (let i = 0; i < 12; i++) {
       const s = await state();
@@ -65,12 +66,33 @@ fs.mkdirSync(SHOTS, { recursive: true });
       if (!s.busy && s.turn === 'you') {
         await page.locator('button', { hasText: 'kill foe' }).click();
         await aimFoe();
-        await page.evaluate(() => DUEL.onFire());
+        /* fire and DO NOT await the sequence — evaluate() would not resolve
+           until the whole kill cinematic had already played out */
+        await page.evaluate(() => { DUEL.onFire(); });
+        /* the kill does not cut — it lands on the glass in front of you */
+        if (!sawBlood) {
+          for (let t = 0; t < 20; t++) {
+            if (await page.locator('#cine-root.blood').count() > 0) {
+              await page.waitForTimeout(340);
+              await shot('04c-blood-wipe');
+              sawBlood = true;
+              break;
+            }
+            await page.waitForTimeout(70);
+          }
+        }
       }
       await settle();
       await page.waitForTimeout(250);
     }
-    /* the kill blacks out straight into the back room */
+    /* the kill does not cut: it lands on the glass in front of you */
+    await page.waitForFunction(
+      () => document.querySelector('#cine-root.blood') || DUEL.room === 'back',
+      null, { timeout: 25000 }).catch(() => {});
+    if (await page.locator('#cine-root.blood').count() > 0) {
+      await page.waitForTimeout(360);
+      await shot('04c-blood-wipe');
+    }
     await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 25000 });
     await page.waitForFunction(() => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
     await page.waitForSelector('#loot-panel', { timeout: 25000 });
@@ -101,9 +123,33 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await page.waitForTimeout(900);
       if (shotName) await shot(shotName + '-bribed');
     }
+    /* mop the trail he left coming through the door */
+    for (let i = 0; i < 8; i++) {
+      const st = await page.evaluate(() => {
+        const L = G2().loot;
+        if (!L || !L.stains) return null;
+        const i = L.stains.findIndex(s => !s.done);
+        if (i < 0) return null;
+        const p = DUEL.stainPos(L.stains[i]);
+        const r = DUEL.cv.getBoundingClientRect();
+        return { x: r.left + (p[0] + DUEL.OX) / DUEL.W * r.width,
+                 y: r.top + (p[1] + DUEL.OY) / DUEL.H * r.height };
+      });
+      if (!st) break;
+      await page.mouse.move(st.x, st.y);
+      await page.waitForTimeout(80);
+      if (i === 0 && shotName) await shot(shotName + '-mop');
+      await page.mouse.click(st.x, st.y);
+      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
+      await page.waitForTimeout(80);
+    }
     if (shotName) await shot(shotName);
     await click('#btn-walk');
-    await page.waitForTimeout(400);
+    /* walking out plays the trail verdict before anything else happens */
+    await page.waitForFunction(
+      () => document.querySelector('#btn-heat') || document.querySelector('#btn-sit'),
+      null, { timeout: 20000 });
+    await page.waitForTimeout(250);
     const heat = page.locator('#btn-heat');
     if (await heat.count() > 0) {
       await shot(shotName ? shotName + '-heat' : 'heat');

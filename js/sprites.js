@@ -3867,3 +3867,108 @@ SPR.lorePanel = function (name) {
     return cv;
   });
 };
+
+/* ============================================================
+   BLOOD ON THE LENS.
+   A splat is not a circle and it is not a starburst: it is a
+   ragged blob with a couple of long throws off one edge and a
+   scatter of drops around it. Built in blocks on a seed, so the
+   same shot always throws the same shape.
+   ============================================================ */
+SPR.bloodSplat = function (seed, R) {
+  return SPR.cached('splat_' + seed + '_' + R, () => {
+    const rng = U.mulberry32(seed);
+    const P = PIX.PAL;
+    /* Work on a coarse cell grid, not on pixels: a splat drawn per-pixel
+       comes out a circle no matter how you jitter the radius. Big square
+       cells give it the stepped, torn edge it is supposed to have. */
+    const CELL = Math.max(2, Math.round(R / 7));
+    const N = Math.ceil(R * 2.6 / CELL) | 1;
+    const S = N * CELL;
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    const mid = (N - 1) / 2;
+
+    /* a ragged radius: eight arms of wildly different length, plus two
+       notches bitten out of it */
+    const arms = [];
+    for (let i = 0; i < 10; i++) arms.push(0.42 + rng() * 0.72);
+    arms[(rng() * 10) | 0] = 0.16;
+    arms[(rng() * 10) | 0] = 0.22;
+    const radAt = (a2) => {
+      const t = ((a2 / (Math.PI * 2) + 1) % 1) * 10;
+      const i = Math.floor(t);
+      return arms[i] * (1 - (t - i)) + arms[(i + 1) % 10] * (t - i);
+    };
+    const cell = (gx, gy, col) => {
+      if (gx < 0 || gy < 0 || gx >= N || gy >= N) return;
+      c.fillStyle = col;
+      c.fillRect(gx * CELL, gy * CELL, CELL, CELL);
+    };
+
+    const rCells = R / CELL;
+    for (let gy = 0; gy < N; gy++) {
+      for (let gx = 0; gx < N; gx++) {
+        const dx = gx - mid, dy = gy - mid;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const lim = rCells * radAt(Math.atan2(dy, dx));
+        if (d > lim) continue;
+        cell(gx, gy, d > lim * 0.72 ? P.D : d > lim * 0.34 ? P.d : P.r);
+      }
+    }
+
+    /* throws: four fingers of shrinking cells flung off one side */
+    const dir = rng() * Math.PI * 2;
+    for (let t = 0; t < 4; t++) {
+      const a2 = dir + (rng() - 0.5) * 1.8;
+      const len = rCells * (1.1 + rng() * 1.5);
+      for (let s2 = 0; s2 < len; s2++) {
+        if (s2 > len * 0.5 && rng() < 0.35) continue;      // it breaks up as it goes
+        const gx = Math.round(mid + Math.cos(a2) * (rCells * 0.7 + s2));
+        const gy = Math.round(mid + Math.sin(a2) * (rCells * 0.7 + s2));
+        cell(gx, gy, s2 < len * 0.4 ? P.D : P.d);
+      }
+    }
+    /* and the scatter around it */
+    for (let i = 0; i < 12; i++) {
+      const a2 = rng() * Math.PI * 2, dd = rCells * (1.05 + rng() * 0.55);
+      cell(Math.round(mid + Math.cos(a2) * dd), Math.round(mid + Math.sin(a2) * dd), P.D);
+    }
+    return cv;
+  });
+};
+
+/* a stain on the floorboards, seen from above: flatter, no throws */
+SPR.floorStain = function (seed, R) {
+  return SPR.cached('stain_' + seed + '_' + R, () => {
+    const rng = U.mulberry32(seed);
+    const W = R * 2 + 2, H = Math.round(R * 1.3) + 2;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+    const P = PIX.PAL;
+    const cx = R + 1, cy = Math.round(R * 0.65) + 1;
+    const lump = [];
+    for (let i = 0; i < 12; i++) lump.push(0.6 + rng() * 0.4);
+    for (let y = -cy; y <= cy; y++) {
+      const t = (y / cy + 1) / 2 * 12;
+      const i = Math.floor(t), f = t - i;
+      const w = Math.round(R * (lump[i] * (1 - f) + lump[Math.min(11, i + 1)] * f) *
+        Math.sqrt(Math.max(0, 1 - (y / cy) * (y / cy))));
+      if (w > 0) {
+        PIX.rect(c, cx - w, cy + y, w * 2, 1, P.K);              // it has an edge
+        PIX.rect(c, cx - w + 1, cy + y, w * 2 - 2, 1, P.D);
+        if (Math.abs(y) < cy * 0.62) PIX.rect(c, cx - w + 3, cy + y, w * 2 - 6, 1, P.d);
+        if (Math.abs(y) < cy * 0.3) PIX.rect(c, cx - w + 5, cy + y, Math.max(1, w - 4), 1, P.r);
+      }
+    }
+    for (let i = 0; i < 8; i++) {
+      const a = rng() * Math.PI * 2;
+      PIX.rect(c, Math.round(cx + Math.cos(a) * R * 1.0),
+        Math.round(cy + Math.sin(a) * cy * 1.05), 1 + ((rng() * 2) | 0), 1, P.D);
+    }
+    return cv;
+  });
+};

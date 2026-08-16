@@ -133,6 +133,62 @@ const CINE = {
   },
 
   /* ============================================================
+     BLOOD ON THE LENS.
+
+     You do not watch him fall. The shot lands and the next thing
+     that happens is on the glass in front of you: one splat, then
+     four, then the frame is gone. Behind it the scene changes.
+     Then it wipes, badly, the way a sleeve wipes a lens.
+     ============================================================ */
+  async bloodWipe(fn, hold) {
+    if (CINE.busy) { if (fn) fn(); return; }
+    CINE.busy = true;
+    const root = CINE.root();
+    root.className = 'blood';
+    root.innerHTML = '';
+    const sheet = U.el('div', 'blood-sheet');
+    root.appendChild(sheet);
+
+    /* the splats, biggest first, thrown from the middle of the frame */
+    const W = window.innerWidth, H = window.innerHeight;
+    const K = Math.max(2, Math.round(Math.min(W, H) / 260));
+    const plan = [
+      [46, 50, 50, 0], [34, 30, 38, 70], [30, 72, 60, 120],
+      [26, 18, 66, 190], [24, 84, 30, 250], [20, 58, 22, 310],
+      [18, 40, 82, 360], [16, 90, 74, 410],
+    ];
+    plan.forEach(([r, px, py, delay], i) => {
+      const art = CINE.url('splat' + i, SPR.bloodSplat(1000 + i * 37, r), K);
+      const el = U.el('i', 'bsplat');
+      el.style.backgroundImage = 'url(' + art.url + ')';
+      el.style.width = art.w + 'px';
+      el.style.height = art.h + 'px';
+      el.style.left = 'calc(' + px + '% - ' + (art.w / 2) + 'px)';
+      el.style.top = 'calc(' + py + '% - ' + (art.h / 2) + 'px)';
+      el.style.animationDelay = delay + 'ms';
+      sheet.appendChild(el);
+    });
+
+    try {
+      SFX.hurt();
+      await U.sleep(120);
+      FX.screen.shake && FX.screen.shake(14);
+      await U.sleep(460);
+      SFX.tone(60, 0.5, 'sawtooth', 0.2, 0, -22);
+      root.classList.add('flood');          // and the rest of the glass goes
+      await U.sleep(420);
+      if (fn) fn();
+      if (hold) await U.sleep(hold);
+      root.classList.add('wipe');           // a sleeve, badly, in two strokes
+      await U.sleep(620);
+    } finally {
+      root.innerHTML = '';
+      root.className = 'hidden';
+      CINE.busy = false;
+    }
+  },
+
+  /* ============================================================
      SITTING DOWN. The room is dark; the lamp above the table
      clicks on; the camera settles in on the felt; a lower third
      tells you whose chair this is.

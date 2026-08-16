@@ -141,12 +141,27 @@ function driver() {
       }
       if (E.heatUp()) {
         if (useItemIf('fileFolder', E.lootLeft() >= 2)) continue;
-        const reserve = G.blind === 2 ? HEAT_COST(G.ante) : Math.ceil(HEAT_COST(G.ante) / 2);
+        const reserve = G.blind === 2 ? E.heatDue() : Math.ceil(E.heatDue() / 2);
         if (E.lootLeft() >= 1 && G.loot.bribes < 2 && G.chips >= E.bribeCost() + reserve) {
           if (E.bribe()) continue;
         }
       }
+      /* the pockets are done. What is left is the trail on the floor: wipe
+         it while there is clock, because leaving it is a fine now and
+         dearer protection later. */
+      const st = (G.loot.stains || []).findIndex((s2, i) => E.canMop(i));
+      if (st >= 0 && !G.loot.caught && G.loot.time > MESS_TUNING.seconds + 3) {
+        E.mop(st);
+        E.lootTick(MESS_TUNING.seconds);
+        continue;
+      }
       break;
+    }
+    /* and pay for whatever is still down there */
+    const bill = E.messBill();
+    if (bill) {
+      G.chips = Math.max(0, G.chips - bill.chips);
+      if (bill.heat) G.messHeat = (G.messHeat || 0) + 1;
     }
     const res = E.endLoot();
     if (res.heatDue !== undefined) E.payHeat(); // busts to 'over' on a short pocket

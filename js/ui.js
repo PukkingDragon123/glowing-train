@@ -537,7 +537,7 @@ const UI = {
       '<div class="ri-sec"><h4>BELT ' + r.items.length + '/' + E.maxItems() + '</h4>' + items + '</div>' +
       '<div class="ri-sec"><h4>TAGS</h4><div class="ri-pills">' + tags + '</div></div>' +
       '<p class="ri-foot">Next up: <b>' + nb.name + '</b>' + (nb.boss ? ' - ' + nb.boss.name : '') +
-      ', purse ' + nb.purse + '. Swamp PD wants ' + HEAT_COST(r.ante) + ' after this ante\'s boss.</p>'
+      ', purse ' + nb.purse + '. Swamp PD wants ' + E.heatDue() + ' after this ante\'s boss.</p>'
     );
     const c = document.querySelector('#mm-close');
     c.appendChild(UI.txt('X', { scale: 3, color: PIX.PAL.W, shadow: null }));
@@ -1143,10 +1143,13 @@ const UI = {
 
   PANEL_TIPS: {
     chips: () => `<b>CHIPS</b> — the only money down here. It comes out of corpses, and it goes to bribes and Swamp PD protection.`,
-    ante: () => `<b>ANTE ${G.ante}</b> of ${ANTES}. Every ante is three blinds: small, big, then one of the Bullfrog's people. After the boss, Swamp PD wants <b>${HEAT_COST(G.ante)}⛁</b>.`,
+    ante: () => `<b>ANTE ${G.ante}</b> of ${ANTES}. Every ante is three blinds: small, big, then one of the Bullfrog's people. After the boss, Swamp PD wants <b>${E.heatDue()}⛁</b>.`,
     blind: () => `<b>${E.blindName()}</b> — three frogs in the room, one of them is the bounty. Turn evidence over until the string only reaches one poster, name him, then sit down. Name him right and the purse pays more; name him wrong and he sits down ready for you.`,
     purse: () => `<b>THE TAKE</b> — roughly ${E.purse()} chips sewn into this mark, plus 1 per heart you keep, plus whatever his tells promise.`,
     heat: () => `<b>THE BADGES</b> — every pocket you rifle brings them closer. When they're at the door: bribe (${G.loot ? E.bribeCost() : '?'}⛁) or walk.`,
+    clock: () => `<b>THE CLOCK</b> — real seconds, and it does not stop for you. Run it out and they come through the door.`,
+    noise: () => `<b>NOISE</b> — every hand you put in him makes some, and it bleeds away if you hold still. Past the red line somebody has heard enough.`,
+    mess: () => `<b>THE TRAIL</b> — what he left on the boards coming through the door. Tap a stain to go over it with the rag: it costs you seconds and a little noise. Walk out over the rest and somebody finds it in the morning — that is chips now and dearer protection later.`,
     counts: () => E.countsHidden()
       ? `<b>THE LOAD</b> — Blind Newt keeps the count to himself.`
       : `<b>THE LOAD</b> — this drum loaded with <b>${G.duel.lives} LIVE</b>, <b>${G.duel.blanks} blank</b>.${E.has('counter') ? ' Your bead counter tracks what\'s left.' : ' What\'s left is on you to count.'}`,

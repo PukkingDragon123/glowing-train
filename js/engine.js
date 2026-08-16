@@ -25,7 +25,7 @@ const E = {
       hearts: PLAYER_HP,
       duel: null, loot: null,
       endless: false, wonRun: false, busted: false,
-      tag: null, tagsTaken: [], skipped: 0,
+      tag: null, tagsTaken: [], skipped: 0, messHeat: 0,
       case: null, caseBonus: false, caseMiss: false,
       run: { duelsWon: 0, shots: 0, damage: 0, called: 0, misnamed: 0 },
     };
@@ -84,6 +84,68 @@ const E = {
 
   /* kept for the notebook copy that still talks about free pockets */
   freePockets() { return 3 + (E.has('pockets') ? 1 : 0) + (G.tagPocket ? 1 : 0); },
+
+  /* ============================================================
+     THE MESS.
+     Dragging a frog through a doorway leaves a trail, and the
+     trail is what hangs you. Every stain you wipe up costs you
+     seconds off the clock and a little noise; every one you
+     leave is something for somebody to find in the morning.
+     ============================================================ */
+  makeMess() {
+    const L = G.loot;
+    if (!L) return;
+    const rng = G.rng;
+    const n = MESS_TUNING.stains(G.ante);
+    L.stains = [];
+    /* a trail, not a scatter: it runs from the back door to where he
+       stopped, because that is the way you brought him in */
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      L.stains.push({
+        x: Math.round(292 - t * 92 + (rng() - 0.5) * 18),
+        y: Math.round(2 + t * 22 + (rng() - 0.5) * 7),    // offset from the floor line
+        r: 8 + Math.round(rng() * 8),
+        seed: (rng() * 100000) | 0,
+        done: false,
+      });
+    }
+    L.mess = 1;
+  },
+
+  /* how much of the room is still evidence, 0..1 */
+  messLeft() {
+    const L = G.loot;
+    if (!L || !L.stains || !L.stains.length) return 0;
+    return L.stains.filter(s => !s.done).length / L.stains.length;
+  },
+
+  canMop(i) {
+    const L = G.loot;
+    return !!(L && !L.done && !L.caught && L.stains && L.stains[i] && !L.stains[i].done);
+  },
+
+  /* wipe one up. It is not free: the clock eats it and the rag talks. */
+  mop(i) {
+    if (!E.canMop(i)) return null;
+    const L = G.loot;
+    L.stains[i].done = true;
+    L.time = Math.max(0, L.time - MESS_TUNING.seconds);
+    const heard = E.addNoise(MESS_TUNING.noise);
+    return { heard, left: E.messLeft() };
+  },
+
+  /* what you left behind, priced. Called when you walk out. */
+  messBill() {
+    const left = E.messLeft();
+    if (left <= MESS_TUNING.forgive) return null;
+    const over = left - MESS_TUNING.forgive;
+    return {
+      left,
+      chips: Math.round(MESS_TUNING.fine * over * (1 + (G.ante - 1) * 0.25)),
+      heat: over > 0.5,
+    };
+  },
 
   /* damage outside the shell cycle (knuckles, shiv): flat, no gun/trinket bonuses */
   freeHit(dmg) {
@@ -665,6 +727,9 @@ const E = {
     E.openLoot(budget);
   },
 
+  /* protection scales with the ante AND with every trail you left behind */
+  heatDue() { return HEAT_COST(G.ante) + (G.messHeat || 0) * 8; },
+
   onRunOver() {
     META.bump('deaths');
     META.save();
@@ -735,6 +800,7 @@ const E = {
 
     G.loot = { pockets, bribes: 0, pendingCard: null, pendingItem: null,
       done: false, tool: null, bonusFree: 0, dragged: false,
+      stains: [], mess: 0,
       noise: 0, caught: false, busted: false,
       time: Math.max(18, LOOT_TUNING.seconds + LOOT_TUNING.secondsPerAnte * (G.ante - 1)
         + (E.has('pockets') ? 8 : 0) + (G.tagPocket ? 8 : 0)),
@@ -836,14 +902,14 @@ const E = {
     for (const t of G.duel.opp.traits) if (META.learnTrait(t)) learned.push(t);
     META.save();
     if (G.wonRun) { G.phase = 'won'; return { learned, won: true }; }
-    if (G.blind === 2) return { learned, heatDue: HEAT_COST(G.ante) };
+    if (G.blind === 2) return { learned, heatDue: E.heatDue() };
     E.nextBlind();
     return { learned };
   },
 
   /* protection money after a boss. Can't pay = they take the marker. */
   payHeat() {
-    const cost = HEAT_COST(G.ante);
+    const cost = E.heatDue();
     if (G.chips < cost) {
       G.busted = true;
       META.bump('deaths');

@@ -2024,3 +2024,41 @@ body.heard #siren-wash { opacity: 1; }
   animation: siren .6s steps(2) infinite;
 }
 .ante-card.climb { gap: 10px; }
+
+/* ============================================================
+   23. BLOOD ON THE LENS
+   The kill does not cut. It lands on the glass in front of you.
+   ============================================================ */
+
+#cine-root.blood { display: block; background: transparent; }
+.blood-sheet { position: absolute; inset: 0; }
+.bsplat {
+  position: absolute; display: block;
+  image-rendering: pixelated;
+  background-repeat: no-repeat; background-size: 100% 100%;
+  transform: scale(.2); opacity: 0;
+  animation: splat-hit .16s steps(3) forwards;
+}
+@keyframes splat-hit {
+  0%   { transform: scale(.25); opacity: 0; }
+  60%  { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+#cine-root.blood::after {
+  content: ''; position: absolute; inset: 0;
+  background: #571220; opacity: 0;
+  transition: opacity .38s steps(5);
+}
+#cine-root.blood.flood::after { opacity: 1; }
+#cine-root.blood.flood { background: #2b0810; }
+/* the sleeve: two hard strokes off the glass */
+#cine-root.blood.wipe .blood-sheet,
+#cine-root.blood.wipe::after {
+  transform: translateX(-118%) skewX(-9deg);
+  transition: transform .5s steps(9), opacity .5s steps(9);
+  opacity: 0;
+}
+
+/* the third meter: what is still on the floor behind you */
+.m-mess .m-fill { background: repeating-linear-gradient(90deg, var(--red) 0 4px, #571220 4px 8px); }
+.m-mess .m-fill.dirty { animation: siren .7s steps(2) infinite; }

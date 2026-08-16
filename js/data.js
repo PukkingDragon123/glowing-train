@@ -125,6 +125,18 @@ const CASE_TUNING = {
   missChips: 6,          // and the room charges you for the noise
 };
 
+/* ------------------------------------------------------------
+   THE MESS — what dragging a body through a doorway leaves on
+   the floor, and what it costs to walk away from it.
+   ------------------------------------------------------------ */
+const MESS_TUNING = {
+  stains: (ante) => 3 + Math.min(4, Math.floor(ante / 2)),
+  seconds: 2.6,          // off the clock, per stain wiped
+  noise: 0.09,           // a rag on boards is quiet, but it is not nothing
+  forgive: 0.2,          // this much left behind and nobody notices
+  fine: 26,              // chips, scaled by ante, for the rest of it
+};
+
 const TAGS = {
   purse:  { id: 'purse',  name: 'FAT ENVELOPE', icon: 'ic_chip',
     desc: 'Somebody owed you: +10 chips, right now.' },

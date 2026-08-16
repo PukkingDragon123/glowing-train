@@ -26,11 +26,12 @@ const LOOT = {
     head.appendChild(who);
     panel.appendChild(head);
 
-    /* the two meters: how long you have, and how loud you are being */
+    /* three meters: how long you have, how loud you are being, and how
+       much of him is still on the floor behind you */
     const meters = U.el('div', 'meters');
-    ['time', 'noise'].forEach(kind => {
+    ['time', 'noise', 'mess'].forEach(kind => {
       const w = U.el('div', 'meter has-tip m-' + kind);
-      w.dataset.tipKey = kind === 'time' ? 'clock' : 'noise';
+      w.dataset.tipKey = kind === 'time' ? 'clock' : kind === 'noise' ? 'noise' : 'mess';
       const lab = U.el('span', 'm-lab'); lab.id = 'm-lab-' + kind;
       w.appendChild(lab);
       const bar = U.el('div', 'm-bar');
@@ -81,8 +82,10 @@ const LOOT = {
     const heat = E.heatUp();
     const tf = document.getElementById('m-fill-time');
     const nf = document.getElementById('m-fill-noise');
+    const mf = document.getElementById('m-fill-mess');
     const tl = document.getElementById('m-lab-time');
     const nl = document.getElementById('m-lab-noise');
+    const ml = document.getElementById('m-lab-mess');
     if (tf) {
       const t = L.maxTime ? L.time / L.maxTime : 0;
       tf.style.width = (t * 100) + '%';
@@ -98,6 +101,14 @@ const LOOT = {
       nl.innerHTML = '';
       nl.appendChild(UI.txt(heat ? 'HEARD' : n > 0.68 ? 'TOO LOUD' : n > 0.34 ? 'NOISY' : 'QUIET', {
         scale: 2, color: heat || n > 0.68 ? PIX.PAL.R : n > 0.34 ? PIX.PAL.O : PIX.PAL.q }));
+    }
+    if (mf) {
+      const m = E.messLeft();
+      mf.style.width = (m * 100) + '%';
+      mf.classList.toggle('dirty', m > MESS_TUNING.forgive);
+      ml.innerHTML = '';
+      ml.appendChild(UI.txt(m <= MESS_TUNING.forgive ? 'CLEAN' : Math.round(m * 100) + '%', {
+        scale: 2, color: m > MESS_TUNING.forgive ? PIX.PAL.R : PIX.PAL.N }));
     }
     document.body.classList.toggle('heard', heat);
     document.body.classList.toggle('loud', !heat && L.noise > 0.68);
@@ -324,8 +335,24 @@ const LOOT = {
     }
   },
 
-  onWalk() {
+  async onWalk() {
     if (G.phase !== 'loot' || !G.loot || G.loot.done) return;
+    /* WHAT YOU LEFT ON THE FLOOR. Walk out over it and somebody finds it in
+       the morning; that costs money now and heat later. */
+    const bill = E.messBill();
+    if (bill) {
+      G.chips = Math.max(0, G.chips - bill.chips);
+      if (bill.heat) G.messHeat = (G.messHeat || 0) + 1;
+      UI.syncChips();
+      UI.stampBig('YOU LEFT A TRAIL', PIX.PAL.R, true);
+      SFX.jamSfx(); UI.shake();
+      UI.chipTick(-bill.chips);
+      await U.sleep(950);
+    } else if (G.loot.stains && G.loot.stains.length) {
+      UI.stampBig('NOTHING TO FIND', PIX.PAL.N, true);
+      SFX.bank();
+      await U.sleep(600);
+    }
     if (G.blind !== 2) LOOT.retireCallout();
     const res = E.endLoot();
     (res.learned || []).forEach((t, i) => setTimeout(() => UI.tellToast(t), 300 + i * 700));

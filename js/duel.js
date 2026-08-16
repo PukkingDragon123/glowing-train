@@ -45,7 +45,7 @@ const DUEL = {
   room: 'table',          // 'table' while he is on the felt, 'back' once you drag him
   tongue: null,           // a verlet chain, anchored in his mouth
   flies: [],              // what it goes out for
-  hoverSpot: -1, hoverFace: false,
+  hoverSpot: -1, hoverFace: false, hoverStain: -1,
   react: null,               // what his hand came up out of the dark to say
   myGore: 0,                 // what is on YOUR face, and stays there
   blood: [],                 // what is on HIS, in his own space, and grows
@@ -194,7 +194,7 @@ const DUEL = {
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
-    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = [];
+    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = [];
     DUEL.view = 'table'; DUEL.viewT = 0;
     DUEL.initTongue();
     /* G.loot survives from the LAST corpse until the next one is opened, so
@@ -503,6 +503,9 @@ const DUEL = {
          was never on screen */
       COPS.draw(x, DUEL.t);
       DUEL.drawCorpse(x);
+      /* the trail goes ON TOP of him: it is between the door and the body
+         and half of it is smeared over his own coat */
+      DUEL.drawStains(x);
       DUEL.drawSpots(x);
       DUEL.drawSmoke(x);
       DUEL.parts.forEach(p => {
@@ -1149,6 +1152,85 @@ const DUEL = {
         PIX.disc(x, sx + r + 4, sy - r - 2, 2, P.G);
       }
     });
+  },
+
+  /* ============================================================
+     THE MESS ON THE FLOOR.
+     He left a trail coming through the door. Every stain is a
+     thing somebody finds in the morning unless you go over it
+     with a rag, and the rag costs you clock.
+     ============================================================ */
+  stainPos(st) {
+    return [st.x, DUEL.FY - 34 + st.y];
+  },
+
+  stainAt(px, py) {
+    if (G.phase !== 'loot' || !G.loot || !G.loot.stains) return -1;
+    let best = -1, bd = 16 * 16;
+    G.loot.stains.forEach((st, i) => {
+      if (st.done) return;
+      const sp = DUEL.stainPos(st);
+      const dx = px - sp[0], dy = (py - sp[1]) * 1.6;
+      const d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = i; }
+    });
+    return best;
+  },
+
+  drawStains(x) {
+    if (G.phase !== 'loot' || !G.loot || !G.loot.stains) return;
+    const P = PIX.PAL;
+    G.loot.stains.forEach((st, i) => {
+      const sp = DUEL.stainPos(st);
+      if (st.done) {
+        /* wiped: a smear where it was, and boards you can see again */
+        PIX.rect(x, sp[0] - st.r, sp[1] - 1, st.r * 2, 2, 'rgba(87,18,32,.22)');
+        return;
+      }
+      const art = SPR.floorStain(st.seed, st.r);
+      x.drawImage(art, Math.round(sp[0] - art.width / 2), Math.round(sp[1] - art.height / 2));
+      if (DUEL.hoverStain === i && !DUEL.busy && !G.loot.caught) {
+        const r = st.r + 4, rr = Math.round(r * 0.7);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => {
+          const cx = sp[0] + o[0] * r, cy = sp[1] + o[1] * rr;
+          const bx = o[0] > 0 ? cx - 3 : cx, by = o[1] > 0 ? cy - 3 : cy;
+          PIX.rect(x, bx - 1, cy - 1, 6, 3, P.K);
+          PIX.rect(x, cx - 1, by - 1, 3, 6, P.K);
+          PIX.rect(x, bx, cy, 4, 1, P.N);
+          PIX.rect(x, cx, by, 1, 4, P.N);
+        });
+      }
+    });
+  },
+
+  /* go over one with the rag: down, three passes, back */
+  async mopAt(i) {
+    if (DUEL.busy || G.phase !== 'loot' || !E.canMop(i)) return;
+    const st = G.loot.stains[i];
+    const sp = DUEL.stainPos(st);
+    DUEL.busy = true;
+    DUEL.hurry = false;
+    DUEL.hoverStain = -1;
+    DUEL.reach = { x: sp[0], y: sp[1], dig: 0, rag: true };
+    DUEL.fist.tx = sp[0]; DUEL.fist.ty = sp[1] - 6;
+    LOOT.sync();
+    await DUEL.sleep(220);
+    for (let n = 0; n < 3; n++) {
+      DUEL.reach.dig = 1;
+      DUEL.fist.tx = sp[0] - st.r + (n % 2) * st.r * 2;
+      SFX.tick();
+      await DUEL.sleep(120);
+      DUEL.reach.dig = 0;
+      await DUEL.sleep(60);
+    }
+    const ev = E.mop(i);
+    SFX.click();
+    if (ev && ev.heard) { SFX.jamSfx(); FX.screen.shake(8); LOOT.heard(); }
+    DUEL.reach = null;
+    DUEL.setPose('rest');
+    await DUEL.sleep(160);
+    DUEL.busy = false;
+    LOOT.sync();
   },
 
   /* put your hand in. The arm goes out, it digs, it comes back. */
@@ -2005,34 +2087,28 @@ const DUEL = {
     }
   },
 
-  /* the mark dies → the corpse is yours */
+  /* ============================================================
+     THE MARK DIES.
+     You do not watch it. It lands on the glass in front of you
+     and by the time you can see again you are out back with him
+     and the door is shut. Nobody goes through a body under the
+     lamp, and nobody wants to watch you drag one either.
+     ============================================================ */
   async killSequence() {
     DUEL.setPose('rest');
-    await U.sleep(350);
-    DUEL.opp.fall = 0;
-    FX.bloodBurst(180, 88, 2);
-    FX.screen.shake(16);
-    FX.screen.slowmo(900, 0.65);
-    SFX.lose(); SFX.cluck();
-    await U.sleep(750);
-    DUEL.ghost = { x: 168, y: 60, t: 0 };
-    SFX.tone && SFX.tone(880, 0.4, 'sine', 0.08, 0, 400);
-    DUEL.opp.gone = true;
-    DUEL.corpse = true;
-    DUEL.pool = 4;
-    await U.sleep(650);
-    DUEL.setPose('rest');
-    /* Black. Then you are out back with him and the door is shut. Nobody
-       goes through a body under the lamp, and nobody wants to watch you
-       drag one either. */
-    await CINE.iris(() => {
+    SFX.lose();
+    await CINE.bloodWipe(() => {
+      DUEL.opp.gone = true;
+      DUEL.corpse = true;
+      DUEL.ghost = null;
       G.loot.dragged = true;
       DUEL.room = 'back';
       DUEL.pool = 16;
       COPS.GROUND = DUEL.FY - 8;
       BG.set('back');
+      E.makeMess();
       LOOT.overlay();
-    }, 260);
+    }, 320);
     DUEL.busy = false;
   },
 
@@ -2094,6 +2170,7 @@ const DUEL = {
     if (!DUEL.cv) return;
     if (G.phase !== 'loot' || DUEL.busy) {
       if (DUEL.hoverSpot !== -1) DUEL.hoverSpot = -1;
+      if (DUEL.hoverStain !== -1) DUEL.hoverStain = -1;
       /* in a duel, the two things you can put the muzzle on light the cursor */
       if (G.phase === 'duel' && !DUEL.busy) {
         const p = DUEL.sceneXY(e);
@@ -2110,7 +2187,9 @@ const DUEL = {
     const q = DUEL.sceneXY(e);
     const i = DUEL.spotAt(q.x, q.y);
     if (i !== DUEL.hoverSpot) { DUEL.hoverSpot = i; if (i >= 0) SFX.tick(); }
-    DUEL.cv.style.cursor = i >= 0 ? 'pointer' : 'crosshair';
+    const st = i >= 0 ? -1 : DUEL.stainAt(q.x, q.y);
+    if (st !== DUEL.hoverStain) { DUEL.hoverStain = st; if (st >= 0) SFX.tick(); }
+    DUEL.cv.style.cursor = (i >= 0 || st >= 0) ? 'pointer' : 'crosshair';
   },
 
   sceneClick(e) {
@@ -2118,7 +2197,9 @@ const DUEL = {
       if (DUEL.busy) { DUEL.hurry = true; return; }
       const q = DUEL.sceneXY(e);
       const i = DUEL.spotAt(q.x, q.y);
-      if (i >= 0) DUEL.searchAt(i);
+      if (i >= 0) { DUEL.searchAt(i); return; }
+      const st = DUEL.stainAt(q.x, q.y);
+      if (st >= 0) DUEL.mopAt(st);
       return;
     }
     if (G.phase !== 'duel') return;
