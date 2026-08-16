@@ -1652,15 +1652,20 @@ SPR.buildFrog = function (d, expr) {
   }
 
   /* ---- the eyeball itself, and the brow that does the acting ---- */
+  /* These frogs are professionals. They do not emote — they are sitting
+     across a table from a man with a gun and they have done it before.
+     Every expression here is one or two pixels off deadpan; what changes
+     is the LID and the pupil, not the whole face. */
   const EX = {
     /*            lid   pupil  brow-in  brow-out  brow-y */
     neutral: { lid: 2, pup: 3, bi: 0, bo: 0, by: 0 },
-    smug:    { lid: 2, pup: 3, bi: 2, bo: -1, by: 0 },
-    worry:   { lid: 0, pup: 2, bi: -2, bo: 1, by: -1 },
-    grin:    { lid: 1, pup: 4, bi: -1, bo: -1, by: -1 },
-    angry:   { lid: 1, pup: 3, bi: 2, bo: -2, by: 1 },
-    pain:    { lid: 0, pup: 0, bi: 2, bo: -1, by: 0 },
+    smug:    { lid: 3, pup: 3, bi: 1, bo: 0, by: 0 },
+    worry:   { lid: 0, pup: 2, bi: -1, bo: 0, by: -1 },
+    grin:    { lid: 2, pup: 3, bi: 0, bo: 0, by: 0 },
+    angry:   { lid: 3, pup: 3, bi: 1, bo: -1, by: 1 },
+    pain:    { lid: 0, pup: 0, bi: 1, bo: 0, by: 0 },
     dead:    { lid: 0, pup: 0, bi: 0, bo: 0, by: 0 },
+    blink:   { lid: 7, pup: 3, bi: 0, bo: 0, by: 0 },   // the whole idle tell
   };
   const X = EX[expr] || EX.neutral;
 
@@ -1672,6 +1677,15 @@ SPR.buildFrog = function (d, expr) {
       for (let i = -3; i <= 3; i++) {
         ctx.fillRect(cx + off + i, EY + i, 1, 1);
         ctx.fillRect(cx + off + i, EY - i, 1, 1);
+      }
+      return;
+    }
+    if (expr === 'blink') {                      // lids all the way down
+      PIX.disc(ctx, cx + off, EY, er - 1, skin);
+      PIX.rect(ctx, cx + off - er + 1, EY, er * 2 - 1, 1, shade);
+      PIX.rect(ctx, cx + off - er + 2, EY + 1, er * 2 - 3, 1, dark);
+      for (let i = 0; i < er * 2 + 1; i++) {
+        PIX.rect(ctx, cx + off - er + i, EY - er + 1, 1, 3, P.K);
       }
       return;
     }
@@ -1803,59 +1817,54 @@ SPR.buildFrog = function (d, expr) {
 
   switch (expr) {
     case 'grin': {
-      maw(3, false);
-      /* the upper lip riding over it, and the corners creased back */
-      line(5, -1, P.K, 2, -3);
-      line(5, -1, shade, 1, -1);
-      PIX.rect(ctx, cx - mw, my - 3, 2, 3, P.K);
-      PIX.rect(ctx, cx + mw - 1, my - 3, 2, 3, P.K);
-      goldStud(cx + 3, my - 2);
+      /* he is pleased. He does not show you teeth he does not have and
+         he does not beam — the line goes up two pixels at the ends. */
+      line(2, 0);
+      line(2, 0, shade, 1, 2);
+      PIX.rect(ctx, cx - mw - 1, my - 3, 2, 3, P.K);
+      PIX.rect(ctx, cx + mw, my - 3, 2, 3, P.K);
+      goldStud(cx + mw - 6, my - 1);
       break;
     }
     case 'smug': {
-      /* one corner up, the other flat: a mobster's half smile */
+      /* one corner up. That is the entire performance. */
       ctx.fillStyle = P.K;
       for (let i = -mw; i <= mw; i++) {
         const t = (i + mw) / (2 * mw);
-        ctx.fillRect(cx + i, my + 1 - Math.round(t * t * 5), 1, 2);
+        ctx.fillRect(cx + i, my - Math.round(t * t * 2), 1, 2);
       }
-      PIX.rect(ctx, cx + mw - 2, my - 5, 3, 3, P.K);
+      ctx.fillStyle = shade;
       for (let i = -mw + 1; i <= mw - 1; i++) {
         const t = (i + mw) / (2 * mw);
-        ctx.fillStyle = shade;
-        ctx.fillRect(cx + i, my + 3 - Math.round(t * t * 5), 1, 1);
+        ctx.fillRect(cx + i, my + 2 - Math.round(t * t * 2), 1, 1);
       }
-      goldStud(cx + mw - 6, my - 3);
+      goldStud(cx + mw - 6, my - 1);
       break;
     }
     case 'worry': {
-      /* a line that cannot hold still */
-      ctx.fillStyle = P.K;
-      for (let i = -mw + 1; i <= mw - 1; i++) {
-        ctx.fillRect(cx + i, my + ((i & 2) ? 1 : -1), 1, 2);
-      }
+      /* the line is flat. It is the sweat that gives him away. */
+      line(-1, 0);
+      line(-1, 0, shade, 1, 2);
       PIX.rect(ctx, cx - rx + 3, ey - 1, 2, 4, P.L);      // flop sweat
       PIX.rect(ctx, cx - rx + 3, ey - 2, 1, 1, P.W);
       PIX.rect(ctx, cx + rx - 5, ey + 2, 2, 3, P.L);
       break;
     }
     case 'angry': {
-      /* corners hauled down hard, lower lip pushed out under it */
-      line(-6, -1);
-      line(-6, -1, shade, 1, 2);
-      PIX.rect(ctx, cx - 5, my + 3, 11, 3, P.K);
-      PIX.rect(ctx, cx - 4, my + 3, 9, 2, shade);
-      PIX.rect(ctx, cx - 4, my + 3, 9, 1, skin);
-      goldStud(cx + 3, my - 1);
+      /* set. Two pixels down at the corners and a jaw he is holding shut. */
+      line(-3, 0);
+      line(-3, 0, shade, 1, 2);
+      PIX.rect(ctx, cx - 5, my + 4, 11, 2, P.K);
+      PIX.rect(ctx, cx - 4, my + 4, 9, 1, shade);
+      goldStud(cx + mw - 6, my + 1);
       break;
     }
     case 'pain': {
-      /* hauled open sideways, the jaw ridge showing, no teeth to grit */
-      maw(2, false);
-      line(-2, -3, P.K, 2, -3);
-      line(-2, -3, shade, 1, -1);
-      PIX.rect(ctx, cx - mw, my - 2, 2, 5, P.K);
-      PIX.rect(ctx, cx + mw - 1, my - 2, 2, 5, P.K);
+      /* it opens a little. That is all he gives you. */
+      maw(1, false);
+      line(-1, -2, P.K, 2, -2);
+      PIX.rect(ctx, cx - mw - 1, my - 2, 2, 4, P.K);
+      PIX.rect(ctx, cx + mw, my - 2, 2, 4, P.K);
       break;
     }
     case 'dead': {

@@ -424,6 +424,8 @@ const UI = {
     const strip = U.el('span'); strip.id = 'shell-strip'; strip.className = 'has-tip';
     strip.dataset.tipKey = 'strip';
     stripRow.appendChild(strip);
+    const odds = U.el('span'); odds.id = 'strip-odds'; odds.className = 'has-tip';
+    stripRow.appendChild(odds);
     const oppName = U.el('span'); oppName.id = 'opp-name';
     stripRow.appendChild(oppName);
     wrap.appendChild(stripRow);
@@ -530,6 +532,29 @@ const UI = {
       }
     }
 
+    /* THE ODDS. The one number every choice in this game turns on: how
+       likely the chamber under the hammer is live. Working it out in your
+       head from two bead counts is not depth, it is arithmetic homework. */
+    const odds = document.getElementById('strip-odds');
+    if (odds) {
+      odds.innerHTML = '';
+      const o = E.liveOdds();
+      if (o === null) {
+        odds.appendChild(UI.txt('?? %', { scale: 3, color: PIX.PAL.q }));
+        odds.appendChild(UI.txt('LIVE', { scale: 2, color: PIX.PAL.q }));
+      } else {
+        const pct = Math.round(o * 100);
+        const col = pct >= 100 ? PIX.PAL.R : pct === 0 ? PIX.PAL.N
+          : pct >= 60 ? PIX.PAL.R : pct >= 34 ? PIX.PAL.O : PIX.PAL.G;
+        odds.appendChild(UI.txt(pct + '%', { scale: 4, color: col, outline: PIX.PAL.K }));
+        odds.appendChild(UI.txt(pct === 0 ? 'SAFE' : pct === 100 ? 'LIVE' : 'LIVE',
+          { scale: 2, color: PIX.PAL.q }));
+      }
+      odds.className = 'has-tip' + (o !== null && o >= 0.6 ? ' hot' : '');
+      odds.dataset.tipText = 'The chance the shell under the hammer is LIVE. ' +
+        'Aim at yourself when this is low — a blank there keeps your turn.';
+    }
+
     /* opp name plate — hover for his tells */
     const nm = document.getElementById('opp-name');
     if (nm) {
@@ -551,15 +576,18 @@ const UI = {
       }
     }
 
-    /* first-run helper */
+    /* The rule of the game, on screen, always. It costs one line and it
+       stops every new player having to be told twice. */
     const hint = document.getElementById('hint-bar');
     if (hint) {
-      const fresh = META.stats().shots < 30 && G.ante === 1 && G.blind === 0 && !d.over;
-      hint.className = fresh ? '' : 'hidden';
-      if (fresh) {
-        hint.textContent = DUEL.aim === 'foe'
-          ? 'tap HIM again to fire — or tap YOURSELF: a blank there keeps your turn'
-          : 'tap YOURSELF again to risk it — a blank keeps your turn';
+      const show = G.phase === 'duel' && !d.over;
+      hint.className = show ? '' : 'hidden';
+      if (show) {
+        hint.textContent = d.turn !== 'you'
+          ? 'his pull'
+          : DUEL.aim === 'self'
+            ? 'AT YOURSELF — a blank keeps your turn, a live costs a heart'
+            : 'AT HIM — a live shell hurts him, a blank wastes your turn';
       }
     }
 

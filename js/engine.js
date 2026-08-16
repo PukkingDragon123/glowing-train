@@ -277,6 +277,20 @@ const E = {
 
   shellsLeft() { return G.duel.shells.length - G.duel.ptr; },
 
+  /* The one number that actually decides every choice in this game:
+     how likely the chamber under the hammer is live, right now. Returns
+     null when the load is hidden and you are guessing blind. */
+  liveOdds() {
+    const d = G.duel;
+    if (!d) return null;
+    const k = d.known[d.ptr];
+    if (k === true) return 1;
+    if (k === false) return 0;
+    if (E.countsHidden()) return null;
+    const r = E.remaining(), n = r.l + r.b;
+    return n ? r.l / n : 0;
+  },
+
   /* ================= THE PULL ================= */
 
   /* target: 'self' | 'foe' — relative to whoever's turn it is */

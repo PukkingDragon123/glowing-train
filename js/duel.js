@@ -44,6 +44,7 @@ const DUEL = {
   tongue: null,           // a verlet chain, anchored in his mouth
   flies: [],              // what it goes out for
   hoverSpot: -1,
+  blink: 0, blinkNext: 90,   // he is alive; every so often the lids come down
   oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
 
   /* ---------------- gun poses (world space) ---------------- */
@@ -194,6 +195,7 @@ const DUEL = {
        duel gets played standing in the back room */
     DUEL.room = (G.phase === 'loot' && G.loot && G.loot.dragged) ? 'back' : 'table';
     DUEL.haul = null;
+    COPS.GROUND = DUEL.room === 'back' ? DUEL.FY - 8 : 150;
     document.querySelectorAll('.mark-speech, .cop-callout').forEach(n => n.remove());
     DUEL.setPose('rest', true);
     FX.reset(); FX.ambient(true);
@@ -307,6 +309,13 @@ const DUEL = {
     if (DUEL.kick > 0.002) DUEL.kick *= 0.79; else DUEL.kick = 0;
     DUEL.stepFlies();
     DUEL.stepTongue();
+    /* the blink. It is the only thing that separates a frog sitting very
+       still from a frog who is not there any more. */
+    if (DUEL.blink > 0) DUEL.blink--;
+    else if (--DUEL.blinkNext <= 0) {
+      DUEL.blink = 7;
+      DUEL.blinkNext = 150 + ((Math.random() * 300) | 0);
+    }
     DUEL.smoke = DUEL.smoke.filter(w => {
       w.t++; w.x += w.vx; w.y += w.vy; w.vy *= 0.97; w.r += 0.14;
       return w.t < w.life;
@@ -401,10 +410,18 @@ const DUEL = {
     /* --- the mark, alive or falling --- */
     if (!DUEL.opp.gone) {
       const o = DUEL.opp;
-      const comp = DUEL.composite(o.fall >= 0 ? 'dead' : DUEL.exprName);
+      /* the blink rides over any expression calm enough to have lids */
+      const CALM = { neutral: 1, smug: 1, worry: 1, grin: 1, angry: 1 };
+      const shown = (DUEL.blink > 0 && CALM[DUEL.exprName] && o.fall < 0)
+        ? 'blink' : DUEL.exprName;
+      const comp = DUEL.composite(o.fall >= 0 ? 'dead' : shown);
       const bob = Math.sin(DUEL.t / 34) * 1.4;
+      /* and he shifts his weight, slowly, the way anybody does after an hour
+         in a hard chair — two sines so it never loops obviously */
+      const lean = Math.sin(DUEL.t / 191) * 1.5 + Math.sin(DUEL.t / 73) * 0.5;
       x.save();
-      x.translate(180, 130);
+      x.translate(180 + (o.fall < 0 ? Math.round(lean) : 0), 130);
+      if (o.fall < 0) x.rotate(lean * 0.005);
       if (o.fall >= 0) {
         const f = o.fall, ease = f * f;
         x.translate(0, ease * 26);
@@ -459,6 +476,10 @@ const DUEL = {
 
     if (DUEL.room === 'back') {
       DUEL.drawBackRoom(x);
+      /* the law comes through the back door too — this branch used to skip
+         COPS.draw entirely, so the siren and the callout fired at a cop who
+         was never on screen */
+      COPS.draw(x, DUEL.t);
       DUEL.drawCorpse(x);
       DUEL.drawSpots(x);
       DUEL.drawSmoke(x);
@@ -672,6 +693,7 @@ const DUEL = {
       LOOT.overlay();
     });
     DUEL.busy = false;
+    COPS.GROUND = DUEL.FY - 8;      // the concrete, not the felt
     LOOT.sync();
   },
 

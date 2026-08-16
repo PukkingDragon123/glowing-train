@@ -222,40 +222,66 @@ const COPS = {
     const ctx = cv.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
-    /* --- the seated rig body, shrunk to standing-extra scale --- */
-    const BS = COPS.BODY_SC;
-    const bw = Math.round(body.width * BS), bh = Math.round(body.height * BS);
-    const bx = Math.round((COPS.CW - bw) / 2), by = COPS.CH - bh;
-    ctx.drawImage(body, bx, by, bw, bh);
+    /* ============================================================
+       A STANDING TUNIC, built here.
 
-    const cx = bx + Math.round(58 * BS);   // the rig's centre line, in composite space
-    const ty = by;                         // shoulder line
+       These used to reuse the seated rig body at 0.75 — but that body
+       is a wide slab designed to be cut off at the waist by a table.
+       Standing up in the middle of the room it read as a chest of
+       drawers with a frog balanced on it. This is a proper standing
+       figure: shoulders barely wider than his head, tapering to a duty
+       belt, tunic skirt below it, and the legs continue past the
+       bottom edge where the caller draws them.
+       ============================================================ */
+    const cx = 45;
+    const SH = d.fat ? 26 : 21;              // half width at the shoulders
+    const WA = d.fat ? 23 : 17;              // half width at the belt
+    const TOP = 36, BELT = 62, HIP = COPS.CH;
+    const ty = TOP;
     const tunic = P[uni.tunic] || P.t;
     const tHi = P[uni.tunicHi] || P.s;
-    const hw = d.fat ? 40 : 28;            // half width at the belt
+    const hw = WA;
+    const halfAt = (y) => {
+      if (y >= BELT) return WA + 1;
+      const t = U.clamp((y - TOP) / (BELT - TOP), 0, 1);
+      /* the shoulder holds for a few rows before it starts to taper */
+      const e = t < 0.22 ? 0 : (t - 0.22) / 0.78;
+      return Math.round(SH + (WA - SH) * e);
+    };
+    /* ink pass, then fill: everything below merges into one silhouette */
+    for (let y = TOP - 1; y <= HIP; y++) {
+      const h = halfAt(y);
+      PIX.rect(ctx, cx - h - 1, y, (h + 1) * 2 + 1, 1, P.K);
+    }
+    for (let y = TOP; y < HIP; y++) {
+      const h = halfAt(y);
+      PIX.rect(ctx, cx - h, y, h * 2 + 1, 1, tunic);
+      PIX.rect(ctx, cx - h, y, 3, 1, tHi);                        // rim light
+      PIX.rect(ctx, cx + h - 4, y, 4, 1, 'rgba(0,0,0,.30)');
+      if (uni.seam && y > TOP + 4 && y < BELT) {
+        PIX.rect(ctx, cx - h + 5, y, 1, 1, 'rgba(0,0,0,.18)');
+        PIX.rect(ctx, cx + h - 6, y, 1, 1, 'rgba(0,0,0,.18)');
+      }
+    }
+    /* the shoulders roll: a light band across the top of the tunic */
+    PIX.rect(ctx, cx - SH + 2, TOP, SH * 2 - 4, 2, tHi);
 
-    /* --- everything below is OUR tailoring: skipped when the rig's own
-       wardrobe already put a tunic, buttons, belt and badge on him --- */
-    if (!dressed) {
-    /* --- closed tunic front over the rig's shirt V --- */
-    PIX.rect(ctx, cx - 10, ty + 8, 21, 28, P.K);
-    PIX.rect(ctx, cx - 9, ty + 8, 19, 27, tunic);
-    PIX.rect(ctx, cx - 9, ty + 8, 19, 1, tHi);
-    PIX.rect(ctx, cx + 6, ty + 9, 4, 26, 'rgba(0,0,0,.25)');
-    PIX.rect(ctx, cx - 1, ty + 9, 2, 26, 'rgba(0,0,0,.30)');   // placket
+    /* --- the closed front, and the placket down it --- */
+    PIX.rect(ctx, cx - 2, TOP + 2, 4, BELT - TOP - 2, 'rgba(0,0,0,.30)');
+    PIX.rect(ctx, cx - 3, TOP + 2, 1, BELT - TOP - 2, 'rgba(255,255,255,.06)');
 
-    /* collar tabs, stepped */
-    PIX.rect(ctx, cx - 11, ty + 2, 8, 5, P.K);
-    PIX.rect(ctx, cx - 10, ty + 3, 6, 3, tunic);
-    PIX.rect(ctx, cx - 10, ty + 3, 6, 1, tHi);
-    PIX.rect(ctx, cx + 3, ty + 2, 8, 5, P.K);
-    PIX.rect(ctx, cx + 4, ty + 3, 6, 3, tunic);
-    PIX.rect(ctx, cx + 4, ty + 3, 6, 1, 'rgba(0,0,0,.22)');
+    /* --- collar tabs standing up under his chin --- */
+    [-1, 1].forEach(sg => {
+      PIX.rect(ctx, cx + sg * 4 - (sg > 0 ? 0 : 8), TOP - 3, 9, 6, P.K);
+      PIX.rect(ctx, cx + sg * 4 + (sg > 0 ? 1 : -7), TOP - 2, 7, 4, tunic);
+      PIX.rect(ctx, cx + sg * 4 + (sg > 0 ? 1 : -7), TOP - 2, 7, 1, tHi);
+      PIX.rect(ctx, cx + sg * 5 + (sg > 0 ? 1 : -3), TOP, 2, 2, P.G);
+    });
 
     /* --- brass buttons, double breasted --- */
     for (let i = 0; i < 4; i++) {
-      const byy = ty + 12 + i * 6;
-      [-6, 4].forEach(bxx => {
+      const byy = TOP + 7 + i * 6;
+      [-7, 5].forEach(bxx => {
         PIX.rect(ctx, cx + bxx - 1, byy - 1, 4, 4, P.K);
         PIX.rect(ctx, cx + bxx, byy, 2, 2, P.G);
         PIX.rect(ctx, cx + bxx, byy, 1, 1, P.Y);
@@ -263,51 +289,51 @@ const COPS = {
       });
     }
 
-    /* --- shield on the chest --- */
-    COPS._shield(ctx, cx - 21, ty + 12, true);
+    /* --- the shield, high on his chest where you cannot miss it --- */
+    COPS._shield(ctx, cx - SH + 5, TOP + 7, true);
 
-    /* --- Sam Browne strap, stepped (sergeants only) --- */
+    /* --- Sam Browne strap over the shoulder (sergeants) --- */
     if (uni.strap) {
       for (let i = 0; i < 9; i++) {
-        const sx = cx - 16 + i * 3, sy = ty + 4 + i * 3;
+        const sx = cx - 13 + i * 3, sy = TOP + 1 + i * 3;
         PIX.rect(ctx, sx, sy, 4, 4, P.K);
         PIX.rect(ctx, sx, sy, 3, 3, P.U);
         PIX.rect(ctx, sx, sy, 3, 1, P.u);
       }
     }
 
-    /* --- epaulettes + sleeve chevrons --- */
-    [-1, 1].forEach(s => {
-      const ox = cx + s * (d.fat ? 26 : 19);
-      PIX.rect(ctx, ox - 6, ty + 1, 13, 5, P.K);
-      PIX.rect(ctx, ox - 5, ty + 2, 11, 3, tunic);
-      PIX.rect(ctx, ox - 5, ty + 2, 11, 1, tHi);
+    /* --- epaulettes --- */
+    [-1, 1].forEach(sg => {
+      const ox = cx + sg * (SH - 4);
+      PIX.rect(ctx, ox - 6, TOP - 1, 13, 5, P.K);
+      PIX.rect(ctx, ox - 5, TOP, 11, 3, tunic);
+      PIX.rect(ctx, ox - 5, TOP, 11, 1, tHi);
       if (uni.braid) {
-        PIX.rect(ctx, ox - 4, ty + 3, 9, 1, P.G);
-        PIX.rect(ctx, ox + 3, ty + 2, 2, 3, P.G);
+        PIX.rect(ctx, ox - 4, TOP + 1, 9, 1, P.G);
+        PIX.rect(ctx, ox + 3, TOP, 2, 3, P.G);
       }
     });
 
-    /* --- duty belt + buckle --- */
-    const bY = ty + 33;
-    PIX.rect(ctx, cx - hw - 1, bY, (hw + 1) * 2, 6, P.K);
-    PIX.rect(ctx, cx - hw, bY + 1, hw * 2, 4, P.U);
-    PIX.rect(ctx, cx - hw, bY + 1, hw * 2, 1, P.u);
-    PIX.rect(ctx, cx + hw - 6, bY + 1, 6, 4, 'rgba(0,0,0,.25)');
-    PIX.rect(ctx, cx - 4, bY - 1, 9, 8, P.K);
-    PIX.rect(ctx, cx - 3, bY, 7, 6, P.G);
-    PIX.rect(ctx, cx - 2, bY + 1, 5, 4, P.h);
-    PIX.rect(ctx, cx - 3, bY, 7, 1, P.Y);
-    /* the empty baton loop on his hip */
-    PIX.rect(ctx, cx - hw + 3, bY + 5, 5, 4, P.K);
-    PIX.rect(ctx, cx - hw + 4, bY + 6, 3, 2, P.u);
-    }
+    /* --- duty belt, buckle, and the loop his stick came off --- */
+    const bY = BELT;
+    PIX.rect(ctx, cx - WA - 2, bY, (WA + 2) * 2 + 1, 7, P.K);
+    PIX.rect(ctx, cx - WA - 1, bY + 1, (WA + 1) * 2 + 1, 5, P.U);
+    PIX.rect(ctx, cx - WA - 1, bY + 1, (WA + 1) * 2 + 1, 1, P.u);
+    PIX.rect(ctx, cx + WA - 5, bY + 1, 6, 5, 'rgba(0,0,0,.25)');
+    PIX.rect(ctx, cx - 5, bY - 1, 11, 9, P.K);
+    PIX.rect(ctx, cx - 4, bY, 9, 7, P.G);
+    PIX.rect(ctx, cx - 3, bY + 1, 7, 5, P.h);
+    PIX.rect(ctx, cx - 4, bY, 9, 1, P.Y);
+    PIX.rect(ctx, cx - WA + 2, bY + 6, 6, 5, P.K);
+    PIX.rect(ctx, cx - WA + 3, bY + 7, 4, 3, P.u);
+    /* the tunic skirt below the belt, and its hem */
+    PIX.rect(ctx, cx - WA - 1, HIP - 3, (WA + 1) * 2 + 1, 2, 'rgba(0,0,0,.34)');
 
     /* rank chevrons are ours either way — no wardrobe draws those */
     if (uni.chev) {
-      const ax = cx - (d.fat ? 28 : 22);
+      const ax = cx - (d.fat ? 22 : 18);
       for (let k = 0; k < uni.chev; k++) {
-        const yy = ty + 16 + k * 4;
+        const yy = ty + 14 + k * 4;
         PIX.rect(ctx, ax - 3, yy + 1, 2, 2, P.G);
         PIX.rect(ctx, ax - 1, yy, 3, 2, P.G);
         PIX.rect(ctx, ax + 2, yy + 1, 2, 2, P.G);

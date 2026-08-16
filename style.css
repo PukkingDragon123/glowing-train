@@ -1850,3 +1850,18 @@ body.at-corpse #duel-bottom { justify-content: flex-start; gap: var(--gap-lg); }
   border-radius: var(--r-lg);
   box-shadow: var(--d4), var(--inset-ink);
 }
+
+/* ---- the odds readout: the number every choice turns on ---- */
+#strip-odds {
+  display: inline-flex; flex-direction: column; align-items: center;
+  gap: 1px; min-width: 66px;
+  padding: 3px 9px 4px;
+  background: rgba(4, 10, 8, .55);
+  border: var(--bd) solid var(--line);
+  border-radius: var(--r-sm);
+}
+#strip-odds.hot { border-color: var(--red); box-shadow: 0 0 14px rgba(209, 59, 69, .35); }
+
+/* the rule of the game stays on screen */
+#hint-bar { letter-spacing: 1px; text-transform: uppercase; opacity: .92; }
+body.at-corpse #strip-odds { display: none; }

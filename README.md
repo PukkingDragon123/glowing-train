@@ -26,9 +26,14 @@ Arms sit *under* the coat and end in four-fingered frog hands resting on the fel
 The whole game plays **fullscreen over a Balatro-style paint swirl** — the table, the
 lamp and the mark sit right on the casino floor, and the UI is felt and gold trim. Every
 sprite is drawn by the game at boot from one parameterized frog rig: eye bulbs that are
-part of the skull rather than stuck on top of it, brows that do the acting, and a mouth
-nearly as wide as the head that bends seven ways — they grin when you get hit, sweat when
-they're losing, haul it open sideways when it hurts, and die with the tongue out.
+part of the skull rather than stuck on top of it, and a mouth nearly as wide as the head.
+
+**These frogs do not emote.** They are professionals sitting across a table from a man
+with a gun and they have done it before, so every expression is one or two pixels off
+deadpan — what moves is the lid and the pupil, not the whole face. A grin is the line
+going up two pixels at the ends. Anger is a jaw held shut. What tells you he is alive is
+that he **blinks**, shifts his weight in the chair, and every so often puts his tongue
+through a fly.
 
 **No teeth anywhere.** Frogs don't have any, so an open mouth shows gum, the pale
 maxillary ridge along the top jaw, and tongue — and the GOLD TOOTH tell is a stud set in
@@ -164,12 +169,14 @@ cards and guns come out of corpses — **boss holsters carry your next iron**.
 | 🔍 **JEWELLER'S LOUPE** | every bulge on him shows at once, and you get one more pocket for free |
 | 📁 **FILE FOLDER** | hand them somebody else's paperwork: the heat here clears, free |
 
-The badges are not an abstraction: a cop **walks in from the right**, stands over the
+The badges are not an abstraction: a cop **walks in through the back door**, stands over the
 body tapping his nightstick in his palm, and waits. Bribe him and the chips arc across
 the felt into his glove one at a time — he pockets them, tips his cap and leaves. Refuse
 and he folds his arms and stays.
 
 ![Swamp PD](docs/screen-cops.png)
+
+![The uniform](docs/screen-cops-sheet.png)
 
 After every boss, **Swamp PD wants protection money**, scaling with the ante. Two or
 three of them march in flanking the table under a red-and-blue light wash. Pay and they
