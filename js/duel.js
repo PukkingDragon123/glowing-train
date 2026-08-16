@@ -15,7 +15,10 @@ const DUEL = {
   W: 360, H: 200, SCALE: 4, OX: 0, OY: 0,
   cv: null, ctx: null, raf: 0, t: 0,
 
-  aim: 'foe',
+  /* No aim at all until you pick a head. Every turn starts with the iron
+     down, so the first tap is always "aim" and the second one is the one
+     that goes off — there is no state where a single stray tap kills. */
+  aim: null,
   busy: true,
 
   gun: { x: 178, y: 126, rot: 0, flip: false, sc: 1, tx: 178, ty: 126, trot: 0, tsc: 1 },
@@ -40,11 +43,11 @@ const DUEL = {
   smoke: [],              // wisps off the muzzle and out of the cylinder gap
   reach: null,            // your arm out over the corpse, going through a pocket
   room: 'table',          // 'table' while he is on the felt, 'back' once you drag him
-  haul: null,             // { on, prog } — dragging him off the felt
   tongue: null,           // a verlet chain, anchored in his mouth
   flies: [],              // what it goes out for
-  hoverSpot: -1,
+  hoverSpot: -1, hoverFace: false,
   blink: 0, blinkNext: 90,   // he is alive; every so often the lids come down
+  view: 'table', viewT: 0,   // the camera: across the felt, or round on yourself
   oppKey: '', oppCache: {}, exprName: 'neutral', exprTimer: 0,
 
   /* ---------------- gun poses (world space) ---------------- */
@@ -178,7 +181,7 @@ const DUEL = {
 
   enter() {
     DUEL.stop();
-    DUEL.aim = 'foe';
+    DUEL.aim = null;
     DUEL.busy = true;
     DUEL.parts = []; DUEL.casings = []; DUEL.decals = []; DUEL.wounds = [];
     DUEL.muzzle = null; DUEL.ghost = null;
@@ -189,14 +192,14 @@ const DUEL = {
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
     DUEL.reach = null; DUEL.hoverSpot = -1;
+    DUEL.view = 'table'; DUEL.viewT = 0;
     DUEL.initTongue();
     /* G.loot survives from the LAST corpse until the next one is opened, so
        this has to ask what phase we are actually in — otherwise the next
        duel gets played standing in the back room */
     DUEL.room = (G.phase === 'loot' && G.loot && G.loot.dragged) ? 'back' : 'table';
-    DUEL.haul = null;
     COPS.GROUND = DUEL.room === 'back' ? DUEL.FY - 8 : 150;
-    document.querySelectorAll('.mark-speech, .cop-callout').forEach(n => n.remove());
+    document.querySelectorAll('.cop-callout').forEach(n => n.remove());
     DUEL.setPose('rest', true);
     FX.reset(); FX.ambient(true);
     COPS.reset();
@@ -216,7 +219,7 @@ const DUEL = {
       DUEL.opp.fall = 1; DUEL.opp.gone = true;
       DUEL.corpse = true; DUEL.pool = 20;
       DUEL.busy = false;
-      if (G.loot && G.loot.dragged) LOOT.overlay(); else LOOT.haulPrompt();
+      LOOT.overlay();
     } else {
       DUEL.intro();
     }
@@ -248,7 +251,7 @@ const DUEL = {
     if (DUEL.oppCache[expr]) return DUEL.oppCache[expr];
     const opp = G.duel.opp;
     const key = DUEL.oppKey;
-    const body = SPR.bodyCustom(key, opp.def);
+    const body = SPR.bodyCustom(key, opp.def, true);   // he is sitting down
     const head = SPR.frogCustom(key, opp.def, expr);
     const hs = 1.5;
     /* size follows the art: the head overlaps the body's collar by NECK px */
@@ -309,8 +312,21 @@ const DUEL = {
     if (DUEL.kick > 0.002) DUEL.kick *= 0.79; else DUEL.kick = 0;
     DUEL.stepFlies();
     DUEL.stepTongue();
+    /* the clock out back runs in real seconds, off the frame timer */
+    if (G.phase === 'loot' && G.loot && !G.loot.done) {
+      const now = performance.now();
+      const dt = Math.min(0.2, (now - (DUEL._lootT || now)) / 1000);
+      DUEL._lootT = now;
+      const ev = E.lootTick(dt);
+      LOOT.tick();
+      if (ev === 'time') { SFX.jamSfx(); FX.screen.shake(10); LOOT.heard(); LOOT.sync(); }
+    } else DUEL._lootT = 0;
     /* the blink. It is the only thing that separates a frog sitting very
        still from a frog who is not there any more. */
+    /* the camera swings round when you turn the gun on yourself */
+    const vt = DUEL.view === 'self' ? 1 : 0;
+    DUEL.viewT += (vt - DUEL.viewT) * 0.18;
+    if (Math.abs(DUEL.viewT - vt) < 0.004) DUEL.viewT = vt;
     if (DUEL.blink > 0) DUEL.blink--;
     else if (--DUEL.blinkNext <= 0) {
       DUEL.blink = 7;
@@ -589,6 +605,23 @@ const DUEL = {
 
     x.restore();
 
+    /* --- where the shot goes, drawn on the thing it goes into --- */
+    if (G.phase === 'duel' && G.duel && !G.duel.over && !DUEL.busy &&
+        G.duel.turn === 'you' && DUEL.viewT < 0.5 && !DUEL.opp.gone &&
+        (DUEL.aim === 'foe' || DUEL.hoverFace)) {
+      /* world space, but outside the shake: a sight picture that jitters
+         with the room reads as a bug, not as recoil */
+      x.save();
+      x.translate(Math.round(DUEL.OX), Math.round(DUEL.OY));
+      x.globalAlpha = 1 - DUEL.viewT * 2;
+      DUEL.drawReticle(x, 182, 42, DUEL.aim === 'foe');
+      x.globalAlpha = 1;
+      x.restore();
+    }
+
+    /* --- the camera round on yourself --- */
+    if (DUEL.viewT > 0.004) DUEL.drawSelfView(x, W, H);
+
     /* --- screen-space vignettes --- */
     if (DUEL.redPulse > 0) {
       x.globalAlpha = Math.min(0.55, DUEL.redPulse);
@@ -636,65 +669,9 @@ const DUEL = {
      floor and the search spots come along with him.
      ============================================================ */
   corpseAt() {
-    if (DUEL.room === 'back') return { x: 186, y: DUEL.FY - 40 };
-    const p = DUEL.haul ? DUEL.haul.prog : 0;
-    return { x: 196 - p * 26, y: 130 + p * 30 };
-  },
-
-  /* ============================================================
-     HAULING HIM OUT BACK.
-
-     You do not go through a body in the middle of the room with the
-     lamp on it. Get a grip on his collar and drag — the felt is
-     slick, he is heavy, and he only moves while you are pulling.
-     ============================================================ */
-  haulStart(px, py) {
-    if (G.phase !== 'loot' || DUEL.room !== 'back' && G.loot.dragged) return false;
-    if (DUEL.room === 'back' || DUEL.busy) return false;
-    const at = DUEL.corpseAt();
-    if (Math.abs(px - at.x) > 70 || Math.abs(py - at.y) > 40) return false;
-    DUEL.haul = DUEL.haul || { on: false, prog: 0 };
-    DUEL.haul.on = true;
-    DUEL.haul.lx = px; DUEL.haul.ly = py;
-    SFX.jamSfx();
-    return true;
-  },
-
-  haulMove(px, py) {
-    const h = DUEL.haul;
-    if (!h || !h.on) return;
-    /* only pulling TOWARD you counts — shoving him about does nothing */
-    const dy = py - h.ly, dx = px - h.lx;
-    h.lx = px; h.ly = py;
-    const pull = Math.max(0, dy) + Math.max(0, -dx) * 0.5;
-    if (pull <= 0) return;
-    const was = h.prog;
-    h.prog = Math.min(1, h.prog + pull / 130);
-    DUEL.jiggle = 1.6;
-    if ((h.prog * 8 | 0) !== (was * 8 | 0)) {
-      SFX.tick();
-      DUEL.puff(DUEL.corpseAt().x + 30, DUEL.corpseAt().y + 12, 2, [PIX.PAL.q, PIX.PAL.e], 1, -0.2);
-    }
-    if (h.prog >= 1) DUEL.haulDone();
-  },
-
-  haulEnd() { if (DUEL.haul) DUEL.haul.on = false; },
-
-  async haulDone() {
-    if (DUEL.busy || DUEL.room === 'back') return;
-    DUEL.busy = true;
-    DUEL.haul.on = false;
-    SFX.chak();
-    UI.stampBig('OUT BACK', PIX.PAL.G, true);
-    await CINE.transition(() => {
-      G.loot.dragged = true;
-      DUEL.room = 'back';
-      BG.set('back');
-      LOOT.overlay();
-    });
-    DUEL.busy = false;
-    COPS.GROUND = DUEL.FY - 8;      // the concrete, not the felt
-    LOOT.sync();
+    return DUEL.room === 'back'
+      ? { x: 186, y: DUEL.FY - 40 }
+      : { x: 196, y: 130 };
   },
 
   /* ============================================================
@@ -1130,7 +1107,7 @@ const DUEL = {
 
   drawSpots(x) {
     if (G.phase !== 'loot' || !G.loot || DUEL.reach) return;
-    if (!G.loot.dragged) { DUEL.drawHaul(x); return; }
+    if (G.loot.caught) return;
     const P = PIX.PAL;
     const pulse = DUEL.t % 44 < 22;
     G.loot.pockets.forEach((p, i) => {
@@ -1168,39 +1145,6 @@ const DUEL = {
     });
   },
 
-  /* the grip you have on his collar, and how far you have got him */
-  drawHaul(x) {
-    const P = PIX.PAL;
-    const at = DUEL.corpseAt();
-    const h = DUEL.haul || { prog: 0, on: false };
-    const gx = at.x - 34, gy = at.y - 4;
-    /* the handful of collar */
-    const pulse = h.on ? 0 : (DUEL.t % 50 < 25 ? 1 : 0);
-    const col = h.on ? P.Y : P.W;
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => {
-      const cx2 = gx + o[0] * 12, cy2 = gy + o[1] * 12;
-      const bx = o[0] > 0 ? cx2 - 4 : cx2, by = o[1] > 0 ? cy2 - 4 : cy2;
-      PIX.rect(x, bx - 1, cy2 - 1, 7, 3, P.K);
-      PIX.rect(x, cx2 - 1, by - 1, 3, 7, P.K);
-      PIX.rect(x, bx, cy2, 5, 1, col);
-      PIX.rect(x, cx2, by, 1, 5, col);
-    });
-    if (pulse) {
-      PIX.rect(x, gx - 1, gy + 3, 3, 8, P.K);
-      PIX.rect(x, gx - 4, gy + 8, 9, 4, P.K);
-      PIX.rect(x, gx, gy + 4, 1, 6, col);
-      PIX.rect(x, gx - 3, gy + 9, 7, 2, col);
-    }
-    /* how far he has come, drawn as a drag track on the felt behind him */
-    if (h.prog > 0.02) {
-      const w = Math.round(58 * h.prog);
-      PIX.rect(x, gx - 30, gy + 26, 62, 6, P.K);
-      PIX.rect(x, gx - 29, gy + 27, 60, 4, '#0b2318');
-      PIX.rect(x, gx - 29, gy + 27, w, 4, P.G);
-      PIX.rect(x, gx - 29, gy + 27, w, 1, P.Y);
-    }
-  },
-
   /* put your hand in. The arm goes out, it digs, it comes back. */
   async searchAt(i) {
     if (DUEL.busy || G.phase !== 'loot') return;
@@ -1227,7 +1171,6 @@ const DUEL = {
       DUEL.reach.dig = 0;
       await DUEL.sleep(45);
     }
-    if (slit) { SFX.jamSfx(); UI.stampSmall('THE LINING GIVES'); }
     LOOT.take(i, sx, sy);
     await DUEL.sleep(260);
     DUEL.reach = null;
@@ -1512,6 +1455,179 @@ const DUEL = {
     }
   },
 
+  /* ============================================================
+     THE OTHER ANGLE.
+
+     Turn the gun on yourself and the camera goes with it: round and
+     behind your own head, close enough to see the muzzle against
+     your temple and the room going out of focus past your ear. The
+     table is still back there. So is he. He is watching.
+     ============================================================ */
+  drawSelfView(x, W, H) {
+    const P = PIX.PAL, t = DUEL.viewT;
+    const d = DUEL.myDef();
+    const skin = P[d.skin[0]], shade = P[d.skin[1]], dark = P[d.skin[2]];
+    const INK = P.K, FY = DUEL.FY;
+
+    /* the room goes out. There is nothing to look at now but this. */
+    x.save();
+    x.globalAlpha = 0.88 * t;
+    x.fillStyle = '#05070c';
+    x.fillRect(0, 0, W, H);
+    x.globalAlpha = 1;
+    x.restore();
+
+    x.save();
+    x.translate(Math.round(DUEL.OX), Math.round(DUEL.OY));
+    /* it swings in from the right rather than cutting */
+    x.translate(Math.round((1 - t) * 130), 0);
+    x.globalAlpha = Math.min(1, t * 1.5);
+
+    /* the lamp is still burning out there over the felt, behind you */
+    x.save();
+    x.globalAlpha = 0.13 * t * DUEL.lamp;
+    x.fillStyle = '#ffd75e';
+    x.beginPath();
+    x.moveTo(46, -DUEL.OY); x.lineTo(-50, FY - 6); x.lineTo(140, FY - 6);
+    x.closePath(); x.fill();
+    x.restore();
+
+    /* ---- him, small, far side of the table, watching you do it ---- */
+    if (!DUEL.opp.gone && G.duel) {
+      const comp = DUEL.composite(DUEL.exprName);
+      const k = 0.44;
+      x.save();
+      x.globalAlpha = 0.5 * t;
+      SPR.ellipse(x, 44, FY - 28, 42, 8, '#000');
+      x.drawImage(comp.cv, 44 - comp.cv.width * k / 2, FY - 30 - comp.cv.height * k,
+        comp.cv.width * k, comp.cv.height * k);
+      x.restore();
+    }
+
+    /* ============================================================
+       You, and the iron, in one local frame: the head sprite is
+       authored at a fixed size, so the composition is scaled here
+       and nowhere else. Origin is the middle of your skull.
+       ============================================================ */
+    const K = 0.82;
+    x.save();
+    x.translate(178, FY - 60);
+    x.scale(K, K);
+    /* your hand is not steady and neither are you */
+    const tr = DUEL.busy ? 0 : Math.round(Math.sin(DUEL.t / 2.7) * 1.2);
+
+    /* ---- your shoulders, filling the bottom of the frame ---- */
+    SPR.rrect(x, -170, 52, 360, 220, 40, INK);
+    SPR.rrect(x, -168, 54, 356, 218, 38, P.T);
+    PIX.rect(x, -150, 54, 320, 4, P.t);                       // light along the shoulder
+    for (let i = 0; i < 11; i++) {
+      PIX.rect(x, -140 + i * 32, 60, 1, 200, 'rgba(100,109,132,.26)');
+    }
+    /* the neck, and the collar standing away from it */
+    SPR.rrect(x, -24, 8, 52, 48, 12, INK);
+    SPR.rrect(x, -22, 10, 48, 46, 11, dark);
+    PIX.rect(x, 8, 10, 18, 46, 'rgba(0,0,0,.30)');
+    /* the collar: a band round the throat with its point turned forward,
+       and the knot of your tie sitting in the notch of it */
+    SPR.rrect(x, -44, 28, 96, 26, 9, INK);
+    SPR.rrect(x, -42, 30, 92, 24, 8, P.W);
+    PIX.rect(x, -42, 46, 92, 8, 'rgba(0,0,0,.24)');
+    PIX.rect(x, -42, 30, 92, 2, 'rgba(255,255,255,.32)');
+    for (let i = 0; i < 9; i++) {                            // the point, stepped forward
+      PIX.rect(x, -44 - i * 2, 38 + i * 2, 8, 4, INK);
+      PIX.rect(x, -43 - i * 2, 38 + i * 2, 6, 3, i > 5 ? P.q : P.W);
+    }
+    SPR.rrect(x, -20, 44, 40, 28, 8, INK);                   // the knot
+    SPR.rrect(x, -18, 46, 36, 26, 7, P.d);
+    PIX.rect(x, -18, 46, 36, 3, 'rgba(255,255,255,.14)');
+    SPR.rrect(x, -16, 68, 34, 70, 6, INK);                   // and the tie, going down
+    SPR.rrect(x, -14, 70, 30, 68, 5, P.d);
+    PIX.rect(x, -14, 70, 5, 68, 'rgba(255,255,255,.08)');
+    PIX.rect(x, -14, 118, 30, 20, 'rgba(0,0,0,.45)');
+    /* the lapel, running down out of frame */
+    SPR.rrect(x, -150, 66, 78, 180, 16, INK);
+    SPR.rrect(x, -148, 68, 74, 178, 15, P.k);
+    PIX.rect(x, -148, 68, 74, 3, 'rgba(255,255,255,.10)');
+
+    /* ---- your head, in profile, looking back across the table ----
+       baked once and laid down twice: a rim of lamplight along the edge
+       facing the table, then the head itself over the top of it */
+    const pv = SPR.profileCv(d, DUEL.blink > 0);
+    const rim = SPR.silhouette(SPR.defKey(d) + (DUEL.blink > 0 ? ':b' : ''), pv, '#6c7f6a');
+    x.drawImage(rim, -SPR.PROF_OX - 3, -SPR.PROF_OY - 3);
+    x.drawImage(pv, -SPR.PROF_OX, -SPR.PROF_OY);
+
+    /* ---- the iron, its muzzle in your temple ---- */
+    const gm = DUEL.ironArt();
+    const mz = gm.muzzle || [gm.width, gm.height / 2];
+    const gp = gm.grip || [10, 13];
+    const sc = 1.3, rot = 0.2;
+    const MX = 30, MY = -18 + tr;                    // where the muzzle presses in
+    /* the press: skin dented and dark under the crown of the barrel */
+    SPR.ellipse(x, MX + 4, MY + 2, 11, 8, dark);
+    SPR.ellipse(x, MX + 6, MY + 3, 7, 5, INK);
+    x.save();
+    x.translate(MX, MY);
+    x.rotate(rot);
+    x.scale(-sc, sc);                                // the sprite points right; this one does not
+    x.drawImage(gm, -mz[0], -mz[1]);
+    x.restore();
+    /* where your fist closes, worked out from the iron's own grip anchor */
+    const lx = -(gp[0] - mz[0]) * sc, ly = (gp[1] - mz[1]) * sc;
+    const cs = Math.cos(rot), sn = Math.sin(rot);
+    const GX = Math.round(MX + lx * cs - ly * sn), GY = Math.round(MY + lx * sn + ly * cs);
+    /* the hand is turned so the digits wrap ACROSS the grip instead of
+       hanging off the bottom of it — a fist, not a hand near a gun */
+    const wx = GX + 26, wy = GY + 30;
+    SPR.povSleeve(x, 300, 250, wx, wy, 66, 34, P.T,
+      'rgba(0,0,0,.42)', P.t, 'rgba(100,109,132,.34)');
+    x.save();
+    x.translate(wx - 6, wy - 8);
+    x.rotate(rot + 0.5);
+    SPR.povCuff(x, 0, 0, d, 1);
+    x.restore();
+    x.save();
+    x.translate(GX + 5, GY + 3);
+    x.rotate(rot);
+    x.scale(0.78, 0.78);
+    SPR.frogFist(x, 0, 0, d, { wet: true });
+    x.restore();
+    x.restore();
+
+    /* the sight picture, on your own temple, once the swing has landed */
+    if (t > 0.55 && !DUEL.busy) DUEL.drawReticle(x, 178 + 10, FY - 60 - 18, true);
+    x.globalAlpha = 1;
+    x.restore();
+  },
+
+  /* the box your own head fills in the self view, in world coords */
+  selfHead() {
+    const hx = 236, hy = DUEL.FY - 62;
+    return { x0: hx - 66, x1: hx + 60, y0: hy - 84, y1: hy + 40 };
+  },
+
+  /* the sight picture: brackets on his face, tight and red when it is armed */
+  drawReticle(x, cx, cy, armed) {
+    const P = PIX.PAL;
+    const pulse = DUEL.t % 40 < 20;
+    const r = armed ? (pulse ? 26 : 28) : 31;
+    const col = armed ? P.R : 'rgba(244,239,224,.42)';
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => {
+      const px = cx + o[0] * r, py = cy + o[1] * (r * 0.72);
+      const bx = o[0] > 0 ? px - 8 : px, by = o[1] > 0 ? py - 8 : py;
+      PIX.rect(x, bx - 1, py - 1, 11, 4, P.K);
+      PIX.rect(x, px - 1, by - 1, 4, 11, P.K);
+      PIX.rect(x, bx, py, 9, 2, col);
+      PIX.rect(x, px, by, 2, 9, col);
+    });
+    if (armed && pulse) {
+      PIX.rect(x, cx - 1, cy - 7, 3, 15, P.K);
+      PIX.rect(x, cx - 7, cy - 1, 15, 3, P.K);
+      PIX.rect(x, cx, cy - 6, 1, 13, col);
+      PIX.rect(x, cx - 6, cy, 13, 1, col);
+    }
+  },
+
   /* powder smoke: thick and white at first, then thin grey drifting up */
   drawSmoke(x) {
     const P = PIX.PAL;
@@ -1523,35 +1639,6 @@ const DUEL = {
       PIX.disc(x, w.x - 1, w.y - 1, w.r * 0.55, P.W);
     });
     x.globalAlpha = 1;
-  },
-
-  /* the mark says something — a pixel bubble pinned over his head */
-  say(text, boss) {
-    if (!text) return;
-    const holder = document.getElementById('scene-holder');
-    if (!holder) return;
-    holder.querySelectorAll('.mark-speech').forEach(n => n.remove());
-    const sp = U.el('div', 'mark-speech flip' + (boss ? ' shout' : ''));
-    sp.textContent = text;
-    sp.appendChild(U.el('i', 'sp-tail'));
-    /* world (196, 88) is just off his mouth */
-    sp.style.setProperty('--sx', Math.round((DUEL.OX + 196) * DUEL.SCALE) + 'px');
-    sp.style.setProperty('--sy', Math.round((DUEL.OY + 88) * DUEL.SCALE) + 'px');
-    holder.appendChild(sp);
-    setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 300); }, 2100);
-  },
-
-  /* pick a line for whatever just happened */
-  taunt(ev) {
-    if (typeof TAUNT !== 'function' || !G.duel || G.duel.over) return;
-    const R = Math.random;
-    let line = null;
-    if (ev.reloaded) line = TAUNT(R, 'reload');
-    else if (ev.by === 'opp' && !ev.live && ev.target === 'self') line = TAUNT(R, 'afterSelfBlank');
-    else if (ev.by === 'opp' && ev.victim === 'you') line = TAUNT(R, 'afterHittingYou');
-    else if (ev.by === 'you' && !ev.live && ev.target === 'self') line = TAUNT(R, 'afterYouSelfBlank');
-    else if (G.duel.opp.hp === 1 && R() < 0.4) line = TAUNT(R, 'lowHearts');
-    if (line) DUEL.say(line, !!G.duel.opp.boss);
   },
 
   hearts(x, hx, hy, hp, max, throb) {
@@ -1596,12 +1683,22 @@ const DUEL = {
     if (DUEL.busy || G.phase !== 'duel') return;
     if (DUEL.aim !== a) SFX.chak();
     DUEL.aim = a;
+    DUEL.view = a === 'self' ? 'self' : 'table';
     DUEL.setPose(a === 'foe' ? 'youFoe' : 'youSelf');
     UI.syncDuel();
   },
 
+  /* Between pulls the iron comes down and the camera goes back over the
+     felt. Nothing stays aimed while you are not the one holding the turn. */
+  lowerIron() {
+    DUEL.aim = null;
+    DUEL.view = 'table';
+    DUEL.setPose('rest');
+  },
+
   async onFire() {
     if (DUEL.busy || G.phase !== 'duel' || G.duel.over || G.duel.turn !== 'you') return;
+    if (!DUEL.aim) return;                   // nothing is under the muzzle yet
     DUEL.busy = true;
     DUEL.hurry = false;
     DUEL.setPose(DUEL.aim === 'foe' ? 'youFoe' : 'youSelf');
@@ -1708,7 +1805,6 @@ const DUEL = {
   async afterPull(ev) {
     if (ev.over === 'win') { await DUEL.killSequence(); return; }
     if (ev.over === 'loss') { await DUEL.deathSequence(); return; }
-    DUEL.taunt(ev);
 
     if (ev.revived) {
       await DUEL.sleep(300);
@@ -1734,7 +1830,7 @@ const DUEL = {
     if (G.duel.turn === 'opp') {
       await DUEL.oppLoop();
     } else {
-      DUEL.setPose(DUEL.aim === 'foe' ? 'youFoe' : 'youSelf');
+      DUEL.lowerIron();
       DUEL.busy = false;
       UI.syncDuel();
     }
@@ -1762,7 +1858,7 @@ const DUEL = {
       UI.syncDuel();
     }
     if (G.phase === 'duel' && !G.duel.over) {
-      DUEL.setPose(DUEL.aim === 'foe' ? 'youFoe' : 'youSelf');
+      DUEL.lowerIron();
       DUEL.busy = false;
       UI.syncDuel();
     }
@@ -1783,10 +1879,20 @@ const DUEL = {
     DUEL.opp.gone = true;
     DUEL.corpse = true;
     DUEL.pool = 4;
-    await U.sleep(700);
+    await U.sleep(650);
     DUEL.setPose('rest');
-    DUEL.busy = false;          // he is yours now — but not here
-    LOOT.haulPrompt();
+    /* Black. Then you are out back with him and the door is shut. Nobody
+       goes through a body under the lamp, and nobody wants to watch you
+       drag one either. */
+    await CINE.iris(() => {
+      G.loot.dragged = true;
+      DUEL.room = 'back';
+      DUEL.pool = 16;
+      COPS.GROUND = DUEL.FY - 8;
+      BG.set('back');
+      LOOT.overlay();
+    }, 260);
+    DUEL.busy = false;
   },
 
   /* you die */
@@ -1845,13 +1951,19 @@ const DUEL = {
   /* light the spot under the pointer, so it is obvious he can be gone through */
   sceneMove(e) {
     if (!DUEL.cv) return;
-    if (DUEL.haul && DUEL.haul.on) {
-      const q = DUEL.sceneXY(e);
-      DUEL.haulMove(q.x, q.y);
-      return;
-    }
     if (G.phase !== 'loot' || DUEL.busy) {
       if (DUEL.hoverSpot !== -1) DUEL.hoverSpot = -1;
+      /* in a duel, the two things you can put the muzzle on light the cursor */
+      if (G.phase === 'duel' && !DUEL.busy) {
+        const p = DUEL.sceneXY(e);
+        const b = DUEL.selfHead();
+        const face = p.x > 118 && p.x < 244 && p.y > 8 && p.y < 96;
+        const on = DUEL.view === 'self'
+          ? (p.x > b.x0 && p.x < b.x1 && p.y > b.y0 && p.y < b.y1)
+          : (face || p.y > DUEL.FY - 52);
+        DUEL.hoverFace = DUEL.view !== 'self' && face;
+        DUEL.cv.style.cursor = on ? 'pointer' : 'crosshair';
+      } else DUEL.hoverFace = false;
       return;
     }
     const q = DUEL.sceneXY(e);
@@ -1860,20 +1972,9 @@ const DUEL = {
     DUEL.cv.style.cursor = i >= 0 ? 'pointer' : 'crosshair';
   },
 
-  sceneDown(e) {
-    if (G.phase !== 'loot' || DUEL.busy) return;
-    if (G.loot && !G.loot.dragged) {
-      const q = DUEL.sceneXY(e);
-      if (DUEL.haulStart(q.x, q.y)) { DUEL.cv.setPointerCapture && DUEL.cv.setPointerCapture(e.pointerId); }
-    }
-  },
-
-  sceneUp() { DUEL.haulEnd(); },
-
   sceneClick(e) {
     if (G.phase === 'loot') {
       if (DUEL.busy) { DUEL.hurry = true; return; }
-      if (G.loot && !G.loot.dragged) return;      // he is not out back yet
       const q = DUEL.sceneXY(e);
       const i = DUEL.spotAt(q.x, q.y);
       if (i >= 0) DUEL.searchAt(i);
@@ -1881,15 +1982,22 @@ const DUEL = {
     }
     if (G.phase !== 'duel') return;
     if (DUEL.busy) { DUEL.hurry = true; return; }
-    const r = DUEL.cv.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width * DUEL.W - DUEL.OX;
-    const py = (e.clientY - r.top) / r.height * DUEL.H - DUEL.OY;
-    if (px > 100 && px < 262 && py < 130) {
+    const q = DUEL.sceneXY(e);
+    /* Round on yourself: anywhere on your own end of the table, or anywhere
+       at all once the camera is already there — click again and you pull. */
+    if (DUEL.view === 'self') {
+      const b = DUEL.selfHead();
+      if (q.x > b.x0 && q.x < b.x1 && q.y > b.y0 && q.y < b.y1) DUEL.onFire();
+      else { DUEL.lowerIron(); SFX.click(); UI.syncDuel(); }   // back over the felt
+      return;
+    }
+    if (q.x > 118 && q.x < 244 && q.y > 8 && q.y < 96) {   // his face
       if (DUEL.aim === 'foe') DUEL.onFire();
       else DUEL.setAim('foe');
-    } else if (py > DUEL.FY - 46) {           /* your own end of the felt */
-      if (DUEL.aim === 'self') DUEL.onFire();
-      else DUEL.setAim('self');
+    } else if (q.y > DUEL.FY - 52) {                       // your own end
+      DUEL.setAim('self');
+    } else if (DUEL.aim) {
+      DUEL.lowerIron(); SFX.click(); UI.syncDuel();        // dead space: stand down
     }
   },
 };

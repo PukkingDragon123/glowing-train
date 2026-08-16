@@ -30,8 +30,26 @@ function BLIND_PURSE(ante, blind) {
    can't pay, and they take your marker.
    ------------------------------------------------------------ */
 
+/* ------------------------------------------------------------
+   OUT BACK: TIME AND NOISE.
+
+   Two meters, pulling opposite ways. TIME drains the whole while
+   you are back there — somebody is going to come looking. NOISE
+   spikes every time you put a hand in him and bleeds off if you
+   hold still. Rush and the noise brings the law; creep and the
+   clock runs out with his boot still on.
+   ------------------------------------------------------------ */
 const LOOT_TUNING = {
-  freePockets: 3,             // rifles before the badges arrive
+  seconds: 42,                // on the clock when the door shuts
+  secondsPerAnte: -2,         // and it gets shorter as you climb
+  noiseDecay: 0.115,          // per second, when your hands are still
+  noiseGrace: 0.55,           // how quiet the room goes after a bribe
+  /* how loud each pocket is to go into */
+  noise: {
+    hat: 0.16, jacket: 0.24, shirt: 0.22, vest: 0.26,
+    hand: 0.20, boot: 0.34, holster: 0.30, tooth: 0.52,
+  },
+  slitNoise: 0.12,            // the shiv is quiet; that is the point of it
   bribeBase: 3, bribePerAnte: 1, bribeStep: 3, // bribe = base + ante + step*bribesPaid
   trinketChance: [0.5, 0.65, 1.0],             // per blind: odds one pocket hides a card
   itemChance: [0.45, 0.6, 0.9],                // per blind: odds one pocket hides a belt item

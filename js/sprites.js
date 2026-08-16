@@ -1456,6 +1456,186 @@ SPR.povHand = function (ctx, cx, cy, d, sgn, k, grip) {
 /* a forearm entering from off-frame, in your pinstripe sleeve */
 SPR.povSleeve = SPR.povTube;
 
+/* ============================================================
+   A HAND CLOSED AROUND SOMETHING.
+   The splayed hand is wrong for a grip: four digits fanned out
+   over a gun butt read as a shrub. This is the back of a fist,
+   knuckles toward the lens, the digits wrapping away to the
+   LEFT across whatever it is holding, thumb laid over the top.
+   Nominal 30 wide — scale it with the transform.
+   ============================================================ */
+SPR.frogFist = function (ctx, cx, cy, d, o) {
+  o = o || {};
+  const P = PIX.PAL, INK = P.K;
+  const skin = P[d.skin[0]] || P.F, shade = P[d.skin[1]] || P.f, dark = P[d.skin[2]] || P.e;
+
+  /* the digits first, so the back of the hand lands on top of them */
+  for (let i = 0; i < 4; i++) {
+    const fy = cy - 12 + i * 8, len = i === 3 ? 13 : 17 - Math.abs(i - 1) * 2;
+    SPR.rrect(ctx, cx - 14 - len, fy - 1, len + 8, 10, 4, INK);
+    SPR.rrect(ctx, cx - 13 - len, fy, len + 6, 8, 3, i < 2 ? skin : shade);
+    PIX.rect(ctx, cx - 13 - len, fy, len + 6, 2, 'rgba(255,255,255,.16)');
+    PIX.rect(ctx, cx - 13 - len, fy + 6, len + 6, 2, 'rgba(0,0,0,.30)');
+    PIX.disc(ctx, cx - 13 - len, fy + 4, 4, INK);              // the knuckle of it
+    PIX.disc(ctx, cx - 13 - len, fy + 4, 3, i < 2 ? skin : shade);
+  }
+
+  /* the back of the hand, one mass over the top of the digits */
+  SPR.rrect(ctx, cx - 16, cy - 16, 34, 38, 11, INK);
+  SPR.rrect(ctx, cx - 14, cy - 14, 30, 34, 10, skin);
+  SPR.rrect(ctx, cx - 14, cy + 6, 30, 14, 8, shade);
+  PIX.rect(ctx, cx - 12, cy - 14, 24, 3, 'rgba(255,255,255,.20)');
+
+  /* the tendons standing up over the knuckles when it is held tight */
+  for (let i = 0; i < 3; i++) {
+    PIX.rect(ctx, cx - 12, cy - 8 + i * 8, 22, 1, 'rgba(0,0,0,.26)');
+    PIX.rect(ctx, cx - 12, cy - 9 + i * 8, 22, 1, 'rgba(255,255,255,.09)');
+  }
+  const rng = SPR.defRng(d);
+  for (let i = 0; i < 7; i++) {
+    PIX.disc(ctx, Math.round(cx - 12 + rng() * 26), Math.round(cy - 12 + rng() * 30), 2, shade);
+  }
+
+  /* the thumb, laid over the top of the grip and pointing away */
+  SPR.rrect(ctx, cx - 22, cy - 24, 38, 14, 6, INK);
+  SPR.rrect(ctx, cx - 20, cy - 22, 34, 11, 5, skin);
+  PIX.rect(ctx, cx - 20, cy - 22, 34, 2, 'rgba(255,255,255,.20)');
+  PIX.rect(ctx, cx - 20, cy - 14, 34, 3, 'rgba(0,0,0,.22)');
+  PIX.disc(ctx, cx - 21, cy - 17, 6, INK);
+  PIX.disc(ctx, cx - 21, cy - 17, 5, skin);
+  PIX.rect(ctx, cx - 24, cy - 20, 3, 2, 'rgba(255,255,255,.25)');
+
+  if (d.rings) {
+    PIX.rect(ctx, cx - 24, cy - 4, 5, 6, INK);
+    PIX.rect(ctx, cx - 24, cy - 3, 4, 4, P.G);
+  }
+  if (o.wet) SPR.ellipse(ctx, cx + 2, cy - 6, 8, 5, 'rgba(255,255,255,.10)');
+  void dark;
+};
+
+/* ============================================================
+   A FROG IN PROFILE, CLOSE.
+   Seen from the side he is a different animal from the one the
+   table shows you: one bulb instead of two, a snout carrying
+   most of the length of the skull, a mouth line running nearly
+   back to the drum, and no chin to speak of.
+
+   Faces LEFT. Origin is the middle of the skull, which is
+   nominally 46x33 — scale it with the transform, never by
+   passing sizes in, or the outlines stop being one pixel.
+   ============================================================ */
+SPR.frogProfile = function (ctx, cx, cy, d, o) {
+  o = o || {};
+  const P = PIX.PAL, INK = P.K;
+  const skin = P[d.skin[0]] || P.F, shade = P[d.skin[1]] || P.f, dark = P[d.skin[2]] || P.e;
+
+  /* THE HAT GOES ON FIRST. A frog's eyes sit on top of his skull, so a
+     fedora rides behind them: the bulb has to come out over the brim, and
+     the only way to get that is to lay the hat down before the head. */
+  if (o.hat !== false && d.hat) {
+    const hc = P[d.hatCol] || P.T, hb = P[d.band] || P.d, lt = P[LIGHTER[d.hatCol]] || P.t;
+    SPR.rrect(ctx, cx - 8, cy - 68, 48, 38, 15, INK);
+    SPR.rrect(ctx, cx - 6, cy - 66, 44, 36, 14, hc);
+    PIX.rect(ctx, cx - 6, cy - 58, 9, 28, lt);                  // the lit side of the crown
+    PIX.rect(ctx, cx + 4, cy - 62, 6, 22, 'rgba(0,0,0,.26)');   // the pinch in the crown
+    PIX.rect(ctx, cx - 6, cy - 44, 44, 9, INK);
+    PIX.rect(ctx, cx - 6, cy - 43, 44, 7, hb);                  // the band
+    /* the brim, dipping toward the front the way a worn one does */
+    SPR.ellipse(ctx, cx + 4, cy - 34, 48, 8, INK);
+    SPR.ellipse(ctx, cx + 4, cy - 36, 45, 6, hc);
+    SPR.ellipse(ctx, cx - 28, cy - 30, 22, 5, INK);
+    SPR.ellipse(ctx, cx - 28, cy - 32, 19, 4, hc);
+    SPR.ellipse(ctx, cx + 8, cy - 38, 38, 3, lt);
+  }
+
+  /* ink pass, then fill pass, over every lump at once — they bury each
+     other's outlines and it comes out one silhouette, not five blobs */
+  /* On a frog the mouth IS the bottom of the head: the line runs from the
+     tip of the snout back past the drum and there is barely a jaw under
+     it. Build the mass to end there, with only a shallow lip and the
+     throat sac below. */
+  const mass = (col, g) => {
+    SPR.ellipse(ctx, cx + 16, cy - 6, 28 + g, 23 + g, col);     // cranium, tall at the back
+    SPR.ellipse(ctx, cx - 8, cy - 2, 33 + g, 20 + g, col);      // the middle of the skull
+    SPR.ellipse(ctx, cx - 34, cy + 2, 24 + g, 14 + g, col);     // snout, tapering forward
+    PIX.disc(ctx, cx - 52, cy + 3, 9 + g, col);                 // the blunt tip of it
+    SPR.ellipse(ctx, cx - 6, cy + 10, 34 + g, 7 + g, col);      // the lower lip
+    SPR.ellipse(ctx, cx + 16, cy + 12, 20 + g, 10 + g, col);    // the throat sac
+    PIX.disc(ctx, cx - 14, cy - 28, 20 + g, col);               // the one eye bulb
+  };
+  mass(INK, 2);
+  mass(skin, 0);
+
+  /* the lamp is out over the table, in front of him and above: the back of
+     the head and everything under the jaw roll away from it */
+  SPR.ellipse(ctx, cx + 26, cy + 2, 20, 19, shade);
+  SPR.ellipse(ctx, cx + 32, cy + 8, 14, 12, dark);
+  SPR.ellipse(ctx, cx - 6, cy + 14, 30, 4, shade);              // under the lip
+  SPR.ellipse(ctx, cx - 44, cy + 8, 12, 6, shade);              // under the snout
+
+  /* freckling, seeded off him, so it never crawls between frames */
+  const rng = SPR.defRng(d);
+  for (let i = 0; i < 30; i++) {
+    const a = rng() * Math.PI * 2, rr = Math.sqrt(rng());
+    PIX.disc(ctx, Math.round(cx - 8 + Math.cos(a) * 36 * rr),
+      Math.round(cy - 2 + Math.sin(a) * 18 * rr), rng() < 0.28 ? 3 : 2, shade);
+  }
+  if (d.warts) {
+    for (let i = 0; i < 7; i++) {
+      const a = rng() * Math.PI * 2, rr = 0.5 + rng() * 0.5;
+      const wx = Math.round(cx + 2 + Math.cos(a) * 30 * rr);
+      const wy = Math.round(cy - 4 + Math.sin(a) * 16 * rr);
+      PIX.disc(ctx, wx, wy, 3, dark); PIX.disc(ctx, wx - 1, wy - 1, 2, shade);
+    }
+  }
+
+  /* the mouth: from the tip of the snout back to under the drum, stepped
+     along its own length so it never anti-aliases */
+  const line = [[-60, 1], [-46, 6], [-28, 9], [-6, 10], [14, 9], [32, 4]];
+  for (let i = 0; i < line.length - 1; i++) {
+    const a = line[i], b = line[i + 1], n = b[0] - a[0];
+    for (let s = 0; s < n; s++) {
+      const t = s / n;
+      const px = Math.round(cx + a[0] + n * t);
+      const py = Math.round(cy + a[1] + (b[1] - a[1]) * t);
+      PIX.rect(ctx, px, py, 1, 3, INK);
+      PIX.rect(ctx, px, py + 3, 1, 2, shade);
+      if (s % 2 === 0) PIX.rect(ctx, px, py - 2, 1, 2, 'rgba(255,255,255,.07)');
+    }
+  }
+  PIX.disc(ctx, cx - 54, cy - 6, 2, INK);                       // nostril
+  PIX.rect(ctx, cx - 58, cy - 10, 5, 2, 'rgba(255,255,255,.12)');
+
+  /* the eye. Near-expressionless: a heavy lid, a slit that only tracks,
+     and a blink that is the only thing it ever does. */
+  PIX.disc(ctx, cx - 14, cy - 28, 18, shade);
+  PIX.disc(ctx, cx - 17, cy - 31, 14, skin);
+  if (o.blink) {
+    SPR.ellipse(ctx, cx - 23, cy - 29, 15, 13, shade);
+    PIX.rect(ctx, cx - 38, cy - 29, 31, 2, INK);
+  } else {
+    SPR.ellipse(ctx, cx - 24, cy - 29, 14, 13, INK);
+    SPR.ellipse(ctx, cx - 24, cy - 29, 12, 11, o.gold ? P.Y : P.O);
+    SPR.ellipse(ctx, cx - 27, cy - 29, 4, 10, INK);             // slit pupil
+    PIX.rect(ctx, cx - 32, cy - 35, 3, 3, 'rgba(255,255,255,.8)');
+    /* the lid comes down over the top third of it, always */
+    SPR.ellipse(ctx, cx - 20, cy - 42, 20, 9, skin);
+    PIX.rect(ctx, cx - 39, cy - 38, 35, 2, 'rgba(0,0,0,.45)');
+  }
+
+  /* the drum on the side of the head */
+  PIX.disc(ctx, cx + 22, cy - 6, 11, INK);
+  PIX.disc(ctx, cx + 22, cy - 6, 9, shade);
+  PIX.disc(ctx, cx + 22, cy - 6, 6, dark);
+  PIX.disc(ctx, cx + 19, cy - 9, 3, shade);
+
+  /* wet — a slick over the crown of the bulb, one down the snout */
+  for (let i = -5; i <= 5; i++) {
+    PIX.rect(ctx, cx - 18 + i * 3, cy - 44 + Math.round(i * i * 0.5), 3, 2, 'rgba(255,255,255,.13)');
+  }
+  PIX.rect(ctx, cx - 50, cy - 4, 16, 2, 'rgba(255,255,255,.10)');
+};
+
 const FROG_DEFS = {
   player:    { skin: ['F', 'f', 'e'], fat: false, suit: 'T', shirt: 'W', tie: 'd',
                costume: 'pinstripe', braces: true,
@@ -1485,12 +1665,52 @@ const FROG_DEFS = {
                costume: 'cop', flatcap: true, warts: true },
 };
 
+/* what makes one frog a different frog from another, as a string */
+SPR.defKey = function (d) {
+  return (d.skin || []).join('') + '|' + (d.costume || '') + '|' + (d.suit || '') +
+    '|' + (d.shirt || '') + '|' + (d.tie || '') + (d.fat ? 'F' : '') + (d.hat || '');
+};
+
 /* Every frog is freckled the same way every time you meet him: the
    scatter is seeded off his own def, not off Math.random. */
 SPR.defRng = function (d) {
-  const key = (d.skin || []).join('') + '|' + (d.costume || '') + '|' + (d.suit || '') +
-    '|' + (d.shirt || '') + '|' + (d.tie || '') + (d.fat ? 'F' : '') + (d.hat || '');
-  return U.mulberry32(U.hashSeed(key));
+  return U.mulberry32(U.hashSeed(SPR.defKey(d)));
+};
+
+/* ============================================================
+   RIM LIGHT.
+   A dark suit against a dark room is a hole in the screen. Take
+   the sprite's own silhouette, flood it with one colour, and lay
+   it down a couple of pixels toward the lamp before drawing the
+   real thing over it: the shape gets an edge without anyone
+   hand-painting one on every part.
+   ============================================================ */
+SPR.silhouette = function (key, src, col) {
+  return SPR.cached('sil:' + key + ':' + col, () => {
+    const cv = document.createElement('canvas');
+    cv.width = src.width; cv.height = src.height;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.drawImage(src, 0, 0);
+    c.globalCompositeOperation = 'source-in';
+    c.fillStyle = col;
+    c.fillRect(0, 0, cv.width, cv.height);
+    return cv;
+  });
+};
+
+/* the profile head, baked once, so it can be rimmed and reused */
+SPR.PROF_OX = 120;
+SPR.PROF_OY = 130;
+SPR.profileCv = function (d, blink) {
+  return SPR.cached('prof:' + SPR.defKey(d) + (blink ? ':b' : ''), () => {
+    const cv = document.createElement('canvas');
+    cv.width = 220; cv.height = 200;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    SPR.frogProfile(c, SPR.PROF_OX, SPR.PROF_OY, d, { blink: blink });
+    return cv;
+  });
 };
 
 /* a stepped rounded rect — an ellipse reads as a blob at gun scale, and a
@@ -2094,7 +2314,13 @@ SPR.buildFrog = function (d, expr) {
      buttons, pockets -> chest accessories -> sleeves -> sleeve
      accessories -> bowtie.
    ------------------------------------------------------------ */
-SPR.buildBody = function (d) {
+SPR.buildBody = function (d, o) {
+  o = o || {};
+  /* SEATED: he is behind a table, so the forearms go down out of frame
+     instead of stopping in mid-air with a shirt cuff on the end. They also
+     hang closer to the body — the bowed-out elbow of the standing pose
+     reads as a robot arm once the hands are gone. */
+  const seated = !!o.seated;
   const P = PIX.PAL;
   const C = SPR.costumeOf(d);
   const W = 116, H = 60, cx = 58;
@@ -2664,6 +2890,9 @@ SPR.buildBody = function (d) {
   const actx = armCv.getContext('2d');
   let baseHw = (fat ? 50 : 43) + Math.round(pad * 0.5) + Math.round(shX * 0.6);
   baseHw = Math.min(baseHw, 52);
+  /* seated, the arms come in against the ribs — out at the standing width
+     they poke past the coat's shoulder and the silhouette turns into steps */
+  if (seated) baseHw -= 7;
   const rolled = !!(sh && sh.rolled);
   const sleeveC = gown ? L(acc.gloves || gown.col, P.W) : base;
   /* must agree with SPR.cuffColor — duel.js paints the felt-hand cuff from it */
@@ -2678,9 +2907,14 @@ SPR.buildBody = function (d) {
        Upper arm -> behind layer. Forearm -> front layer, fully outlined, so it
        reads as a limb instead of another panel of jacket. */
     const shoX = cx + sgn * (baseHw - 9);          // sleeve head, tucked under the cap
-    const elX  = cx + sgn * (baseHw - 1);          // elbow bows out past the ribs
-    const haX  = cx + sgn * (baseHw - 9);          // wrist back in, onto the felt
-    const y0 = 8, yEl = 30, y2 = 57;
+    /* Seated the arm hangs: shoulder, elbow and wrist stack up almost in a
+       line. Bowed out the way the standing pose does it, the two-pixel
+       stair steps turn the whole limb into a right angle. */
+    const elX  = cx + sgn * (baseHw - (seated ? 8 : 1));   // elbow, out past the ribs
+    const haX  = cx + sgn * (baseHw - (seated ? 13 : 9));  // wrist in toward the felt
+    /* seated, the sleeve head starts BELOW the coat's shoulder line, so the
+       arm grows out of the jacket instead of notching a step into it */
+    const y0 = seated ? 13 : 8, yEl = 30, y2 = seated ? H : 57;
     const centerAt = (y) => {
       const t = y < yEl ? (y - y0) / (yEl - y0) : (y - yEl) / (y2 - yEl);
       const a = y < yEl ? shoX : elX, b = y < yEl ? elX : haX;
@@ -2712,34 +2946,48 @@ SPR.buildBody = function (d) {
       }
     }
 
-    /* ---- forearm: IN FRONT, coming toward the felt ---- */
+    /* ---- forearm ----
+       Standing, it swings forward over the coat and needs its own outline.
+       Seated, it just goes down past the table edge: keeping it on the
+       BEHIND layer means no second dark line running down the ribs, and
+       the arm reads as one limb coming out from under the shoulder. */
+    const fctx = seated ? actx : ctx;
     for (let y = yEl - 3; y <= y2; y++) {
       const c = centerAt(U.clamp(y, y0, y2 - 1)), w = widthAt(y);
-      PIX.rect(ctx, c - (w >> 1), y, w, 1, INK);        // full outline against the coat
+      PIX.rect(fctx, c - (w >> 1), y, w, 1, INK);       // full outline against the coat
     }
     for (let y = yEl - 2; y < y2; y++) {
       const c = centerAt(y), w = widthAt(y) - 2;
       const bare = y > rollY;
-      PIX.rect(ctx, c - (w >> 1), y, w, 1, bare ? skin : sleeveC);
+      PIX.rect(fctx, c - (w >> 1), y, w, 1, bare ? skin : sleeveC);
       /* round the tube: lit on the inside edge, shaded on the outside */
-      PIX.rect(ctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, SH1);
-      PIX.rect(ctx, c + (sgn < 0 ? (w >> 1) - 1 : -(w >> 1)), y, 1, 1, 'rgba(255,255,255,.07)');
+      PIX.rect(fctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, SH1);
+      PIX.rect(fctx, c + (sgn < 0 ? (w >> 1) - 1 : -(w >> 1)), y, 1, 1, 'rgba(255,255,255,.07)');
       if (!bare && stripe === 'chalk') {
         const lx = c - (w >> 1) + ((Math.abs(c) + 1) % stripeGap);
-        PIX.rect(ctx, lx, y, 1, 1, CHALK);
+        PIX.rect(fctx, lx, y, 1, 1, CHALK);
       }
-      if (bare && (y & 3) === 0) PIX.rect(ctx, c - 1, y, 2, 1, skShade);
+      if (bare && (y & 3) === 0) PIX.rect(fctx, c - 1, y, 2, 1, skShade);
     }
     /* elbow crease where the sleeve bends onto the table */
     const ec = centerAt(yEl);
-    PIX.rect(ctx, ec - 4, yEl - 1, 8, 1, SH3);
-    PIX.rect(ctx, ec - 3, yEl + 1, 6, 1, SH2);
+    PIX.rect(fctx, ec - 4, yEl - 1, 8, 1, SH3);
+    PIX.rect(fctx, ec - 3, yEl + 1, 6, 1, SH2);
 
-    /* shoulder cap: the coat's own seam riding over the sleeve head */
+    /* the sleeve head, rounded, so the shoulder is a shoulder and not a step */
+    const shc = centerAt(y0);
+    PIX.disc(actx, shc, y0 + 5, 8, INK);
+    PIX.disc(actx, shc, y0 + 5, 7, sleeveC);
+    PIX.disc(actx, shc - sgn, y0 + 3, 4, 'rgba(255,255,255,.08)');
+
+    /* shoulder cap: the coat's own seam riding over the sleeve head. Seated,
+       the rounded head already does that job and the bar just floats. */
     const sc = centerAt(y0);
-    PIX.rect(ctx, sc - 7, y0 - 1, 14, 2, INK);
-    PIX.rect(ctx, sc - 6, y0, 12, 1, base);
-    PIX.rect(ctx, sc - 6, y0 + 1, 12, 1, SH2);
+    if (!seated) {
+      PIX.rect(ctx, sc - 7, y0 - 1, 14, 2, INK);
+      PIX.rect(ctx, sc - 6, y0, 12, 1, base);
+      PIX.rect(ctx, sc - 6, y0 + 1, 12, 1, SH2);
+    }
 
     if (rolled) {                                    // the roll itself
       const rc = centerAt(rollY);
@@ -2754,14 +3002,17 @@ SPR.buildBody = function (d) {
       PIX.rect(ctx, ec + 1, yEl + 1, 3, 2, baseDk);
     }
 
-    /* cuff at the wrist — the scene's felt hands butt straight up against this */
-    const wc = centerAt(y2 - 1);
-    PIX.rect(ctx, wc - 6, y2 - 4, 12, 5, INK);
-    PIX.rect(ctx, wc - 5, y2 - 4, 10, 4, cuffC);
-    PIX.rect(ctx, wc - 5, y2 - 4, 10, 1, 'rgba(255,255,255,.16)');
-    PIX.rect(ctx, wc - 5, y2 - 1, 10, 1, SH1);
-    if (!gown && !rolled) {                          // cuff link
-      PIX.rect(ctx, wc + (sgn < 0 ? -4 : 2), y2 - 3, 2, 2, P.G);
+    /* cuff at the wrist — the scene's felt hands butt straight up against
+       this. Seated, there is no wrist to show: the arm is under the table. */
+    if (!seated) {
+      const wc = centerAt(y2 - 1);
+      PIX.rect(ctx, wc - 6, y2 - 4, 12, 5, INK);
+      PIX.rect(ctx, wc - 5, y2 - 4, 10, 4, cuffC);
+      PIX.rect(ctx, wc - 5, y2 - 4, 10, 1, 'rgba(255,255,255,.16)');
+      PIX.rect(ctx, wc - 5, y2 - 1, 10, 1, SH1);
+      if (!gown && !rolled) {                        // cuff link
+        PIX.rect(ctx, wc + (sgn < 0 ? -4 : 2), y2 - 3, 2, 2, P.G);
+      }
     }
 
     /* sleeve accessories, on the forearm where you can see them */
@@ -2843,8 +3094,9 @@ SPR.frogCustom = function (key, def, expr) {
     () => SPR.buildFrog(def, expr));
 };
 
-SPR.bodyCustom = function (key, def) {
-  return SPR.cached('body_' + key, () => SPR.buildBody(def));
+SPR.bodyCustom = function (key, def, seated) {
+  return SPR.cached('body_' + key + (seated ? '_sit' : ''),
+    () => SPR.buildBody(def, { seated: seated }));
 };
 
 SPR.frogEl = function (id, scale, cls, expr) {

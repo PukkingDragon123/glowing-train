@@ -31,6 +31,18 @@ fs.mkdirSync(SHOTS, { recursive: true });
     console.log('shot:', name);
   };
   const click = (sel) => page.locator(sel).first().click({ timeout: 6000 });
+  /* the aim rail is gone — you click the scene at world coordinates */
+  const world = (wx, wy) => page.evaluate(([x, y]) => {
+    const r = DUEL.cv.getBoundingClientRect();
+    return { x: r.left + (x + DUEL.OX) / DUEL.W * r.width,
+             y: r.top + (y + DUEL.OY) / DUEL.H * r.height };
+  }, [wx, wy]);
+  const tapWorld = async (wx, wy) => {
+    const p2 = await world(wx, wy);
+    await page.mouse.click(p2.x, p2.y);
+  };
+  const aimFoe = () => page.evaluate(() => DUEL.setAim('foe'));
+  const aimSelf = () => page.evaluate(() => DUEL.setAim('self'));
   /* every screen change goes behind the card-rack wipe — let it finish */
   const wiped = () => page.waitForFunction(
     () => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
@@ -52,29 +64,14 @@ fs.mkdirSync(SHOTS, { recursive: true });
       if (s.phase !== 'duel' || s.over) break;
       if (!s.busy && s.turn === 'you') {
         await page.locator('button', { hasText: 'kill foe' }).click();
-        await click('#aim-foe');
-        await click('#btn-fire');
+        await aimFoe();
+        await page.evaluate(() => DUEL.onFire());
       }
       await settle();
       await page.waitForTimeout(250);
     }
-    /* the corpse → haul him out back → the loot panel */
-    await page.waitForSelector('#btn-haul', { timeout: 25000 });
-    await page.waitForTimeout(500);           // let the card finish popping in
-    await shot('05a-haul');
-    const hb = await page.locator('#btn-haul').boundingBox();
-    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
-    await page.mouse.down();
-    await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 15000 })
-      .catch(async () => {                    // fall back to clicking him out back
-        await page.mouse.up();
-        for (let k = 0; k < 4; k++) {
-          await page.locator('#btn-haul').click({ timeout: 4000 }).catch(() => {});
-          await page.waitForTimeout(200);
-        }
-        await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 15000 });
-      });
-    await page.mouse.up();
+    /* the kill blacks out straight into the back room */
+    await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 25000 });
     await page.waitForFunction(() => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
     await page.waitForSelector('#loot-panel', { timeout: 25000 });
     await page.waitForTimeout(300);
@@ -84,7 +81,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
   async function lootAndGo(shotName) {
     /* the pockets are places on the corpse now: the panel rows are the
        fallback, and each one plays the reach-and-dig before it pays out */
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
       const btn = page.locator('.pocket-btn:not(.taken):not(:disabled)');
       if (await btn.count() === 0) break;
@@ -155,11 +152,14 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
     await shot('03-duel-small');
 
-    /* the two aim poses */
-    await click('#aim-self');
-    await page.waitForTimeout(450);
+    /* the two aim poses — driven the way a player does it, by clicking */
+    await tapWorld(180, 52);
+    await page.waitForTimeout(300);
+    await shot('03d-reticle');
+    await tapWorld(180, 190);
+    await page.waitForTimeout(750);
     await shot('03b-aim-self');
-    await click('#aim-foe');
+    await aimFoe();
     await page.waitForTimeout(450);
     await shot('03c-aim-foe');
 
@@ -167,8 +167,8 @@ fs.mkdirSync(SHOTS, { recursive: true });
     for (let p = 0; p < 2; p++) {
       const s = await state();
       if (s.phase !== 'duel' || s.over || s.busy || s.turn !== 'you') break;
-      await click('#aim-foe');
-      await click('#btn-fire');
+      await aimFoe();
+      await page.evaluate(() => DUEL.onFire());
       await settle();
       await page.waitForTimeout(300);
     }

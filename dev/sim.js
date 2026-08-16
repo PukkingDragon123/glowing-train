@@ -92,13 +92,24 @@ function driver() {
 
   function botLoot() {
     let guard = 0;
-    while (G.phase === 'loot' && guard++ < 40) {
+    /* the headless bot has no frame loop, so it spends its own clock: every
+       action costs a couple of seconds, and holding still to let the noise
+       bleed off costs more. Without this the balance numbers are a lie. */
+    const ACT = 2.2, WAIT = 1.6;
+    while (G.phase === 'loot' && guard++ < 80) {
+      E.lootTick(ACT);
+      if (G.loot.done || G.phase !== 'loot') break;
       if (G.loot.pendingCard) {
         // swap over the cheapest-rarity card we hold, if the find is better
         const worst = G.trinkets.reduce((w, t, i) =>
           RARITY_VAL[TRINKETS[t.id].rarity] < RARITY_VAL[TRINKETS[G.trinkets[w].id].rarity] ? i : w, 0);
         const found = RARITY_VAL[TRINKETS[G.loot.pendingCard].rarity];
         E.resolveCard(found > RARITY_VAL[TRINKETS[G.trinkets[worst].id].rarity] ? worst : null);
+        continue;
+      }
+      /* if the room is nearly too loud and there is clock to burn, wait */
+      if (!G.loot.caught && G.loot.noise > 0.66 && G.loot.time > 12 && E.lootLeft() > 0) {
+        E.lootTick(WAIT);
         continue;
       }
       useItemIf('pliers', G.loot.pockets.some(p => p.id === 'tooth' && !p.taken));
@@ -121,6 +132,8 @@ function driver() {
           .map((p, i) => ({ p, i }))
           .filter(x => !x.p.taken)
           .sort((a, b) => (b.p.bulge - a.p.bulge) ||
+            /* when the room is already loud, take the quiet pocket first */
+            (G.loot.noise > 0.45 ? E.noiseOf(a.i) - E.noiseOf(b.i) : 0) ||
             (POCKET_ORDER.indexOf(a.p.id) - POCKET_ORDER.indexOf(b.p.id)));
         if (!cand.length) break;
         E.rifle(cand[0].i);
@@ -129,7 +142,7 @@ function driver() {
       if (E.heatUp()) {
         if (useItemIf('fileFolder', E.lootLeft() >= 2)) continue;
         const reserve = G.blind === 2 ? HEAT_COST(G.ante) : Math.ceil(HEAT_COST(G.ante) / 2);
-        if (E.lootLeft() >= 2 && G.loot.bribes < 2 && G.chips >= E.bribeCost() + reserve) {
+        if (E.lootLeft() >= 1 && G.loot.bribes < 2 && G.chips >= E.bribeCost() + reserve) {
           if (E.bribe()) continue;
         }
       }

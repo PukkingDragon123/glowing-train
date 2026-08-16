@@ -46,9 +46,43 @@ const E = {
   hasItem(id) { return G.items.indexOf(id) >= 0; },
   itemRoom() { return G.items.length < E.maxItems(); },
   giveItem(id) { if (!E.itemRoom()) return false; G.items.push(id); return true; },
-  freePockets() { return LOOT_TUNING.freePockets + (E.has('pockets') ? 1 : 0)
-    + (G.tagPocket ? 1 : 0) + ((G.loot && G.loot.bonusFree) || 0)
-    - (G.duel && G.duel.opp.traits.some(t => TRAITS[t] && TRAITS[t].hot) ? 1 : 0); },
+  /* ============================================================
+     TIME AND NOISE. The clock runs the whole time you are back
+     there; the noise you make bleeds away if you hold still. Cross
+     the noise line and somebody at the door has heard enough.
+     ============================================================ */
+
+  /* ticked by the scene, in real seconds */
+  lootTick(dt) {
+    const L = G.loot;
+    if (!L || L.done || G.phase !== 'loot') return null;
+    if (L.noise > 0) L.noise = Math.max(0, L.noise - LOOT_TUNING.noiseDecay * dt);
+    if (L.caught) return null;                 // the clock stops while they are on you
+    L.time = Math.max(0, L.time - dt);
+    if (L.time <= 0) { L.caught = true; L.overtime = true; return 'time'; }
+    return null;
+  },
+
+  /* how loud going into this pocket would be, right now */
+  noiseOf(i) {
+    const p = G.loot && G.loot.pockets[i];
+    if (!p) return 0;
+    if (p.taken) return LOOT_TUNING.slitNoise;
+    let n = LOOT_TUNING.noise[p.id] !== undefined ? LOOT_TUNING.noise[p.id] : 0.24;
+    if (E.has('glove')) n *= 0.75;             // the kid glove muffles it
+    return n;
+  },
+
+  addNoise(n) {
+    const L = G.loot;
+    if (!L) return false;
+    L.noise = Math.min(1.4, L.noise + n);
+    if (L.noise >= 1 && !L.caught) { L.caught = true; return true; }
+    return false;
+  },
+
+  /* kept for the notebook copy that still talks about free pockets */
+  freePockets() { return 3 + (E.has('pockets') ? 1 : 0) + (G.tagPocket ? 1 : 0); },
 
   /* damage outside the shell cycle (knuckles, shiv): flat, no gun/trinket bonuses */
   freeHit(dmg) {
@@ -511,7 +545,7 @@ const E = {
     if (G.phase === 'loot') {
       if (!G.loot || G.loot.done || G.loot.pendingCard || G.loot.pendingItem) return false;
       if (!ITEM_PHASE_OK(id, 'loot')) return false;
-      if (id === 'fileFolder') return G.loot.sinceBribe > 0 && E.lootLeft() > 0;
+      if (id === 'fileFolder') return (G.loot.caught || G.loot.noise > 0.35) && E.lootLeft() > 0;
       if (id === 'pliers') return G.loot.pockets.some(p => p.id === 'tooth' && !p.taken);
       return true;
     }
@@ -560,7 +594,10 @@ const E = {
         d.known[d.ptr] = false; break;
       }
       case 'brassKnuckle': r.dmg = E.freeHit(1); break;
-      case 'fileFolder': G.loot.sinceBribe = 0; r.cleared = true; break;
+      case 'fileFolder':
+        G.loot.caught = false; G.loot.noise = 0; G.loot.overtime = false;
+        if (G.loot.time < 12) G.loot.time = 12;
+        r.cleared = true; break;
       /* the shiv is not spent when you take it out — it is spent when you
          put it into a lining, so arming it is the whole of the use here */
       case 'shiv': G.loot.tool = 'shiv'; r.armed = true; break;
@@ -691,28 +728,29 @@ const E = {
     /* something square shows through the cloth */
     pockets.forEach(p => { p.bulge = !!(p.card || p.gun || p.item); });
 
-    G.loot = { pockets, sinceBribe: 0, bribes: 0, pendingCard: null, pendingItem: null,
-      done: false, tool: null, bonusFree: 0, dragged: false };
+    G.loot = { pockets, bribes: 0, pendingCard: null, pendingItem: null,
+      done: false, tool: null, bonusFree: 0, dragged: false,
+      noise: 0, caught: false, busted: false,
+      time: Math.max(18, LOOT_TUNING.seconds + LOOT_TUNING.secondsPerAnte * (G.ante - 1)
+        + (E.has('pockets') ? 8 : 0) + (G.tagPocket ? 8 : 0)),
+      maxTime: 0 };
+    G.loot.maxTime = G.loot.time;
     G.phase = 'loot';
     return G.loot;
   },
 
   lootLeft() { return G.loot.pockets.filter(p => !p.taken).length; },
   canRifle() {
-    return G.phase === 'loot' && !G.loot.done && !G.loot.pendingCard &&
-      G.loot.sinceBribe < E.freePockets();
+    return G.phase === 'loot' && !G.loot.done && !G.loot.pendingCard && !G.loot.caught;
   },
-  heatUp() { // the badges are at the door
-    return G.phase === 'loot' && !G.loot.done &&
-      G.loot.sinceBribe >= E.freePockets() && E.lootLeft() > 0;
-  },
+  heatUp() { return G.phase === 'loot' && !G.loot.done && !!G.loot.caught; },
 
   /* can this pocket be gone into right now, and with what */
   canSearch(i) {
-    const p = G.loot && G.loot.pockets[i];
-    if (!p || G.phase !== 'loot' || G.loot.done || G.loot.pendingCard) return false;
-    if (p.taken) return G.loot.tool === 'shiv' && !p.slit;   // the lining is still there
-    return G.loot.sinceBribe < E.freePockets();
+    const L = G.loot, p = L && L.pockets[i];
+    if (!p || G.phase !== 'loot' || L.done || L.pendingCard || L.caught) return false;
+    if (p.taken) return L.tool === 'shiv' && !p.slit;        // the lining is still there
+    return true;
   },
 
   rifle(i) {
@@ -720,18 +758,21 @@ const E = {
     if (!p || !E.canSearch(i)) return null;
     /* SLITTING THE LINING: a pocket you already emptied, opened up with the
        shiv. Small take, and the badges never see your hands do it. */
+    const loud = E.noiseOf(i);
     if (p.taken) {
       G.loot.tool = null;
       p.slit = true;
       const found = 1 + Math.ceil(p.chips * 0.5);
       G.chips += found;
       META.bump('looted');
-      return { id: p.id, label: p.label, chips: found, slit: true, taken: true };
+      const heard = E.addNoise(loud);
+      return { id: p.id, label: p.label, chips: found, slit: true, taken: true, noise: loud, heard };
     }
     p.taken = true;
-    G.loot.sinceBribe++;
     G.chips += p.chips;
     META.bump('looted');
+    p.noise = loud;
+    p.heard = E.addNoise(loud);
     if (p.gun) { G.gunIdx++; META.ownGun(GUNS[G.gunIdx].id); META.save(); }
     if (p.card) {
       if (G.trinkets.length < MAX_TRINKETS) G.trinkets.push({ id: p.card, used: {} });
@@ -769,10 +810,13 @@ const E = {
 
   bribe() {
     const c = E.bribeCost();
-    if (!G.loot || G.loot.done || G.chips < c || E.lootLeft() === 0) return false;
+    if (!G.loot || G.loot.done || G.chips < c || !G.loot.caught) return false;
     G.chips -= c;
     G.loot.bribes++;
-    G.loot.sinceBribe = 0;
+    G.loot.caught = false;
+    G.loot.noise = LOOT_TUNING.noiseGrace;
+    /* they cost you the rest of the clock too if they came for the time */
+    if (G.loot.overtime) { G.loot.overtime = false; G.loot.time = Math.max(10, G.loot.maxTime * 0.4); }
     META.bump('bribesPaid');
     return true;
   },

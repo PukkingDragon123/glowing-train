@@ -8,56 +8,6 @@
 
 const LOOT = {
 
-  /* ============================================================
-     Before anything else: he is lying in the middle of the room
-     with the lamp on him. Get him out back first.
-     ============================================================ */
-  haulPrompt() {
-    const o = document.getElementById('duel-overlay');
-    if (!o) return;
-    o.className = 'haul-in';
-    o.innerHTML = '';
-    const card = U.el('div', 'haul-card pop');
-    card.appendChild(UI.txt('HE IS STILL ON THE TABLE', { scale: 3, color: PIX.PAL.q }));
-    card.appendChild(UI.txt('DRAG HIM OUT BACK', { scale: 5, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    card.appendChild(UI.txt('grab his collar and pull', { scale: 2, color: PIX.PAL.w }));
-    const b = U.el('button', 'pixbtn gold primary');
-    b.id = 'btn-haul';
-    b.appendChild(UI.txt('HAUL HIM', { scale: 3, shadow: null, color: PIX.PAL.K }));
-    const kh = U.el('span', 'key-hint'); kh.textContent = 'HOLD';
-    b.appendChild(kh);
-    /* holding the button hauls too — one thumb, or a mouse that will not drag */
-    let iv = 0;
-    const start = () => {
-      if (iv) return;
-      DUEL.haul = DUEL.haul || { on: false, prog: 0 };
-      SFX.jamSfx();
-      iv = setInterval(() => {
-        if (G.phase !== 'loot' || !DUEL.haul || DUEL.room === 'back') { stop(); return; }
-        DUEL.haul.on = true;
-        DUEL.jiggle = 1.4;
-        DUEL.haul.prog = Math.min(1, DUEL.haul.prog + 0.045);
-        if (DUEL.haul.prog >= 1) { stop(); DUEL.haulDone(); }
-      }, 55);
-    };
-    const stop = () => { clearInterval(iv); iv = 0; if (DUEL.haul) DUEL.haul.on = false; };
-    b.addEventListener('pointerdown', start);
-    b.addEventListener('pointerup', stop);
-    b.addEventListener('pointerleave', stop);
-    b.addEventListener('pointercancel', stop);
-    /* and a plain click still moves him, so no input method is locked out */
-    b.onclick = () => {
-      if (DUEL.room === 'back' || DUEL.busy) return;
-      DUEL.haul = DUEL.haul || { on: false, prog: 0 };
-      DUEL.haul.prog = Math.min(1, DUEL.haul.prog + 0.34);
-      DUEL.jiggle = 2;
-      SFX.jamSfx();
-      if (DUEL.haul.prog >= 1) { stop(); DUEL.haulDone(); }
-    };
-    card.appendChild(b);
-    o.appendChild(card);
-  },
-
   /* the loot panel rides the duel scene's overlay */
   overlay() {
     const o = document.getElementById('duel-overlay');
@@ -76,16 +26,21 @@ const LOOT = {
     head.appendChild(who);
     panel.appendChild(head);
 
-    /* the badges bar */
-    const heatWrap = U.el('div', 'heat-wrap has-tip');
-    heatWrap.dataset.tipKey = 'heat';
-    const heatLab = U.el('span'); heatLab.id = 'heat-label';
-    heatWrap.appendChild(heatLab);
-    const bar = U.el('div', 'heat-bar');
-    const fill = U.el('div', 'heat-fill'); fill.id = 'heat-fill';
-    bar.appendChild(fill);
-    heatWrap.appendChild(bar);
-    panel.appendChild(heatWrap);
+    /* the two meters: how long you have, and how loud you are being */
+    const meters = U.el('div', 'meters');
+    ['time', 'noise'].forEach(kind => {
+      const w = U.el('div', 'meter has-tip m-' + kind);
+      w.dataset.tipKey = kind === 'time' ? 'clock' : 'noise';
+      const lab = U.el('span', 'm-lab'); lab.id = 'm-lab-' + kind;
+      w.appendChild(lab);
+      const bar = U.el('div', 'm-bar');
+      const fill = U.el('div', 'm-fill'); fill.id = 'm-fill-' + kind;
+      bar.appendChild(fill);
+      if (kind === 'noise') { const line = U.el('i', 'm-line'); bar.appendChild(line); }
+      w.appendChild(bar);
+      meters.appendChild(w);
+    });
+    panel.appendChild(meters);
 
     /* the tools you can put into him, and which one is in your hand */
     const tools = U.el('div'); tools.id = 'loot-tools';
@@ -117,10 +72,44 @@ const LOOT = {
     LOOT.sync();
   },
 
+  /* The two meters move every frame; the panel behind them does NOT.
+     Rebuilding the pocket list ten times a second made its buttons
+     jitter out from under the pointer. */
+  tick() {
+    if (G.phase !== 'loot' || !G.loot) return;
+    const L = G.loot;
+    const heat = E.heatUp();
+    const tf = document.getElementById('m-fill-time');
+    const nf = document.getElementById('m-fill-noise');
+    const tl = document.getElementById('m-lab-time');
+    const nl = document.getElementById('m-lab-noise');
+    if (tf) {
+      const t = L.maxTime ? L.time / L.maxTime : 0;
+      tf.style.width = (t * 100) + '%';
+      tf.classList.toggle('low', t < 0.34);
+      tl.innerHTML = '';
+      tl.appendChild(UI.txt(Math.ceil(L.time) + 'S', {
+        scale: 3, color: t < 0.34 ? PIX.PAL.R : PIX.PAL.W, outline: PIX.PAL.K }));
+    }
+    if (nf) {
+      const n = Math.min(1, L.noise);
+      nf.style.width = (n * 100) + '%';
+      nf.classList.toggle('loud', n > 0.68);
+      nl.innerHTML = '';
+      nl.appendChild(UI.txt(heat ? 'HEARD' : n > 0.68 ? 'TOO LOUD' : n > 0.34 ? 'NOISY' : 'QUIET', {
+        scale: 2, color: heat || n > 0.68 ? PIX.PAL.R : n > 0.34 ? PIX.PAL.O : PIX.PAL.q }));
+    }
+    document.body.classList.toggle('heard', heat);
+    document.body.classList.toggle('loud', !heat && L.noise > 0.68);
+    /* the bribe button and the search rows only care about caught/not */
+    if (LOOT._wasCaught !== heat) { LOOT._wasCaught = heat; LOOT.sync(); }
+  },
+
   sync() {
     if (G.phase !== 'loot' || !G.loot) return;
     UI.syncChips();
     const L = G.loot;
+    const heat = E.heatUp();
 
     /* pockets */
     const list = document.getElementById('pocket-list');
@@ -182,22 +171,13 @@ const LOOT = {
     const hint = document.querySelector('.loot-hint');
     if (hint) {
       hint.innerHTML = '';
-      hint.appendChild(UI.txt(L.tool === 'shiv' ? 'SHIV OUT — PICK AN EMPTY POCKET'
-        : E.canRifle() ? 'TAP HIM TO SEARCH' : 'THE BADGES ARE COUNTING',
-        { scale: 2, color: L.tool ? PIX.PAL.N : E.canRifle() ? PIX.PAL.q : PIX.PAL.R }));
+      hint.appendChild(UI.txt(heat ? 'THEY HEARD YOU — PAY OR WALK'
+        : L.tool === 'shiv' ? 'SHIV OUT — PICK AN EMPTY POCKET'
+          : 'TAP HIM TO SEARCH',
+        { scale: 2, color: heat ? PIX.PAL.R : L.tool ? PIX.PAL.N : PIX.PAL.q }));
     }
 
-    /* heat */
-    const heat = E.heatUp();
-    const fill = document.getElementById('heat-fill');
-    const lab = document.getElementById('heat-label');
-    const pct = Math.min(1, L.sinceBribe / E.freePockets());
-    fill.style.width = (pct * 100) + '%';
-    fill.classList.toggle('hot', heat);
-    lab.innerHTML = '';
-    lab.appendChild(UI.txt(heat ? 'THE BADGES ARE HERE' : 'THE BADGES', {
-      scale: 2, color: heat ? PIX.PAL.R : PIX.PAL.q,
-    }));
+    LOOT.tick();
 
     /* bribe button */
     const bribe = document.getElementById('btn-bribe');
@@ -210,10 +190,10 @@ const LOOT = {
     if (cost > 0) bribe.appendChild(UI.icon('ic_chip', 3));
     const kh = U.el('span', 'key-hint'); kh.textContent = 'R';
     bribe.appendChild(kh);
-    const canBribe = heat && G.chips >= cost && E.lootLeft() > 0;
+    const canBribe = heat && G.chips >= cost;
     bribe.disabled = !canBribe;
     bribe.classList.toggle('pulse-red', heat && canBribe);
-    if (heat && !COPS.active) { COPS.arrive(); LOOT.callout(); }
+    if (heat && !COPS.active) { COPS.arrive(); LOOT.callout('THEY HEARD THAT', 'pay them or walk out now'); }
 
     /* card swap flow */
     const swap = document.getElementById('card-swap');
@@ -300,8 +280,21 @@ const LOOT = {
     if (G.chips > before) UI.chipTick(G.chips - before);
     if (p.gun) UI.stampSmall('HIS IRON IS YOURS — ' + E.gun().name);
     if (p.card) SFX.jackpot();
-    if (p.lint) UI.stampSmall('NOTHING BUT LINT');
+    /* the sound of it: a ring on the meter, and the room going quiet */
+    const loud = p.noise || 0;
+    if (loud > 0.3) { FX.screen.shake(Math.round(loud * 12)); SFX.jamSfx(); }
+    if (p.heard) LOOT.heard();
     LOOT.sync();
+  },
+
+  /* somebody at the door has heard enough */
+  heard() {
+    SFX.backfire();
+    FX.screen.shake(16);
+    FX.screen.vignette(PIX.PAL.d, 0.9, 0.02);
+    UI.shake();
+    if (!COPS.active) COPS.arrive();
+    LOOT.callout('THEY HEARD THAT', 'pay them or walk out now');
   },
 
   /* kept for anything that wants the old one-call behaviour */

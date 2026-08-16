@@ -435,11 +435,8 @@ const UI = {
     const cv = U.el('canvas'); cv.id = 'scene'; cv.className = 'pix';
     cv.width = DUEL.W; cv.height = DUEL.H;
     cv.onclick = (e) => DUEL.sceneClick(e);
-    cv.onpointerdown = (e) => DUEL.sceneDown(e);
     cv.onpointermove = (e) => DUEL.sceneMove(e);
-    cv.onpointerup = () => DUEL.sceneUp();
-    cv.onpointercancel = () => DUEL.sceneUp();
-    cv.onpointerleave = () => { DUEL.sceneUp(); DUEL.hoverSpot = -1; };
+    cv.onpointerleave = () => { DUEL.hoverSpot = -1; DUEL.hoverFace = false; };
     holder.appendChild(cv);
 
     const stampB = U.el('div'); stampB.id = 'stamp-big'; holder.appendChild(stampB);
@@ -455,28 +452,14 @@ const UI = {
     const bottom = U.el('div'); bottom.id = 'duel-bottom';
     const tr = U.el('div'); tr.id = 'trinket-row'; bottom.appendChild(tr);
     const belt = U.el('div', 'item-belt'); belt.id = 'item-belt'; bottom.appendChild(belt);
+    /* No aim rail. You click the thing you mean to shoot: his face to put
+       the sights on him, your own end of the table to turn it round. The
+       keys still work for anyone who wants them. */
     const controls = U.el('div'); controls.id = 'aim-controls';
-
-    const mkAim = (label, key, aim) => {
-      const b = U.el('button', 'pixbtn aim-btn');
-      b.id = 'aim-' + aim;
-      b.appendChild(UI.txt(label, { scale: 3, shadow: null }));
-      const k = U.el('span', 'key-hint'); k.textContent = key;
-      b.appendChild(k);
-      b.onclick = () => DUEL.setAim(aim);
-      return b;
-    };
-    controls.appendChild(mkAim('AT YOU', 'A', 'self'));
-
-    const fire = U.el('button', 'pixbtn fire-btn');
+    const fire = U.el('button', 'pixbtn fire-btn hidden');
     fire.id = 'btn-fire';
-    fire.appendChild(UI.txt('FIRE', { scale: 3, shadow: null, color: PIX.PAL.W }));
-    const fk = U.el('span', 'key-hint'); fk.textContent = 'SPACE';
-    fire.appendChild(fk);
     fire.onclick = () => DUEL.onFire();
     controls.appendChild(fire);
-
-    controls.appendChild(mkAim('AT HIM', 'D', 'foe'));
     bottom.appendChild(controls);
 
     const gunP = U.el('div'); gunP.id = 'gun-panel'; bottom.appendChild(gunP);
@@ -584,20 +567,17 @@ const UI = {
       hint.className = show ? '' : 'hidden';
       if (show) {
         hint.textContent = d.turn !== 'you'
-          ? 'his pull'
+          ? 'HIS PULL'
           : DUEL.aim === 'self'
-            ? 'AT YOURSELF — a blank keeps your turn, a live costs a heart'
-            : 'AT HIM — a live shell hurts him, a blank wastes your turn';
+            ? 'CLICK YOUR OWN HEAD TO PULL  ·  ANYWHERE ELSE TO STAND DOWN'
+            : DUEL.aim === 'foe'
+              ? 'CLICK HIS FACE AGAIN TO PULL  ·  ANYWHERE ELSE TO STAND DOWN'
+              : 'CLICK HIS FACE TO AIM  ·  YOUR END OF THE TABLE TO TURN IT ROUND';
       }
     }
 
-    /* aim + fire buttons */
-    const aimS = document.getElementById('aim-self'), aimF = document.getElementById('aim-foe');
     const fire = document.getElementById('btn-fire');
-    const canAct = !DUEL.busy && !d.over && d.turn === 'you';
-    if (aimS) { aimS.classList.toggle('sel', DUEL.aim === 'self'); aimS.disabled = !canAct; }
-    if (aimF) { aimF.classList.toggle('sel', DUEL.aim === 'foe'); aimF.disabled = !canAct; }
-    if (fire) fire.disabled = !canAct;
+    if (fire) fire.disabled = !(!DUEL.busy && !d.over && d.turn === 'you');
 
     UI.syncTrinkets();
     UI.syncItems();
