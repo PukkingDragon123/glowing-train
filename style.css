@@ -2072,39 +2072,23 @@ body.heard #siren-wash { opacity: 1; }
 #tutor-root {
   position: fixed; inset: 0; z-index: 158;
   display: flex; align-items: flex-end; justify-content: center;
-  padding: 0 12px 82px;
+  padding: 0 12px 78px;
   pointer-events: auto;
 }
 #tutor-root.hidden { display: none; }
 #tutor-root.big { align-items: center; padding-bottom: 0; }
+/* a line he is not waiting on must not eat your clicks */
+#tutor-root.pass { pointer-events: none; align-items: flex-start; padding: 92px 12px 0; }
 
+/* The plate itself is one drawn canvas — this only places it and slides it
+   in. No box, no gradient, no radius: those were the last things in the
+   game that were not pixels. */
 .tut-plate {
-  display: grid; grid-template-columns: auto 1fr; gap: 12px 14px;
-  align-items: center;
-  max-width: min(94vw, 720px);
-  padding: 12px 16px 10px;
-  background: linear-gradient(180deg, rgba(12,22,18,.97), rgba(6,14,11,.97));
-  border: var(--bd) solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 8px 0 rgba(0,0,0,.5), inset 0 0 0 3px rgba(0,0,0,.35);
-  transform: translateY(18px); opacity: 0;
-  transition: transform .16s steps(4), opacity .16s steps(4);
+  display: block; max-width: 96vw;
+  transform: translateY(14px); opacity: 0;
+  transition: transform .14s steps(3), opacity .14s steps(3);
   cursor: pointer;
 }
 .tut-plate.in { transform: translateY(0); opacity: 1; }
-.tut-plate.out { transform: translateY(10px); opacity: 0; }
-#tutor-root.big .tut-plate { max-width: min(94vw, 820px); padding: 18px 22px 14px; }
-
-.tut-face {
-  display: flex; align-items: flex-end; justify-content: center;
-  padding: 4px 8px 0;
-  border-right: 3px solid rgba(0,0,0,.4);
-  align-self: stretch;
-}
-.tut-face canvas { image-rendering: pixelated; }
-.tut-body { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-/* a canvas in a stretch container gets its bitmap scaled to the column —
-   the handler's name came out four times the size it was drawn at */
-.tut-body canvas, .tut-face canvas, .tut-body .txt-lines canvas { width: auto; height: auto; flex: 0 0 auto; }
-.tut-body .txt-lines { align-items: flex-start; }
-.tut-go { grid-column: 2; justify-self: end; opacity: .8; animation: breathe 1.4s steps(2) infinite; }
+.tut-plate.out { transform: translateY(8px); opacity: 0; }
+.tut-plate canvas { display: block; image-rendering: pixelated; }

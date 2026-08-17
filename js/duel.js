@@ -1565,7 +1565,7 @@ const DUEL = {
 
     /* the room goes out. There is nothing to look at now but this. */
     x.save();
-    x.globalAlpha = 0.88 * t;
+    x.globalAlpha = 0.9 * t;
     x.fillStyle = '#05070c';
     x.fillRect(0, 0, W, H);
     x.globalAlpha = 1;
@@ -1573,148 +1573,155 @@ const DUEL = {
 
     x.save();
     x.translate(Math.round(DUEL.OX), Math.round(DUEL.OY));
-    /* it swings in from the right rather than cutting */
-    x.translate(Math.round((1 - t) * 130), 0);
-    x.globalAlpha = Math.min(1, t * 1.5);
+    /* the camera crosses the table rather than cutting: it swings in from
+       HIS side, which is where it now is */
+    x.translate(Math.round((1 - t) * -120), Math.round((1 - t) * 26));
+    x.globalAlpha = Math.min(1, t * 1.6);
 
-    /* the lamp is still burning out there over the felt, behind you */
+    /* ---- the lamp, now above and behind the lens ---- */
     x.save();
-    x.globalAlpha = 0.13 * t * DUEL.lamp;
+    x.globalAlpha = 0.16 * t * DUEL.lamp;
     x.fillStyle = '#ffd75e';
     x.beginPath();
-    x.moveTo(46, -DUEL.OY); x.lineTo(-50, FY - 6); x.lineTo(140, FY - 6);
+    x.moveTo(180, -DUEL.OY - 10); x.lineTo(64, FY + 6); x.lineTo(296, FY + 6);
     x.closePath(); x.fill();
     x.restore();
 
-    /* ---- him, small, far side of the table, watching you do it ---- */
-    if (!DUEL.opp.gone && G.duel) {
-      const comp = DUEL.composite(DUEL.exprName);
-      const k = 0.44;
-      x.save();
-      x.globalAlpha = 0.5 * t;
-      SPR.ellipse(x, 44, FY - 28, 42, 8, '#000');
-      x.drawImage(comp.cv, 44 - comp.cv.width * k / 2, FY - 30 - comp.cv.height * k,
-        comp.cv.width * k, comp.cv.height * k);
-      x.restore();
-    }
-
     /* ============================================================
-       You, and the iron, in one local frame: the head sprite is
-       authored at a fixed size, so the composition is scaled here
-       and nowhere else. Origin is the middle of your skull.
+       YOU, FROM WHERE HE IS SITTING.
+       Same head rig every frog in this game wears — because that is
+       what you look like to somebody across a table — with the iron
+       against your own temple and his shoulder in the way.
        ============================================================ */
-    const K = 0.82;
-    x.save();
-    x.translate(178, FY - 60);
-    x.scale(K, K);
-    /* your hand is not steady and neither are you */
-    const tr = DUEL.busy ? 0 : Math.round(Math.sin(DUEL.t / 2.7) * 1.2);
+    const comp = DUEL.selfComposite();
+    const K = 1.05;
+    const BOT = FY - 16;                              // he sits behind the table
+    const CH = Math.round(comp.cv.height * K), CW = Math.round(comp.cv.width * K);
+    const TOPY = BOT - CH;
+    const hy = TOPY + Math.round(comp.headH * K * 0.55);   // the middle of your face
 
-    /* ---- your shoulders, filling the bottom of the frame ---- */
-    SPR.rrect(x, -170, 52, 360, 220, 40, INK);
-    SPR.rrect(x, -168, 54, 356, 218, 38, P.T);
-    PIX.rect(x, -150, 54, 320, 4, P.t);                       // light along the shoulder
-    for (let i = 0; i < 11; i++) {
-      PIX.rect(x, -140 + i * 32, 60, 1, 200, 'rgba(100,109,132,.26)');
-    }
-    /* the neck, and the collar standing away from it */
-    SPR.rrect(x, -24, 8, 52, 48, 12, INK);
-    SPR.rrect(x, -22, 10, 48, 46, 11, dark);
-    PIX.rect(x, 8, 10, 18, 46, 'rgba(0,0,0,.30)');
-    /* the collar: a band round the throat with its point turned forward,
-       and the knot of your tie sitting in the notch of it */
-    SPR.rrect(x, -44, 28, 96, 26, 9, INK);
-    SPR.rrect(x, -42, 30, 92, 24, 8, P.W);
-    PIX.rect(x, -42, 46, 92, 8, 'rgba(0,0,0,.24)');
-    PIX.rect(x, -42, 30, 92, 2, 'rgba(255,255,255,.32)');
-    for (let i = 0; i < 9; i++) {                            // the point, stepped forward
-      PIX.rect(x, -44 - i * 2, 38 + i * 2, 8, 4, INK);
-      PIX.rect(x, -43 - i * 2, 38 + i * 2, 6, 3, i > 5 ? P.q : P.W);
-    }
-    SPR.rrect(x, -20, 44, 40, 28, 8, INK);                   // the knot
-    SPR.rrect(x, -18, 46, 36, 26, 7, P.d);
-    PIX.rect(x, -18, 46, 36, 3, 'rgba(255,255,255,.14)');
-    SPR.rrect(x, -16, 68, 34, 70, 6, INK);                   // and the tie, going down
-    SPR.rrect(x, -14, 70, 30, 68, 5, P.d);
-    PIX.rect(x, -14, 70, 5, 68, 'rgba(255,255,255,.08)');
-    PIX.rect(x, -14, 118, 30, 20, 'rgba(0,0,0,.45)');
-    /* the lapel, running down out of frame */
-    SPR.rrect(x, -150, 66, 78, 180, 16, INK);
-    SPR.rrect(x, -148, 68, 74, 178, 15, P.k);
-    PIX.rect(x, -148, 68, 74, 3, 'rgba(255,255,255,.10)');
+    /* the chair back behind you: two uprights and a rail, and the wall
+       behind THAT going dark. No slats — it read as a fence. */
+    [120, 236].forEach(ux => {
+      PIX.rect(x, ux, TOPY + 30, 5, FY - 28 - (TOPY + 30), INK);
+      PIX.rect(x, ux + 1, TOPY + 31, 3, FY - 30 - (TOPY + 30), '#241f31');
+    });
+    PIX.rect(x, 118, TOPY + 26, 124, 6, INK);
+    PIX.rect(x, 119, TOPY + 27, 122, 4, '#241f31');
+    PIX.rect(x, 119, TOPY + 27, 122, 1, '#332c46');
 
-    /* ---- your head, in profile, looking back across the table ----
-       baked once and laid down twice: a rim of lamplight along the edge
-       facing the table, then the head itself over the top of it */
-    const pv = SPR.profileCv(d, DUEL.blink > 0);
-    const rim = SPR.silhouette(SPR.defKey(d) + (DUEL.blink > 0 ? ':b' : ''), pv, '#6c7f6a');
-    x.drawImage(rim, -SPR.PROF_OX - 3, -SPR.PROF_OY - 3);
-    x.drawImage(pv, -SPR.PROF_OX, -SPR.PROF_OY);
+    /* the tremor: your hand is not steady and neither are you */
+    const tr = DUEL.busy ? 0 : Math.round(Math.sin(DUEL.t / 2.6) * 1.1);
+    const bob = Math.round(Math.sin(DUEL.t / 38) * 1.2);
+
+    x.drawImage(comp.cv, Math.round(180 - CW / 2), TOPY + bob, CW, CH);
 
     /* ---- what the night has put on your own face ---- */
     if (DUEL.myGore > 0) {
       const gr = U.mulberry32(1337);
-      for (let i = 0; i < Math.min(9, DUEL.myGore * 3); i++) {
-        const bx = Math.round(-40 + gr() * 60), by = Math.round(-18 + gr() * 26);
-        const rr = 1 + gr() * 2.4;
+      for (let i = 0; i < Math.min(10, DUEL.myGore * 3); i++) {
+        const bx = Math.round(152 + gr() * 58), by = Math.round(hy - 20 + gr() * 34);
+        const rr = 1 + gr() * 2.2;
         PIX.disc(x, bx, by, rr + 0.6, INK);
         PIX.disc(x, bx, by, rr, P.D);
         const run = 3 + gr() * 12;
-        PIX.rect(x, bx - 1, by, 3, run + 1, INK);
+        PIX.rect(x, bx - 1, by, 2, run + 1, INK);
         PIX.rect(x, bx, by, 1, run, P.d);
       }
-      /* and a split lip that has not stopped */
-      PIX.rect(x, -34, 12, 12, 3, P.D);
-      PIX.rect(x, -30, 15, 2, 9, P.d);
     }
 
     /* ---- the iron, its muzzle in your temple ---- */
     const gm = DUEL.ironArt();
     const mz = gm.muzzle || [gm.width, gm.height / 2];
     const gp = gm.grip || [10, 13];
-    const sc = 1.3, rot = 0.2;
-    const MX = 30, MY = -18 + tr;                    // where the muzzle presses in
-    /* the press: skin dented and dark under the crown of the barrel */
-    SPR.ellipse(x, MX + 4, MY + 2, 11, 8, dark);
-    SPR.ellipse(x, MX + 6, MY + 3, 7, 5, INK);
+    /* Mirror-image logic: from HIS chair your right hand is on the LEFT of
+       frame, so the iron comes in from the left and the muzzle presses the
+       temple on that side. Unflipped, the body extends away from the muzzle
+       and never crosses your face. */
+    const sc = 1.0, rot = -0.16;
+    const MX = 152, MY = hy - 2 + tr + bob;
+    /* the press: a dent and a shadow where steel meets him */
+    PIX.rect(x, MX, MY - 4, 8, 9, dark);
+    PIX.rect(x, MX + 1, MY - 2, 6, 5, P.E);
     x.save();
     x.translate(MX, MY);
     x.rotate(rot);
-    x.scale(-sc, sc);                                // the sprite points right; this one does not
-    x.drawImage(gm, -mz[0], -mz[1]);
+    x.drawImage(gm, -mz[0] * sc, -mz[1] * sc, gm.width * sc, gm.height * sc);
     x.restore();
-    /* where your fist closes, worked out from the iron's own grip anchor */
-    const lx = -(gp[0] - mz[0]) * sc, ly = (gp[1] - mz[1]) * sc;
+    /* your fist on the grip, worked out from the iron's own anchor */
+    const lx = (gp[0] - mz[0]) * sc, ly = (gp[1] - mz[1]) * sc;
     const cs = Math.cos(rot), sn = Math.sin(rot);
     const GX = Math.round(MX + lx * cs - ly * sn), GY = Math.round(MY + lx * sn + ly * cs);
-    /* the hand is turned so the digits wrap ACROSS the grip instead of
-       hanging off the bottom of it — a fist, not a hand near a gun */
-    const wx = GX + 26, wy = GY + 30;
-    SPR.povSleeve(x, 300, 250, wx, wy, 66, 34, P.T,
-      'rgba(0,0,0,.42)', P.t, 'rgba(100,109,132,.34)');
+    SPR.povSleeve(x, 78, FY + 6, GX - 12, GY + 12, 26, 18, P.T,
+      'rgba(0,0,0,.45)', P.t, 'rgba(100,109,132,.3)');
     x.save();
-    x.translate(wx - 6, wy - 8);
-    x.rotate(rot + 0.5);
-    SPR.povCuff(x, 0, 0, d, 1);
-    x.restore();
-    x.save();
-    x.translate(GX + 5, GY + 3);
-    x.rotate(rot);
-    x.scale(0.78, 0.78);
+    x.translate(GX + 2, GY + 2);
+    x.rotate(rot - 0.1);
+    x.scale(-0.62, 0.62);          // his angle mirrors your hand too
     SPR.frogFist(x, 0, 0, d, { wet: true });
     x.restore();
-    x.restore();
 
-    /* the sight picture, on your own temple, once the swing has landed */
-    if (t > 0.55 && !DUEL.busy) DUEL.drawReticle(x, 178 + 10, FY - 60 - 18, true);
+    /* ---- the table between you, from the other side ---- */
+    PIX.rect(x, -40, FY - 16, 480, 3, INK);
+    for (let i = 0; i < 12; i++) {
+      PIX.rect(x, -40, FY - 13 + i, 480, 1,
+        i < 3 ? '#2e7d5b' : i < 7 ? '#1c5540' : '#103527');
+    }
+    PIX.rect(x, -40, FY - 1, 480, 2, P.u);
+    PIX.rect(x, -40, FY + 1, 480, 2, P.U);
+
+    /* ---- and HIS shoulder, in the way, because this is his angle ---- */
+    if (!DUEL.opp.gone && G.duel) {
+      const oc = G.duel.opp.def;
+      const oS = P[oc.suit] || P.T;
+      x.save();
+      x.globalAlpha = Math.min(1, t * 1.6);
+      /* the back of his head, bottom-left, out of focus and very dark */
+      SPR.rrect(x, -30, FY - 8, 150, 120, 34, INK);
+      SPR.rrect(x, -28, FY - 6, 146, 118, 32, 'rgba(10,9,14,.96)');
+      PIX.disc(x, 34, FY - 4, 30, INK);
+      PIX.disc(x, 34, FY - 4, 28, 'rgba(14,12,20,.96)');
+      PIX.rect(x, -20, FY + 2, 130, 3, 'rgba(120,130,150,.10)');
+      void oS;
+      x.restore();
+    }
+
+    /* the sight picture, on your own head, once the swing has landed */
+    if (t > 0.55 && !DUEL.busy) DUEL.drawReticle(x, 180, hy, true);
     x.globalAlpha = 1;
     x.restore();
   },
 
+  /* your own frog, head and shoulders, in the same rig everybody else
+     wears — cached, and rebuilt only when your face changes */
+  selfComposite() {
+    const key = 'me:' + (DUEL.myGore > 0 ? 'hurt' : 'ok') + ':' + (DUEL.blink > 0 ? 'b' : '');
+    if (DUEL._meCache && DUEL._meCache.key === key) return DUEL._meCache;
+    const d = DUEL.myDef();
+    const expr = DUEL.blink > 0 ? 'blink' : DUEL.myGore > 0 ? 'pain' : 'neutral';
+    const head = SPR.frogCustom('me' + (DUEL.myGore > 0 ? 'h' : ''), d, expr);
+    const body = SPR.bodyCustom('me', d, true);
+    const hs = 1.4, NECK = 8;
+    const hw = Math.round(head.width * hs), hh = Math.round(head.height * hs);
+    const cw = Math.max(body.width, hw) + 2;
+    const ch = hh + body.height - NECK;
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.drawImage(body, Math.round((cw - body.width) / 2), ch - body.height);
+    c.drawImage(head, Math.round((cw - hw) / 2), 0, hw, hh);
+    DUEL._meCache = { key, cv, headH: hh };
+    return DUEL._meCache;
+  },
+
   /* the box your own head fills in the self view, in world coords */
   selfHead() {
-    const hx = 236, hy = DUEL.FY - 62;
-    return { x0: hx - 66, x1: hx + 60, y0: hy - 84, y1: hy + 40 };
+    const c = DUEL._meCache;
+    const CH = c ? Math.round(c.cv.height * 1.05) : 118;
+    const hh = c ? Math.round(c.headH * 1.05) : 62;
+    const top = DUEL.FY - 16 - CH;
+    return { x0: 126, x1: 236, y0: top - 6, y1: top + hh + 8 };
   },
 
   /* ============================================================
@@ -2005,14 +2012,21 @@ const DUEL = {
         UI.stampBig('-' + ev.dmg, PIX.PAL.R);
         SFX.hurt();
         DUEL.myGore += ev.dmg;                // it goes on your face and stays there
-        if (ev.by === 'opp') setTimeout(() => DUEL.reactAt('shrug'), 560);
+        DUEL._meCache = null;
+        if (ev.by === 'opp') {
+          setTimeout(() => DUEL.reactAt('shrug'), 560);
+          if (typeof TALK !== 'undefined') setTimeout(() => TALK.after('hitYou'), 700);
+        }
       }
     } else {
       SFX.dud();
       DUEL.kick = 0.16;
       FX.cordite(tip.x, tip.y, 5);
       UI.stampBig('click', PIX.PAL.w, true);
-      if (ev.by === 'opp' && ev.target === 'self') { DUEL.setExpr('smug', 60); DUEL.reactAt('shrug'); }
+      if (ev.by === 'opp' && ev.target === 'self') {
+        DUEL.setExpr('smug', 60); DUEL.reactAt('shrug');
+        if (typeof TALK !== 'undefined') TALK.after('selfBlank');
+      }
       if (ev.by === 'you' && ev.target === 'foe' && !ev.croakHeal) DUEL.setExpr('smug', 45);
       /* you put it against your own head and it clicked: he has seen luck before */
       if (ev.by === 'you' && ev.target === 'self') DUEL.reactAt('facepalm');
@@ -2064,7 +2078,9 @@ const DUEL = {
       DUEL.setPose('rest');
       DUEL.hurry = false;
       UI.syncDuel();
-      await DUEL.sleep(380 + Math.random() * 320);
+      /* the iron is in HIS hand now, and he has something to say about it */
+      if (typeof TALK !== 'undefined') await TALK.takes();
+      await DUEL.sleep(240 + Math.random() * 260);
       const choice = E.oppDecide();
       DUEL.setPose(choice === 'foe' ? 'oppYou' : 'oppSelf');
       if (choice === 'self') DUEL.setExpr('worry', 70);

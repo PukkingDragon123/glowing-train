@@ -1736,7 +1736,7 @@ SPR.frogProfile = function (ctx, cx, cy, d, o) {
 
 const FROG_DEFS = {
   player:    { skin: ['F', 'f', 'e'], fat: false, suit: 'T', shirt: 'W', tie: 'd',
-               costume: 'pinstripe', braces: true,
+               costume: 'pinstripe', braces: true, glasses: 'shades',
                hat: 'fedora', hatCol: 'T', band: 'd', cigar: true },
   blindfold: { skin: ['w', 'q', 'q'], fat: false, suit: 'u', shirt: 'w', tie: 'U',
                costume: 'shabby', glasses: 'round' },
@@ -2075,6 +2075,32 @@ SPR.buildFrog = function (d, expr) {
       PIX.rect(ctx, cx + off - 1, ey - 1, 3, 4, P.K);
     });
     PIX.rect(ctx, cx - ex + 5, ey - 1, ex * 2 - 10, 1, P.K);
+  }
+  /* SHADES. Two flat black lenses across the bulbs with a bar between and
+     a hard white glint on each — you cannot read a frog behind these, which
+     is the point of wearing them to work. */
+  if (d.glasses === 'shades') {
+    const lw = er + 1, lh = er - 1;
+    /* A steel frame, or the lenses read as part of a dark hat. */
+    PIX.rect(ctx, cx - ex - lw - 2, ey - lh - 2, (ex + lw) * 2 + 5, lh * 2 + 5, P.K);
+    PIX.rect(ctx, cx - ex - lw - 1, ey - lh - 1, (ex + lw) * 2 + 3, lh * 2 + 3, P.s);
+    PIX.rect(ctx, cx - ex - lw - 1, ey - lh - 1, (ex + lw) * 2 + 3, 1, P.S);
+    [-ex, ex].forEach(off => {
+      PIX.rect(ctx, cx + off - lw, ey - lh, lw * 2 + 1, lh * 2 + 1, P.K);
+      PIX.rect(ctx, cx + off - lw + 1, ey - lh + 1, lw * 2 - 1, lh * 2 - 1, '#0b0d12');
+      /* the glint, top-left, two hard steps — the only thing in them */
+      PIX.rect(ctx, cx + off - lw + 2, ey - lh + 2, 5, 2, P.W);
+      PIX.rect(ctx, cx + off - lw + 2, ey - lh + 4, 2, 2, 'rgba(244,239,224,.5)');
+      PIX.rect(ctx, cx + off + 1, ey + lh - 4, 3, 2, 'rgba(154,163,184,.35)');
+    });
+    PIX.rect(ctx, cx - ex + lw, ey - 3, (ex - lw) * 2 + 1, 4, P.K);   // the bar
+    PIX.rect(ctx, cx - ex + lw, ey - 2, (ex - lw) * 2 + 1, 2, P.s);
+    PIX.rect(ctx, cx - ex + lw, ey - 2, (ex - lw) * 2 + 1, 1, P.S);
+    /* and the arms, going back over the bulbs */
+    PIX.rect(ctx, cx - ex - lw - 5, ey - lh + 2, 5, 3, P.K);
+    PIX.rect(ctx, cx - ex - lw - 5, ey - lh + 3, 5, 1, P.s);
+    PIX.rect(ctx, cx + ex + lw + 1, ey - lh + 2, 5, 3, P.K);
+    PIX.rect(ctx, cx + ex + lw + 1, ey - lh + 3, 5, 1, P.s);
   }
   if (d.visor) {
     PIX.rect(ctx, cx - ex - er, ey - 4, (ex + er) * 2 + 1, 1, P.K);
@@ -3938,6 +3964,93 @@ SPR.bloodSplat = function (seed, R) {
     }
     return cv;
   });
+};
+
+/* ============================================================
+   A SPEECH PLATE, DRAWN AND NOT STYLED.
+   Every panel in this game is pixels except the ones CSS was
+   making, and a gradient with a border-radius is not pixel art.
+   This builds the whole thing — frame, rivets, portrait well,
+   name bar, wrapped lines — onto one canvas at one scale.
+   ============================================================ */
+SPR.speech = function (o) {
+  const P = PIX.PAL;
+  const pad = 6, gap = 5;
+
+  /* Everything inside is drawn at ONE pixel per pixel and the whole plate
+     is blown up by an integer at the end. Render the text big and scale the
+     canvas down in CSS instead and the letters go soft, which defeats the
+     entire point of a pixel font. */
+  const name = o.name ? PIXFONT.render(o.name, { scale: 1, color: o.nameCol || P.G, shadow: null }) : null;
+  const lines = (o.lines || []).map(l =>
+    PIXFONT.render(l, { scale: 1, color: P.W, shadow: null }));
+  const foot = o.foot ? PIXFONT.render(o.foot, { scale: 1, color: P.q, shadow: null }) : null;
+
+  const pw = o.portrait ? o.portrait.width : 0;
+  const ph = o.portrait ? o.portrait.height : 0;
+  let tw = Math.max(name ? name.width : 0, foot ? foot.width : 0);
+  lines.forEach(l => { tw = Math.max(tw, l.width); });
+  let th = (name ? name.height + 3 : 0) + (foot ? foot.height + 3 : 0);
+  lines.forEach(l => { th += l.height + 2; });
+
+  const bodyW = pw + (pw ? gap : 0) + tw;
+  const W = bodyW + pad * 2 + 4;
+  const H = Math.max(ph, th) + pad * 2 + 4;
+
+  /* the blow-up factor is chosen from the room the plate has, not guessed */
+  const K = U.clamp(Math.floor((o.maxW || 1200) / W), 2, 6);
+
+  const cv = document.createElement('canvas');
+  cv.width = W * K; cv.height = H * K;
+  const c = cv.getContext('2d');
+  c.imageSmoothingEnabled = false;
+  c.save();
+  c.scale(K, K);
+
+  /* --- the box: ink, bevel, felt, and a rivet in every corner --- */
+  SPR.rrect(c, 0, 0, W, H, 4, P.K);
+  SPR.rrect(c, 1, 1, W - 2, H - 2, 3, o.rim || P.f);
+  SPR.rrect(c, 2, 2, W - 4, H - 4, 3, P.K);
+  SPR.rrect(c, 3, 3, W - 6, H - 6, 2, '#0d1a14');
+  PIX.rect(c, 3, 3, W - 6, 1, 'rgba(255,255,255,.10)');
+  PIX.rect(c, 3, H - 4, W - 6, 1, 'rgba(0,0,0,.5)');
+  [[3, 3], [W - 7, 3], [3, H - 7], [W - 7, H - 7]].forEach(([rx, ry]) => {
+    PIX.rect(c, rx, ry, 4, 4, P.K);
+    PIX.rect(c, rx + 1, ry + 1, 2, 2, o.rim || P.f);
+  });
+  /* a hatch of scanlines over the fill, so it is not a flat slab */
+  for (let y = 5; y < H - 5; y += 3) PIX.rect(c, 4, y, W - 8, 1, 'rgba(0,0,0,.22)');
+
+  /* --- the portrait, in its own well --- */
+  let tx = pad + 2;
+  if (o.portrait) {
+    PIX.rect(c, pad, pad, pw + 2, ph + 2, P.K);
+    PIX.rect(c, pad + 1, pad + 1, pw, ph, '#08120d');
+    c.drawImage(o.portrait, pad + 1, pad + 1);
+    PIX.rect(c, pad + pw + 3, pad, 1, ph + 2, 'rgba(0,0,0,.55)');
+    tx = pad + pw + 3 + gap;
+  }
+
+  /* --- the words --- */
+  let ty = pad + 2;
+  if (name) { c.drawImage(name, tx, ty); ty += name.height + 3; }
+  lines.forEach(l => { c.drawImage(l, tx, ty); ty += l.height + 2; });
+  if (foot) c.drawImage(foot, W - pad - 2 - foot.width, H - pad - 2 - foot.height);
+
+  c.restore();
+  return cv;
+};
+
+/* break a string into lines that fit a character budget */
+SPR.fitLines = function (str, per) {
+  const out = [];
+  let line = '';
+  str.split(' ').forEach(w => {
+    if (line && (line + ' ' + w).length > per) { out.push(line); line = ''; }
+    line = line ? line + ' ' + w : w;
+  });
+  if (line) out.push(line);
+  return out;
 };
 
 /* a stain on the floorboards, seen from above: flatter, no throws */

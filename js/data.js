@@ -137,6 +137,50 @@ const MESS_TUNING = {
   fine: 26,              // chips, scaled by ante, for the rest of it
 };
 
+/* ------------------------------------------------------------
+   WHAT THE MARK SAYS WHEN THE IRON IS IN HIS HAND. He gets no
+   lines while you are holding it; that half of the table is
+   yours. Short, and never twice in a row.
+   ------------------------------------------------------------ */
+const MARK_LINES = {
+  takes: [
+    'MY TURN WITH IT.',
+    'YOU SWEAT A LOT FOR A FROG.',
+    'SIX CHAMBERS. ONE OPINION.',
+    'HOLD STILL. IT IS EASIER.',
+    'I HAVE DONE THIS SOBER.',
+    'NOBODY IS COMING FOR YOU.',
+    'THE HOUSE ALREADY KNOWS HOW THIS ENDS.',
+  ],
+  hurt: [
+    'THAT ALL YOU BROUGHT?',
+    'I HAVE BLED IN WORSE ROOMS.',
+    'YOU WILL WANT TO BE QUICKER.',
+    'STILL HERE. STILL YOUR PROBLEM.',
+  ],
+  winning: [
+    'YOU ARE ALMOST OUT OF FROG.',
+    'ONE MORE AND I KEEP YOUR MARKER.',
+    'I WILL GO THROUGH YOUR POCKETS MYSELF.',
+  ],
+  boss: [
+    'YOU CAME UP EIGHT FLOORS FOR THIS.',
+    'I REMEMBER YOUR DOOR.',
+    'THE HOUSE PAID FOR THAT NIGHT.',
+    'SIT DOWN. YOU ARE ALREADY DEAD.',
+  ],
+  selfBlank: [
+    'SEE? NOTHING IN IT.',
+    'I KNOW THIS DRUM.',
+    'MY LUCK. NOT YOURS.',
+  ],
+  hitYou: [
+    'THAT IS ONE.',
+    'BREATHE. IT HELPS NOBODY.',
+    'YOU ARE PAYING FOR THE ROOM NOW.',
+  ],
+};
+
 const TAGS = {
   purse:  { id: 'purse',  name: 'FAT ENVELOPE', icon: 'ic_chip',
     desc: 'Somebody owed you: +10 chips, right now.' },

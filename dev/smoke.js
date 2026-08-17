@@ -259,12 +259,25 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForTimeout(450);
     await shot('03c-aim-foe');
 
-    /* two honest pulls at the mark, then the debug finisher */
-    for (let p = 0; p < 2; p++) {
+    /* two honest pulls at the mark, then the debug finisher. He says his
+       piece the moment the iron is in his hand, so catch that too. */
+    let sawTalk = false;
+    for (let p = 0; p < 3; p++) {
       const s = await state();
       if (s.phase !== 'duel' || s.over || s.busy || s.turn !== 'you') break;
       await aimFoe();
-      await page.evaluate(() => DUEL.onFire());
+      await page.evaluate(() => { DUEL.onFire(); });
+      if (!sawTalk) {
+        for (let t = 0; t < 40; t++) {
+          if (await page.locator('#tutor-root.pass').count() > 0) {
+            await page.waitForTimeout(180);
+            await shot('04d-mark-talks');
+            sawTalk = true;
+            break;
+          }
+          await page.waitForTimeout(90);
+        }
+      }
       await settle();
       await page.waitForTimeout(300);
     }

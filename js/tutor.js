@@ -90,41 +90,66 @@ const TUTOR = {
     return SPR.clone(SPR.frogCustom('handler', HANDLER_DEF), k);
   },
 
+  /* ============================================================
+     ONE PLATE, DRAWN.
+     Frame, rivets, portrait well and every letter go onto a single
+     canvas — no CSS box, no gradient, no border-radius. Used by
+     the handler and by whoever is holding the gun.
+     ============================================================ */
+  plate(o) {
+    const per = o.big ? 30 : 34;
+    return SPR.speech({
+      maxW: Math.min(window.innerWidth - 28, 1180),
+      portrait: o.art,
+      name: o.name,
+      nameCol: o.nameCol,
+      lines: SPR.fitLines(o.line, per),
+      foot: o.foot,
+      rim: o.rim,
+    });
+  },
+
   /* one line, with his face on it. Resolves when it is dismissed. */
   say(line, opts) {
     opts = opts || {};
     return new Promise(res => {
       const root = TUTOR.root();
-      root.className = 'plate-on' + (opts.big ? ' big' : '');
+      root.className = 'plate-on' + (opts.big ? ' big' : '') +
+        (opts.hold ? ' pass' : '');
       root.innerHTML = '';
-      const plate = U.el('div', 'tut-plate');
-      const face = U.el('div', 'tut-face');
-      face.appendChild(TUTOR.portrait(opts.big ? 4 : 3));
-      plate.appendChild(face);
-      const body = U.el('div', 'tut-body');
-      body.appendChild(UI.txt('THE HANDLER', { scale: 2, color: PIX.PAL.G }));
-      body.appendChild(UI.wrap(line, opts.big ? 34 : 40, { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
-      plate.appendChild(body);
-      const go = U.el('div', 'tut-go');
-      go.appendChild(UI.txt(opts.last ? 'GET TO WORK' : 'GO ON', { scale: 2, color: PIX.PAL.q }));
-      plate.appendChild(go);
-      root.appendChild(plate);
-      requestAnimationFrame(() => plate.classList.add('in'));
-      SFX.tick();
+      const holder = U.el('div', 'tut-plate');
+      holder.appendChild(TUTOR.plate({
+        art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
+        name: opts.name || 'THE HANDLER',
+        nameCol: opts.nameCol,
+        rim: opts.rim,
+        line,
+        foot: opts.hold ? null : (opts.last ? 'GET TO WORK' : 'GO ON'),
+        big: opts.big,
+      }));
+      root.appendChild(holder);
+      requestAnimationFrame(() => holder.classList.add('in'));
+      if (SFX[opts.snd || 'tick']) SFX[opts.snd || 'tick']();
 
+      let closed = false;
       const done = () => {
-        plate.classList.add('out');
+        if (closed) return;
+        closed = true;
+        holder.classList.add('out');
         root.removeEventListener('pointerdown', done);
         window.removeEventListener('keydown', key);
         setTimeout(() => {
-          if (root.firstChild === plate) { root.innerHTML = ''; root.className = 'hidden'; }
+          if (root.firstChild === holder) { root.innerHTML = ''; root.className = 'hidden'; }
           res();
         }, 180);
       };
       const key = (e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') done(); };
-      root.addEventListener('pointerdown', done);
-      window.addEventListener('keydown', key);
-      opts.hold ? setTimeout(done, opts.hold) : 0;
+      if (opts.hold) {
+        setTimeout(done, opts.hold);          // he is not waiting for you
+      } else {
+        root.addEventListener('pointerdown', done);
+        window.addEventListener('keydown', key);
+      }
     });
   },
 
@@ -182,5 +207,68 @@ const TUTOR = {
     const d = META.load();
     d.tutor = {};
     META.save();
+  },
+};
+
+/* ============================================================
+   WHAT HE SAYS WHEN HE HAS THE GUN.
+
+   The mark is silent while you are holding it — that is your
+   half of the table. The moment the iron is in HIS hand he has
+   something to say about it, and it goes up on the same drawn
+   plate the handler uses, in his own colour, and it does not
+   wait for you to click it.
+   ============================================================ */
+
+const TALK = {
+
+  busy: false,
+  _last: '',
+
+  /* pick a line that has not just been said */
+  pick(pool) {
+    if (!pool || !pool.length) return null;
+    for (let i = 0; i < 6; i++) {
+      const l = U.pick(Math.random, pool);
+      if (l !== TALK._last) { TALK._last = l; return l; }
+    }
+    return pool[0];
+  },
+
+  /* he has just picked the iron up */
+  async takes() {
+    if (TALK.busy || !G.duel || G.duel.over) return;
+    const opp = G.duel.opp;
+    const hurt = opp.hp <= Math.ceil(opp.maxHP / 3);
+    const pool = opp.boss ? MARK_LINES.boss
+      : hurt ? MARK_LINES.hurt
+        : G.hearts <= 2 ? MARK_LINES.winning : MARK_LINES.takes;
+    await TALK.line(TALK.pick(pool), 1250);
+  },
+
+  /* and after it goes off, one way or the other */
+  async after(kind) {
+    if (TALK.busy || !G.duel || G.duel.over) return;
+    const pool = MARK_LINES[kind];
+    if (!pool) return;
+    await TALK.line(TALK.pick(pool), 1050);
+  },
+
+  async line(line, hold) {
+    if (!line || TALK.busy) return;
+    TALK.busy = true;
+    try {
+      const opp = G.duel.opp;
+      await TUTOR.say(line, {
+        art: SPR.frogCustom(DUEL.oppKey + ':talk', opp.def, 'smug'),
+        name: opp.name,
+        nameCol: opp.boss ? PIX.PAL.R : PIX.PAL.O,
+        rim: opp.boss ? PIX.PAL.d : PIX.PAL.t,
+        snd: 'cluck',
+        hold: hold || 1100,
+      });
+    } finally {
+      TALK.busy = false;
+    }
   },
 };
