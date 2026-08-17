@@ -114,16 +114,39 @@ const MOOK_TRAIT_POOL = Object.keys(TRAITS);
    ------------------------------------------------------------ */
 
 const CASE_TUNING = {
-  /* suspects on the board, and free looks into the file, by ante */
-  suspects: (ante) => (ante >= 6 ? 5 : ante >= 3 ? 4 : 3),
-  looks:    (ante) => Math.max(1, 4 - Math.floor((ante - 1) / 2)),
-  greaseBase: 12,        // chips for one more look
-  greaseStep: 8,         // and it goes up every time you ask
+  /* A GUESS WHO WALL. It starts small and honest — three faces and enough
+     looks to actually solve it — and by the top of the house it is nine
+     strangers and you get two questions. */
+  suspects: (ante) => [3, 4, 5, 6, 7, 8, 9, 9][Math.min(ante, 8) - 1] || 9,
+  /* free evidence looks, and free questions you get to ask out loud */
+  looks:    (ante) => (ante <= 1 ? 4 : ante <= 2 ? 3 : ante <= 4 ? 3 : 2),
+  asks:     (ante) => (ante <= 1 ? 4 : ante <= 3 ? 3 : ante <= 5 ? 3 : 2),
+  greaseBase: 10,        // chips for one more look
+  greaseStep: 7,         // and it goes up every time you ask
   hit: 0.3,              // purse multiplier on top, for calling the right frog
   missHearts: 1,         // he is ready for you: one more heart on him
   missAggro: 0.12,
   missChips: 6,          // and the room charges you for the noise
 };
+
+/* ------------------------------------------------------------
+   THE QUESTIONS you can put to the room. Each one is a feature
+   of the frog you are hunting, phrased as something you would
+   actually say to a barman, and the answer is always true.
+   ------------------------------------------------------------ */
+const CASE_ASKS = [
+  { id: 'hat',       ask: 'WAS HE WEARING A HAT?' },
+  { id: 'build',     ask: 'WAS HE A BIG FROG?' },
+  { id: 'skin',      ask: 'WHAT COLOUR WAS HE?' },
+  { id: 'goldtooth', ask: 'ANY GOLD IN HIS MOUTH?' },
+  { id: 'cigar',     ask: 'WAS HE SMOKING?' },
+  { id: 'rings',     ask: 'RINGS ON HIS HANDS?' },
+  { id: 'glasses',   ask: 'DID HE WEAR GLASSES?' },
+  { id: 'scar',      ask: 'WAS HIS FACE MARKED?' },
+  { id: 'patch',     ask: 'BOTH EYES?' },
+  { id: 'chain',     ask: 'GOLD AT HIS THROAT?' },
+  { id: 'warts',     ask: 'WAS HIS SKIN ROUGH?' },
+];
 
 /* ------------------------------------------------------------
    THE MESS — what dragging a body through a doorway leaves on

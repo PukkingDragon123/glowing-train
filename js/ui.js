@@ -277,19 +277,20 @@ const UI = {
   /* ================= the board ================= */
 
   /* A wanted poster: his face, his name, and the pin that holds it up. */
-  posterEl(s, i, out, called) {
+  posterEl(s, i, out, called, small) {
     const p = U.el('div', 'poster' + (out ? ' out' : '') + (called ? ' called' : ''));
     p.dataset.sus = i;
     p.appendChild(U.el('i', 'poster-pin'));
     const hd = U.el('div', 'po-head');
-    hd.appendChild(UI.txt('WANTED', { scale: 3, color: PIX.PAL.K, shadow: null }));
+    hd.appendChild(UI.txt('WANTED', { scale: small ? 2 : 3, color: PIX.PAL.K, shadow: null }));
     p.appendChild(hd);
     const art = U.el('div', 'po-art');
     art.appendChild(SPR.clone(SPR.frogCustom('sus:' + s.name, s.def), 4));
     p.appendChild(art);
     const nm = U.el('div', 'po-name');
     /* long names get set smaller rather than running off the paper */
-    nm.appendChild(UI.txt(s.name, { scale: s.name.length > 9 ? 2 : 3, color: PIX.PAL.K, shadow: null }));
+    const sc = small ? (s.name.length > 8 ? 1 : 2) : (s.name.length > 9 ? 2 : 3);
+    nm.appendChild(UI.txt(s.name, { scale: sc, color: PIX.PAL.K, shadow: null }));
     p.appendChild(nm);
     if (out) {
       const x = U.el('div', 'po-stamp');
@@ -309,7 +310,8 @@ const UI = {
     const head = U.el('div', 'board-head');
     head.appendChild(UI.txt('ANTE ' + G.ante + (G.endless ? ' · ENDLESS' : ' OF ' + ANTES),
       { scale: 3, color: PIX.PAL.q }));
-    head.appendChild(UI.txt(c.known ? 'YOU KNOW THIS ONE' : 'THREE IN THE ROOM · ONE OF THEM IS HIM',
+    head.appendChild(UI.txt(c.known ? 'YOU KNOW THIS ONE'
+      : c.suspects.length + ' IN THE ROOM - ONE OF THEM IS HIM',
       { scale: 4, color: c.known ? PIX.PAL.R : PIX.PAL.W, outline: PIX.PAL.K }));
     const pay = U.el('div', 'board-purse');
     pay.appendChild(UI.txt('PURSE ' + BLIND_PURSE(G.ante, G.blind), { scale: 3, color: PIX.PAL.G }));
@@ -325,12 +327,12 @@ const UI = {
     svg.id = 'cork-strings';
     board.appendChild(svg);
 
-    const row = U.el('div', 'poster-row');
+    const row = U.el('div', 'poster-row' + (c.suspects.length > 5 ? ' wall' : ''));
     const stand = c.known ? [true] : CASE.standing();
     c.suspects.forEach((s, i) => {
       const out = !stand[i];
       const called = c.done && c.accused === i;
-      const p = UI.posterEl(s, i, out, called);
+      const p = UI.posterEl(s, i, out, called, c.suspects.length > 5);
       if (c.known) p.classList.add('solo');
       if (!c.done && !out) {
         p.classList.add('live');
@@ -378,6 +380,37 @@ const UI = {
       });
       file.appendChild(cards);
       board.appendChild(file);
+
+      /* ---- and the questions: you ask, the room answers, faces come down ---- */
+      const quiz = U.el('div', 'casefile asks');
+      const qh = U.el('div', 'cf-head');
+      qh.appendChild(UI.txt('ASK THE ROOM', { scale: 3, color: PIX.PAL.W }));
+      qh.appendChild(UI.txt(c.done ? 'NOBODY IS TALKING NOW'
+        : c.quiz + (c.quiz === 1 ? ' QUESTION LEFT' : ' QUESTIONS LEFT'),
+        { scale: 3, color: c.quiz > 0 && !c.done ? PIX.PAL.N : PIX.PAL.q }));
+      qh.appendChild(UI.txt(CASE.left() + ' STILL IN IT', { scale: 3, color: PIX.PAL.O }));
+      quiz.appendChild(qh);
+      const qrow = U.el('div', 'ask-row');
+      (c.asks || []).forEach((a, i) => {
+        const b = U.el('button', 'pixbtn ask' + (a.asked ? ' asked' : ''));
+        b.disabled = a.asked || !CASE.canAsk(i);
+        const col = U.el('div', 'ask-col');
+        col.appendChild(UI.wrap(a.ask, 22, { scale: 2, color: a.asked ? PIX.PAL.q : PIX.PAL.W }));
+        if (a.asked) col.appendChild(UI.wrap(a.reply, 24, { scale: 2, color: PIX.PAL.N }));
+        b.appendChild(col);
+        if (!a.asked) {
+          b.onclick = () => {
+            const ev = CASE.ask(i);
+            if (!ev) { SFX.dud(); return; }
+            SFX.chak();
+            UI.render();
+            UI.askedToast(ev);
+          };
+        }
+        qrow.appendChild(b);
+      });
+      quiz.appendChild(qrow);
+      board.appendChild(quiz);
     }
     wrap.appendChild(board);
 
@@ -493,6 +526,20 @@ const UI = {
         ln.setAttribute('class', 'str');
         svg.appendChild(ln);
       });
+    });
+  },
+
+  /* the room answers, on the same drawn plate everybody else uses */
+  askedToast(a) {
+    if (typeof TUTOR === 'undefined') return;
+    TUTOR.say(a.reply, {
+      art: SPR.frogCustom('barman', BARMAN_DEF),
+      name: 'THE ROOM',
+      nameCol: PIX.PAL.N,
+      rim: PIX.PAL.t,
+      snd: 'tick',
+      hold: 1500,
+      top: true,            // the rack it is answering is at the bottom
     });
   },
 

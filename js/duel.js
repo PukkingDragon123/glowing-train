@@ -48,6 +48,7 @@ const DUEL = {
   hoverSpot: -1, hoverFace: false, hoverStain: -1,
   react: null,               // what his hand came up out of the dark to say
   dying: 0,                  // 0 = you are fine; 1 = he is standing over you
+  slug: null,                // the round, in the air, in bullet time
   myGore: 0,                 // what is on YOUR face, and stays there
   blood: [],                 // what is on HIS, in his own space, and grows
   blink: 0, blinkNext: 90,   // he is alive; every so often the lids come down
@@ -195,7 +196,7 @@ const DUEL = {
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
-    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = []; DUEL.dying = 0;
+    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = []; DUEL.dying = 0; DUEL.slug = null;
     DUEL.view = 'table'; DUEL.viewT = 0;
     DUEL.initTongue();
     /* G.loot survives from the LAST corpse until the next one is opened, so
@@ -333,6 +334,17 @@ const DUEL = {
     if (Math.abs(DUEL.viewT - vt) < 0.004) DUEL.viewT = vt;
     if (DUEL.react && ++DUEL.react.t >= DUEL.react.life) DUEL.react = null;
     if (DUEL.dying > 0 && DUEL.dying < 1) DUEL.dying = Math.min(1, DUEL.dying + 0.018);
+    /* the round, crawling down the bore line with its own wake */
+    if (DUEL.slug) {
+      const sl = DUEL.slug;
+      sl.t++;
+      sl.trail.unshift([sl.x, sl.y]);
+      if (sl.trail.length > 9) sl.trail.pop();
+      sl.x += Math.cos(sl.ang) * sl.sp;
+      sl.y += Math.sin(sl.ang) * sl.sp;
+      sl.sp *= 1.09;
+      if (sl.t > sl.life) DUEL.slug = null;
+    }
     if (DUEL.blink > 0) DUEL.blink--;
     else if (--DUEL.blinkNext <= 0) {
       DUEL.blink = 7;
@@ -486,6 +498,9 @@ const DUEL = {
 
     /* --- the room's flies, and what goes out for them --- */
     if (!DUEL.opp.gone && DUEL.opp.fall < 0) { DUEL.drawFlies(x); DUEL.drawTongue(x); }
+
+    /* --- the round in the air. It gets its own layer, over everybody. --- */
+    if (DUEL.slug) DUEL.drawSlug(x);
 
     /* --- and if you are the one going, he stands up over the lens --- */
     if (DUEL.dying > 0 && G.duel && !DUEL.opp.gone) {
@@ -1516,6 +1531,28 @@ const DUEL = {
         PIX.rect(x, fx - 4, gy + 1, 11, 5, i ? sh : skin);
         PIX.rect(x, fx - 4, gy + 4, 11, 1, P.K);
       }
+    } else if (G.duel && !DUEL.opp.gone && DUEL.opp.fall < 0) {
+      /* HIS hand. The iron used to hang in the air on his turn with nothing
+         holding it — his arm comes up over the felt and closes on the grip,
+         out of the same dark his gestures come out of. */
+      const od = G.duel.opp.def;
+      const C = SPR.costumeOf(od);
+      const O = C.overcoat || C.jacket || C.gown || C.shirt || null;
+      const cl = (O && O.col) || od.suit;
+      const sC = P[cl] || P.T, sL = P[LIGHTER[cl]] || P.t;
+      const gpA = gm.grip || [10, 13];
+      const gw = DUEL.ironPoint(gpA[0], gpA[1]);
+      const gx2 = Math.round(gw.x + kk.dx), gy2 = Math.round(gw.y + kk.dy);
+      const side = gx2 > 180 ? 1 : -1;
+      SPR.povTube(x, 180 + side * 44, 140, gx2 + side * 8, gy2 + 9,
+        15, 11, sC, 'rgba(0,0,0,.45)', sL);
+      SPR.povCuff(x, gx2 + side * 3, gy2 + 7, od, side);
+      x.save();
+      x.translate(gx2, gy2);
+      x.rotate(g.rot * 0.5);
+      x.scale(side * 0.48, 0.48);
+      SPR.frogFist(x, 0, 0, od, {});
+      x.restore();
     }
     x.restore();
     /* pointed at the lens: a bore seen end-on, staring back at you */
@@ -1849,6 +1886,57 @@ const DUEL = {
     });
   },
 
+  /* ============================================================
+     THE ROUND.
+     Time opens up for about a third of a second and you watch the
+     thing travel: a hot slug, a shock ring off the nose of it, a
+     wake of spent air behind, and a smear of light down the bore
+     line it came out of.
+     ============================================================ */
+  fireSlug(from, ang, dist) {
+    DUEL.slug = {
+      x: from.x, y: from.y, ox: from.x, oy: from.y, ang, sp: 2.4,
+      t: 0, life: 26, dist,
+      trail: [],
+    };
+  },
+
+  drawSlug(x) {
+    const P = PIX.PAL, sl = DUEL.slug;
+    const f = 1 - sl.t / sl.life;
+    /* the wake: spent air, thinning out behind it */
+    sl.trail.forEach((pt, i) => {
+      const a = (1 - i / sl.trail.length) * 0.5 * f;
+      x.globalAlpha = a;
+      const w = Math.max(1, 8 - i);
+      PIX.rect(x, Math.round(pt[0]) - (w >> 1), Math.round(pt[1]) - (w >> 1), w, w,
+        i < 2 ? P.W : i < 5 ? P.Y : P.o);
+    });
+    x.globalAlpha = 1;
+    /* the bore line it came out of, still lit */
+    const sx = Math.round(sl.x), sy = Math.round(sl.y);
+    const dx = sx - sl.ox, dy = sy - sl.oy;
+    const steps = Math.max(1, Math.round(Math.max(Math.abs(dx), Math.abs(dy))));
+    x.globalAlpha = 0.22 * f;
+    for (let i = 0; i < steps; i += 2) {
+      PIX.rect(x, Math.round(sl.ox + dx * (i / steps)),
+        Math.round(sl.oy + dy * (i / steps)), 2, 2, P.Y);
+    }
+    x.globalAlpha = 1;
+    /* the slug itself: blocks of hot metal with ink round them */
+    PIX.rect(x, sx - 5, sy - 5, 11, 11, P.K);
+    PIX.rect(x, sx - 4, sy - 4, 9, 9, P.o);
+    PIX.rect(x, sx - 3, sy - 3, 7, 7, P.Y);
+    PIX.rect(x, sx - 1, sy - 1, 4, 4, P.W);
+    /* and the ring it pushes ahead of itself */
+    const r = 4 + sl.t * 0.7;
+    x.globalAlpha = 0.4 * f;
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(o => {
+      PIX.rect(x, Math.round(sx + o[0] * r) - 1, Math.round(sy + o[1] * r) - 1, 3, 3, P.W);
+    });
+    x.globalAlpha = 1;
+  },
+
   /* the sight picture: brackets on his face, tight and red when it is armed */
   drawReticle(x, cx, cy, armed) {
     const P = PIX.PAL;
@@ -2024,14 +2112,22 @@ const DUEL = {
       FX.screen.shake(ev.dmg >= 2 ? 20 : 14);
       FX.screen.flash(PIX.PAL.W, 0.85, 0.16);
       FX.screen.chroma(ev.dmg >= 2 ? 4 : 2.4);
-      FX.screen.slowmo(ev.victim === 'foe' ? 520 : 700, 0.55);
+      /* BULLET TIME. Long enough to watch the round leave and land, and
+         longest of all when what it lands in is you. */
+      FX.screen.slowmo(ev.victim === 'you' ? 900 : 700, 0.42);
+      if (!ev.fizzled) DUEL.fireSlug(tip, ang, 100);
       if (ev.fizzled) {
         await U.sleep(160);
         UI.stampBig('FIZZLE', PIX.PAL.N); SFX.dud();
         DUEL.reactAt('facepalm');            // he cannot believe he watched that
       } else if (ev.victim === 'foe') {
+        /* it has to get there first */
+        await DUEL.sleep(220);
+        DUEL.slug = null;
         DUEL.opp.recoil = 1; DUEL.opp.flash = 1;
         DUEL.setExpr('pain', 55);
+        FX.screen.shake(ev.dmg >= 2 ? 18 : 12);
+        FX.screen.flash(PIX.PAL.R, 0.3, 0.1);
         if (ev.dmg >= 2) {
           FX.crit(180, 62, 'CRUNCH');
           FX.screen.slowmo(650);
@@ -2053,6 +2149,8 @@ const DUEL = {
         /* still upright, and he has something to say about it */
         if (G.duel.opp.hp > 0) setTimeout(() => DUEL.reactAt('finger'), 520);
       } else if (ev.victim === 'you') {
+        await DUEL.sleep(200);
+        DUEL.slug = null;
         FX.screen.vignette(PIX.PAL.d, 0.95);
         FX.screen.chroma(3);
         FX.screen.shake(13);
@@ -2129,15 +2227,17 @@ const DUEL = {
       DUEL.setPose('rest');
       DUEL.hurry = false;
       UI.syncDuel();
-      /* the iron is in HIS hand now, and he has something to say about it */
+      /* He says his piece FIRST, and it is out of the way before the iron
+         comes up — otherwise the plate covers the pull it is talking about. */
       if (typeof TALK !== 'undefined') await TALK.takes();
-      await DUEL.sleep(240 + Math.random() * 260);
+      await DUEL.sleep(160);
       const choice = E.oppDecide();
       DUEL.setPose(choice === 'foe' ? 'oppYou' : 'oppSelf');
       if (choice === 'self') DUEL.setExpr('worry', 70);
-      await DUEL.sleep(300);
-      SFX.chak();
-      await DUEL.sleep(200 + Math.random() * 220);
+      /* the barrel comes round to where it is going, and you get to watch */
+      UI.stampSmall(choice === 'foe' ? 'HE POINTS IT AT YOU' : 'HE POINTS IT AT HIMSELF');
+      await DUEL.sleep(420);
+      await DUEL.cockIt();
       const ev = E.pull(choice);
       await DUEL.playShot(ev);
       if (ev.over === 'win') { await DUEL.killSequence(); return; }

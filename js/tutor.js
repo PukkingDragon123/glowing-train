@@ -19,6 +19,12 @@ const HANDLER_DEF = {
   scar: true,
 };
 
+/* whoever it is behind the bar that answers when you ask */
+const BARMAN_DEF = {
+  skin: ['N', 'n', 'n'], fat: true, suit: 'W', shirt: 'W', bowtie: 'K',
+  costume: 'croupier', visor: true,
+};
+
 const TUTOR = {
 
   /* ---------------- the opening, before the first board ---------------- */
@@ -99,7 +105,10 @@ const TUTOR = {
   plate(o) {
     const per = o.big ? 30 : 34;
     return SPR.speech({
-      maxW: Math.min(window.innerWidth - 28, 1180),
+      /* A line nobody is waiting on gets a smaller plate: at full size the
+         portrait alone covered the board it was talking about. */
+      maxW: o.small ? Math.min(window.innerWidth - 40, 560)
+        : Math.min(window.innerWidth - 28, 1180),
       portrait: o.art,
       name: o.name,
       nameCol: o.nameCol,
@@ -115,7 +124,7 @@ const TUTOR = {
     return new Promise(res => {
       const root = TUTOR.root();
       root.className = 'plate-on' + (opts.big ? ' big' : '') +
-        (opts.hold ? ' pass' : '');
+        (opts.hold ? ' pass' : '') + (opts.top ? ' top' : '');
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
       holder.appendChild(TUTOR.plate({
@@ -126,6 +135,7 @@ const TUTOR = {
         line,
         foot: opts.hold ? null : (opts.last ? 'GET TO WORK' : 'GO ON'),
         big: opts.big,
+        small: !!opts.hold,
       }));
       root.appendChild(holder);
       requestAnimationFrame(() => holder.classList.add('in'));

@@ -218,12 +218,26 @@ fs.mkdirSync(SHOTS, { recursive: true });
     const ev1 = page.locator('.ev.live').first();
     if (await ev1.count() > 0) { await ev1.click(); await page.waitForTimeout(400); }
     await shot('02b2-board-clue');
+    /* ask the room something, and watch faces come off the wall */
+    const q1 = page.locator('.pixbtn.ask:not([disabled])').first();
+    if (await q1.count() > 0) {
+      await q1.click();
+      await page.waitForTimeout(700);
+      await shot('02b2b-asked');
+      await page.waitForTimeout(1100);
+    }
     /* spend the file down, then pay somebody to turn one more over */
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const e = page.locator('.ev.live').first();
       if (await e.count() === 0) break;
       await e.click();
       await page.waitForTimeout(200);
+    }
+    for (let i = 0; i < 5; i++) {
+      const q = page.locator('.pixbtn.ask:not([disabled])').first();
+      if (await q.count() === 0) break;
+      await q.click();
+      await page.waitForTimeout(260);
     }
     for (let i = 0; i < 3; i++) {
       await page.locator('button', { hasText: '+20⛁' }).click();

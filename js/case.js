@@ -183,6 +183,23 @@ function SKIN_WORD(letter) {
   })[letter] || 'HARD TO SAY';
 }
 
+/* how the room answers a question about the frog you are hunting */
+const ASK_REPLY = {
+  hat:       (v) => (v === 'bare' ? 'NO HAT. BARE HEAD ALL NIGHT.'
+    : v === 'tophat' ? 'A TALL ONE. YOU COULD NOT MISS IT.'
+      : v === 'bowler' ? 'A ROUND ONE. BOWLER.' : 'A FLAT CAP.'),
+  build:     (v) => (v === 'fat' ? 'BIG FROG. TOOK TWO CHAIRS.' : 'THIN. ALL ELBOWS.'),
+  skin:      (v) => 'HE WAS ' + SKIN_WORD(v) + '.',
+  goldtooth: (v) => (v === 'y' ? 'GOLD. RIGHT AT THE FRONT.' : 'NOTHING IN HIS MOUTH BUT TEETH.'),
+  cigar:     (v) => (v === 'y' ? 'SMOKING THE WHOLE TIME.' : 'HE NEVER LIT ANYTHING.'),
+  rings:     (v) => (v === 'y' ? 'RINGS. HEAVY ONES.' : 'BARE HANDS.'),
+  glasses:   (v) => (v === 'y' ? 'GLASSES, YES.' : 'NO GLASSES.'),
+  scar:      (v) => (v === 'y' ? 'HIS FACE WAS OPENED UP ONCE.' : 'CLEAN FACE.'),
+  patch:     (v) => (v === 'y' ? 'ONE EYE. PATCH ON THE OTHER.' : 'BOTH EYES, BOTH WORKING.'),
+  chain:     (v) => (v === 'y' ? 'A ROPE OF GOLD AT THE THROAT.' : 'NOTHING ROUND HIS NECK.'),
+  warts:     (v) => (v === 'y' ? 'ROUGH SKIN. PITTED ALL OVER.' : 'SMOOTH AS A BOTTLE.'),
+};
+
 /* ============================================================
    THE CASE
    ============================================================ */
@@ -254,9 +271,34 @@ const CASE = {
     const deck = rest.concat(wide.slice(0, 1));
     U.shuffle(rng, deck);
 
+    /* THE QUESTIONS. Every one is a feature of the frog you are hunting,
+       and asking it crosses off everybody who does not match. They are
+       what makes a nine-face wall solvable at all — but you only get a
+       couple of them, so which one you ask is the whole game. */
+    const asks = CASE_ASKS.map(a => {
+      const test = CLUE_TESTS.find(t => t.id === a.id);
+      if (!test) return null;
+      const mine = test.of(real);
+      const keeps = suspects.map(s2 => test.of(s2) === mine);
+      const cut = keeps.filter(k => !k).length;
+      if (!cut) return null;                 // a question nobody fails is a wasted breath
+      /* AND NO SINGLE QUESTION WINS THE BOARD. On a big wall a four-way
+         answer like the hat could leave exactly one face standing, which
+         turns the whole thing into one click. Anything that decisive is
+         left out of the rack, so it always takes two. */
+      if (suspects.length >= 5 && keeps.filter(k => k).length < 2) return null;
+      const reply = ASK_REPLY[a.id] ? ASK_REPLY[a.id](mine) : null;
+      if (!reply) return null;
+      return { id: a.id, ask: a.ask, reply, keeps, cut, asked: false };
+    }).filter(Boolean);
+    /* the sharpest ones last, so the rack is not sorted by how good it is */
+    U.shuffle(rng, asks);
+
     G.case = {
-      suspects, clues: deck.slice(0, Math.max(4, suspects.length + 1)),
+      suspects, clues: deck.slice(0, Math.max(3, Math.ceil(suspects.length / 2))),
+      asks: asks.slice(0, 6),
       looks: CASE_TUNING.looks(G.ante),
+      quiz: CASE_TUNING.asks(G.ante),
       grease: 0,
       accused: -1, right: null, done: false,
       realIdx: suspects.findIndex(s => s.real),
@@ -267,7 +309,27 @@ const CASE = {
   /* which suspects the clues you HAVE TURNED OVER still allow */
   standing() {
     const c = G.case;
-    return c.suspects.map((s, i) => c.clues.every(cl => !cl.seen || cl.keeps[i]));
+    return c.suspects.map((s, i) =>
+      c.clues.every(cl => !cl.seen || cl.keeps[i]) &&
+      (c.asks || []).every(a => !a.asked || a.keeps[i]));
+  },
+
+  /* how many faces are still in it */
+  left() {
+    return CASE.standing().filter(Boolean).length;
+  },
+
+  /* ---- asking out loud ---- */
+  canAsk(i) {
+    const c = G.case;
+    return !!c && !c.done && !c.known && c.quiz > 0 && c.asks && c.asks[i] && !c.asks[i].asked;
+  },
+  ask(i) {
+    if (!CASE.canAsk(i)) return null;
+    const c = G.case;
+    c.asks[i].asked = true;
+    c.quiz--;
+    return c.asks[i];
   },
 
   /* what one more look off the books costs, and whether you can cover it */
@@ -277,14 +339,19 @@ const CASE = {
   },
   canGrease() {
     const c = G.case;
-    return !!c && !c.done && !c.known && c.looks <= 0 &&
-      c.clues.some(cl => !cl.seen) && G.chips >= CASE.greaseCost();
+    if (!c || c.done || c.known) return false;
+    const wantLook = c.looks <= 0 && c.clues.some(cl => !cl.seen);
+    const wantAsk = c.quiz <= 0 && (c.asks || []).some(a => !a.asked);
+    return (wantLook || wantAsk) && G.chips >= CASE.greaseCost();
   },
   grease() {
     if (!CASE.canGrease()) return false;
+    const c = G.case;
     G.chips -= CASE.greaseCost();
-    G.case.grease++;
-    G.case.looks++;
+    c.grease++;
+    /* it buys back whichever one you ran out of first */
+    if (c.looks <= 0 && c.clues.some(cl => !cl.seen)) c.looks++;
+    else c.quiz++;
     return true;
   },
 

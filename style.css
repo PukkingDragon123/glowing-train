@@ -105,11 +105,15 @@
   --rar-legendary: #ffd75e;
 
   /* ---- radii: five steps, nothing in between ---- */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 26px;
+  /* SQUARE. Nothing in a pixel-art game should have a smooth curved
+     corner: a border-radius is anti-aliased by the browser and no amount
+     of chunky borders hides it. Everything is a box now, and the panels
+     that want a shaped corner draw one in pixels instead. */
+  --r-xs: 0px;
+  --r-sm: 0px;
+  --r-md: 0px;
+  --r-lg: 0px;
+  --r-xl: 0px;
 
   /* ---- borders: two weights only ---- */
   --bd: 3px;
@@ -263,7 +267,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   background: linear-gradient(180deg, var(--btn-top), var(--btn-bot));
   border: var(--bd) solid var(--btn-edge);
-  border-radius: var(--r-md);
+  border-radius: 0;
   box-shadow: 0 var(--depth) 0 var(--btn-deep), inset 0 2px 0 rgba(255, 255, 255, .10);
   padding: 8px 12px;
   position: relative;
@@ -296,7 +300,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 :focus-visible {
   outline: var(--bd-thick) solid var(--gold-hi);
   outline-offset: 2px;
-  border-radius: var(--r-xs);
+  border-radius: 0;
 }
 .pixbtn:focus-visible { filter: brightness(1.22); }
 
@@ -306,7 +310,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   font-size: var(--fs-xs); letter-spacing: 1px; line-height: 1.4;
   color: var(--dust);
   background: var(--ink); border: var(--bd) solid var(--shadow);
-  border-radius: var(--r-xs);
+  border-radius: 0;
   padding: 1px 4px; pointer-events: none;
   white-space: nowrap;
 }
@@ -352,7 +356,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   padding: 3px 8px 4px;
   background: linear-gradient(180deg, rgba(0, 0, 0, .28), rgba(0, 0, 0, .12));
   border: var(--bd) solid var(--line-soft);
-  border-radius: var(--r-md);
+  border-radius: 0;
 }
 .at-seg {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -364,14 +368,14 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 }
 .at-link {
   width: 12px; height: var(--bd-thick); margin: 0 1px 6px;
-  background: var(--line-soft); border-radius: 1px; flex: none;
+  background: var(--line-soft); border-radius: 0; flex: none;
 }
 /* only the link that leaves a finished segment goes gold — `~` lit every
    later link too, which contradicted the .done the markup sets itself */
 .at-seg.done + .at-link, .at-link.done { background: var(--gold-dk); }
 
 .bpip {
-  width: 14px; height: 14px; display: inline-block; border-radius: 50%;
+  width: 14px; height: 14px; display: inline-block; border-radius: 0;
   background: var(--felt-ink); border: var(--bd) solid var(--line);
   box-shadow: inset 0 2px 0 rgba(0, 0, 0, .35);
   flex: none;
@@ -415,7 +419,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   display: flex; align-items: center; justify-content: center; gap: var(--gap-lg);
   min-height: 74px; padding: 4px 14px; flex: none;
   background: linear-gradient(180deg, rgba(10, 31, 22, .55), transparent);
-  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  border-radius: 0;
 }
 #strip-counts { display: inline-flex; align-items: center; gap: var(--gap-xs); min-width: 74px; justify-content: flex-end; }
 #opp-name { min-width: 74px; display: inline-flex; }
@@ -437,7 +441,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 #hint-bar {
   position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
   pointer-events: none; z-index: 3;
-  background: var(--glass); border: var(--bd) solid var(--line); border-radius: var(--r-sm);
+  background: var(--glass); border: var(--bd) solid var(--line); border-radius: 0;
   padding: 5px 12px; font-size: var(--fs-md); color: var(--text-soft);
   max-width: min(92vw, 460px); text-align: center;
   animation: hint-fade .3s ease-out;
@@ -483,7 +487,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   padding: 7px 11px;
   background: var(--bone); color: var(--ink);
   border: var(--bd-thick) solid var(--ink);
-  border-radius: var(--r-md);
+  border-radius: 0;
   box-shadow: var(--d1), inset 0 -3px 0 rgba(18, 16, 29, .10);
   font-size: var(--fs-sm); line-height: var(--lh-tight);
   letter-spacing: var(--track); text-align: center;
@@ -557,7 +561,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
       rgba(63, 137, 196, .95) 0 14px,
       rgba(209, 59, 69, .95) 14px 28px);
   border: var(--bd-thick) solid var(--ink);
-  border-radius: var(--r-md);
+  border-radius: 0;
   box-shadow: var(--d2), var(--glow-ice), inset 0 0 0 var(--bd) rgba(255, 255, 255, .18);
   animation: cc-slam .26s cubic-bezier(.2, 1.5, .4, 1) backwards;   /* not both — see .mark-speech */
   overflow: hidden;
@@ -571,14 +575,14 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .cop-callout > * { position: relative; z-index: 1; }
 .cc-badge {
   display: inline-flex; align-items: center; line-height: 0; flex: none;
-  padding: 3px; border-radius: var(--r-xs);
+  padding: 3px; border-radius: 0;
   background: rgba(10, 12, 24, .78);
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .5));
 }
 /* the words ride an ink plate — stripes behind text is unreadable */
 .cc-text {
   display: flex; flex-direction: column; gap: 2px; flex: 0 1 auto; min-width: 0;
-  padding: 4px 9px; border-radius: var(--r-xs);
+  padding: 4px 9px; border-radius: 0;
   background: rgba(10, 12, 24, .82);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .10);
   font-size: var(--fs-md); letter-spacing: var(--track-wide);
@@ -609,7 +613,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   display: flex; flex-direction: column; align-items: center; gap: var(--gap);
   background: var(--felt-panel);
   border: var(--bd-thick) solid var(--gold);
-  border-radius: var(--r-xl);
+  border-radius: 0;
   box-shadow: var(--d3), var(--inset-ink);
   padding: 18px 28px; max-width: min(94vw, 460px);
 }
@@ -628,7 +632,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   display: flex; flex-direction: column; align-items: center; gap: var(--gap);
   background: var(--felt-panel);
   border: var(--bd-thick) solid var(--red);
-  border-radius: var(--r-xl);
+  border-radius: 0;
   box-shadow: var(--d4), var(--inset-ink), var(--glow-red);
   padding: 22px 32px; max-width: min(94vw, 480px); text-align: center;
   max-height: 100%; overflow-y: auto; scrollbar-width: none;
@@ -655,7 +659,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 }
 .bb-tag {
   font-size: var(--fs-xs); letter-spacing: 4px; color: var(--red-hi);
-  border: var(--bd) solid var(--red-mid); border-radius: var(--r-xs);
+  border: var(--bd) solid var(--red-mid); border-radius: 0;
   padding: 1px 6px;
 }
 .bb-name { font-size: var(--fs-xl); letter-spacing: 3px; color: var(--bone); text-shadow: 3px 3px 0 var(--ink); }
@@ -682,11 +686,11 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 .tcard {
   position: relative; padding: 0; background: none; border: 0; box-shadow: none;
-  border-radius: var(--r-sm);
+  border-radius: 0;
   transition: transform .08s steps(2), filter .12s;
 }
 .tcard canvas {
-  display: block; border-radius: var(--r-sm);
+  display: block; border-radius: 0;
   box-shadow: var(--d1),
               0 0 0 var(--bd) var(--rq, transparent),
               0 0 14px var(--rq-soft, transparent);
@@ -701,13 +705,13 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   justify-content: center; color: var(--red-hi); font-size: 26px; text-shadow: 2px 2px 0 var(--ink);
 }
 .charge-pips { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; }
-.cpip { width: 7px; height: 7px; border-radius: 50%; background: var(--felt-ink); border: var(--bd) solid rgba(0, 0, 0, .5); }
+.cpip { width: 7px; height: 7px; border-radius: 0; background: var(--felt-ink); border: var(--bd) solid rgba(0, 0, 0, .5); }
 .cpip.on { background: var(--neon); box-shadow: 0 0 5px rgba(111, 247, 216, .8); }
 
 .tslot-empty {
   width: var(--card-w); height: var(--card-h);
   border: var(--bd-thick) dashed var(--line-soft);
-  border-radius: var(--r-md);
+  border-radius: 0;
   flex: none;
 }
 
@@ -739,7 +743,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   gap: 2px; padding: 3px 3px 0;
   background: linear-gradient(180deg, rgba(16, 53, 39, .9), rgba(10, 31, 22, .9));
   border: var(--bd) solid var(--rq, var(--line));
-  border-radius: var(--r-sm);
+  border-radius: 0;
   box-shadow: var(--d1),
               inset 0 2px 0 rgba(255, 255, 255, .06),
               0 0 12px var(--rq-soft, transparent);
@@ -753,7 +757,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   position: absolute; left: 2px; right: 2px; bottom: 2px;
   font-size: var(--fs-xs); letter-spacing: 1.4px; line-height: 12px; text-align: center;
   color: var(--ink); background: var(--gold-hi);
-  border: var(--bd) solid var(--ink); border-radius: var(--r-xs);
+  border: var(--bd) solid var(--ink); border-radius: 0;
   box-shadow: inset 0 -2px 0 rgba(110, 76, 18, .5);
 }
 .ibelt-slot:hover:not(:disabled) { transform: translateY(-4px); filter: brightness(1.15); }
@@ -770,7 +774,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .ibelt-slot.empty::after {
   content: ''; position: absolute; left: 50%; top: 50%;
   width: 10px; height: 10px; transform: translate(-50%, -50%);
-  border: var(--bd) solid var(--line-soft); border-radius: 2px;
+  border: var(--bd) solid var(--line-soft); border-radius: 0;
 }
 /* consumed */
 .ibelt-slot.burn { animation: ib-burn .3s steps(4) forwards; }
@@ -810,7 +814,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .rq-legendary { position: relative; }
 .rq-legendary::before {
   content: ''; position: absolute; inset: -3px; z-index: 0;
-  border-radius: var(--r-md); pointer-events: none;
+  border-radius: 0; pointer-events: none;
   box-shadow: 0 0 16px var(--rq-soft);
   animation: shine 2.4s steps(3) infinite;
 }
@@ -833,7 +837,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   max-width: min(88vw, 300px); padding: 10px 12px;
   background: var(--felt-panel);
   border: var(--bd) solid var(--gold);
-  border-radius: var(--r-md);
+  border-radius: 0;
   box-shadow: var(--d2), inset 0 0 0 var(--bd) rgba(0, 0, 0, .25);
   font-size: var(--fs-md); line-height: var(--lh);
 }
@@ -857,7 +861,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   overflow-y: auto; overflow-x: hidden;
   background: var(--felt-panel);
   border: var(--bd-thick) solid var(--gold);
-  border-radius: var(--r-xl);
+  border-radius: 0;
   box-shadow: var(--d3), var(--inset-ink), var(--glow-gold);
   padding: 18px 22px;
   animation: pop-in .22s cubic-bezier(.2, 1.5, .4, 1);
@@ -867,7 +871,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .toast {
   display: inline-flex; align-items: center; gap: 5px;
   background: var(--glass);
-  border: var(--bd) solid var(--line); border-radius: var(--r-sm);
+  border: var(--bd) solid var(--line); border-radius: 0;
   box-shadow: var(--d1);
   padding: 4px 9px; max-width: 100%;
   animation: toast-in .25s cubic-bezier(.2, 1.6, .4, 1);
@@ -882,7 +886,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   display: flex; align-items: center; gap: var(--gap);
   max-width: min(90vw, 340px);
   background: var(--felt-panel);
-  border: var(--bd-thick) solid var(--gold); border-radius: var(--r-lg);
+  border: var(--bd-thick) solid var(--gold); border-radius: 0;
   box-shadow: var(--d2), var(--glow-gold);
   padding: 12px 16px;
   animation: unlock-slide .3s cubic-bezier(.2, 1.5, .4, 1) backwards;   /* not both — see .mark-speech */
@@ -915,7 +919,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   display: flex; flex-direction: column; gap: 6px;
   background: var(--felt-panel);
   border: var(--bd-thick) solid var(--gold);
-  border-radius: var(--r-lg);
+  border-radius: 0;
   box-shadow: var(--d4), var(--inset-ink), var(--glow-gold);
   padding: 10px 12px; min-width: 268px; max-width: 320px;
   max-height: 100%; overflow-y: auto;
@@ -926,7 +930,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 .heat-wrap { display: flex; flex-direction: column; gap: var(--gap-xs); }
 .heat-bar {
-  height: 12px; border: var(--bd) solid rgba(0, 0, 0, .55); border-radius: 7px;
+  height: 12px; border: var(--bd) solid rgba(0, 0, 0, .55); border-radius: 0;
   background: var(--felt-ink); overflow: hidden;
 }
 .heat-fill {
@@ -942,7 +946,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .pocket-btn {
   display: flex; justify-content: space-between; align-items: center; gap: var(--gap);
   background: var(--felt-btn);
-  border: var(--bd) solid var(--rq, var(--line)); border-radius: var(--r-sm);
+  border: var(--bd) solid var(--rq, var(--line)); border-radius: 0;
   box-shadow: 0 3px 0 var(--felt-ink), 0 0 12px var(--rq-soft, transparent);
   padding: 4px 9px; position: relative; min-height: 34px;
   transition: filter .12s, transform .06s steps(2);
@@ -971,7 +975,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 #card-swap {
   display: flex; flex-direction: column; gap: var(--gap-sm); padding: var(--gap-sm);
-  border: var(--bd-thick) dashed rgba(224, 166, 60, .4); border-radius: var(--r-md);
+  border: var(--bd-thick) dashed rgba(224, 166, 60, .4); border-radius: 0;
 }
 .swap-row { display: flex; gap: var(--gap-sm); align-items: center; flex-wrap: wrap; }
 
@@ -979,7 +983,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .heat-card {
   display: flex; flex-direction: column; align-items: center; gap: var(--gap);
   background: var(--felt-panel);
-  border: var(--bd-thick) solid var(--ice); border-radius: var(--r-xl);
+  border: var(--bd-thick) solid var(--ice); border-radius: 0;
   box-shadow: var(--d4), var(--inset-ink), var(--glow-ice);
   padding: 22px 34px; text-align: center; max-width: min(94vw, 440px);
 }
@@ -1000,7 +1004,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 .seed-row { display: flex; align-items: center; gap: var(--gap-sm); }
 .seed-row input {
-  background: var(--glass); border: var(--bd) solid var(--line); border-radius: var(--r-md);
+  background: var(--glass); border: var(--bd) solid var(--line); border-radius: 0;
   color: var(--bone);
   padding: 12px 14px; font-family: inherit; font-size: var(--fs-md); letter-spacing: 3px;
   width: min(250px, 70vw); min-height: var(--hit); text-align: center; text-transform: uppercase;
@@ -1018,7 +1022,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .end-cell {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   background: var(--felt-panel);
-  border: var(--bd) solid var(--line); border-radius: var(--r-lg);
+  border: var(--bd) solid var(--line); border-radius: 0;
   box-shadow: var(--d2);
   padding: 12px;
 }
@@ -1045,7 +1049,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   width: min(94vw, 460px);
   background: var(--felt-panel);
   border: var(--bd-thick) solid var(--gold);
-  border-radius: var(--r-xl);
+  border-radius: 0;
   box-shadow: var(--d3), var(--inset-ink), var(--glow-gold);
   padding: 16px 18px;
   animation: slam-in .26s steps(4) both;
@@ -1060,7 +1064,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   display: flex; align-items: center; gap: var(--gap-sm);
   padding: 6px 8px; min-height: 34px;
   background: rgba(0, 0, 0, .18);
-  border: var(--bd) solid transparent; border-radius: var(--r-sm);
+  border: var(--bd) solid transparent; border-radius: 0;
   animation: deal-in .24s steps(4) both;
   animation-delay: calc(var(--i, 0) * 40ms);
 }
@@ -1074,7 +1078,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .rs-row.best .rs-lab { color: var(--gold-hi); }
 .rs-flag {
   font-size: var(--fs-xs); letter-spacing: var(--track-caps); color: var(--ink);
-  background: var(--gold-hi); border: var(--bd) solid var(--gold-dk); border-radius: var(--r-xs);
+  background: var(--gold-hi); border: var(--bd) solid var(--gold-dk); border-radius: 0;
   padding: 1px 5px;
 }
 .rs-foot { display: flex; gap: var(--gap-sm); justify-content: center; flex-wrap: wrap; padding-top: var(--gap-xs); }
@@ -1090,13 +1094,13 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .coll-head { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; justify-content: center; }
 .coll-sec {
   display: flex; flex-direction: column; align-items: center; gap: var(--gap-sm);
-  background: var(--glass-thin); border: var(--bd) solid var(--line); border-radius: var(--r-lg);
+  background: var(--glass-thin); border: var(--bd) solid var(--line); border-radius: 0;
   box-shadow: var(--d1);
   padding: 14px 20px; max-width: 100%;
 }
 .coll-grid { display: flex; gap: var(--gap-sm); flex-wrap: wrap; justify-content: center; max-width: 900px; }
 .coll-card, .coll-gun, .coll-boss { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
-.coll-card canvas { border-radius: var(--r-xs); box-shadow: 0 0 0 var(--bd) var(--rq, transparent), 0 0 12px var(--rq-soft, transparent); }
+.coll-card canvas { border-radius: 0; box-shadow: 0 0 0 var(--bd) var(--rq, transparent), 0 0 12px var(--rq-soft, transparent); }
 .boss-kills { position: absolute; bottom: -6px; right: -6px; }
 
 /* help modal keeps honest text */
@@ -1505,7 +1509,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   flex: 0 0 auto; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; gap: 8px; justify-content: center;
   background: var(--felt-panel);
-  border: 3px solid var(--line); border-radius: 16px;
+  border: 3px solid var(--line); border-radius: 0;
   box-shadow: 0 6px 0 rgba(0,0,0,.4), inset 0 0 0 3px rgba(0,0,0,.22);
   padding: 14px 16px; min-width: 148px; max-width: 260px;
   opacity: .55; filter: saturate(.7);
@@ -1526,7 +1530,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .bc-stats { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; max-width: 150px; }
 .bc-tells { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
 .bc-tell {
-  display: inline-flex; padding: 2px 6px; border-radius: 6px;
+  display: inline-flex; padding: 2px 6px; border-radius: 0;
   background: rgba(0,0,0,.3); border: 2px solid rgba(111,247,216,.35);
 }
 .bc-tell.unknown { border-color: rgba(141,134,114,.35); }
@@ -1535,7 +1539,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .tag-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .tag-chip {
   display: inline-flex; align-items: center; gap: 5px;
-  background: rgba(10,31,22,.85); border: 2px solid var(--line); border-radius: 8px;
+  background: rgba(10,31,22,.85); border: 2px solid var(--line); border-radius: 0;
   padding: 3px 8px;
 }
 .blind-btns { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
@@ -1555,7 +1559,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 }
 .ri-stat {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  background: rgba(0,0,0,.26); border: 2px solid var(--line); border-radius: 9px;
+  background: rgba(0,0,0,.26); border: 2px solid var(--line); border-radius: 0;
   padding: 7px 4px;
 }
 .ri-stat b { color: var(--gold-hi); font-size: 15px; }
@@ -1565,13 +1569,13 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 .ri-row {
   display: grid; grid-template-columns: 130px 1fr; gap: 10px;
   font-size: 12px; line-height: 1.45; padding: 5px 8px;
-  background: rgba(0,0,0,.2); border-radius: 7px; margin-bottom: 4px;
+  background: rgba(0,0,0,.2); border-radius: 0; margin-bottom: 4px;
 }
 .ri-row b { color: var(--bone); letter-spacing: 1px; }
 .ri-row span { color: #cfe8d8; }
 .ri-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .ri-pill {
-  font-size: 10px; letter-spacing: 1px; padding: 3px 8px; border-radius: 7px;
+  font-size: 10px; letter-spacing: 1px; padding: 3px 8px; border-radius: 0;
   background: rgba(111,247,216,.14); border: 2px solid rgba(111,247,216,.4); color: var(--neon);
 }
 .ri-pill.off { background: rgba(0,0,0,.2); border-color: var(--line); color: var(--dust); }
@@ -1652,7 +1656,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   padding: 12px 26px 12px 16px;
   background: linear-gradient(180deg, var(--felt-mid), var(--felt-ink));
   border: var(--bd) solid var(--ink); border-left: 0;
-  border-radius: 0 var(--r-md) var(--r-md) 0;
+  border-radius: 0;
 }
 
 /* ---- the boss cut-in ---- */
@@ -1700,7 +1704,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   padding: 26px 44px;
   background: linear-gradient(180deg, var(--felt-mid), var(--felt-ink));
   border: var(--bd-thick) solid var(--ink);
-  border-radius: var(--r-lg);
+  border-radius: 0;
   box-shadow: 0 0 0 3px var(--gold) inset, 0 10px 0 rgba(0, 0, 0, .5);
   opacity: 0;
   transition: transform 240ms cubic-bezier(.2, 1.5, .4, 1), opacity 180ms;
@@ -1808,7 +1812,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 #loot-tools { display: flex; gap: 6px; flex-wrap: wrap; }
 .tool-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 9px; border-radius: var(--r-sm);
+  padding: 5px 9px; border-radius: 0;
   background: rgba(0, 0, 0, .32);
   border: var(--bd) solid var(--line);
   box-shadow: 0 3px 0 rgba(0, 0, 0, .4);
@@ -1847,7 +1851,7 @@ body.at-corpse #duel-bottom { justify-content: flex-start; gap: var(--gap-lg); }
   padding: 14px 26px;
   background: linear-gradient(180deg, rgba(28, 85, 64, .92), rgba(10, 31, 22, .95));
   border: var(--bd-thick) solid var(--gold);
-  border-radius: var(--r-lg);
+  border-radius: 0;
   box-shadow: var(--d4), var(--inset-ink);
 }
 
@@ -1858,7 +1862,7 @@ body.at-corpse #duel-bottom { justify-content: flex-start; gap: var(--gap-lg); }
   padding: 3px 9px 4px;
   background: rgba(4, 10, 8, .55);
   border: var(--bd) solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: 0;
 }
 #strip-odds.hot { border-color: var(--red); box-shadow: 0 0 14px rgba(209, 59, 69, .35); }
 
@@ -1872,7 +1876,7 @@ body.at-corpse #strip-odds { display: none; }
 .m-lab { min-width: 62px; display: inline-flex; justify-content: flex-end; }
 .m-bar {
   position: relative; flex: 1; height: 13px;
-  border: var(--bd) solid rgba(0, 0, 0, .6); border-radius: 7px;
+  border: var(--bd) solid rgba(0, 0, 0, .6); border-radius: 0;
   background: var(--felt-ink); overflow: hidden;
 }
 .m-fill { height: 100%; width: 0; transition: width .12s linear; }
@@ -1912,7 +1916,7 @@ body.heard #siren-wash { opacity: 1; }
   display: flex; flex-direction: column; align-items: center; gap: 16px;
   padding: 18px 20px 16px;
   border: var(--bd) solid #2a1a10;
-  border-radius: 6px;
+  border-radius: 0;
   background:
     repeating-linear-gradient(37deg, rgba(0,0,0,.10) 0 2px, transparent 2px 5px),
     repeating-linear-gradient(-51deg, rgba(255,255,255,.05) 0 2px, transparent 2px 6px),
@@ -1948,7 +1952,7 @@ body.heard #siren-wash { opacity: 1; }
 
 .poster-pin {
   position: absolute; top: -9px; left: 50%; margin-left: -7px;
-  width: 14px; height: 14px; border-radius: 50%;
+  width: 14px; height: 14px; border-radius: 0;
   background: radial-gradient(circle at 35% 32%, #ff8a7e, #a11d28 70%);
   border: 2px solid #2a1a10; z-index: 4;
 }
@@ -1958,7 +1962,7 @@ body.heard #siren-wash { opacity: 1; }
 .po-stamp {
   position: absolute; left: 50%; top: 52%;
   transform: translate(-50%, -50%) rotate(-11deg);
-  border: 4px solid currentColor; padding: 2px 8px; border-radius: 4px;
+  border: 4px solid currentColor; padding: 2px 8px; border-radius: 0;
   color: var(--red); opacity: .92; pointer-events: none;
 }
 .po-stamp.big { top: 50%; transform: translate(-50%, -50%) rotate(-7deg); }
@@ -1972,7 +1976,7 @@ body.heard #siren-wash { opacity: 1; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   padding: 6px 5px;
   background: rgba(10,10,14,.55);
-  border: var(--bd) solid #2a1a10; border-radius: 4px;
+  border: var(--bd) solid #2a1a10; border-radius: 0;
   transition: transform .1s;
 }
 .ev.live { cursor: pointer; }
@@ -2077,8 +2081,14 @@ body.heard #siren-wash { opacity: 1; }
 }
 #tutor-root.hidden { display: none; }
 #tutor-root.big { align-items: center; padding-bottom: 0; }
-/* a line he is not waiting on must not eat your clicks */
-#tutor-root.pass { pointer-events: none; align-items: flex-start; padding: 92px 12px 0; }
+/* A line he is not waiting on must not eat your clicks — and it must not
+   sit over the table either. It used to cover him, his hand and the iron
+   for the whole of his turn, so the pull looked like it never happened. */
+#tutor-root.pass {
+  pointer-events: none;
+  align-items: flex-end;
+  padding: 0 12px 96px;
+}
 
 /* The plate itself is one drawn canvas — this only places it and slides it
    in. No box, no gradient, no radius: those were the last things in the
@@ -2114,3 +2124,38 @@ body.heard #siren-wash { opacity: 1; }
   image-rendering: pixelated;
 }
 #hint-bar .txt-lines { align-items: center; }
+
+/* ============================================================
+   25. THE WALL
+   Nine faces will not sit in one row. Above five suspects the
+   posters shrink and wrap into a proper Guess Who wall.
+   ============================================================ */
+
+.poster-row.wall { gap: 8px; max-width: 100%; }
+.poster-row.wall .poster { width: 104px; padding: 10px 5px 7px; transform: none; }
+.poster-row.wall .poster:nth-child(odd) { transform: rotate(-1deg); }
+.poster-row.wall .poster:nth-child(even) { transform: rotate(1.2deg); }
+.poster-row.wall .po-art { min-height: 52px; }
+.poster-row.wall .po-art canvas { width: 76px; height: auto; }
+.poster-row.wall .po-stamp { border-width: 3px; padding: 1px 4px; }
+
+/* the question rack */
+.casefile.asks { border-top: 3px solid rgba(0,0,0,.4); padding-top: 10px; }
+.ask-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.pixbtn.ask {
+  flex: 0 1 auto; max-width: 240px; text-align: left;
+  padding: 8px 10px;
+}
+.pixbtn.ask .ask-col { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.pixbtn.ask.asked { opacity: .8; }
+.pixbtn.ask:disabled { cursor: default; }
+
+@media (max-width: 720px) {
+  .poster-row.wall .poster { width: 82px; padding: 8px 4px 6px; }
+  .poster-row.wall .po-art { min-height: 42px; }
+  .poster-row.wall .po-art canvas { width: 60px; }
+  .pixbtn.ask { max-width: 172px; }
+}
+
+/* a reply about the board goes ABOVE it — the rack it answers is below */
+#tutor-root.pass.top { align-items: flex-start; padding: 72px 12px 0; }

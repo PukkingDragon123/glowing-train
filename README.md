@@ -115,15 +115,24 @@ corpse (a fat envelope, an inside man at the precinct, a care package, dutch cou
 a gunrunner). Bosses can never be skipped, and a boss is never a mystery: his poster has
 been on your wall since the night they did it.
 
-There is **nothing to buy and nothing to own**. The looks you get into the file are the
-looks the job gives you — four at ante 1, down to one by the end — and the board gets
-harder as you climb: three faces on the wall, then four, then five, and the decoys are
-built to answer most of the same questions the same way. At most one clue halves the
-field; the rest cross off a single face each, so it always takes several looks and
-sometimes it takes a guess.
+### And you can ask
 
-When the file runs dry you can still **grease a palm** — somebody in the room will turn
-one more card over for money, and the price goes up every time you ask.
+![Nine on the wall](docs/screen-wall.png)
+
+The other half of the board is **Guess Who**. You get a handful of questions to put to
+the room — *was he wearing a hat? was he a big frog? any gold in his mouth?* — and the
+barman answers honestly. Every answer takes every face that doesn't match straight off
+the wall.
+
+It starts small and fair: **three** faces at floor 1 with four looks and four questions,
+which is enough to actually solve it. By the top of the house it is **nine strangers and
+two questions**, the decoys are built to answer most of the same things the same way, and
+no single question is allowed to leave one face standing — so it always takes two, and
+often it takes a guess.
+
+There is **nothing to buy and nothing to own**. When the file and the questions run dry
+you can still **grease a palm** — somebody will turn one more card or answer one more
+question for money, and the price goes up every time you ask.
 
 ![That is him](docs/screen-called.png)
 
@@ -177,10 +186,22 @@ nothing, and you shoot by pointing at a head:
 
 Every pull is four beats and a camera move: the hammer back, the cylinder indexing, one
 held beat on nothing at all — the last moment in which everybody at this table is still
-alive — and then it falls. Live, and the room is briefly overexposed: one white frame,
-a thump, a ring that hangs on, cordite, a casing on the felt.
+alive — and then it falls. Live, and the room is briefly overexposed: one white frame, a
+thump, a ring that hangs on, cordite, a casing on the felt.
+
+And then **time opens up and you watch the round travel** — a hot slug with a shock ring
+off its nose, a wake of spent air behind it and the bore line still lit all the way back
+to the muzzle — before it arrives and the frame kicks.
+
+![The round, in the air](docs/screen-slug.png)
 
 ![One white frame](docs/screen-shot.png)
+
+When it is **his** pull you see it coming: his arm comes up out of the dark under the
+felt, closes on the grip, and the barrel swings to whichever head he has picked while the
+room tells you which one it is.
+
+![His pull](docs/screen-histurn.png)
 
 Nobody at this table talks while you are holding it. The moment the iron is in **his**
 hand he has something to say about it, and it goes up on a drawn plate in his own colour
