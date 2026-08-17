@@ -39,6 +39,20 @@ function driver() {
     return !!(E.canUseItem(i) && E.useItem(i));
   }
 
+  /* THE STEADY CHECK, AS A DIE ROLL. The real one is a moving marker the
+     player has to break the shot on; headless, the bot rolls for it at a
+     plausible human skill level that gets worse as the bands tighten. */
+  function steadyRoll() {
+    const d = G.duel;
+    const a = G.ante;
+    const pClean = Math.max(0.12, 0.34 - (a - 1) * 0.024);
+    const pWide = Math.min(0.22, 0.04 + (a - 1) * 0.024);
+    const r = Math.random();
+    d.aimClean = r < pClean;
+    d.aimWide = !d.aimClean && r > 1 - pWide;
+  }
+  function pullFoe() { steadyRoll(); return E.pull('foe'); }
+
   function botTurn() {
     const d = G.duel;
     /* heal when hurting */
@@ -72,7 +86,7 @@ function driver() {
       if (E.canUseGun('saw') && d.opp.hp >= 2) E.useGun('saw');
       if (E.canUseGun('tommy') && d.opp.hp >= 3) E.useGun('tommy');
       useItemIf('hollowPoint', d.opp.hp >= 3);
-      return E.pull('foe');
+      return pullFoe();
     }
     /* nothing known and the drum looks hot: make the chamber safe */
     if (p >= 0.6 && useItemIf('lucky1', true)) return E.pull('self');
@@ -83,7 +97,7 @@ function driver() {
       return E.pull('self');
     }
     if (p >= 0.85 && E.canUseGun('saw')) E.useGun('saw');
-    return E.pull('foe');
+    return pullFoe();
   }
 
   /* rifle in tell-informed priority, bribe when it's worth it, pay the heat */

@@ -621,6 +621,8 @@ const UI = {
     stripRow.appendChild(odds);
     const oppName = U.el('span'); oppName.id = 'opp-name';
     stripRow.appendChild(oppName);
+    const oppGrip = U.el('span'); oppGrip.id = 'opp-grip'; oppGrip.className = 'hidden';
+    stripRow.appendChild(oppGrip);
     wrap.appendChild(stripRow);
 
     /* the scene */
@@ -729,6 +731,19 @@ const UI = {
       odds.className = 'has-tip' + (o !== null && o >= 0.6 ? ' hot' : '');
       odds.dataset.tipText = 'The chance the shell under the hammer is LIVE. ' +
         'Aim at yourself when this is low — a blank there keeps your turn.';
+    }
+
+    /* how he is holding it, once he has picked it up */
+    const grip = document.getElementById('opp-grip');
+    if (grip) {
+      const show = d.turn === 'opp' && !d.over;
+      grip.className = show ? '' : 'hidden';
+      if (show && grip._g !== DUEL.oppGrip) {
+        grip._g = DUEL.oppGrip;
+        grip.innerHTML = '';
+        grip.appendChild(UI.txt((DUEL.GRIPS[DUEL.oppGrip] || {}).label || '',
+          { scale: 2, color: PIX.PAL.O }));
+      }
     }
 
     /* opp name plate — hover for his tells */

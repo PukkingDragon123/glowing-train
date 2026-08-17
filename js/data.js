@@ -204,6 +204,21 @@ const MARK_LINES = {
   ],
 };
 
+/* ------------------------------------------------------------
+   THE STEADY CHECK. Pointing a revolver across a table is not a
+   button press: the bore drifts, and you break the shot when it
+   is where you want it. One sweep, one click. Faster and tighter
+   every floor you climb.
+   ------------------------------------------------------------ */
+const AIM_TUNING = {
+  /* the sweep, in world px per frame, and the widths of the two bands */
+  speed: (ante) => 1.3 + Math.min(2.2, (ante - 1) * 0.28),
+  good:  (ante) => Math.max(12, 26 - (ante - 1) * 1.6),
+  clean: (ante) => Math.max(3, 8 - (ante - 1) * 0.6),
+  width: 132,          // the length of the sweep, world px
+  wobble: (ante) => 0.5 + Math.min(2.2, (ante - 1) * 0.28),
+};
+
 const TAGS = {
   purse:  { id: 'purse',  name: 'FAT ENVELOPE', icon: 'ic_chip',
     desc: 'Somebody owed you: +10 chips, right now.' },

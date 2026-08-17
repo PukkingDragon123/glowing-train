@@ -189,6 +189,23 @@ held beat on nothing at all — the last moment in which everybody at this table
 alive — and then it falls. Live, and the room is briefly overexposed: one white frame, a
 thump, a ring that hangs on, cordite, a casing on the felt.
 
+### Breaking the shot
+
+Across a table is a shot **you can miss**. Point at his face and pull, and the bore
+drifts: a rail comes up on the felt with a marker sweeping it, a green band and a gold
+one inside that, and you break the shot when the marker is where you want it.
+
+| Where you break it | What happens |
+|---|---|
+| **the gold band** | through the eye — the round does one extra damage |
+| **the green band** | on him — a normal hit |
+| **outside both** | into the wall behind his ear, and the chamber is gone anyway |
+
+![Break the shot](docs/screen-steady.png)
+
+The sweep gets faster and the bands get tighter every floor you climb. Against your own
+head there is no check — there is nothing to steady at that range.
+
 And then **time opens up and you watch the round travel** — a hot slug with a shock ring
 off its nose, a wake of spent air behind it and the bore line still lit all the way back
 to the muzzle — before it arrives and the frame kicks.
@@ -197,9 +214,12 @@ to the muzzle — before it arrives and the frame kicks.
 
 ![One white frame](docs/screen-shot.png)
 
-When it is **his** pull you see it coming: his arm comes up out of the dark under the
-felt, closes on the grip, and the barrel swings to whichever head he has picked while the
-room tells you which one it is.
+When it is **his** pull you see all of it: the iron comes up out of his lap in three
+beats, his arm closes on the grip, the barrel levels at whichever head he picked, and he
+thumbs the hammer back with the same four beats you get. And **not everybody in this house
+shoots the same way** — the grip is picked off his own name and stays his for the whole
+duel: from the hip, high and formal, canted over sideways, or both hands wrapped round it
+like he means it. It says which on the strip next to his name.
 
 ![His pull](docs/screen-histurn.png)
 

@@ -2159,3 +2159,7 @@ body.heard #siren-wash { opacity: 1; }
 
 /* a reply about the board goes ABOVE it — the rack it answers is below */
 #tutor-root.pass.top { align-items: flex-start; padding: 72px 12px 0; }
+
+/* how he is holding it, next to his name */
+#opp-grip { display: inline-flex; opacity: .9; }
+#opp-grip.hidden { display: none; }

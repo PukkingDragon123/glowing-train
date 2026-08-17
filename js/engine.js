@@ -278,6 +278,7 @@ const E = {
       cuffed: false, coltSpent: false, snakePrimed: false, revived: false,
       selfBlanks: 0, heartsLost: 0, dmgDealt: 0,
       hollow: false, smoke: false, gauzeUsed: false,
+      aimWide: false, aimClean: false,
       payout: null,
     };
     G.trinkets.forEach(t => { t.used = {}; });
@@ -404,6 +405,7 @@ const E = {
       croakHeal: 0, tonyTax: 0, revived: false, chips: 0,
     };
     d.ptr++; d.shots++; G.run.shots++;
+    ev.wide = false; ev.clean = false;
 
     if (by === 'you') {
       META.bump('shots');
@@ -424,6 +426,13 @@ const E = {
           if (d.hollow) { dmg += 2; d.hollow = false; ev.hollow = true; }
         }
         if (d.sawArmed) { dmg *= 2; d.sawArmed = false; ev.sawed = true; }
+        /* WHERE YOU PUT IT. The steady check has already run: a clean break
+           puts it through the eye, a bad one throws the round into the wall
+           behind him and the chamber is spent all the same. */
+        if (target === 'foe') {
+          if (d.aimWide) { dmg = 0; ev.wide = true; }
+          else if (d.aimClean) { dmg += 1; ev.clean = true; }
+        }
       } else {
         if (d.opp.boss === 'owner' && d.revived) dmg = 2; // phase two: he's angry now
         if (target === 'foe') { // the mark is shooting YOU
@@ -446,6 +455,8 @@ const E = {
         d.croakHeals = (d.croakHeals || 0) + 1;
       }
     }
+
+    d.aimWide = false; d.aimClean = false;
 
     /* -- apply damage -- */
     if (live && dmg > 0) {

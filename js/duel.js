@@ -49,6 +49,7 @@ const DUEL = {
   react: null,               // what his hand came up out of the dark to say
   dying: 0,                  // 0 = you are fine; 1 = he is standing over you
   slug: null,                // the round, in the air, in bullet time
+  aimBar: null,              // the steady check, while it is running
   myGore: 0,                 // what is on YOUR face, and stays there
   blood: [],                 // what is on HIS, in his own space, and grows
   blink: 0, blinkNext: 90,   // he is alive; every so often the lids come down
@@ -67,7 +68,26 @@ const DUEL = {
     youSelf:  { mine: 1, hx: 272, hy: 142, rot: -1.24, flip: true, sc: 0.9 },
     oppYou:   { x: 222, y: 100, rot: 0.34, flip: true, sc: 0.8 },
     oppSelf:  { x: 220, y: 82, rot: -1.18, flip: false, sc: 0.8 },
+    /* he does not go straight from the felt to your face: it comes up out
+       of his lap first, and it goes back down after */
+    oppLap:   { x: 214, y: 138, rot: 1.1, flip: true, sc: 0.72 },
+    oppUp:    { x: 220, y: 118, rot: 0.7, flip: true, sc: 0.78 },
   },
+
+  /* ============================================================
+     HOW HE HOLDS IT.
+     Not everybody in this house shoots the same way. The style is
+     picked off his name so it is his for the whole duel: down low
+     from the hip, up high and formal, canted over sideways, or
+     both hands wrapped round it like he means it.
+     ============================================================ */
+  GRIPS: {
+    low:  { dx: -6, dy: 10, rot: 0.16, two: false, label: 'FROM THE HIP' },
+    high: { dx: 4, dy: -12, rot: -0.08, two: false, label: 'HIGH AND FORMAL' },
+    side: { dx: 0, dy: 2, rot: 0.62, two: false, label: 'CANTED OVER' },
+    both: { dx: -2, dy: 4, rot: -0.02, two: true, label: 'BOTH HANDS' },
+  },
+  oppGrip: 'low',
 
   /* the iron reports its own anchors, so nothing here guesses where your
      fist closes or where the flash comes out */
@@ -98,19 +118,23 @@ const DUEL = {
     const g = DUEL.gun, f = DUEL.fist;
     const dy = DUEL.FY - 180;
     const rest = DUEL.POSES.rest;
-    let tx = p.x, ty = p.y;
+    let tx = p.x, ty = p.y, rot = p.rot;
     if (p.mine) {
       f.tx = p.hx; f.ty = p.hy + dy;
       const c = DUEL.ironFromGrip(f.tx, f.ty - 2, p.rot, p.sc, p.flip);
       tx = c.x; ty = c.y;
     } else {
-      /* he has the iron — your hand drops back to the felt, empty */
+      /* He has the iron: your hand drops back to the felt, empty, and the
+         iron sits where HIS grip style puts it rather than in one place
+         every frog in the house shares. */
       f.tx = rest.hx; f.ty = rest.hy + dy;
+      const gr = DUEL.GRIPS[DUEL.oppGrip] || DUEL.GRIPS.low;
+      tx += gr.dx; ty += gr.dy; rot += gr.rot;
     }
-    g.tx = tx; g.ty = ty; g.trot = p.rot; g.tsc = p.sc;
+    g.tx = tx; g.ty = ty; g.trot = rot; g.tsc = p.sc;
     g.flip = p.flip;
     if (snap) {
-      g.x = tx; g.y = ty; g.rot = p.rot; g.sc = p.sc;
+      g.x = tx; g.y = ty; g.rot = rot; g.sc = p.sc;
       f.x = f.tx; f.y = f.ty;
     }
   },
@@ -209,6 +233,11 @@ const DUEL = {
     FX.reset(); FX.ambient(true);
     COPS.reset();
     DUEL.buildOpp();
+    /* his grip style is his for the whole duel, picked off his own name */
+    if (G.duel && G.duel.opp) {
+      const ks = Object.keys(DUEL.GRIPS);
+      DUEL.oppGrip = ks[U.hashSeed(G.duel.opp.name + (G.duel.opp.boss || '')) % ks.length];
+    }
 
     DUEL.cv = document.getElementById('scene');
     DUEL.ctx = DUEL.cv.getContext('2d');
@@ -334,6 +363,7 @@ const DUEL = {
     if (Math.abs(DUEL.viewT - vt) < 0.004) DUEL.viewT = vt;
     if (DUEL.react && ++DUEL.react.t >= DUEL.react.life) DUEL.react = null;
     if (DUEL.dying > 0 && DUEL.dying < 1) DUEL.dying = Math.min(1, DUEL.dying + 0.018);
+    DUEL.stepAim();
     /* the round, crawling down the bore line with its own wake */
     if (DUEL.slug) {
       const sl = DUEL.slug;
@@ -499,9 +529,6 @@ const DUEL = {
     /* --- the room's flies, and what goes out for them --- */
     if (!DUEL.opp.gone && DUEL.opp.fall < 0) { DUEL.drawFlies(x); DUEL.drawTongue(x); }
 
-    /* --- the round in the air. It gets its own layer, over everybody. --- */
-    if (DUEL.slug) DUEL.drawSlug(x);
-
     /* --- and if you are the one going, he stands up over the lens --- */
     if (DUEL.dying > 0 && G.duel && !DUEL.opp.gone) {
       const comp = DUEL.composite('grin');
@@ -647,6 +674,13 @@ const DUEL = {
     x.beginPath(); x.moveTo(180 + sway, lampY + 8); x.lineTo(165 + sway, lampY + 19); x.lineTo(195 + sway, lampY + 19); x.closePath(); x.fill();
     PIX.rect(x, 176 + sway, lampY + 19, 8, 3, DUEL.lamp > 0.4 ? P.Y : P.T);
     if (DUEL.lamp > 0.6) DUEL.drawMoths(x, 180 + sway, lampY + 22);
+
+    /* --- the steady check, on the felt between you. LAST in world space:
+       drawn any earlier and the table is painted over the top of it. --- */
+    if (DUEL.aimBar) DUEL.drawAim(x);
+
+    /* --- the round in the air, over everybody --- */
+    if (DUEL.slug) DUEL.drawSlug(x);
 
     x.restore();
 
@@ -1544,14 +1578,30 @@ const DUEL = {
       const gw = DUEL.ironPoint(gpA[0], gpA[1]);
       const gx2 = Math.round(gw.x + kk.dx), gy2 = Math.round(gw.y + kk.dy);
       const side = gx2 > 180 ? 1 : -1;
-      SPR.povTube(x, 180 + side * 44, 140, gx2 + side * 8, gy2 + 9,
+      const gr = DUEL.GRIPS[DUEL.oppGrip] || DUEL.GRIPS.low;
+      /* the shoulder he is working from — under the coat, at the table line */
+      const SHY = 142;
+      SPR.povTube(x, 180 + side * 44, SHY, gx2 + side * 8, gy2 + 9,
         15, 11, sC, 'rgba(0,0,0,.45)', sL);
       SPR.povCuff(x, gx2 + side * 3, gy2 + 7, od, side);
+      /* BOTH HANDS: the off hand comes across and wraps the first one */
+      if (gr.two) {
+        const ox2 = gx2 - side * 11, oy2 = gy2 + 5;
+        SPR.povTube(x, 180 - side * 40, SHY + 2, ox2 - side * 6, oy2 + 8,
+          14, 10, sC, 'rgba(0,0,0,.45)', sL);
+        SPR.povCuff(x, ox2 - side * 3, oy2 + 6, od, -side);
+        x.save();
+        x.translate(ox2, oy2);
+        x.rotate(g.rot * 0.4);
+        x.scale(-side * 0.42, 0.42);
+        SPR.frogFist(x, 0, 0, od, {});
+        x.restore();
+      }
       x.save();
       x.translate(gx2, gy2);
       x.rotate(g.rot * 0.5);
       x.scale(side * 0.48, 0.48);
-      SPR.frogFist(x, 0, 0, od, {});
+      SPR.frogFist(x, 0, 0, od, { wet: DUEL.kick > 0.2 });
       x.restore();
     }
     x.restore();
@@ -1887,6 +1937,111 @@ const DUEL = {
   },
 
   /* ============================================================
+     THE STEADY CHECK.
+     A revolver across a table is not a button press. The bore
+     drifts, and you break the shot when the marker is where you
+     want it: one sweep, one click. Dead centre and it goes
+     through the eye. Outside the band it goes into the wall
+     behind him and the chamber is gone anyway.
+     ============================================================ */
+  aimBar: null,
+
+  steady() {
+    return new Promise(res => {
+      const ante = G.ante;
+      const bar = {
+        x: 0, dir: 1,
+        sp: AIM_TUNING.speed(ante),
+        good: AIM_TUNING.good(ante),
+        clean: AIM_TUNING.clean(ante),
+        w: AIM_TUNING.width,
+        wob: AIM_TUNING.wobble(ante),
+        /* where the band sits is not always the middle */
+        centre: 0.34 + Math.random() * 0.32,
+        t: 0, done: false, verdict: null,
+      };
+      bar.x = Math.random() * bar.w;
+      DUEL.aimBar = bar;
+      SFX.tick();
+
+      const finish = () => {
+        if (bar.done) return;
+        bar.done = true;
+        window.removeEventListener('pointerdown', hit, true);
+        window.removeEventListener('keydown', key, true);
+        const c = bar.centre * bar.w;
+        const off = Math.abs(bar.x - c);
+        bar.verdict = off <= bar.clean ? 'clean' : off <= bar.good ? 'good' : 'wide';
+        if (bar.verdict === 'clean') { SFX.jackpot(); FX.screen.flash(PIX.PAL.G, 0.3); }
+        else if (bar.verdict === 'good') SFX.chak();
+        else { SFX.dud(); FX.screen.shake(6); }
+        /* hold the result on screen long enough to read it, then go */
+        setTimeout(() => { DUEL.aimBar = null; res(bar.verdict); }, 420);
+      };
+      const hit = (e) => { e.preventDefault(); e.stopPropagation(); finish(); };
+      const key = (e) => {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); finish(); }
+      };
+      window.addEventListener('pointerdown', hit, true);
+      window.addEventListener('keydown', key, true);
+      /* nobody holds a gun forever: run out of nerve and it goes wide */
+      bar.timeout = setTimeout(finish, 1800);   // nobody holds a gun forever
+    });
+  },
+
+  stepAim() {
+    const b = DUEL.aimBar;
+    if (!b || b.done) return;
+    b.t++;
+    b.x += b.dir * b.sp;
+    if (b.x <= 0) { b.x = 0; b.dir = 1; }
+    if (b.x >= b.w) { b.x = b.w; b.dir = -1; }
+  },
+
+  /* drawn on the felt in front of him, in the same blocks as everything else */
+  drawAim(x) {
+    const b = DUEL.aimBar;
+    if (!b) return;
+    const P = PIX.PAL;
+    const BX = 180 - b.w / 2, BY = 98;
+    const wob = Math.round(Math.sin(DUEL.t / 3.1) * b.wob);
+    const c = BX + b.centre * b.w;
+
+    /* the rail */
+    PIX.rect(x, BX - 4, BY - 4, b.w + 8, 18, P.K);
+    PIX.rect(x, BX - 3, BY - 3, b.w + 6, 16, P.t);
+    PIX.rect(x, BX - 2, BY - 2, b.w + 4, 14, '#0a0f14');
+    PIX.rect(x, BX - 2, BY - 2, b.w + 4, 1, 'rgba(255,255,255,.14)');
+    for (let i = 0; i < b.w; i += 6) PIX.rect(x, BX + i, BY + 5, 3, 1, 'rgba(154,163,184,.34)');
+
+    /* the band you are trying to break the shot in */
+    PIX.rect(x, Math.round(c - b.good), BY - 1, Math.round(b.good * 2), 12, 'rgba(46,125,91,.55)');
+    PIX.rect(x, Math.round(c - b.good), BY - 2, 2, 14, P.F);
+    PIX.rect(x, Math.round(c + b.good), BY - 2, 2, 14, P.F);
+    PIX.rect(x, Math.round(c - b.clean), BY - 1, Math.round(b.clean * 2), 12, 'rgba(224,166,60,.6)');
+    PIX.rect(x, Math.round(c) - 1, BY - 5, 2, 20, P.G);
+
+    /* the marker: the bore, drifting */
+    const mx = Math.round(BX + b.x) + wob;
+    PIX.rect(x, mx - 3, BY - 6, 7, 22, P.K);
+    PIX.rect(x, mx - 2, BY - 5, 5, 20, b.verdict === 'wide' ? P.R
+      : b.verdict ? P.G : P.W);
+    PIX.rect(x, mx - 1, BY - 5, 3, 20, b.verdict === 'wide' ? P.r : P.Y);
+
+    /* and what it said */
+    if (b.verdict) {
+      const lab = b.verdict === 'clean' ? 'THROUGH THE EYE'
+        : b.verdict === 'good' ? 'ON HIM' : 'INTO THE WALL';
+      const col = b.verdict === 'wide' ? P.R : b.verdict === 'clean' ? P.G : P.W;
+      const cv = PIXFONT.render(lab, { scale: 1, color: col, outline: P.K });
+      x.drawImage(cv, Math.round(180 - cv.width / 2), BY + 20);
+    } else {
+      const cv = PIXFONT.render('BREAK THE SHOT', { scale: 1, color: P.q, outline: P.K });
+      x.drawImage(cv, Math.round(180 - cv.width / 2), BY + 20);
+    }
+  },
+
+  /* ============================================================
      THE ROUND.
      Time opens up for about a third of a second and you watch the
      thing travel: a hot slug, a shock ring off the nose of it, a
@@ -2034,6 +2189,16 @@ const DUEL = {
     DUEL.hurry = false;
     DUEL.setPose(DUEL.aim === 'foe' ? 'youFoe' : 'youSelf');
     await DUEL.sleep(140);
+    /* ACROSS THE TABLE IS A SHOT YOU CAN MISS. Point blank at your own
+       head is not — there is nothing to steady. */
+    if (DUEL.aim === 'foe') {
+      const v = await DUEL.steady();
+      G.duel.aimWide = v === 'wide';
+      G.duel.aimClean = v === 'clean';
+      if (v === 'wide') UI.stampSmall('YOU RUSHED IT');
+    } else {
+      G.duel.aimWide = false; G.duel.aimClean = false;
+    }
     await DUEL.cockIt();
     const ev = E.pull(DUEL.aim);
     await DUEL.playShot(ev);
@@ -2120,6 +2285,16 @@ const DUEL = {
         await U.sleep(160);
         UI.stampBig('FIZZLE', PIX.PAL.N); SFX.dud();
         DUEL.reactAt('facepalm');            // he cannot believe he watched that
+      } else if (ev.wide) {
+        /* it went past his ear. He knows it, too. */
+        await DUEL.sleep(190);
+        DUEL.slug = null;
+        FX.cordite(300, 40, 10);
+        FX.screen.shake(7);
+        UI.stampBig('WIDE', PIX.PAL.N);
+        SFX.jamSfx();
+        DUEL.setExpr('smug', 70);
+        if (typeof TALK !== 'undefined') setTimeout(() => TALK.after('selfBlank'), 260);
       } else if (ev.victim === 'foe') {
         /* it has to get there first */
         await DUEL.sleep(220);
@@ -2143,7 +2318,8 @@ const DUEL = {
           y: -46 - Math.random() * 34,
           big: ev.dmg >= 2,
         });
-        UI.stampBig(ev.dmg >= 2 ? '-' + ev.dmg + ' CRUNCH' : 'HIT', PIX.PAL.R);
+        UI.stampBig(ev.clean ? 'THROUGH THE EYE  -' + ev.dmg
+          : ev.dmg >= 2 ? '-' + ev.dmg + ' CRUNCH' : 'HIT', PIX.PAL.R);
         SFX.hurt();
         DUEL.gore(ev.dmg >= 2 ? 3 : 2);
         /* still upright, and he has something to say about it */
@@ -2224,7 +2400,7 @@ const DUEL = {
 
   async oppLoop() {
     while (G.phase === 'duel' && !G.duel.over && G.duel.turn === 'opp') {
-      DUEL.setPose('rest');
+      DUEL.setPose('oppLap');
       DUEL.hurry = false;
       UI.syncDuel();
       /* He says his piece FIRST, and it is out of the way before the iron
@@ -2232,11 +2408,16 @@ const DUEL = {
       if (typeof TALK !== 'undefined') await TALK.takes();
       await DUEL.sleep(160);
       const choice = E.oppDecide();
+      /* IT COMES UP OUT OF HIS LAP. Three beats so you can see it happen:
+         off the felt, half way, then level with whichever head he picked. */
+      DUEL.setPose('oppUp');
+      SFX.tick();
+      await DUEL.sleep(200);
       DUEL.setPose(choice === 'foe' ? 'oppYou' : 'oppSelf');
       if (choice === 'self') DUEL.setExpr('worry', 70);
-      /* the barrel comes round to where it is going, and you get to watch */
+      else DUEL.setExpr('angry', 90);
       UI.stampSmall(choice === 'foe' ? 'HE POINTS IT AT YOU' : 'HE POINTS IT AT HIMSELF');
-      await DUEL.sleep(420);
+      await DUEL.sleep(400);
       await DUEL.cockIt();
       const ev = E.pull(choice);
       await DUEL.playShot(ev);
@@ -2245,6 +2426,9 @@ const DUEL = {
       if (ev.shuffled) { SFX.spin(); UI.stampSmall('SHUFFLED'); }
       if (ev.reloaded) { SFX.spin(); await UI.loadBanner(); }
       if (ev.extraTurn) { UI.stampSmall('HE GOES AGAIN'); await DUEL.sleep(140); }
+      /* and it goes back down into his lap */
+      DUEL.setPose('oppLap');
+      await DUEL.sleep(220);
       UI.syncDuel();
     }
     if (G.phase === 'duel' && !G.duel.over) {

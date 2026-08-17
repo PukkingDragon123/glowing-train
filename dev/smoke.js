@@ -42,6 +42,22 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.mouse.click(p2.x, p2.y);
   };
   const aimFoe = () => page.evaluate(() => DUEL.setAim('foe'));
+  /* Every shot across the table now runs the steady check. Park the marker
+     where we want it and break the shot, so the test is deterministic. */
+  const breakShot = async (verdict) => {
+    const got = await page.waitForFunction(
+      () => !!DUEL.aimBar && !DUEL.aimBar.done, null, { timeout: 8000 }).catch(() => null);
+    if (!got) return false;
+    await page.evaluate((v) => {
+      const b = DUEL.aimBar;
+      b.sp = 0; b.dir = 0;
+      b.x = b.centre * b.w + (v === 'wide' ? b.good + 8 : v === 'good' ? b.clean + 2 : 0);
+    }, verdict || 'clean');
+    await page.waitForTimeout(50);
+    await page.mouse.click(6, 6);
+    await page.waitForTimeout(520);
+    return true;
+  };
   const aimSelf = () => page.evaluate(() => DUEL.setAim('self'));
   /* every screen change goes behind the card-rack wipe — let it finish */
   const wiped = () => page.waitForFunction(
@@ -69,6 +85,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
         /* fire and DO NOT await the sequence — evaluate() would not resolve
            until the whole kill cinematic had already played out */
         await page.evaluate(() => { DUEL.onFire(); });
+        await breakShot('clean');
         /* the kill does not cut — it lands on the glass in front of you */
         if (!sawBlood) {
           for (let t = 0; t < 20; t++) {
@@ -281,6 +298,13 @@ fs.mkdirSync(SHOTS, { recursive: true });
       if (s.phase !== 'duel' || s.over || s.busy || s.turn !== 'you') break;
       await aimFoe();
       await page.evaluate(() => { DUEL.onFire(); });
+      if (p === 0) {
+        /* the steady check, mid-sweep */
+        await page.waitForFunction(() => !!DUEL.aimBar, null, { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(120);
+        await shot('03e-steady');
+      }
+      await breakShot(p === 0 ? 'good' : 'clean');
       if (!sawTalk) {
         for (let t = 0; t < 40; t++) {
           if (await page.locator('#tutor-root.pass').count() > 0) {
