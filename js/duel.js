@@ -47,6 +47,7 @@ const DUEL = {
   flies: [],              // what it goes out for
   hoverSpot: -1, hoverFace: false, hoverStain: -1,
   react: null,               // what his hand came up out of the dark to say
+  dying: 0,                  // 0 = you are fine; 1 = he is standing over you
   myGore: 0,                 // what is on YOUR face, and stays there
   blood: [],                 // what is on HIS, in his own space, and grows
   blink: 0, blinkNext: 90,   // he is alive; every so often the lids come down
@@ -194,7 +195,7 @@ const DUEL = {
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
-    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = [];
+    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = []; DUEL.dying = 0;
     DUEL.view = 'table'; DUEL.viewT = 0;
     DUEL.initTongue();
     /* G.loot survives from the LAST corpse until the next one is opened, so
@@ -331,6 +332,7 @@ const DUEL = {
     DUEL.viewT += (vt - DUEL.viewT) * 0.18;
     if (Math.abs(DUEL.viewT - vt) < 0.004) DUEL.viewT = vt;
     if (DUEL.react && ++DUEL.react.t >= DUEL.react.life) DUEL.react = null;
+    if (DUEL.dying > 0 && DUEL.dying < 1) DUEL.dying = Math.min(1, DUEL.dying + 0.018);
     if (DUEL.blink > 0) DUEL.blink--;
     else if (--DUEL.blinkNext <= 0) {
       DUEL.blink = 7;
@@ -484,6 +486,25 @@ const DUEL = {
 
     /* --- the room's flies, and what goes out for them --- */
     if (!DUEL.opp.gone && DUEL.opp.fall < 0) { DUEL.drawFlies(x); DUEL.drawTongue(x); }
+
+    /* --- and if you are the one going, he stands up over the lens --- */
+    if (DUEL.dying > 0 && G.duel && !DUEL.opp.gone) {
+      const comp = DUEL.composite('grin');
+      const t2 = U.clamp(DUEL.dying, 0, 1);
+      x.save();
+      x.globalAlpha = 1;
+      const k = 1.5 + t2 * 1.5;
+      const cy = 150 + (1 - t2) * 60;
+      x.translate(180, cy);
+      x.drawImage(comp.cv, -comp.cv.width * k / 2, -comp.cv.height * k,
+        comp.cv.width * k, comp.cv.height * k);
+      x.restore();
+      /* his shadow falling over you */
+      x.globalAlpha = 0.42 * t2;
+      x.fillStyle = '#05060a';
+      x.fillRect(-60, -DUEL.OY, 480, 400);
+      x.globalAlpha = 1;
+    }
 
     /* --- ghost on the way out --- */
     if (DUEL.ghost) {
@@ -1931,18 +1952,42 @@ const DUEL = {
     await DUEL.afterPull(ev);
   },
 
-  /* Thumb the hammer back, let the cylinder index a chamber, then let it
-     fall. Three beats, because that is how many a revolver has. */
+  /* ============================================================
+     THE PULL.
+     Four beats and a camera move. Thumb the hammer back, let the
+     cylinder index, hold one beat on nothing at all, then let it
+     fall. The hold is the whole point: it is the last moment in
+     which everybody at this table is still alive.
+     ============================================================ */
   async cockIt() {
+    CINE.pushIn(1.0, 1);                     // reset any pending move
     DUEL.cocked = true;
     DUEL.cylT = 1;
     SFX.tone(2200, 0.025, 'square', 0.05);
     SFX.tone(1500, 0.04, 'square', 0.06, 0.03);
-    await DUEL.sleep(190);
+    /* the camera leans in while the cylinder turns */
+    CINE.pushIn(1.0, 1);
+    const cv = document.getElementById('scene');
+    if (cv) {
+      cv.style.transition = 'transform 420ms steps(7)';
+      cv.style.transformOrigin = DUEL.aim === 'self' ? '50% 46%' : '50% 26%';
+      cv.style.transform = 'scale(1.07)';
+    }
+    await DUEL.sleep(200);
     SFX.click();
+    FX.screen.chroma(0.6);
+    await DUEL.sleep(150);
+    /* the hold. Nothing happens here and that is what it is for. */
+    FX.screen.slowmo(220, 0.5);
     await DUEL.sleep(110);
     DUEL.cocked = false;                     // the hammer drops on the primer
-    await DUEL.sleep(50);
+    await DUEL.sleep(60);
+    if (cv) {
+      cv.style.transition = 'transform 260ms steps(5)';
+      cv.style.transform = 'scale(1)';
+      clearTimeout(DUEL._camTo);
+      DUEL._camTo = setTimeout(() => { cv.style.transition = ''; cv.style.transform = ''; }, 400);
+    }
   },
 
   /* smoke off the muzzle and out of the cylinder gap, which is where it
@@ -1963,17 +2008,23 @@ const DUEL = {
     const tip = DUEL.muzzleTip();
     const ang = DUEL.boreAngle();
     if (ev.live) {
+      /* ONE WHITE FRAME. A gun going off in a dark room is not an orange
+         glow, it is the whole room being briefly overexposed. */
       SFX.shot();
+      SFX.tone(70, 0.55, 'sawtooth', 0.26, 0, -30);       // the thump under it
+      SFX.tone(4200, 1.5, 'sine', 0.05, 0.05, -3800);     // and the ring after
       DUEL.muzzle = { x: tip.x, y: tip.y, ang, t: 0, len: 1 };
       DUEL.kick = 1;                          // the iron jumps, then comes back
       FX.muzzleFlash(tip.x, tip.y, ang);
       FX.casing(DUEL.gun.x, DUEL.gun.y - 6, DUEL.gun.flip ? -1 : 1);
-      FX.cordite(tip.x, tip.y, 8);
-      DUEL.puffSmoke(tip.x, tip.y, ang, 9, 0.7);
+      FX.cordite(tip.x, tip.y, 12);
+      DUEL.puffSmoke(tip.x, tip.y, ang, 14, 0.7);
       const gap = DUEL.ironPoint(28, 9);      // the cylinder gap, top of the frame
-      DUEL.puffSmoke(gap.x, gap.y, -Math.PI / 2, 5, 1.5);
-      FX.screen.shake(ev.dmg >= 2 ? 16 : 10);
-      FX.screen.flash(PIX.PAL.Y, 0.26);
+      DUEL.puffSmoke(gap.x, gap.y, -Math.PI / 2, 7, 1.5);
+      FX.screen.shake(ev.dmg >= 2 ? 20 : 14);
+      FX.screen.flash(PIX.PAL.W, 0.85, 0.16);
+      FX.screen.chroma(ev.dmg >= 2 ? 4 : 2.4);
+      FX.screen.slowmo(ev.victim === 'foe' ? 520 : 700, 0.55);
       if (ev.fizzled) {
         await U.sleep(160);
         UI.stampBig('FIZZLE', PIX.PAL.N); SFX.dud();
@@ -2129,17 +2180,44 @@ const DUEL = {
   },
 
   /* you die */
+  /* ============================================================
+     YOU DIE.
+     Not a fade. The room tips over because your head does, he
+     stands up and looks down at the lens for a while, and then
+     the marker changes hands. Any tap hurries it.
+     ============================================================ */
   async deathSequence() {
-    FX.screen.vignette(PIX.PAL.d, 1.1, 0.02);
-    FX.screen.chroma(4);
-    FX.screen.slowmo(1200, 0.7);
+    FX.screen.vignette(PIX.PAL.d, 1.1, 0.015);
+    FX.screen.chroma(5);
+    FX.screen.slowmo(1600, 0.5);
+    FX.screen.flash(PIX.PAL.R, 0.5, 0.05);
     UI.flash('go-back');
     SFX.backfire();
-    await U.sleep(500);
+    SFX.tone(3200, 2.4, 'sine', 0.06, 0, -3000);     // the ring that does not stop
+    DUEL.hurry = false;
+    await DUEL.sleep(420);
+
+    /* the room goes over with you */
     DUEL.youFall = true;
     SFX.lose();
-    await U.sleep(900);
+    const cv = document.getElementById('scene');
+    if (cv) {
+      cv.style.transition = 'transform 1500ms steps(16)';
+      cv.style.transformOrigin = '50% 100%';
+      cv.style.transform = 'rotate(-13deg) scale(1.1) translateY(6%)';
+    }
+    await DUEL.sleep(700);
+
+    /* he gets up. This is the last thing you see of him. */
+    DUEL.dying = 0.02;              // the step eases it the rest of the way
+    SFX.chak();
+    await DUEL.sleep(1100);
+    SFX.tone(120, 0.5, 'square', 0.1, 0, -60);
+
+    if (cv) { cv.style.transition = ''; cv.style.transform = ''; }
     META.check();
+    /* the card, then the marker */
+    await CINE.deathCard(G.duel && G.duel.opp ? G.duel.opp.name : '');
     await CINE.iris(() => UI.render());
   },
 

@@ -712,13 +712,18 @@ const UI = {
       const show = G.phase === 'duel' && !d.over;
       hint.className = show ? '' : 'hidden';
       if (show) {
-        hint.textContent = d.turn !== 'you'
+        const msg = d.turn !== 'you'
           ? 'HIS PULL'
           : DUEL.aim === 'self'
             ? 'CLICK YOUR OWN HEAD TO PULL  ·  ANYWHERE ELSE TO STAND DOWN'
             : DUEL.aim === 'foe'
               ? 'CLICK HIS FACE AGAIN TO PULL  ·  ANYWHERE ELSE TO STAND DOWN'
               : 'CLICK HIS FACE TO AIM  ·  YOUR END OF THE TABLE TO TURN IT ROUND';
+        if (hint._msg !== msg) {
+          hint._msg = msg;
+          hint.innerHTML = '';
+          hint.appendChild(UI.wrap(msg, 46, { scale: 2, color: PIX.PAL.w }));
+        }
       }
     }
 
@@ -1132,12 +1137,57 @@ const UI = {
 
   /* ================= modal & tooltip ================= */
 
+  /* ============================================================
+     EVERY LETTER, IN THE PIXEL FONT.
+
+     The panels that were built as HTML strings — help, the run
+     sheet, tooltips — were the last places a browser font was
+     still drawing text. This walks a subtree and replaces every
+     text node with one small canvas PER WORD, so the browser
+     still wraps between words but nothing is rendered by the
+     system font any more.
+     ============================================================ */
+  PXCOL: { B: PIX.PAL.G, STRONG: PIX.PAL.G, H3: PIX.PAL.G, H4: PIX.PAL.N, EM: PIX.PAL.N, I: PIX.PAL.N },
+
+  pixelize(root, base) {
+    if (!root) return;
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const nodes = [];
+    while (walk.nextNode()) nodes.push(walk.currentNode);
+    nodes.forEach(n => {
+      /* the font has no em-dash, no curly quotes and no chip glyph — swap
+         them for something it can actually draw instead of a row of '?' */
+      const raw = (n.nodeValue || '')
+        .replace(/[\u2014\u2013]/g, '-')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201c\u201d]/g, '"')
+        .replace(/\u26c1/g, '')
+        .replace(/\u00d7/g, 'x')
+        .replace(/\s+/g, ' ');
+      if (!raw.trim()) return;
+      const parent = n.parentElement;
+      if (!parent || parent.classList.contains('pxw-done')) return;
+      const tag = parent.tagName;
+      const col = UI.PXCOL[tag] || base || PIX.PAL.w;
+      const sc = (tag === 'H3') ? 3 : 2;
+      const frag = document.createDocumentFragment();
+      raw.trim().split(' ').forEach(w => {
+        if (!w) return;
+        const c = PIXFONT.render(w, { scale: sc, color: col, shadow: null });
+        c.className = 'pxw';
+        frag.appendChild(c);
+      });
+      parent.replaceChild(frag, n);
+    });
+  },
+
   modal(html, noClose) {
     const root = document.getElementById('modal-root');
     root.classList.remove('hidden');
     root.innerHTML = '';
     const m = U.el('div', 'modal', html);
     root.appendChild(m);
+    UI.pixelize(m);
     if (!noClose) root.onclick = (e) => { if (e.target === root) UI.closeModal(); };
     else root.onclick = null;
     return m;
@@ -1224,6 +1274,7 @@ const UI = {
         const html = UI.tooltipFor(t);
         if (!html) { tip.classList.add('hidden'); return; }
         tip.innerHTML = html;
+        UI.pixelize(tip);
         tip.classList.remove('hidden');
         const r = t.getBoundingClientRect();
         const tr = tip.getBoundingClientRect();
@@ -1241,6 +1292,7 @@ const UI = {
       const html = UI.tooltipFor(t);
       if (!html) { tip.classList.add('hidden'); return; }
       tip.innerHTML = html;
+      UI.pixelize(tip);
       tip.classList.remove('hidden');
     });
     document.addEventListener('mousemove', (e) => {

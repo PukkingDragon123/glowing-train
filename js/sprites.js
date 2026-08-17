@@ -4041,6 +4041,45 @@ SPR.speech = function (o) {
   return cv;
 };
 
+/* ============================================================
+   A TITLE CARD, DRAWN.
+   Stacked lines on a ruled plate with a hard rule under the big
+   one. Used by the cutscenes so no interstitial in the game is
+   made of CSS text.
+   ============================================================ */
+SPR.titleCard = function (o) {
+  const P = PIX.PAL;
+  const rows = [];
+  if (o.big) rows.push({ cv: PIXFONT.render(o.big, { scale: 1, color: P.q, shadow: null }), gap: 3 });
+  if (o.huge) rows.push({ cv: PIXFONT.render(o.huge, { scale: 2, color: o.col || P.W, shadow: null }), gap: 5, rule: true });
+  if (o.sub) rows.push({ cv: PIXFONT.render(o.sub, { scale: 1, color: P.w, shadow: null }), gap: 3 });
+  if (o.foot) rows.push({ cv: PIXFONT.render(o.foot, { scale: 1, color: P.q, shadow: null }), gap: 0 });
+
+  const pad = 8;
+  let W = 0, H = pad * 2;
+  rows.forEach(r => { W = Math.max(W, r.cv.width); H += r.cv.height + r.gap + (r.rule ? 4 : 0); });
+  W += pad * 2;
+
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  c.imageSmoothingEnabled = false;
+  PIX.rect(c, 0, 0, W, H, P.K);
+  PIX.rect(c, 1, 1, W - 2, H - 2, '#0a0e14');
+  PIX.rect(c, 1, 1, W - 2, 1, 'rgba(255,255,255,.10)');
+  PIX.rect(c, 0, 0, W, 3, o.col || P.W);
+  PIX.rect(c, 0, H - 3, W, 3, o.col || P.W);
+  for (let y = 4; y < H - 4; y += 3) PIX.rect(c, 2, y, W - 4, 1, 'rgba(0,0,0,.30)');
+
+  let y = pad;
+  rows.forEach(r => {
+    c.drawImage(r.cv, Math.round((W - r.cv.width) / 2), y);
+    y += r.cv.height + r.gap;
+    if (r.rule) { PIX.rect(c, pad, y, W - pad * 2, 1, o.col || P.W); y += 4; }
+  });
+  return cv;
+};
+
 /* break a string into lines that fit a character budget */
 SPR.fitLines = function (str, per) {
   const out = [];

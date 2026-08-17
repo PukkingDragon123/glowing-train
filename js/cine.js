@@ -303,6 +303,34 @@ const CINE = {
   },
 
   /* ============================================================
+     THE MARKER CHANGES HANDS.
+     One card, drawn, held long enough to read.
+     ============================================================ */
+  async deathCard(who) {
+    const root = CINE.stage();
+    root.className = 'death-cut';
+    root.innerHTML = '';
+    const card = U.el('div', 'death-card');
+    const K = U.clamp(Math.floor(window.innerWidth / 300), 2, 6);
+    card.appendChild(SPR.clone(SPR.titleCard({
+      big: 'THE SWAMP KEEPS',
+      huge: 'YOUR MARKER',
+      sub: who ? 'TAKEN BY ' + who : '',
+      foot: 'FLOOR ' + G.ante + ' OF 8',
+      col: PIX.PAL.R,
+    }), K));
+    root.appendChild(card);
+    await U.sleep(20);
+    card.classList.add('in');
+    SFX.tone(90, 1.2, 'sawtooth', 0.16, 0, -50);
+    await DUEL.sleep(2100);
+    card.classList.add('out');
+    await U.sleep(320);
+    root.innerHTML = '';
+    root.className = 'hidden';
+  },
+
+  /* ============================================================
      ANTE CLEARED. The take rains onto the felt and the marker
      gets one more line struck off it.
      ============================================================ */

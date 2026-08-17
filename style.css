@@ -2092,3 +2092,25 @@ body.heard #siren-wash { opacity: 1; }
 .tut-plate.in { transform: translateY(0); opacity: 1; }
 .tut-plate.out { transform: translateY(8px); opacity: 0; }
 .tut-plate canvas { display: block; image-rendering: pixelated; }
+
+/* the marker changing hands: one drawn card, held */
+#cine-stage.death-cut {
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(6,4,8,.82);
+}
+.death-card {
+  opacity: 0; transform: scale(1.06);
+  transition: opacity .3s steps(5), transform .3s steps(5);
+}
+.death-card.in { opacity: 1; transform: scale(1); }
+.death-card.out { opacity: 0; }
+.death-card canvas { display: block; image-rendering: pixelated; box-shadow: 0 10px 0 rgba(0,0,0,.55); }
+
+/* one canvas per word, so the browser still wraps but no letter on screen
+   is drawn by a system font */
+.pxw {
+  display: inline-block; vertical-align: -2px;
+  margin: 0 5px 2px 0;
+  image-rendering: pixelated;
+}
+#hint-bar .txt-lines { align-items: center; }

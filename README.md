@@ -129,6 +129,12 @@ one more card over for money, and the price goes up every time you ask.
 
 ### The handler
 
+Every panel, plate, card and label in the game is drawn — including the letters. The
+speech plates are a single canvas each (frame, rivets, portrait well, scanline hatch,
+pixel font) blown up by an integer, and the prose panels render **one small canvas per
+word**, so the browser still wraps between words but nothing on screen is set in a
+system font.
+
 ![The handler](docs/screen-handler.png)
 
 Somebody has to tell you how this works once, and then never again. He is a frog in a
@@ -161,16 +167,37 @@ nothing, and you shoot by pointing at a head:
 
 - **Click his face** — the iron comes up and a sight picture lands on him. **Click it
   again** and it goes off.
-- **Click your own end of the table** — the camera swings round behind you. You are in
-  profile, the muzzle dented into your temple, and he is small and dim across the felt
-  still watching. Click your own head to pull, anywhere else to stand down.
+- **Click your own end of the table** — and the camera *crosses the table*. You see
+  yourself from **his chair**: front-on in the same head rig every frog in this game
+  wears, the pinstripe, the fedora, the shades, the iron against your temple, and his
+  shoulder in the bottom of frame because this is the view over it. Click your own head
+  to pull, anywhere else to stand down.
 
-![Down your own barrel](docs/screen-self.png)
+![From his chair](docs/screen-self.png)
 
-Nobody at this table talks. When the mark has an opinion, one of his hands comes up out
-of the dark under the felt and says it — a flat hand over his own eyes when you put the
-muzzle to your head and it clicks, one digit raised at the lamp when you hit him and he
-is still upright, a shrug when he watches you take a live one. Then it goes back down.
+Every pull is four beats and a camera move: the hammer back, the cylinder indexing, one
+held beat on nothing at all — the last moment in which everybody at this table is still
+alive — and then it falls. Live, and the room is briefly overexposed: one white frame,
+a thump, a ring that hangs on, cordite, a casing on the felt.
+
+![One white frame](docs/screen-shot.png)
+
+Nobody at this table talks while you are holding it. The moment the iron is in **his**
+hand he has something to say about it, and it goes up on a drawn plate in his own colour
+without waiting for you to click it — different lines when he is hurt, when you are
+nearly out of frog, and when he is a boss who remembers your door.
+
+![His turn](docs/screen-talk.png)
+
+The rest of the time his hands do the talking: one comes up out of the dark under the
+felt — a flat hand over his own eyes when you put the muzzle to your head and it clicks,
+one digit raised at the lamp when you hit him and he is still upright, a shrug when he
+watches you take a live one. Then it goes back down.
+
+And when it is you who goes: the room tips over because your head does, he stands up and
+looks down at the lens for a while, and the marker changes hands.
+
+![The marker changes hands](docs/screen-death.png)
 
 What lands on him stays on him: every hit spatters where the lead went in, runs downhill
 while he sits there, and does not wipe off between pulls. What he puts on you goes on
@@ -366,7 +393,7 @@ js/duel.js        the drawn table scene: expressions, blood, the fall, the corps
 js/cine.js        the wipe, the sit-down, the boss cut-in, the lore reel, the climb
 js/cops.js        Swamp PD: the walk-in, the bribe handoff, the shakedown, the bust
 js/loot.js        the take: pockets, the three meters, bribes, protection
-js/tutor.js       the handler: the opening, and the three lines that keep you alive
+js/tutor.js       the handler, the mark's lines, and the drawn speech plate
 js/main.js        boot (+ ?debug harness)
 dev/sim.js        headless balance & fuzz harness (node dev/sim.js)
 dev/smoke.js      full browser smoke test (playwright-core)
