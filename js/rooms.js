@@ -219,39 +219,36 @@ const ROOMS = (() => {
      ============================================================ */
 
   function boardRoom() {
-    const W = 300, FY = 116;
+    const W = 236, FY = 116, MID = 118;
 
     const paint = (c) => {
       const p = P();
       c.drawImage(ART.wall(W, FY + 4, { tone: 'grey', railY: 84, seed: 9 }), 0, 0);
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: 2 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#0f1316');
-      /* the big board, most of the wall */
-      c.drawImage(ART.corkboard(212, 74, 4), 44, 12);
-      /* a table under it with the overflow: files, a projector, cold coffee */
-      c.drawImage(ART.desk(96, 22, 6), 100, FY - 22);
-      c.drawImage(ART.art('files', 1), 108, FY - 33);
-      c.drawImage(ART.art('mug', 1), 132, FY - 29);
-      c.drawImage(ART.art('ashtray', 1), 150, FY - 28);
-      c.drawImage(ART.art('badge', 1), 176, FY - 30);
-      /* two chairs nobody sits in */
-      c.drawImage(ART.chair(14, 28, 4), 74, FY - 28);
-      c.drawImage(ART.chair(14, 28, 5), 214, FY - 28);
-      c.drawImage(ART.hangLamp(18, 30, true), 140, 0);
+      /* the board: most of the wall, and the only thing in the room that matters */
+      c.drawImage(ART.corkboard(206, 76, 4), MID - 103, 12);
+      /* a table under it with the overflow: files, cold coffee, a spare badge */
+      c.drawImage(ART.desk(92, 22, 6), MID - 46, FY - 22);
+      c.drawImage(ART.art('files', 1), MID - 38, FY - 33);
+      c.drawImage(ART.art('mug', 1), MID - 14, FY - 29);
+      c.drawImage(ART.art('ashtray', 1), MID + 4, FY - 28);
+      c.drawImage(ART.art('badge', 1), MID + 28, FY - 30);
+      c.drawImage(ART.chair(14, 26, 4), MID - 78, FY - 26);
+      c.drawImage(ART.chair(14, 26, 5), MID + 62, FY - 26);
+      c.drawImage(ART.hangLamp(18, 26, true), MID - 9, 0);
       ART.dither(c, 0, FY - 18, W, 18, 'rgba(0,0,0,.2)', 0.1, 13);
     };
 
-    /* what is actually pinned up is drawn live — it grows with intel */
+    /* what is pinned up is drawn live — it grows with the case */
     const onPaintOver = (c) => {
       const known = STORY.knownIntel();
-      const P0 = P();
-      /* the five cards of the address, revealed one at a time */
+      const X0 = MID - 100, PITCH = 40;
       known.cards.forEach((card, i) => {
-        const cx = 58 + i * 40, cy = 20;
+        const cx = X0 + i * PITCH, cy = 18;
         px(c, cx, cy, 32, 30, PIX.PAL.K);
         px(c, cx + 1, cy + 1, 30, 28, card.got ? '#ded2b4' : '#5c4a30');
         if (card.got) {
-          /* a photograph or a document, depending which piece it is */
           if (card.art === 'face') {
             px(c, cx + 5, cy + 4, 22, 16, '#141820');
             px(c, cx + 9, cy + 7, 14, 12, '#2e7d5b');
@@ -260,51 +257,48 @@ const ROOMS = (() => {
             px(c, cx + 10, cy + 15, 12, 2, '#12101d');
           } else if (card.art === 'map') {
             px(c, cx + 4, cy + 4, 24, 18, '#1d3a2c');
-            for (let i2 = 0; i2 < 4; i2++) px(c, cx + 4, cy + 6 + i2 * 4, 24, 1, 'rgba(255,255,255,.12)');
-            for (let i2 = 0; i2 < 5; i2++) px(c, cx + 6 + i2 * 5, cy + 4, 1, 18, 'rgba(255,255,255,.10)');
+            for (let k = 0; k < 4; k++) px(c, cx + 4, cy + 6 + k * 4, 24, 1, 'rgba(255,255,255,.12)');
+            for (let k = 0; k < 5; k++) px(c, cx + 6 + k * 5, cy + 4, 1, 18, 'rgba(255,255,255,.10)');
             px(c, cx + 16, cy + 12, 4, 4, '#d13b45');
           } else {
-            for (let i2 = 0; i2 < 6; i2++) px(c, cx + 5, cy + 5 + i2 * 3, 22 - (i2 % 2) * 6, 1, '#4a4436');
+            for (let k = 0; k < 6; k++) px(c, cx + 5, cy + 5 + k * 3, 22 - (k % 2) * 6, 1, '#4a4436');
           }
-          /* the pin */
           px(c, cx + 14, cy - 1, 4, 3, '#b8232f');
           px(c, cx + 15, cy - 1, 1, 1, '#ff8a7e');
         } else {
-          /* an empty slot: tape corners and a question mark */
           px(c, cx + 3, cy + 3, 5, 2, 'rgba(240,235,220,.3)');
           px(c, cx + 24, cy + 3, 5, 2, 'rgba(240,235,220,.3)');
           const q = PIXFONT.render('?', { scale: 2, color: '#8d8672', shadow: null });
           c.drawImage(q, cx + 13, cy + 10);
         }
       });
-      /* red string between everything you have */
+      /* red string between the pieces you have */
       const got = known.cards.filter(k => k.got).length;
       for (let i = 0; i < got - 1; i++) {
-        const ax = 58 + i * 40 + 16, bx2 = 58 + (i + 1) * 40 + 16;
+        const ax = X0 + i * PITCH + 16, bx2 = X0 + (i + 1) * PITCH + 16;
         for (let x = ax; x < bx2; x++) {
           const t = (x - ax) / (bx2 - ax);
-          px(c, x, 51 + Math.round(Math.sin(t * Math.PI) * 5), 1, 1, '#b8232f');
+          px(c, x, 49 + Math.round(Math.sin(t * Math.PI) * 5), 1, 1, '#b8232f');
         }
       }
-      /* the headline, the readout and the count — cut to the width of cork */
+      /* and the readout, cut to the width of the cork */
       const head = PIXFONT.render('WHERE IS HE', { scale: 1, color: PIX.PAL.W, shadow: null });
-      c.drawImage(head, Math.round(150 - head.width / 2), 54);
-      SPR.fitLines(known.line, 34).slice(0, 2).forEach((ln, i) => {
+      c.drawImage(head, Math.round(MID - head.width / 2), 54);
+      SPR.fitLines(known.line, 30).slice(0, 2).forEach((ln, i) => {
         const sub = PIXFONT.render(ln, { scale: 1, color: known.ready ? PIX.PAL.G : PIX.PAL.q, shadow: null });
-        c.drawImage(sub, Math.round(150 - sub.width / 2), 63 + i * 8);
+        c.drawImage(sub, Math.round(MID - sub.width / 2), 63 + i * 8);
       });
       const pct = PIXFONT.render(STORY.intelPct() + '% OF HIM', { scale: 1, color: known.ready ? PIX.PAL.G : PIX.PAL.R, shadow: null });
-      c.drawImage(pct, Math.round(150 - pct.width / 2), 79);
+      c.drawImage(pct, Math.round(MID - pct.width / 2), 80);
     };
 
     const spots = [
-      { id: 'back', x: 24, w: 30, top: FY - 40, label: 'BACK TO THE BULLPEN', hint: 'GO', onUse: () => STORY.toPrecinct() },
-      { id: 'log', x: 150, w: 90, top: 12, bot: 86,
-        label: 'THE CASE, SO FAR',
-        hint: 'READ IT',
-        onUse: () => STORY.readLog() },
-      { id: 'raid', x: 262, w: 30, top: FY - 40,
-        label: () => (STORY.canFinish() ? 'HIS ADDRESS' : 'NOT ENOUGH YET'),
+      { id: 'back', x: 14, w: 26, top: FY - 40, label: 'BACK TO THE BULLPEN', hint: 'GO',
+        onUse: () => STORY.toPrecinct() },
+      { id: 'log', x: MID, w: 90, top: 12, bot: 88,
+        label: 'THE CASE, SO FAR', hint: 'READ IT', onUse: () => STORY.readLog() },
+      { id: 'raid', x: W - 14, w: 26, top: FY - 40,
+        label: () => (STORY.canFinish() ? 'FOURTEEN MARSH ROW' : 'NOT ENOUGH YET'),
         hint: () => (STORY.canFinish() ? 'GO AND END IT' : 'FIND MORE'),
         onUse: () => STORY.tryFinale() },
     ];
@@ -312,7 +306,7 @@ const ROOMS = (() => {
     return {
       id: 'board', w: W, floorY: FY, paint, onPaintOver, spots, actors: [],
       enterX: 40, enterFace: 1,
-      lights: [{ x: 140, y: 16, r: 60, a: 0.06 }],
+      lights: [{ x: MID, y: 14, r: 56, a: 0.06 }],
     };
   }
 
@@ -331,7 +325,8 @@ const ROOMS = (() => {
       /* rain on a big window, because of course it is still raining */
       c.drawImage(ART.window(72, 46, false, 31), 26, 18);
       /* two beds: yours, and one with the curtain pulled */
-      c.drawImage(ART.bed(78, 46, true), 106, FY - 46);
+      /* your bed, empty: you are the one walking around */
+      c.drawImage(ART.bed(78, 46, false), 106, FY - 46);
       c.drawImage(ART.art('ivbag', 1), 100, FY - 62);
       px(c, 103, FY - 51, 1, 22, p.S);                 // the stand
       px(c, 99, FY - 30, 9, 2, p.K);
@@ -344,9 +339,9 @@ const ROOMS = (() => {
       /* a chart on the wall and a chair for the visitor */
       px(c, 160, 26, 18, 22, p.K); px(c, 161, 27, 16, 20, p.W);
       for (let i = 0; i < 5; i++) px(c, 163, 30 + i * 3, 12, 1, '#8d8672');
-      c.drawImage(ART.chair(14, 26, 9), 150, FY - 26);
+      c.drawImage(ART.chair(14, 26, 9), 192, FY - 26);
       c.drawImage(ART.radiator(34, 14), 60, FY - 14);
-      ART.dither(c, 0, 0, W, FY, 'rgba(190,220,255,.03)', 0.08, 41);
+      ART.dither(c, 0, 0, W, FY, 'rgba(190,220,255,.02)', 0.05, 41);
     };
 
     const spots = [

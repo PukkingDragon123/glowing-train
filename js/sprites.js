@@ -3552,7 +3552,7 @@ KGGGGKGGGK
 KGGGGGGGGK
 KKKKKKKKKK`);
 
-/* tiny full-body patrons for the casino floor */
+/* tiny full-body frogs, for a room seen from across it */
 PIX.def('patron_toad', `
 ......KKKK......
 ..KK.KbBBbK.KK..
@@ -3615,9 +3615,9 @@ PIX.def('ghost_frog', `
 ..WWWWWW..
 ..W.WW.W..`);
 
-/* ---------------- trinket cards (balatro-style) ---------------- */
-
-const TRINKET_RAR = {
+/* how good a thing off a corpse is, as two palette letters: the belt cards
+   are stamped in these and nothing else uses them */
+const ITEM_RAR = {
   common:    ['s', 'T'],
   uncommon:  ['n', 'E'],
   rare:      ['v', 'X'],

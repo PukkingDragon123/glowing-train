@@ -562,15 +562,39 @@ const ART = (() => {
       for (let y = 8; y < h - 12; y += 5) px(c, 1, y, 3, 1, p.m);
       /* the mattress */
       box(c, 3, Math.round(h * 0.42), w - 7, 8, { fill: p.w, top: p.W, bot: p.q, ink: p.K });
-      /* the sheet, folded over, with a body under it */
+      /* nobody in it: the sheet thrown back, the pillow still dented */
+      if (!occupied) {
+        const my = Math.round(h * 0.42);
+        px(c, 5, my - 5, 15, 6, p.K);
+        px(c, 6, my - 4, 13, 4, '#eef2f8');
+        px(c, 8, my - 3, 9, 1, '#cfd6e2');
+        for (let i = 0; i < 4; i++) {
+          px(c, Math.round(w * 0.4) + i * 7, my - 4 - (i % 2), 6, 5, p.K);
+          px(c, Math.round(w * 0.4) + i * 7 + 1, my - 3 - (i % 2), 4, 4, '#cfd6e2');
+        }
+      }
+      /* the sheet, and the shape of somebody under it */
       if (occupied) {
         const my = Math.round(h * 0.42);
-        px(c, 8, my - 4, w - 20, 5, p.K);
-        px(c, 9, my - 3, w - 22, 4, '#cfd6e2');
-        for (let i = 0; i < 5; i++) px(c, 12 + i * 9, my - 3, 1, 4, 'rgba(0,0,0,.14)');
-        /* a green head on the pillow */
-        px(c, 5, my - 8, 9, 7, p.K);
-        px(c, 6, my - 7, 7, 5, '#e8e2d0');    // pillow
+        /* the body: a long low mound, higher at the chest */
+        for (let i = 0; i < w - 22; i++) {
+          const t = i / (w - 22);
+          const rise = Math.round(Math.sin(t * Math.PI) * 4) + 2;
+          px(c, 10 + i, my - rise, 1, rise + 1, i % 7 === 0 ? '#b9c1cf' : '#cfd6e2');
+        }
+        px(c, 10, my - 6, w - 22, 1, p.K);
+        /* the sheet folded back over the chest */
+        px(c, Math.round(w * 0.42), my - 5, Math.round(w * 0.3), 4, '#e8eef7');
+        px(c, Math.round(w * 0.42), my - 5, Math.round(w * 0.3), 1, p.W);
+        /* the pillow, and a frog's head on it */
+        px(c, 5, my - 9, 13, 8, p.K);
+        px(c, 6, my - 8, 11, 6, '#eef2f8');
+        px(c, 8, my - 12, 10, 6, p.K);
+        px(c, 9, my - 11, 8, 4, '#2e7d5b');
+        px(c, 10, my - 13, 3, 3, p.K);
+        px(c, 11, my - 12, 2, 2, '#2e7d5b');
+        px(c, 14, my - 13, 3, 3, p.K);
+        px(c, 15, my - 12, 2, 2, '#2e7d5b');
       }
       /* the frame and castors */
       px(c, 3, Math.round(h * 0.42) + 8, w - 7, 2, p.K);

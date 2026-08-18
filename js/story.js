@@ -443,6 +443,9 @@ const STORY = {
         { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
       return;
     }
+    /* whoever was at the last table is finished with; make sure there is
+       somebody at this one */
+    if (!G.duel || G.duel.over) { STORY.clearTable(); G.case = null; E.startBlind(); }
     SCENE.close();
     await CINE.driveTo(STORY.chapter().where);
     G.phase = 'blind';
@@ -492,14 +495,26 @@ const STORY = {
     }
     STORY.note('WOKE UP IN THE WARD. BILL: ' + bill + ' CHIPS.');
     G.hearts = Math.max(2, Math.round(E.maxHP() / 2));
-    G.duel = null; G.loot = null; G.case = null;
+    G.case = null;
     G.briefed = Math.min(G.briefed, (G.chapter || 1) - 1);   // you have to be re-briefed
     return { bill, lostName };
+  },
+
+  /* THE TABLE IS PACKED UP AFTERWARDS, NOT DURING. The death cinematic is
+     still looking at the frog who shot you while this runs, so clearing the
+     duel out from under it is how you get a black screen and a stack trace. */
+  clearTable() {
+    G.duel = null;
+    G.loot = null;
   },
 
   async rushToWard() {
     const { bill, lostName } = STORY.wardCost();
     await CINE.ambulance(bill, lostName);
+    STORY.clearTable();
+    /* somebody else is standing in that room by the time you can walk: the
+       lead has to be re-dealt or there is nobody at the next line-up */
+    E.startBlind();
     G.phase = 'ward';
     UI.render();
   },
@@ -532,12 +547,22 @@ const STORY = {
   /* he is down and it is the last chapter: the player picks */
   async endgame() {
     const clean = STORY.canFinish() && !G.badgePulled;
-    const pick = await CINE.choice({
-      head: 'HE IS ON THE FLOOR AND HE IS STILL BREATHING',
-      a: { key: 'badge', label: 'THE BADGE', sub: clean ? 'CUFF HIM. LET THE FILE DO IT.' : 'YOU HAVE NO FILE AND NO BADGE' , dim: !clean },
-      b: { key: 'bullet', label: 'THE BULLET', sub: 'FINISH WHAT HE STARTED AT YOUR DOOR' },
-    });
-    if (pick === 'badge' && clean) {
+    let idx = -1;
+    while (idx < 0) {
+      idx = await CINE.pick({
+        head: 'HE IS ON THE FLOOR AND STILL BREATHING',
+        sub: clean ? 'THE FILE IS IN YOUR COAT AND THE BADGE IS STILL YOURS'
+                   : 'NO FILE. NO BADGE. NOBODY WAITING ON PAPERWORK.',
+        cancel: false,
+        items: [
+          { label: 'THE BADGE', sub: clean ? 'CUFF HIM' : 'NOTHING TO CHARGE HIM WITH',
+            art: ART.art('badge', 3), dim: !clean },
+          { label: 'THE BULLET', sub: 'WHAT HE DID AT YOUR DOOR',
+            art: ART.art('gunprop', 3) },
+        ],
+      });
+    }
+    if (idx === 0 && clean) {
       G.ending = 'good';
       META.bump('wins');
       STORY.note('ENDING: HE WENT DOWN IN A COURTROOM.');

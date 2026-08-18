@@ -1,8 +1,8 @@
 /* ============================================================
    SHELL & DEBT — style.css   (single stylesheet, no imports)
 
-   Felt casino skin: rounded felt panels with gold trim over the
-   fullscreen swirl, chunky machine buttons, crisp pixels.
+   The pixel skin: chunky panels with brass trim, arcade buttons,
+   painted rooms, crisp pixels and not one rounded corner.
    Colours mirror PIX.PAL in js/pix.js and are declared ONCE in
    the token block below — nothing further down invents a hex
    that isn't either a token or an rgba() shading overlay.
@@ -195,7 +195,6 @@ canvas.pix, .pix, canvas { image-rendering: pixelated; image-rendering: crisp-ed
 }
 #stamp-big canvas, #turn-stamp canvas { max-width: 94vw; }
 
-/* the balatro-style swirl — the whole casino floor */
 /* No paint swirl behind anything any more. Rooms paint their own walls;
    what is left underneath is the night the city is having. */
 body {
@@ -634,9 +633,16 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   border: var(--bd-thick) solid var(--red);
   border-radius: 0;
   box-shadow: var(--d4), var(--inset-ink), var(--glow-red);
-  padding: 22px 32px; max-width: min(94vw, 480px); text-align: center;
-  max-height: 100%; overflow-y: auto; scrollbar-width: none;
+  padding: 16px 26px; max-width: min(94vw, 460px); text-align: center;
+  max-height: 94%; overflow: hidden;
 }
+/* The lieutenant's card is a cinematic, not a panel inside the table frame:
+   give it the whole window, or it clips its own last two lines. */
+#duel-overlay.boss-in { position: fixed; inset: 0; z-index: 140; padding: 14px; }
+/* and the portrait gives way first when the frame is short — the name, the
+   rule and the line telling you what he carries all have to stay on screen */
+.boss-card { gap: 5px; }
+.boss-card > canvas:first-child { max-height: 30vh; width: auto; }
 .boss-card::-webkit-scrollbar { display: none; }
 .boss-desc { font-size: var(--fs-md); line-height: var(--lh); color: var(--text-soft); max-width: 340px; }
 
@@ -1608,8 +1614,11 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   position: fixed; inset: 0;
   pointer-events: none; overflow: hidden;
 }
-#cine-root { z-index: 152; }              /* the wipe goes over everything */
-#cine-stage { z-index: 149; }             /* cut-ins sit under it, over the bars */
+#cine-root { z-index: 166; }              /* the wipe goes over everything */
+/* Cutscenes and pickers sit ABOVE the speech plates: a plate is somebody
+   talking, and a picker is you deciding — the decision has to be reachable
+   even when somebody is still mid-sentence. */
+#cine-stage { z-index: 160; }
 #cine-root.hidden, #cine-stage.hidden { display: none; }
 
 /* ---- the rack of card backs ---- */
@@ -2381,8 +2390,17 @@ body.dread #dread-wash { opacity: 1; animation: dread-pulse 1.15s steps(6) infin
   flex: 1; min-height: 0;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
-  background: #06070a;
+  /* On a tall window the room is a band in the middle. The space around it
+     is lit like the inside of a cinema rather than left flat black. */
+  background:
+    radial-gradient(120% 70% at 50% 50%, #0d1016 0%, #06070a 70%, #040507 100%);
 }
+.scene-root::before, .scene-root::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 24px;
+  pointer-events: none; z-index: 2;
+}
+.scene-root::before { top: 0; background: linear-gradient(#040507, transparent); }
+.scene-root::after { bottom: 0; background: linear-gradient(transparent, #040507); }
 .scene-cv {
   display: block;
   image-rendering: pixelated;
@@ -2428,7 +2446,18 @@ body.in-scene #app { overflow: hidden; }
    31. A CHOICE, AND AN ENDING
    ============================================================ */
 
-#cine-stage.choice { background: rgba(4,5,8,.93); }
+/* A decision lives on its own layer, above the speech plates and the
+   cutscene stage, and it takes pointer events — it IS the click. */
+#cine-pick {
+  position: fixed; inset: 0; z-index: 162;
+  overflow: hidden; pointer-events: auto;
+  background: rgba(4,5,8,.93);
+}
+#cine-pick.hidden { display: none; }
+#cine-pick .ch-wrap,
+#cine-pick .ch-row,
+#cine-pick .pick-card,
+#cine-pick .ch-card { pointer-events: auto; }
 .ch-wrap {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -2487,3 +2516,7 @@ body.in-scene #app { overflow: hidden; }
 .pick-card:hover { transform: translateY(-5px) rotate(-1deg); filter: drop-shadow(0 8px 0 rgba(0,0,0,.55)) brightness(1.06); }
 .pick-card.dim { filter: grayscale(.8) brightness(.6); cursor: default; }
 .pick-out { opacity: .75; }
+
+/* the lieutenant's card has no button on it — this is the line that tells
+   you so, breathing at the bottom of it */
+.boss-foot { margin-top: 6px; display: flex; animation: nudge 1.3s steps(2) infinite; }

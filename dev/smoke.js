@@ -1,11 +1,15 @@
 'use strict';
 /* ============================================================
-   Headless browser smoke test for SHELL & DEBT (duel era).
-   Drives a real run: title → collection → small blind duel →
-   big blind → boss intro → shop (buy, reroll) → ante 2.
+   Headless browser smoke test for SHELL & DEBT.
+
+   Drives the whole case the way a player does: out of the murder
+   board, through the reload and the drive, around the bullpen on
+   foot, up to the captain, out to the lead, along the line-up,
+   through the back door, across the table, out back with the
+   body, and home again — then the ward, and both endings.
+
    Fails on any console error or page error.
 
-     npm i playwright-core   (or use an existing install)
      node dev/smoke.js [path-to-chromium]
 
    Screenshots land in dev/shots/.
@@ -24,26 +28,70 @@ fs.mkdirSync(SHOTS, { recursive: true });
   const browser = await chromium.launch({ executablePath: EXE, headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.on('console', m => { if (m.type() === 'error') errors.push('[console] ' + m.text()); });
-  page.on('pageerror', e => errors.push('[pageerror] ' + e.message));
+  page.on('pageerror', e => errors.push('[pageerror] ' + e.message + '\n      ' +
+    String(e.stack || '').split('\n').slice(1, 4).join('\n      ')));
 
+  let shots = 0;
   const shot = async (name) => {
     await page.screenshot({ path: path.join(SHOTS, name + '.png') });
+    shots++;
     console.log('shot:', name);
   };
   const click = (sel) => page.locator(sel).first().click({ timeout: 6000 });
-  /* the aim rail is gone — you click the scene at world coordinates */
-  const world = (wx, wy) => page.evaluate(([x, y]) => {
-    const r = DUEL.cv.getBoundingClientRect();
-    return { x: r.left + (x + DUEL.OX) / DUEL.W * r.width,
-             y: r.top + (y + DUEL.OY) / DUEL.H * r.height };
-  }, [wx, wy]);
-  const tapWorld = async (wx, wy) => {
-    const p2 = await world(wx, wy);
-    await page.mouse.click(p2.x, p2.y);
+  const state = () => page.evaluate(() => ({
+    phase: G2().phase, chapter: G2().chapter, briefed: G2().briefed,
+    cards: (G2().intelCards || []).length, hearts: G2().hearts, chips: G2().chips,
+    ward: G2().wardTrips || 0, badge: !G2().badgePulled,
+    turn: G2().duel ? G2().duel.turn : null,
+    over: G2().duel ? G2().duel.over : null,
+    busy: typeof DUEL !== 'undefined' ? DUEL.busy : false,
+  }));
+
+  /* ---------- the drawn plates people talk in ----------
+     A plate waits for a tap and the next line can arrive a beat later, so
+     "cleared" means gone and still gone. Click the plate itself, not a
+     fixed point, or the click lands on the room behind it. */
+  const clearPlates = async (tries) => {
+    let quiet = 0;
+    for (let i = 0; i < (tries || 26) && quiet < 3; i++) {
+      const plate = page.locator('#tutor-root:not(.hidden)');
+      if (await plate.count() === 0) { quiet++; await page.waitForTimeout(130); continue; }
+      quiet = 0;
+      const box = await plate.first().boundingBox().catch(() => null);
+      if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height - 20);
+      else await page.mouse.click(720, 620);
+      await page.waitForTimeout(210);
+    }
+    return await page.locator('#tutor-root:not(.hidden)').count() === 0;
   };
-  const aimFoe = () => page.evaluate(() => DUEL.setAim('foe'));
-  /* Every shot across the table now runs the steady check. Park the marker
-     where we want it and break the shot, so the test is deterministic. */
+  /* ---------- the drawn picker ---------- */
+  const pickCard = async (n) => {
+    await page.waitForSelector('.pick-card', { timeout: 8000 });
+    await page.waitForTimeout(260);              // let the spread settle
+    const cards = page.locator('.pick-card');
+    const count = await cards.count();
+    await cards.nth(Math.min(n, count - 1)).click({ timeout: 5000 });
+    await page.waitForTimeout(320);
+  };
+  const pickerUp = () => page.locator('.pick-card').count();
+
+  /* the cinematics play over the room behind them; wait them out before
+     taking a picture of the room */
+  const settle = async (ms) => {
+    await page.waitForFunction(
+      () => !CINE.busy && !document.querySelector('#cine-stage.anim-cut') &&
+            !document.querySelector('#cine-stage.ante-cut'),
+      null, { timeout: ms || 30000 }).catch(() => {});
+    await page.waitForTimeout(400);
+  };
+
+  /* ---------- walking around a room ---------- */
+  const walkTo = async (x) => {
+    await page.evaluate((wx) => SCENE.walkTo(wx), x);
+    await page.waitForFunction((wx) => Math.abs(SCENE.me.x - wx) < 4, x, { timeout: 12000 }).catch(() => {});
+    await page.waitForTimeout(120);
+  };
+  /* ---------- the table ---------- */
   const breakShot = async (verdict) => {
     const got = await page.waitForFunction(
       () => !!DUEL.aimBar && !DUEL.aimBar.done, null, { timeout: 8000 }).catch(() => null);
@@ -58,383 +106,332 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForTimeout(520);
     return true;
   };
-  const aimSelf = () => page.evaluate(() => DUEL.setAim('self'));
-  /* every screen change goes behind the card-rack wipe — let it finish */
-  const wiped = () => page.waitForFunction(
-    () => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
-  const state = () => page.evaluate(() => ({
-    phase: G2().phase, ante: G2().ante, blind: G2().blind,
-    turn: G2().duel ? G2().duel.turn : null,
-    over: G2().duel ? G2().duel.over : null,
-    busy: DUEL.busy, chips: G2().chips, hearts: G2().hearts,
-  }));
-  /* click away every speech plate that is up, waiting for late ones */
-  const clearPlates = async (expect) => {
-    if (expect) await page.waitForFunction(
-      () => document.querySelector('#tutor-root:not(.hidden)'), null, { timeout: 4000 }).catch(() => {});
-    for (let i = 0; i < 16; i++) {
-      if (await page.locator('#tutor-root:not(.hidden)').count() === 0) {
-        await page.waitForTimeout(240);
-        if (await page.locator('#tutor-root:not(.hidden)').count() === 0) break;
-      }
-      await page.locator('#tutor-root').click({ position: { x: 30, y: 30 } }).catch(() => {});
-      await page.waitForTimeout(300);
-    }
-  };
-  const settle = () => page.waitForFunction(
-    () => !DUEL.busy || G2().phase !== 'duel' ||
-      document.querySelector('#duel-overlay:not(.hidden) .primary'),
-    null, { timeout: 25000 });
 
-  /* win the current duel deterministically via the ?debug rig */
-  let sawBlood = false;
-  async function winDuel() {
-    for (let i = 0; i < 12; i++) {
+  /* play the duel out to a win, breaking every shot clean */
+  const winDuel = async (label) => {
+    let waits = 0;
+    for (let i = 0; i < 40; i++) {
       const s = await state();
       if (s.phase !== 'duel' || s.over) break;
-      if (!s.busy && s.turn === 'you') {
-        await page.locator('button', { hasText: 'kill foe' }).click();
-        await aimFoe();
-        /* fire and DO NOT await the sequence — evaluate() would not resolve
-           until the whole kill cinematic had already played out */
-        await page.evaluate(() => { DUEL.onFire(); });
-        await breakShot('clean');
-        /* the kill does not cut — it lands on the glass in front of you */
-        if (!sawBlood) {
-          for (let t = 0; t < 20; t++) {
-            if (await page.locator('#cine-root.blood').count() > 0) {
-              await page.waitForTimeout(340);
-              await shot('04c-blood-wipe');
-              sawBlood = true;
-              break;
-            }
-            await page.waitForTimeout(70);
-          }
-        }
+      /* a lieutenant's card waits for a tap before the table is live */
+      if (await page.locator('#duel-overlay.boss-in').count() > 0) {
+        await page.mouse.click(720, 620);
+        await page.waitForTimeout(400);
+        continue;
       }
-      await settle();
-      await page.waitForTimeout(250);
+      if (s.busy || s.turn !== 'you') {
+        if (++waits % 8 === 0) console.log('  waiting on the table: ' + JSON.stringify(s));
+        if (waits > 40) { errors.push('[flow] the table never came back to you: ' + JSON.stringify(s)); break; }
+        await page.waitForTimeout(650);
+        continue;
+      }
+      await page.evaluate(() => {
+        const d = G2().duel;
+        d.shells[d.ptr] = true; d.known[d.ptr] = true;   // deterministic: a live round
+        DUEL.setAim('foe'); DUEL.onFire();
+      });
+      await breakShot('clean');
+      if (label && i === 0) await shot(label);
+      await page.waitForTimeout(700);
     }
-    /* the kill does not cut: it lands on the glass in front of you */
-    await page.waitForFunction(
-      () => document.querySelector('#cine-root.blood') || DUEL.room === 'back',
-      null, { timeout: 25000 }).catch(() => {});
-    if (await page.locator('#cine-root.blood').count() > 0) {
-      await page.waitForTimeout(360);
-      await shot('04c-blood-wipe');
+    /* the back room, unless the run already carried us somewhere else */
+    const gotLoot = await page.waitForFunction(
+      () => (G2().phase === 'loot' && LOOT.ready) || G2().phase === 'ending',
+      null, { timeout: 45000 }).catch(() => null);
+    if (!gotLoot) {
+      const s = await state();
+      if (s.phase === 'duel') errors.push('[flow] the table never resolved: ' + JSON.stringify(s));
+      else console.log('  (no back room this time: ' + s.phase + ')');
     }
-    await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 25000 });
-    await page.waitForFunction(() => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
-    await page.waitForSelector('#btn-walk', { timeout: 25000 });
-    await page.waitForTimeout(300);
-  }
+    await page.waitForTimeout(500);
+  };
 
-  /* rifle pockets until the badges arrive, bribe once, then walk out */
-  async function lootAndGo(shotName) {
-    /* the pockets are places on the corpse now: the panel rows are the
-       fallback, and each one plays the reach-and-dig before it pays out */
-    for (let i = 0; i < 6; i++) {
-      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
-      const btn = page.locator('.pocket-btn:not(.taken):not(:disabled)');
-      if (await btn.count() === 0) break;
-      await btn.first().click();
-      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
-      await page.waitForTimeout(150);
-      /* full rack / full belt? leave the find */
-      const skip = page.locator('#card-swap button.pixbtn');
-      if (await skip.count() > 0) { await skip.last().click(); await page.waitForTimeout(200); }
+  /* go through his coat, mop the floor, walk out */
+  const doLoot = async (label) => {
+    if ((await state()).phase !== 'loot') { console.log('  (nothing to loot)'); return; }
+    if (label) await shot(label);
+    for (let i = 0; i < 9; i++) {
+      const ok = await page.evaluate((k) => {
+        if (!E.canSearch(k)) return false;
+        E.rifle(k); if (LOOT.sync) LOOT.sync();
+        return true;
+      }, i);
+      if (ok) await page.waitForTimeout(180);
     }
-    /* the badges should be at the door now — catch the cop and pay him off */
-    const cop = await page.evaluate(() => !!(window.COPS && COPS.active));
-    if (cop && shotName) await shot(shotName + '-cop');
+    /* the mop, on whatever he left on the boards */
+    for (let i = 0; i < 10; i++) {
+      const ok = await page.evaluate((k) => {
+        if (!E.canMop(k)) return false;
+        E.mop(k); if (LOOT.sync) LOOT.sync();
+        return true;
+      }, i);
+      if (ok && i === 0 && label) await shot(label + '-mop');
+      if (!ok) break;
+      await page.waitForTimeout(140);
+    }
+    await clearPlates(8);
     const bribe = page.locator('#btn-bribe:not([disabled])');
     if (await bribe.count() > 0) {
-      await bribe.click();
+      await bribe.click({ timeout: 4000 }).catch(() => {});   // optional, never fatal
       await page.waitForTimeout(900);
-      if (shotName) await shot(shotName + '-bribed');
     }
-    /* mop the trail he left coming through the door */
-    for (let i = 0; i < 8; i++) {
-      const st = await page.evaluate(() => {
-        const L = G2().loot;
-        if (!L || !L.stains) return null;
-        const i = L.stains.findIndex(s => !s.done);
-        if (i < 0) return null;
-        const p = DUEL.stainPos(L.stains[i]);
-        const r = DUEL.cv.getBoundingClientRect();
-        return { x: r.left + (p[0] + DUEL.OX) / DUEL.W * r.width,
-                 y: r.top + (p[1] + DUEL.OY) / DUEL.H * r.height };
-      });
-      if (!st) break;
-      await page.mouse.move(st.x, st.y);
-      await page.waitForTimeout(80);
-      if (i === 0 && shotName) await shot(shotName + '-mop');
-      await page.mouse.click(st.x, st.y);
-      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
-      await page.waitForTimeout(80);
+    await page.evaluate(() => LOOT.onWalk());
+    /* the heat overlay after a lieutenant, if it is due */
+    const heat = await page.waitForSelector('#btn-heat', { timeout: 6000 }).catch(() => null);
+    if (heat) {
+      if (label) await shot(label + '-heat');
+      await click('#btn-heat');
     }
-    if (shotName) await shot(shotName);
-    await click('#btn-walk');
-    /* walking out plays the trail verdict before anything else happens */
-    await page.waitForFunction(
-      () => document.querySelector('#btn-heat') || document.querySelector('#btn-sit'),
-      null, { timeout: 20000 });
-    await page.waitForTimeout(250);
-    const heat = page.locator('#btn-heat');
-    if (await heat.count() > 0) {
-      await shot(shotName ? shotName + '-heat' : 'heat');
-      await heat.click();
-      /* the cop pockets it (slow — he salutes and walks out), then the
-         ante-clear interstitial comes up */
-      await page.waitForSelector('.ante-card.in', { timeout: 20000 });
-      await page.waitForTimeout(500);
-      await shot(shotName ? shotName + '-ante-clear' : 'ante-clear');
-      await wiped();
-      await page.waitForTimeout(400);
-    }
-    await wiped();
-  }
+    /* out of the back room: the bullpen, or the end of the story */
+    await page.waitForFunction(() => G2().phase !== 'loot', null, { timeout: 45000 })
+      .catch(() => errors.push('[flow] never got out of the back room'));
+    await page.waitForTimeout(700);
+  };
 
   try {
+    /* ================= 1. the murder board ================= */
     await page.goto(GAME);
     await page.waitForTimeout(700);
     await shot('01-title');
-
-
-    /* deal in */
-    await page.fill('#seed-input', 'SMOKE-7');
+    await page.evaluate(() => { const i = document.getElementById('seed-input'); if (i) i.value = 'SMOKE'; });
     await click('#btn-deal');
-    await wiped();
-    /* the lore reel plays over the board on a fresh run */
-    await page.waitForTimeout(900);
-    await shot('01b-lore-1');
-    await page.waitForTimeout(2400);
-    await shot('01b-lore-2');
-    await page.keyboard.press('Escape');            // any key gets you out of it
-    await page.waitForFunction(
-      () => !document.querySelector('#cine-stage.lore-cut'), null, { timeout: 20000 });
-    await page.waitForTimeout(400);
 
-    /* the reload and the drive play as the loading screen — catch them */
-    await page.waitForFunction(
-      () => document.querySelector('#cine-stage.anim-cut'), null, { timeout: 25000 }).catch(() => {});
-    if (await page.locator('#cine-stage.anim-cut').count() > 0) {
-      await page.waitForTimeout(900);
-      await shot('01e-reload');
-      await page.waitForTimeout(2700);
-      if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('01f-drive');
-    }
-    /* the precinct */
-    await page.waitForSelector('#btn-board', { timeout: 30000 });
-    await page.waitForTimeout(500);
-    /* the captain's opening plays here — read one plate, then click through */
-    if (await page.locator('#tutor-root:not(.hidden)').count() > 0) await shot('01c-captain');
-    await clearPlates(true);
-    await shot('01g-station');
-    await click('#btn-talk-may');
-    await page.waitForTimeout(500);
-    await shot('01h-maybelle');
-    await clearPlates(false);
-    await click('#btn-board');
-    await wiped();
-    await page.waitForSelector('#btn-sit', { timeout: 15000 });
-    await page.waitForTimeout(600);
-    if (await page.locator('#tutor-root:not(.hidden)').count() > 0) {
-      await shot('01d-captain-board');
-    }
-    await page.evaluate(() => TUTOR.skipAll());
-    await clearPlates(false);
-    await page.waitForTimeout(200);
-    await shot('02b-blind-select');
-    /* the board: turn a clue over, watch the string reach a poster, name him */
-    const ev1 = page.locator('.ev.live').first();
-    if (await ev1.count() > 0) { await ev1.click(); await page.waitForTimeout(400); }
-    await shot('02b2-board-clue');
-    /* ask the room something, and watch faces come off the wall */
-    const q1 = page.locator('.pixbtn.ask:not([disabled])').first();
-    if (await q1.count() > 0) {
-      await q1.click();
-      await page.waitForTimeout(700);
-      await shot('02b2b-asked');
-      await page.waitForTimeout(1100);
-    }
-    /* spend the file down, then pay somebody to turn one more over */
-    for (let i = 0; i < 5; i++) {
-      const e = page.locator('.ev.live').first();
-      if (await e.count() === 0) break;
-      await e.click();
-      await page.waitForTimeout(200);
-    }
-    for (let i = 0; i < 5; i++) {
-      const q = page.locator('.pixbtn.ask:not([disabled])').first();
-      if (await q.count() === 0) break;
-      await q.click();
-      await page.waitForTimeout(260);
-    }
-    for (let i = 0; i < 3; i++) {
-      await page.locator('button', { hasText: '+20⛁' }).click();
-      await page.waitForTimeout(80);
-    }
-    const grease = page.locator('#btn-grease:not([disabled])');
-    if (await grease.count() > 0) { await grease.click(); await page.waitForTimeout(300); }
-    await shot('02b3-greased');
-    const pos = page.locator('.poster.live').first();
-    if (await pos.count() > 0) { await pos.click(); await page.waitForTimeout(800); }
-    await shot('02b4-board-called');
-    /* the run panel */
-    await click('#btn-run');
-    await page.waitForTimeout(350);
-    await shot('02c-run-panel');
+    /* the lore reel, then the reload room, then the drive */
+    await page.waitForTimeout(1400);
+    await shot('02-lore');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(200);
-    await click('#btn-sit');
-    await wiped();
     await page.waitForTimeout(900);
-    await shot('03-cine-sitdown');
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
-    await shot('03-duel-small');
+    if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('03-reload');
+    await page.waitForTimeout(2600);
+    if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('04-drive');
 
-    /* the two aim poses — driven the way a player does it, by clicking */
-    await tapWorld(180, 52);
-    await page.waitForTimeout(300);
-    await shot('03d-reticle');
-    await tapWorld(180, 190);
-    await page.waitForTimeout(750);
-    await shot('03b-aim-self');
-    await aimFoe();
-    await page.waitForTimeout(450);
-    await shot('03c-aim-foe');
+    /* ================= 2. the bullpen ================= */
+    await page.waitForFunction(() => G2().phase === 'precinct' && !!document.querySelector('.scene-cv'),
+      null, { timeout: 40000 });
+    await settle();
+    await clearPlates();
+    await page.waitForTimeout(600);
+    await shot('05-precinct');
 
-    /* two honest pulls at the mark, then the debug finisher. He says his
-       piece the moment the iron is in his hand, so catch that too. */
-    let sawTalk = false;
-    for (let p = 0; p < 3; p++) {
-      const s = await state();
-      if (s.phase !== 'duel' || s.over || s.busy || s.turn !== 'you') break;
-      await aimFoe();
-      await page.evaluate(() => { DUEL.onFire(); });
-      if (p === 0) {
-        /* the steady check, mid-sweep */
-        await page.waitForFunction(() => !!DUEL.aimBar, null, { timeout: 8000 }).catch(() => {});
-        await page.waitForTimeout(120);
-        await shot('03e-steady');
-      }
-      await breakShot(p === 0 ? 'good' : 'clean');
-      if (!sawTalk) {
-        for (let t = 0; t < 40; t++) {
-          if (await page.locator('#tutor-root.pass').count() > 0) {
-            await page.waitForTimeout(180);
-            await shot('04d-mark-talks');
-            sawTalk = true;
-            break;
-          }
-          await page.waitForTimeout(90);
-        }
-      }
-      await settle();
-      await page.waitForTimeout(300);
+    /* tap-to-move: the canvas is the whole control surface. The captain's
+       opening lines can land between clearing and tapping, so give it a few
+       goes before calling it broken. */
+    let walked = 0, beforeX = 0, afterX = 0;
+    for (let attempt = 0; attempt < 4 && !walked; attempt++) {
+      await clearPlates();
+      beforeX = await page.evaluate(() => SCENE.me.x);
+      const box = await page.locator('.scene-cv').boundingBox();
+      await page.mouse.click(box.x + box.width * (attempt % 2 ? 0.3 : 0.62),
+        box.y + box.height * 0.86);
+      await page.waitForTimeout(1700);
+      afterX = await page.evaluate(() => SCENE.me.x);
+      if (Math.abs(afterX - beforeX) > 6) walked = 1;
     }
-    /* the belt: use whatever we're carrying */
-    const belt = page.locator('#item-belt .ibelt-slot:not(.empty):not([disabled])');
-    if (await belt.count() > 0) {
-      await shot('04b-belt');
-      await belt.first().click();
-      await page.waitForTimeout(600);
-    }
-    await shot('04-duel-mid');
-    await winDuel();
-    await shot('05-loot');
-    /* give ourselves bribe money and test one bribe if the badges are up */
-    await page.locator('button', { hasText: '+20⛁' }).click();
-    /* the corpse itself is clickable: take one pocket by tapping HIM */
-    const spot = await page.evaluate(() => {
-      const i = G2().loot.pockets.findIndex((p, n) => E.canSearch(n));
-      if (i < 0) return null;
-      const s = DUEL.spotPos(G2().loot.pockets[i]);
-      const r = DUEL.cv.getBoundingClientRect();
-      return { x: r.left + (s[0] + DUEL.OX) / DUEL.W * r.width,
-               y: r.top + (s[1] + DUEL.OY) / DUEL.H * r.height };
-    });
-    if (spot) {
-      await page.mouse.move(spot.x, spot.y);
-      await page.waitForTimeout(120);
-      await shot('05b-search-spot');
-      await page.mouse.click(spot.x, spot.y);
-      await page.waitForTimeout(600);
-      await shot('05c-searching');
-      await page.waitForFunction(() => !DUEL.busy, null, { timeout: 20000 });
-    }
-    await lootAndGo('06-loot-done');
+    console.log('walk: ' + Math.round(beforeX) + ' -> ' + Math.round(afterX));
+    if (!walked) errors.push('[input] tapping the floor did not move the detective');
+    await shot('06-walking');
 
-    /* mobile layout check (on the blind select, then in the duel) */
-    await page.waitForSelector('#btn-sit', { timeout: 25000 });
-    await page.setViewportSize({ width: 430, height: 860 });
-    await page.waitForTimeout(600);
-    await shot('07-mobile');
-    await page.setViewportSize({ width: 860, height: 430 });
-    await page.waitForTimeout(600);
-    await shot('07b-landscape');
-    await page.setViewportSize({ width: 360, height: 640 });
-    await page.waitForTimeout(600);
-    await shot('07c-small');
-    await page.setViewportSize({ width: 1440, height: 900 });
+    /* the front desk */
+    await page.evaluate(() => { STORY.talkMaybelle(); });
+    await page.waitForTimeout(500);
+    await shot('07-maybelle');
+    await clearPlates();
+
+    /* the captain, and the brief */
+    await page.evaluate(() => { STORY.talkCaptain(); });
+    await page.waitForTimeout(500);
+    await shot('08-captain');
+    await clearPlates(18);
+    const briefed = await state();
+    if (!briefed.briefed) errors.push('[flow] the captain never handed over a lead');
+
+    /* the locker and the cooler, because they are in the room */
+    await page.evaluate(() => { STORY.openLocker(); });
     await page.waitForTimeout(400);
+    await clearPlates();
+    await page.evaluate(() => { STORY.drink(); });
+    await page.waitForTimeout(400);
+    await clearPlates();
 
-    /* big blind — sit down, then finish it */
-    await click('#btn-sit');
-    await wiped();
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 25000 });
-    await shot('07d-duel-mobile-check');
-    await winDuel();
-    await lootAndGo(null);
+    /* ================= 3. the board ================= */
+    await page.evaluate(() => { STORY.openBoard(); });
+    await page.waitForFunction(() => G2().phase === 'board' && !!document.querySelector('.scene-cv'),
+      null, { timeout: 20000 });
+    await settle();
+    await shot('09-board');
+    await page.evaluate(() => { STORY.readLog(); });
+    await page.waitForTimeout(400);
+    await clearPlates();
+    await page.evaluate(() => { STORY.tryFinale(); });       // not yet: it should refuse
+    await page.waitForTimeout(500);
+    await clearPlates();
+    if ((await state()).phase !== 'board') errors.push('[flow] the finale opened without a full board');
+    await page.evaluate(() => { STORY.toPrecinct(); });
+    await page.waitForFunction(() => G2().phase === 'precinct', null, { timeout: 20000 });
+    await page.waitForTimeout(600);
 
-    /* boss blind — the select screen names him, then the intro card */
-    await page.waitForSelector('#btn-sit', { timeout: 20000 });
-    await shot('08a-boss-select');
-    await click('#btn-sit');
-    await wiped();
+    /* ================= 4. out to the lead ================= */
+    await page.evaluate(() => { STORY.goOut(); });
+    await page.waitForFunction(() => G2().phase === 'blind' && !!document.querySelector('.scene-cv'),
+      null, { timeout: 40000 });
+    await settle();
+    await shot('10-lead');
+
+    /* the file on the bar */
+    await page.evaluate(() => { STORY.readEvidence(); });
+    if (await pickerUp()) { await shot('11-evidence'); await pickCard(0); await clearPlates(); }
+    /* a question for the barman */
+    await page.evaluate(() => { STORY.askRoom(); });
+    if (await pickerUp()) { await shot('12-ask'); await pickCard(0); await clearPlates(); }
+    await page.waitForTimeout(400);
+    await shot('13-line-thinned');
+
+    /* walk the line and name the one the file points at */
+    const realIdx = await page.evaluate(() => G2().case.suspects.findIndex(s => s.real));
+    await walkTo(await page.evaluate((i) => {
+      const a = SCENE.def.actors.find(x => x.id === 'sus' + i);
+      return a ? a.x - 16 : 200;
+    }, realIdx));
+    await page.evaluate((i) => { STORY.lookAt(i); }, realIdx);
+    if (await pickerUp()) { await shot('14-look'); await pickCard(0); }
+    await clearPlates();
+    await page.waitForTimeout(500);
+    await shot('15-named');
+
+    /* ================= 5. the table ================= */
+    await page.evaluate(() => { STORY.sitDown(); });
+    if (await pickerUp()) await pickCard(0);
+    await page.waitForFunction(() => G2().phase === 'duel', null, { timeout: 25000 });
+    await page.waitForTimeout(1800);
+    await shot('16-sitdown');
+    await page.waitForFunction(() => !DUEL.busy || G2().duel.over, null, { timeout: 30000 });
+    await shot('17-duel');
+    await winDuel('18-steady');
+
+    /* ================= 6. out back ================= */
+    await doLoot('19-loot');
+    const home = await state();
+    console.log('after the first lead:', JSON.stringify(home));
+    await shot('20-home');
+    if (home.phase !== 'precinct' && home.phase !== 'blind') {
+      errors.push('[flow] the body did not lead home, got ' + home.phase);
+    }
+
+    /* ================= 7. the ward ================= */
+    await page.evaluate(() => { STORY.rushToWard(); });
+    await page.waitForTimeout(1800);
+    await shot('21-ambulance');
+    await page.waitForFunction(() => G2().phase === 'ward' && !!document.querySelector('.scene-cv'),
+      null, { timeout: 30000 });
+    await settle();
+    await shot('22-ward');
+    await page.evaluate(() => { STORY.wardTalk(); });
+    await page.waitForTimeout(400);
+    await clearPlates();
+    await page.evaluate(() => { STORY.readChart(); });
+    await page.waitForTimeout(300);
+    await clearPlates();
+    await page.evaluate(() => { STORY.leaveWard(); });
+    await clearPlates();
+    await page.waitForFunction(() => G2().phase === 'precinct' || G2().phase === 'blind',
+      null, { timeout: 40000 });
+    await page.waitForTimeout(600);
+    const woke = await state();
+    if (woke.ward !== 1) errors.push('[flow] the ward trip was not recorded');
+    console.log('after the ward:', JSON.stringify(woke));
+
+    /* ================= 8. up to the lieutenant ================= */
+    /* Work leads the way the game hands them out until the one who runs the
+       room turns up — he is the frog carrying a piece of the board. */
+    let pinned = 0;
+    for (let lead = 0; lead < 3 && !pinned; lead++) {
+      await page.evaluate(() => { G2().briefed = G2().chapter; });
+      const ph = (await state()).phase;
+      if (ph === 'precinct') {
+        await page.evaluate(() => { STORY.goOut(); });
+        await page.waitForFunction(() => G2().phase === 'blind', null, { timeout: 40000 });
+        await settle();
+      }
+      const isBoss = await page.evaluate(() => G2().blind === 2);
+      if (isBoss) await shot('23-lieutenant');
+      await page.evaluate(() => { STORY.sitDown(); });
+      if (await pickerUp()) await pickCard(0);
+      await page.waitForFunction(() => G2().phase === 'duel', null, { timeout: 25000 });
+      await page.waitForTimeout(1500);
+      if (isBoss) await shot('24-boss-duel');
+      await winDuel();
+      await doLoot(isBoss ? '25-boss-loot' : null);
+      pinned = (await state()).cards;
+      console.log('  lead ' + (lead + 1) + (isBoss ? ' (the lieutenant)' : '') +
+        ' done, pieces pinned: ' + pinned);
+    }
+    const after = await state();
+    console.log('after working the chapter:', JSON.stringify(after));
+    if (!after.cards) errors.push('[flow] three leads and nothing went on the board');
+
+    /* ================= 9. mobile ================= */
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(700);
+    await shot('26-mobile-precinct');
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(700);
+    await shot('27-mobile-landscape');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(500);
+
+    /* ================= 10. both endings ================= */
+    await page.evaluate(() => {
+      G2().intelCards = ['face', 'ledger', 'route', 'name', 'addr'];
+      G2().badgePulled = false;
+    });
+    await settle();
+    await page.evaluate(() => { STORY.endgame(); });
+    await page.waitForSelector('.pick-card', { timeout: 10000 });
+    await page.waitForTimeout(500);
+    await shot('28-choice');
+    await pickCard(0);                              // the badge
+    await page.waitForTimeout(2400);
+    await shot('29-court');
+    await page.waitForTimeout(2600);
+    await shot('30-graves');
+    await page.waitForTimeout(3000);
+    await page.mouse.click(720, 500);
+    await page.waitForFunction(() => G2().phase === 'ending', null, { timeout: 30000 });
+    await page.waitForTimeout(600);
+    await shot('31-ending');
+    const end = await page.evaluate(() => G2().ending);
+    if (end !== 'good') errors.push('[flow] the badge did not produce the good ending, got ' + end);
+
+    /* and the other one */
+    await page.evaluate(() => { G2().ending = null; CINE.ending('bad'); });
     await page.waitForTimeout(1100);
-    await shot('08-cine-boss-cut');
-    await page.waitForSelector('#duel-overlay:not(.hidden) .primary', { timeout: 25000 });
-    await shot('08-boss-intro');
-    await click('#duel-overlay .primary');           // SIT DOWN
-    await page.waitForFunction(() => !DUEL.busy, null, { timeout: 30000 });
-    await shot('09-boss-duel');
-    await winDuel();
-    await page.locator('button', { hasText: '+20⛁' }).click();
-    await lootAndGo('10-boss-loot');
-    await page.waitForSelector('#btn-sit', { timeout: 25000 });
-    await shot('11-ante2');
+    await shot('32-bad-room');
+    await page.waitForTimeout(2400);
+    await shot('33-bad-chair');
+    await page.waitForTimeout(2600);
+    await page.mouse.click(720, 500);
+    await page.waitForTimeout(600);
 
     const fin = await state();
     console.log('final state:', JSON.stringify(fin));
-    const sys = await page.evaluate(() => ({
-      fx: typeof FX !== 'undefined' && typeof FX.bloodBurst === 'function',
-      cops: typeof COPS !== 'undefined' && typeof COPS.arrive === 'function',
-      items: Object.keys(ITEMS).length,
-      costumes: Object.keys(COSTUMES).length,
-      trinkets: Object.keys(TRINKETS).length,
-      itemsUsed: META.stats().itemsUsed,
-      bribes: META.stats().bribesPaid,
-      cine: typeof CINE !== 'undefined' && typeof CINE.transition === 'function',
-    }));
-    console.log('systems:', JSON.stringify(sys));
-    if (!sys.fx) errors.push('[systems] FX not loaded');
-    if (!sys.cops) errors.push('[systems] COPS not loaded');
-    if (!sys.cine) errors.push('[systems] CINE not loaded');
-    if (sys.items < 8) errors.push('[systems] ITEMS table too small');
-    if (fin.ante !== 2) errors.push('[flow] expected ante 2, got ' + fin.ante);
-    if (fin.phase !== 'blind') errors.push('[flow] expected the blind select, got ' + fin.phase);
+    console.log('systems:', JSON.stringify(await page.evaluate(() => ({
+      scene: typeof SCENE !== 'undefined', story: typeof STORY !== 'undefined',
+      art: typeof ART !== 'undefined', rooms: typeof ROOMS !== 'undefined',
+      items: Object.keys(ITEMS).length, costumes: Object.keys(COSTUMES || {}).length,
+      chapters: CHAPTERS.length, pieces: INTEL_CARDS.length,
+      trinketsGone: typeof TRINKETS === 'undefined',
+    }))));
   } catch (e) {
-    errors.push('[script] ' + e.message);
+    errors.push('[threw] ' + e.message);
     await shot('99-failure');
   }
 
   await browser.close();
+  console.log('');
   if (errors.length) {
-    console.log('\n=== ERRORS ===');
-    errors.forEach(e => console.log(e));
+    console.log('SMOKE TEST FAILED —', errors.length, 'problem(s):');
+    errors.forEach(e => console.log('  ' + e));
     process.exit(1);
   }
-  console.log('\nSMOKE TEST PASSED — no console/page errors.');
+  console.log('SMOKE TEST PASSED — no console/page errors, ' + shots + ' shots.');
 })();

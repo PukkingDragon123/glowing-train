@@ -1,360 +1,312 @@
 # SHELL & DEBT
 
-**HOMICIDE DIVISION — AFTER HOURS. A detective frog story, in hand-drawn pixel art.**
+**A murder-mystery in the swamp city, in hand-drawn pixel art. No build, no
+assets, no network — every pixel is drawn by the game at boot.**
 
-You were the good cop. You picked the Bullfrog out of the line and his lawyers had him
-out by noon. At seven, the door came in. It rained at the funeral; he sent flowers.
-You kept the badge. And the gun.
+You were the good cop. You picked the Bullfrog out of a line-up and his
+lawyers had him out by noon. At seven that night the door came in. It rained
+at the funeral and he sent flowers. You kept the badge, and the gun.
 
-Now you work his organisation the only way that's left: one back room at a time. Find
-the right frog in the line-up, sit down across a table with a revolver and a posted mix
-of **LIVE** and **blank** shells, and take turns. Kill him, drag him out back, go
-through his coat for the papers that point at the next one, and mop the floor before
-the noise brings anybody. Eight floors up, the Bullfrog is waiting to find out which
-of you the city misses less.
+Six years later there is a board in the back of the precinct with five holes
+in it, and nobody's name on the case but yours. Fill the board and the man
+goes down in a courtroom. Turn up at his door without it and the only thing
+you can do to him is the thing he did to you.
+
+That is the whole game, and it is the two endings.
 
 ![The murder board](docs/screen-title.png)
 
-The main menu **is your board**: his crew pinned up on cork, red string between them, a
-knife through the case card, and two holes where somebody shot at it. The CASE NO. slip
-is the run seed. OPEN THE CASE and the night starts.
-
-## How it starts
-
-![The lore reel](docs/screen-lore.png)
-
-Five panels, one line each, no music you'd call music. The line-up. The verdict that
-didn't hold. The door. The rain. The oath you swear at nobody. It plays once at the
-top of a run and any tap skips it; after the first time you only get the short version.
-
-Then two little films, because a night like this has a ritual: the lamp room where you
-**load six shells into the drum one at a time** and spin it shut —
-
-![Loading the drum](docs/screen-reload.png)
-
-— and the drive across town in the rain, skylines sliding past the car, wipers going,
-until the precinct sign resolves out of the dark.
-
-![Driving in](docs/screen-drive.png)
-
 ## Play it
 
-No build, no dependencies, no assets, no network — plain HTML/CSS/JS:
-
 ```
-# either just open index.html in a browser, or:
+# open index.html in a browser, or:
 python3 -m http.server 8080   # then visit http://localhost:8080
 ```
 
-Every sprite is drawn by the game at boot from one parameterized frog rig. Every panel,
-plate, button, and letter on screen is drawn too — the prose renders **one small canvas
-per word** in a hand-drawn 5×7 typeface, the buttons are moulded arcade caps painted as
-pixel art at whatever size they land, and there is **not one rounded corner in the
-game**. Sounds are synthesized with WebAudio. Runs are seeded. Progress persists in
-localStorage. Works on phones — the buttons grow to thumb size.
+Plain HTML/CSS/JS. Every sprite, prop, room, letter and cutscene is drawn by
+the game from code — there is not one image file in the repository. Works on
+phones. Sounds are synthesized with WebAudio. Cases are seeded. What the
+department remembers about you persists in localStorage.
 
-## The precinct
+## The rooms you walk around in
 
-![The station](docs/screen-station.png)
+![The precinct](docs/screen-precinct.png)
 
-Between the drive and the board you're standing in the squad room, and nobody makes you
-leave it. The **captain** will brief you — he's the tutorial, one drawn speech plate at
-a time, and every line he says is marked read in your save so a second run is silent.
-Or go straight to work. The board doesn't get any colder either way.
+There is no menu strip and no button bar. A room is a place: **tap the floor
+and the detective walks there**, drag to look down the room, and the things
+you can do are objects in it. Walk up to a thing and it says what it is on a
+little drawn plate over its own head; tap again and you do it.
+
+The bullpen at two in the morning has a front desk with a phone and a
+percolator, three desks with typewriters and one live lamp, a water cooler, a
+dead plant, filing cabinets, lockers, a radiator, a wall clock nobody winds,
+a holding cell with somebody in it, rain on the windows, pipes along the
+ceiling, and the board at the far end. People stand *behind* the furniture,
+the lamps put light on the floor, and the ceiling has joists in the dark.
+
+- **Captain Rook** hands you the next chapter of the case.
+- **Officer Maybelle** works the front desk. Talk to her once a night.
+- **Patrolman Dill** has nothing to report. The **drunk tank** has a lot.
+- **Your desk** holds the lead. **The lockers** hold your iron and your belt.
+  **The cooler** is worth one heart a night.
+- **The street door** takes you out to work it.
+
+### The board
+
+![The Bullfrog board](docs/screen-board.png)
+
+Five pieces make a case: a **photograph**, the **vig ledger**, the **route**,
+the **name on the deed**, and the **address**. Each one is a thing you take
+off a body and pin to cork, and the red string grows between them as you go.
+At five pieces the gap in the middle spells out fourteen Marsh Row.
+
+The board is also the readout the old ante ladder used to be — **the only
+number this game shows you is how much of him you have.**
+
+## The case
+
+Eight chapters, bottom to top: the collector, the bookkeeper, the driver,
+the lawyer, the cousin, the enforcer, the floor below his, and him. Each
+chapter is a room of his people and the frog who runs it — **and every
+lieutenant carries one piece of the board.**
 
 ![Officer Maybelle](docs/screen-maybelle.png)
 
-**Officer Maybelle works the desk.** Talk to her once a night. The first few nights it's
-just talk — she signed you in at eight, she worries, that's all. Keep coming back and it
-becomes coffee money in your coat pocket (+4 chips), then a file pulled before the shift
-change (**+1 evidence look, all night**), and one night, if you've come home enough
-times, *"whatever happens up there... come home after"* — and that's **+1 max heart, all
-night**. Trust is saved across runs. It is slow, and it is real, and she means it.
+Maybelle's trust is slow and it is real: it starts as talk, becomes coffee
+money in your coat, then a file pulled before the shift change (**+1 look at
+the evidence, all night**), and one night, *"whatever happens up there — come
+home after"* — **+1 heart, all night**. It carries between cases.
 
-## The line-up
+## The line
 
 ![The line-up](docs/screen-lineup.png)
 
-Eight floors, three cases each — STREET CASE, MAJOR CASE, and THE KINGPIN at the top.
-Before every chair you're in the identification room: **the whole line standing
-against the height chart, full length**, hats, rings, cigars, bad suits and all.
-One of them is him. Nobody is going to point.
+Out at the lead you walk into the room they drink in. The crew is standing
+against the height chart, the barman is behind his own bar, the file is on
+it, and the back door is where the sit-down happens.
 
-What you have is a **case file** — a limited number of looks. Turn a card and it's a
-piece of physical evidence: a scale off a glass, a matchbook scratched by a ring, a
-cigar burned down in an ashtray. Every clue is true, and every clue **crosses frogs off
-the line** — the ones it rules out go grey under a stepped red X.
+You have to work out which one of them you came for:
 
-### And you can ask
+- **The file on the bar** — turn a page and it rules frogs out. A scale off a
+  glass, a matchbook scratched by a ring, a cigar burned down in an ashtray.
+  Everything in it is true.
+- **The barman** — *was he wearing a hat? both eyes? any gold in his mouth?*
+  He answers honestly and every face that doesn't match goes out of it.
+- **Walk up and look at one.** You get his colour, his build, his hat, his
+  smoke, his rings, whether his face is marked — the things a witness would
+  actually remember. Then you can name him.
 
-![Nine in the room](docs/screen-wall.png)
+![Looking at one of them](docs/screen-look.png)
 
-The other half of the game is **Guess Who with a badge**. You get a handful of questions
-to put to the room — *was he wearing a hat? both eyes? any gold in his mouth?* — and the
-answer comes back on a drawn plate, true every time, and takes every face that doesn't
-match off the line at once.
+It starts fair — three in the room, four looks, four questions — and by the
+top it is nine strangers, two questions, decoys built to answer most things
+the same way he would, and no single question allowed to finish the job.
+When the file runs dry, somebody downtown will pull one more page for money,
+and the price climbs.
 
-![The room answers](docs/screen-asked.png)
-
-It starts honest: **three in the line** on floor one, four looks and four questions,
-enough to actually solve it. By floor seven it's **nine strangers and two questions**,
-the decoys are built to answer most questions the same way he would, and no single
-question is ever allowed to finish the job on a big line — it always takes two, and
-sometimes it takes nerve.
-
-When the file and the questions run dry you can still **grease a palm** — somebody will
-turn one more card or answer one more question for chips, and the price climbs every
-time you ask.
-
-Then click the frog and call it:
-
-- **Right** — he comes quietly to the table, and the bounty pays **30% more**.
-- **Wrong** — the whole room heard you. It costs you **6 chips**, he sits down with
-  **an extra heart**, a faster trigger, and **the first pull of the night is his**.
-- A **KINGPIN** is never a mystery. His face has been on your wall for years. The
-  line-up is one frog, stepping forward.
-
-**His papers travel.** Roughly half the frogs you put down carry a dossier in the coat.
-Take it, and the next line-up starts with **one clue already turned**. That's the whole
-career: each body points at the next one.
+| Naming him | What happens |
+|---|---|
+| **right** | he comes quietly, and the bounty pays **30% more** |
+| **wrong** | −6 chips, he sits down with **an extra heart**, and **he shoots first** |
+| **not at all** | go through the back door and take whoever follows you |
 
 ## The table
 
-![Sitting down](docs/screen-sitdown.png)
+![The table](docs/screen-duel.png)
 
-![The duel](docs/screen-duel.png)
+Through the back door there is a revolver, a posted mix of **LIVE** and
+**blank** shells in an order nobody knows, and a table. You are the camera:
+your own two hands on the felt and the iron in your right fist.
 
-You're not a sprite on the far side; **you are the camera**. Your own two frog hands on
-the felt, your forearms coming up out of the bottom of the frame, the iron in your right
-fist. The drum loads with a posted mix — say **2 LIVE, 3 blank** — in an order nobody
-knows, and you take turns:
-
-- **Aim at him** — live hurts him, blank wastes the pull. Turn passes.
-- **Aim at yourself** — a blank **keeps your turn** (that's the whole game), a live
-  costs a heart. The camera crosses the table for it: you see yourself from **his
-  chair**, front-on, the iron against your own temple.
-
-![From his chair](docs/screen-self.png)
-
-Every pull is four beats: the hammer back, the cylinder indexing, one held beat on
-nothing at all, and then it falls.
+- **Click his face** — the iron comes up. **Click again** and it goes off.
+- **Click your own end of the table** — the camera crosses it and you see
+  yourself from his chair, the muzzle against your own temple. A blank
+  **keeps your turn**. That is the whole game.
 
 ### Breaking the shot
 
 ![The steady check](docs/screen-steady.png)
 
-Across a table is a shot **you can miss**. Point at his face and pull, and the bore
-drifts — a rail comes up on the felt with a marker sweeping it, a green band and a gold
-band inside that, and you break the shot when the marker is where you want it:
+Across a table is a shot you can miss. Point and pull and the bore drifts: a
+rail comes up with a marker sweeping it, a green band and a gold one inside
+that.
 
 | Where you break it | What happens |
 |---|---|
 | **the gold band** | through the eye — **+2 damage** |
-| **the green band** | on him — a normal hit |
-| **outside both** | into the wall behind his ear, chamber gone anyway |
+| **the green band** | a normal hit |
+| **outside both** | into the wall behind his ear, and the chamber is gone |
 
-The sweep gets faster and the bands get tighter every floor. Against your own head
-there's no check — nothing to steady at that range.
-
-### The cut-in
+Faster and tighter every chapter. Against your own head there is no check.
 
 ![The cut-in](docs/screen-cutin.png)
 
-The moment a live round commits, somebody's face crosses the frame on a skewed banner
-with speed lines behind it — your shades and one word when it's your pull, his grin and
-a worse word when it's his. The banner runs black most nights. **When the round is
-going to end somebody, it runs red.**
+The moment a live round commits, somebody's face crosses the frame on a
+skewed banner. It runs black most nights. **When the round is going to end
+somebody, it runs red.** Down to one heart, the lens closes in and you can
+hear your own pulse.
 
-### His pull
-
-![His pull](docs/screen-histurn.png)
-
-When it's his turn you see all of it: the iron comes up out of his lap, his arm closes
-on the grip — an arm that is **part of him**, shoulder to fist — the barrel levels, and
-he thumbs the hammer back on the same four beats you get. **Not everybody in this crew
-shoots the same way**: the grip is picked off his own name and stays his for the whole
-duel — from the hip, high and formal, canted over sideways, or both hands wrapped round
-it like he means it. It says which, next to his name.
-
-![He has something to say](docs/screen-talk.png)
-
-Nobody talks while you hold the iron. The moment it's in **his** hand he has a line for
-you — different ones when he's hurt, when you're nearly out of frog, and when he's one
-of the crew who remembers your door.
-
-### The last heart
-
-Get down to one heart and the game stops being a card game: the lens closes in at the
-edges, and under everything you can hear it — **your own heartbeat**, twice a bar, until
-you're safe or you're not.
-
-## The kill, and the back room
-
-You never watch him fall. The shot goes off and the next thing on the lens is red — one
-splat, then four, then the frame is gone — and when it wipes away you're already out
-back with the door shut.
-
-![The blood lens](docs/screen-bloodwipe.png)
-
-Between the two rooms there's a little loading scene, because even this has a ritual:
-you, small, under one swinging bulb, **dragging him toward the door by the boots**.
-
-![Cleaning up](docs/screen-drag.png)
-
-### First person, out back
+## Out back
 
 ![Out back](docs/screen-loot.png)
 
-The body is **fully intact** — this isn't about what the round did, it's about what's
-in his coat. There's almost no interface: a strip of meters up top, your tools in the
-corner, and the room. **Look around and search him with your own hands** — point at the
-hat, the coat, the vest, his hand, his boot, his mouth; your arm goes out across the
-floor, digs, and comes back with what was in there.
+You never watch him fall. The shot goes off, the lens goes red, and when it
+wipes you are already out back with the door shut — and between the two
+rooms there is a small sad loading scene of you dragging him by the boots
+under a swinging bulb.
 
-![Your hand is in his coat](docs/screen-search.png)
+The body is **fully intact**, because this was never about what the round
+did. It is about what is in his coat. Almost no interface: a strip of meters,
+your tools in the corner, and the room. **Search him with your own hands** —
+hat, coat, vest, hand, boot, mouth.
 
-Three meters run the whole time:
+- **TIME** — real seconds, shorter every chapter.
+- **NOISE** — every pocket makes some; a boot or a gold tooth makes a lot.
+- **THE TRAIL** — dragging a frog through a doorway leaves marks. Tap one and
+  your arm goes out with the mop: three passes each, and the boards come back.
 
-- **TIME** — real seconds, shorter every floor.
-- **NOISE** — every pocket makes some; a boot or a gold tooth makes a lot. It bleeds
-  away if you hold still. Cross the line and somebody at the door has heard enough.
-- **THE TRAIL** — dragging a frog through a doorway leaves marks from the door to where
-  he stopped. Tap a stain and your arm goes out with the **mop** — three passes each,
-  satisfying as scratching a lottery ticket, a couple of seconds off the clock. Walk
-  out over the rest and somebody finds it in the morning: chips out of your pocket,
-  and everything at this address gets more expensive for the rest of the run.
+![The mop](docs/screen-mop.png)
 
-![Mopped](docs/screen-mop.png)
+Get heard and a uniform comes through the back door tapping his nightstick:
+**bribe** him or walk. After a lieutenant, the department wants protection
+money — and if you cannot pay it, **they take your badge instead**, which
+quietly closes one of the two endings.
 
-Get heard and a uniform comes through the back door and stands over the body tapping
-his nightstick. **Bribe** him to keep working (the price climbs) or walk with what you
-have. What comes out of the pockets: chips, belt items, **his dossier** — and off the
-crew's own tables, **your next iron**.
+## Dying is not the end of it
 
-## The crew
+![The ambulance](docs/screen-ambulance.png)
 
-![The kingpin's card](docs/screen-boss.png)
+There is no game over in this game. Lose the table and an ambulance comes
+through the rain, the ceiling of a corridor goes past your own eyes, and a
+clerk stamps a form: gunshot, treated, discharged against advice.
 
-Eight of them between you and the Bullfrog, one per floor, each with a house rule:
+![The ward](docs/screen-ward.png)
 
-| # | The mark | The rule |
-|---|---|---|
-| 1 | **CROAKER** | blanks you fire at him *heal* him |
-| 2 | **BLIND NEWT** | the live/blank counts stay hidden |
-| 3 | **TAXTOAD TONY** | every pull you take costs 1 chip |
-| 4 | **DIZZY SAL** | the drum re-shuffles after every shot |
-| 5 | **SLICK LILY** | your gun tricks are locked |
-| 6 | **WARDEN WART** | your belt is locked |
-| 7 | **DON BUFO** | too fat to fall — start shooting |
-| 8 | **THE BULLFROG** | gets back up once, then hits for 2 |
+You wake up in the ward with rain on the window, a machine counting, a chart
+with your name on it — and Maybelle, who was off at eleven and stayed. It
+costs chips, and after the second trip it can cost you a piece of the board
+out of your coat. **Three trips and the department takes the badge.**
 
-## The iron, and the belt
+Then you discharge yourself and go back to work, because nobody else is going
+to.
 
-The gun ladder stacks as you take it off the crew's corpses:
-**SNUB .38 → LONG COLT** (first live hit +1) **→ SAWN-OFF** (Q: next shot ×2)
-**→ TOMMY GUN** (E: double tap) **→ THE GOLDEN GUN** (bounties ×1.5, +1 heart).
-None of them are flat art — frame, cylinder, hammer, and grip are separate parts, so
-the scene can cock one and index the drum frame by frame.
+## The two endings
 
-Three belt loops, keys **6–8**, one-shot items out of pockets: BAD WHISKEY (heal 2),
-PLIERS (peek the last shell — or pull a gold tooth), TWO-HEAD COIN, SPARE BLANK, SPARE
-LIVE, BRASS KNUCKLES, FILE FOLDER (heat clears free), HOLLOW POINT (+2 on your next
-live), SMOKE BOMB (his next shot misses), THE SHIV (slit an emptied pocket's lining),
-JEWELLER'S LOUPE (every bulge shows, +1 free pocket), SAINT'S MEDAL (the shell under
-the hammer becomes a blank).
+![The choice](docs/screen-choice.png)
 
-There is no shop and nothing passive to hoard — everything you own, somebody was
-carrying.
+Fill the board, walk into fourteen Marsh Row, and put him on the floor. He is
+still breathing. You get one decision:
 
-## The animations
+- **THE BADGE** — cuff him and let the file do it. Available only if the
+  board is full **and** the badge is still yours. He goes down in a
+  courtroom, the sun comes up through the high windows, and it stops raining
+  over two headstones.
+- **THE BULLET** — one flash in a dark room, nobody writes it down, and the
+  last shot of the game is you sitting in his chair with his board burning on
+  the wall behind you.
 
-The user manual counts them so you don't have to. All drawn, all procedural, no sprite
-sheets, tap to skip any of the long ones:
+![The courtroom](docs/screen-court.png)
 
-1. The lore reel — five drawn panels with rain
-2. The reload room — six shells thumbed in one at a time, drum spin
-3. The drive — parallax skylines, rain, wipers
-4. The captain's speech plates, letter by letter
-5. The card-rack wipe between screens
-6. The sit-down — dark room, his eyes, the lamp stutters on
-7. The crew entrance — cinema bars and a name stamp
-8. Blink, weight-shift, and the tongue (a nine-point verlet chain) taking flies
-9. Sweat, cigar smoke, and hat-brim shadows, per frog
-10. The four-beat cock: hammer, cylinder index, the held beat, the drop
-11. The steady check — sweep, bands, and the break
-12. Muzzle flash, cone, cordite, and the casing on the felt
-13. The slug in the air — shock ring, wake, slow-mo
-14. The Persona cut-in — skewed banner, speed lines, red on lethal
-15. His grip animation, in four styles, arm anchored at the shoulder
-16. His reactions — facepalm on your self-blank, one digit raised, a shrug
-17. Blood that lands, runs, and stays — on him, and on your lens
-18. The blood-splat kill wipe, and the wipe coming off like a sleeve on glass
-19. The drag loader — you, him, one swinging bulb, a smear
-20. First-person searching — your arm out, dust off the lining, his weight rocking
-21. The mop — three passes a stain, the boards coming back
+![His chair](docs/screen-bad.png)
+
+## Everything that moves
+
+All drawn, all procedural, no sprite sheets, tap to skip the long ones:
+
+1. The lore reel — the line-up, the verdict, the door, the rain, the oath
+2. The reload room — six shells thumbed into the drum, one at a time
+3. The drive across town — parallax skylines, rain, wipers, a destination
+4. The walk cycle — four frames, every frog in the game, both directions
+5. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
+6. Lamp cones, floor pools, flickering tubes and dust in the air
+7. The card-file wipe between rooms (venetian blinds, with an evidence tab)
+8. The sit-down — dark room, his eyes, the lamp stuttering on
+9. A lieutenant's entrance under cinema bars, with his name stamped on it
+10. The four-beat cock: hammer, cylinder, the held beat, the drop
+11. The steady check — the sweep, the bands, and the break
+12. Muzzle flash, cordite, the casing on the felt
+13. The slug in the air, with a shock ring and a wake
+14. The Persona cut-in — skewed banner, speed lines, red when it is lethal
+15. His grip, in four styles, arm anchored at the shoulder
+16. His reactions — the facepalm, the raised digit, the shrug
+17. Blood that lands, runs and stays — on him, and on your lens
+18. The blood-splat kill wipe, coming off like a sleeve on glass
+19. The drag loader — you, him, one swinging bulb, a smear on the boards
+20. First-person searching: your arm out, dust off the lining, his weight
+21. The mop — three passes a stain
 22. The bribe — chips arcing into a glove, one at a time
-23. The last-heart dread — closing vignette and a heartbeat, twice a bar
-24. The climb between floors, the take raining past the lens, and the iris when you die
+23. The last-heart dread: a closing vignette and a heartbeat, twice a bar
+24. The ambulance — the wagon in the rain, then the corridor from a gurney
+25. The chapter card, and the take raining past the lens
+26. The courtroom, the gavel, and the first daylight in the game
+27. Two headstones and the rain stopping
+28. A burning board, and a frog-shaped hole in a chair
 
 ## Keys
 
-`A` aim at yourself · `D` aim at the mark · `SPACE` fire · `6–8` belt items ·
-`Q`/`E` gun tricks · `R` bribe · `ENTER` sit down / walk out · `M` mute · `H` house rules
-
-Or just **tap**: tap his face to aim, tap again to fire. Tap during any animation to
-fast-forward it. The whole game is playable with one thumb, portrait or landscape.
+Tapping is the whole control scheme, but: `A`/`D` or the arrows walk, `E` or
+`SPACE` uses what you are standing next to, `ENTER` sits down or walks out,
+`6–8` are the belt, `Q`/`E` are the gun tricks at the table, `R` bribes,
+`TAB` opens the case, `M` mutes, `H` is the house rules.
 
 ## Project layout
 
 ```
 index.html        entry point
-style.css         pixel skin: chunky panels, CRT overlay, zero border-radius
+style.css         the pixel skin: chunky panels, CRT overlay, zero radius
 js/util.js        seeded RNG (mulberry32), helpers, procedural WebAudio SFX
-js/pixfont.js     hand-drawn 5×7 typeface (every letter in the game)
-js/pix.js         pixel engine: palette, sprite compiler, draw helpers
-js/data.js        content: the crew, guns, items, questions, case + aim + mess tuning
-js/meta.js        persistence: stats, tutorial marks, Maybelle's trust (localStorage)
-js/sprites.js     ALL the art: frog rig, full bodies, the iron rig, hands, splats
-js/bg.js          the swirling paint background
-js/engine.js      pure rules: the duel, the mark's brain, the loot, the heat (no DOM)
-js/ui.js          screens: murder board, precinct, line-up, duel frame, help
-js/btn.js         the arcade buttons: sockets, moulded caps, pixel-art faces
-js/fx.js          the effects engine: smoke, gore, chip arcs, slow-mo, ambient dust
-js/case.js        the case: suspects, evidence, questions, the accusation
-js/duel.js        the drawn table: expressions, grips, the steady check, the corpse
-js/cine.js        the wipes, the reel, the reload, the drive, the drag, the cut-in
-js/cops.js        the uniforms: the walk-in, the bribe handoff, the bust
-js/loot.js        out back: first-person searching, the meters, the mop, the bill
-js/tutor.js       the captain, Maybelle, the mark's lines, the drawn speech plate
+js/pixfont.js     the hand-drawn 5×7 typeface every letter is set in
+js/pix.js         pixel engine: the palette, a sprite compiler, draw helpers
+js/art.js         THE PROP SHOP: painted pixel maps + the shading kit
+js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
+js/rooms.js       the set: precinct, board room, ward, and the lead
+js/story.js       THE CASE: chapters, the board, dialogue, the two endings
+js/data.js        the crew, the guns, the belt, the questions, the tuning
+js/meta.js        what survives a case: stats, learned tells, her trust
+js/sprites.js     the frog rig, the iron rig, mugshots, splats, plates
+js/engine.js      pure rules: the duel, his brain, the loot, the heat
+js/case.js        the identification game: suspects, evidence, questions
+js/duel.js        the drawn table: expressions, grips, the steady check
+js/cine.js        every cutscene, and the film rig they all run on
+js/cops.js        the uniforms: the walk-in, the bribe, the bust
+js/loot.js        out back: first-person searching, the meters, the mop
+js/tutor.js       the drawn speech plate, and what the mark says
+js/ui.js          the story HUD, the murder board, the duel frame, help
+js/btn.js         the arcade buttons the few remaining screens use
+js/fx.js          smoke, gore, chip arcs, slow-mo, ambient dust
 js/main.js        boot (+ ?debug harness)
-dev/sim.js        headless balance & fuzz harness (node dev/sim.js)
-dev/smoke.js      full browser smoke test (playwright-core)
+dev/sim.js        headless balance + fuzz harness (node dev/sim.js)
+dev/smoke.js      full browser smoke test (node dev/smoke.js)
 ```
 
-### Tuning knobs (for modders)
+### Tuning knobs
 
-- The case — `CASE_TUNING` (line size, looks, questions, the price of being wrong)
-  and `CASE_ASKS` in `js/data.js`
-- The steady check — `AIM_TUNING` (sweep speed and band widths per floor)
-- The mess — `MESS_TUNING` (stains, mop time, the fine)
+- The identification game — `CASE_TUNING` and `CASE_ASKS` in `js/data.js`
+- The steady check — `AIM_TUNING` (sweep speed and band widths per chapter)
+- The trail and what it costs — `MESS_TUNING`
 - Bounties, heat, bribes — `BLIND_PURSE` / `HEAT_COST` / `LOOT_TUNING`
-- The mark's brain — `E.oppDecide()` (aggression per boss in `BOSSES`)
-- What he says — `MARK_LINES`; what she says — `UI.talkMaybelle`
+- The chapters and the five pieces — `CHAPTERS` / `INTEL_CARDS` in `js/story.js`
+- What a room is furnished with — the scene definitions in `js/rooms.js`
 
 ### Dev checks
 
 ```
-node dev/sim.js      # 500 bot runs + 200 random-action fuzz runs against the real engine
-node dev/smoke.js    # drives the full UI in headless Chromium, fails on any console error
+node dev/sim.js      # 500 bot cases + 200 fuzz cases against the real engine
+node dev/smoke.js    # drives the whole story in headless Chromium
 ```
 
-Current curve (counting a bot with average nerves — it breaks a clean shot about a
-third of the time and never reads the line-up, it just guesses): ~89% clear floor 1,
-~27% reach the Bullfrog, ~2% walk out clean. A player who works the questions, mops
-the floor, and learns the sweep does far better than the bot on every one of those
-numbers. That's the point.
+Current curve, for a bot with average nerves that never reads a face and
+names a suspect at random out of whoever is still standing:
+
+- **40%** fill the board
+- **34%** reach the Bullfrog at all
+- **16%** could still take the good ending when they get there
+- **4.2** trips to the ward per case
+
+A player who works the file, asks the right questions, breaks the shot clean
+and mops the floor does far better than that on every line. That is the point.
 
 ---
 
-*A blank in your own head is a free turn. Take his papers — the next line-up is
-already forming.* 🐸🔫
+*A blank in your own head is a free turn. Take his papers — the board is five
+holes wide.* 🐸🔎

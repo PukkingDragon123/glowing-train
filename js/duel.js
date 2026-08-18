@@ -1,7 +1,7 @@
 'use strict';
 /* ============================================================
    SHELL & DEBT — duel.js
-   The table, fullscreen over the swirl. One transparent canvas:
+   The table, fullscreen. One canvas:
    the mark across the felt (face reacting, wounds landing), the
    lamp, the iron, blood on the felt, the fall, the corpse with
    all its parts — and the pockets you go through afterwards.
@@ -457,7 +457,15 @@ const DUEL = {
   draw() {
     const x = DUEL.ctx, P = PIX.PAL, W = DUEL.W, H = DUEL.H;
     if (!x) return;
-    x.clearRect(0, 0, W, H);                        // the swirl shows through
+    /* the table can be packed up under us between frames */
+    if (!G.duel) { x.clearRect(0, 0, W, H); return; }
+    /* THE DARK THE ROOM KEEPS. There is no paint swirl under this scene any
+       more, so the table paints its own night rather than borrowing the
+       page's background through a transparent canvas. */
+    x.clearRect(0, 0, W, H);
+    const roomTone = DUEL.room === 'back' ? '#0a0b10' : '#0b1410';
+    x.fillStyle = roomTone;
+    x.fillRect(0, 0, W, H);
     x.save();
     x.imageSmoothingEnabled = false;
     const fso = FX.shakeOffset();
@@ -465,7 +473,7 @@ const DUEL = {
     const panOff = DUEL.room === 'back' ? Math.round(DUEL.panX) : 0;
     x.translate(Math.round(DUEL.OX + sx - panOff), Math.round(DUEL.OY + sy));
 
-    /* --- lamp cone over the swirl --- */
+    /* --- the lamp cone over all of it --- */
     const sway = Math.sin(DUEL.t / 90) * 3;
     x.save();
     x.globalAlpha = 0.13 * DUEL.lamp;
@@ -481,7 +489,7 @@ const DUEL = {
 
     if (DUEL.room !== 'back') DUEL.drawHouse(x);
 
-    /* --- table shadow, grounding it on the swirl --- */
+    /* --- table shadow, grounding it on the boards --- */
     x.globalAlpha = 0.35;
     SPR.ellipse(x, 182, 158, 168, 42, '#050308');
     x.globalAlpha = 1;

@@ -2,8 +2,8 @@
 /* ============================================================
    SHELL & DEBT — ui.js
    Screens & chrome: title, the duel frame (strip, cards,
-   controls), overlays (boss intro, payout), collection,
-   end screens, tooltips, help, keybinds.
+   controls), overlays, the story HUD, the rooms you walk around
+   in, end screens, tooltips, help, keybinds.
    Mostly wordless: icons + pixel numerals, hover for truth.
    ============================================================ */
 
@@ -11,7 +11,7 @@
 SPR.itemCard = function (id) {
   return SPR.cached('icard_' + id, () => {
     const it = ITEMS[id], P = PIX.PAL;
-    const rc = TRINKET_RAR[it.rarity] || TRINKET_RAR.common;
+    const rc = ITEM_RAR[it.rarity] || ITEM_RAR.common;
     const W = 22, H = 28;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
@@ -268,7 +268,7 @@ const UI = {
       const rec = U.el('div', 'mb-pin mb-record');
       rec.appendChild(U.el('i', 'poster-pin'));
       rec.appendChild(UI.txt('DET. VERDE - RECORD', { scale: 2, color: PIX.PAL.K, shadow: null }));
-      rec.appendChild(UI.txt('BEST FLOOR ' + s.bestAnte + ' / CLOSED ' + s.wins + ' / LOST ' + s.deaths,
+      rec.appendChild(UI.txt('CLOSED ' + s.wins + ' / IN THE WARD ' + s.deaths + ' TIMES',
         { scale: 2, color: PIX.PAL.d, shadow: null }));
       board.appendChild(rec);
     }
@@ -296,7 +296,7 @@ const UI = {
     btns.appendChild(deal);
 
     const hlp = U.el('button', 'pixbtn');
-    hlp.appendChild(UI.txt('HOUSE RULES', { scale: 3, shadow: null }));
+    hlp.appendChild(UI.txt('HOW THIS WORKS', { scale: 3, shadow: null }));
     hlp.onclick = () => UI.showHelp();
     btns.appendChild(hlp);
 
@@ -460,8 +460,8 @@ const UI = {
       '<button class="pixbtn m-close" id="mm-close"></button>' +
       '<div class="ri-head"><h3>THE RUN</h3><span class="ri-seed">SEED ' + U.esc(r.seed) + '</span></div>' +
       '<div class="ri-grid">' +
-      '<div class="ri-stat"><b>' + r.ante + (r.endless ? '' : '/' + ANTES) + '</b><span>ANTE</span></div>' +
-      '<div class="ri-stat"><b>' + r.blindName.split(' ')[0] + '</b><span>BLIND</span></div>' +
+      '<div class="ri-stat"><b>' + STORY.chapter().id + '/' + CHAPTERS.length + '</b><span>CHAPTER</span></div>' +
+      '<div class="ri-stat"><b>' + STORY.intelPct() + '%</b><span>THE BOARD</span></div>' +
       '<div class="ri-stat"><b>' + r.chips + '</b><span>CHIPS</span></div>' +
       '<div class="ri-stat"><b>' + r.hearts + '/' + r.maxHP + '</b><span>HEARTS</span></div>' +
       '<div class="ri-stat"><b>' + r.duelsWon + '</b><span>MARKS DOWN</span></div>' +
@@ -771,7 +771,8 @@ const UI = {
 
   blindBanner() {
     const d = G.duel;
-    UI.stampBig(E.blindName(), G.blind === 2 ? PIX.PAL.R : PIX.PAL.G, true);
+    UI.stampBig(G.blind === 2 ? STORY.chapter().crew : STORY.chapter().where,
+      G.blind === 2 ? PIX.PAL.R : PIX.PAL.G, true);
     UI.stampSmall(d.opp.name + ' - PURSE ' + E.purse());
   },
 
@@ -814,29 +815,48 @@ const UI = {
     UI.syncDuel();
   },
 
+  /* THE ONE WHO RUNS THIS ROOM. A card, a name, a rule, and the piece of
+     the board he is carrying. No button on it: tap anywhere, or wait, and
+     the door opens on its own. */
   bossIntro(opp) {
     return new Promise(res => {
       const o = document.getElementById('duel-overlay');
+      if (!o) { res(); return; }
       o.className = 'boss-in';
       o.innerHTML = '';
       const card = U.el('div', 'boss-card slam');
-      card.appendChild(SPR.clone(SPR.frogCustom(opp.boss + ':intro', opp.def), 5));
-      card.appendChild(UI.txt(opp.name, { scale: 5, color: PIX.PAL.R, outline: PIX.PAL.K }));
+      card.appendChild(SPR.clone(SPR.frogCustom(opp.boss + ':intro', opp.def), 4));
+      card.appendChild(UI.txt(opp.name, { scale: 4, color: PIX.PAL.R, outline: PIX.PAL.K }));
       card.appendChild(UI.txt(opp.rule, { scale: 3, color: PIX.PAL.G }));
       const desc = U.el('p', 'boss-desc');
       desc.textContent = opp.desc;
       card.appendChild(desc);
-      const purse = U.el('div', 'load-row');
-      purse.appendChild(UI.txt('PURSE ' + E.purse(), { scale: 3, color: PIX.PAL.G }));
-      purse.appendChild(UI.icon('ic_chip', 3));
-      card.appendChild(purse);
-      const go = U.el('button', 'pixbtn gold primary');
-      go.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
-      go.onclick = () => { o.className = 'hidden'; o.innerHTML = ''; res(); };
-      card.appendChild(go);
+      const paper = STORY.nextCard();
+      const line = U.el('div', 'load-row');
+      line.appendChild(UI.txt(paper ? 'HE CARRIES ' + paper.name : 'NOTHING ON HIM YOU NEED',
+        { scale: 3, color: paper ? PIX.PAL.G : PIX.PAL.q }));
+      card.appendChild(line);
+      const foot = U.el('div', 'boss-foot');
+      foot.appendChild(UI.txt('TAP TO SIT DOWN', { scale: 3, color: PIX.PAL.w }));
+      card.appendChild(foot);
       o.appendChild(card);
       UI.shake();
       SFX.lose();
+      let done = false;
+      const go = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('pointerdown', go);
+        window.removeEventListener('keydown', go);
+        clearTimeout(timer);
+        o.className = 'hidden'; o.innerHTML = '';
+        res();
+      };
+      const timer = setTimeout(go, 5200);
+      setTimeout(() => {
+        window.addEventListener('pointerdown', go);
+        window.addEventListener('keydown', go);
+      }, 350);
     });
   },
 
@@ -919,7 +939,7 @@ const UI = {
       c.appendChild(UI.txt(String(v), { scale: 3, color: col || PIX.PAL.W }));
       grid.appendChild(c);
     };
-    cell('ANTE', G.ante, PIX.PAL.G);
+    cell('CHAPTER', STORY.chapter().id, PIX.PAL.G);
     cell('MARKS DOWN', G.run.duelsWon);
     cell('SHOTS', G.run.shots);
     cell('DAMAGE', G.run.damage, PIX.PAL.R);
@@ -1051,8 +1071,8 @@ const UI = {
 
   PANEL_TIPS: {
     chips: () => `<b>CHIPS</b> — the only money down here. It comes out of corpses, and it goes to bribes and Swamp PD protection.`,
-    ante: () => `<b>ANTE ${G.ante}</b> of ${ANTES}. Every ante is three blinds: small, big, then one of the Bullfrog's people. After the boss, Swamp PD wants <b>${E.heatDue()}⛁</b>.`,
-    blind: () => `<b>${E.blindName()}</b> — three frogs in the room, one of them is the bounty. Turn evidence over until the string only reaches one poster, name him, then sit down. Name him right and the purse pays more; name him wrong and he sits down ready for you.`,
+    ante: () => `<b>${STORY.chapter().title}</b> — ${STORY.chapter().obj.toLowerCase()}. Every chapter is three rooms; the last one is the frog who runs it, and he carries a piece of the board. After him, the department wants <b>${E.heatDue()}⛁</b> in protection.`,
+    blind: () => `<b>THE LINE</b> — the crew drinks in this room and one of them is the frog you came for. Read the file on the bar, ask the barman, look each of them in the face, then name one. Name him right and the bounty pays 30% more; name him wrong and he sits down with an extra heart and the first pull.`,
     purse: () => `<b>THE TAKE</b> — roughly ${E.purse()} chips sewn into this mark, plus 1 per heart you keep, plus whatever his tells promise.`,
     heat: () => `<b>THE BADGES</b> — every pocket you rifle brings them closer. When they're at the door: bribe (${G.loot ? E.bribeCost() : '?'}⛁) or walk.`,
     clock: () => `<b>THE CLOCK</b> — real seconds, and it does not stop for you. Run it out and they come through the door.`,

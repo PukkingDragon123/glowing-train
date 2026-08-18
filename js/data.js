@@ -420,5 +420,5 @@ const BINDS = [
   ['R', 'bribe the badges (looting)'],
   ['ENTER', 'walk out / next blind'],
   ['M', 'mute'],
-  ['H', 'house rules'],
+  ['H', 'how this works'],
 ];

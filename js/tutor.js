@@ -205,7 +205,12 @@ const TUTOR = {
     TUTOR._busy = true;
     TUTOR.cur = step.id;
     try {
-      await TUTOR.say(step.line);
+      /* A HINT IS NOT A CONVERSATION. These arrive while a clock is running
+         or while you are stood in a room with things to click, so they say
+         their piece over the top of the frame and get out of the way on
+         their own — a modal plate over the back room used to cover the
+         bribe, the mop and the way out while the noise meter climbed. */
+      await TUTOR.say(step.line, { hold: step.hold || 3600, top: true });
       TUTOR.mark(step.id);
     } finally {
       TUTOR.cur = null;

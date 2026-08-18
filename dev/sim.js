@@ -179,7 +179,9 @@ function driver() {
     G.hearts = E.maxHP();
     G.briefed = G.chapter;            // the captain re-briefs you
     G.case = null;
-    if (!G.duel) E.startBlind();
+    /* a finished table gets packed up and a new lead dealt; a live one is
+       left exactly where it was */
+    if (!G.duel || G.duel.over) { STORY.clearTable(); E.startBlind(); }
     G.phase = 'blind';
   }
 
@@ -210,9 +212,14 @@ function driver() {
       }
       /* Dying already ran STORY.wardCost() through E.onRunOver(), which
          clears the table — so the ward is something we notice, not do. */
+      /* Dying ran STORY.wardCost() through E.onRunOver(). The ward scene
+         itself is a screen we do not have out here, so notice the trip and
+         pick the case back up. */
       if ((G.wardTrips || 0) > wardTrips) {
         wardTrips = G.wardTrips;
         if (wardTrips > WARD_LIMIT) break;      // the case collapses
+        resumeCase();
+        continue;
       }
       if (!G.duel) { resumeCase(); continue; }
       if (G.duel.over) { if (G.phase === 'duel') G.phase = 'blind'; continue; }
@@ -317,7 +324,12 @@ function driver() {
           }
           continue;
         }
-        if ((G.wardTrips || 0) > trips) { trips = G.wardTrips; if (trips > 4) break; }
+        if ((G.wardTrips || 0) > trips) {
+          trips = G.wardTrips;
+          if (trips > 4) break;
+          resumeCase();
+          continue;
+        }
         if (!G.duel) { resumeCase(); continue; }
         if (G.duel.over) { if (G.phase === 'duel') G.phase = 'blind'; continue; }
         if (G.duel.turn === 'you') {

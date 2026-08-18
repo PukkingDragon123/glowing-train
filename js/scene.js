@@ -68,21 +68,36 @@ const SCENE = (() => {
         px(c, bx - 2 + (face > 0 ? 1 : -1), legY + 8, 4, 1, P.t);
       });
 
-      /* --- the coat: shoulders, hem, a vent that lifts with the stride --- */
+      /* --- the coat: shoulders that slope, a lapel, a hem that kicks --- */
       const bodyY = 17 + bob;
-      px(c, cx - 7 - fat, bodyY, 15 + fat * 2, 15, K0);
-      px(c, cx - 6 - fat, bodyY + 1, 13 + fat * 2, 13, coat);
-      px(c, cx - 6 - fat, bodyY + 1, 3, 13, P[d.coatLit] || coat);        // lit edge
-      px(c, cx + 4 + fat, bodyY + 1, 2, 13, coatD);                       // shadow edge
+      const halfW = 7 + fat;
+      px(c, cx - halfW, bodyY, halfW * 2 + 1, 15, K0);
+      px(c, cx - halfW + 1, bodyY + 1, halfW * 2 - 1, 13, coat);
+      /* the shoulders are the top two rows, one pixel narrower */
+      px(c, cx - halfW + 2, bodyY, halfW * 2 - 3, 1, K0);
+      px(c, cx - halfW + 1, bodyY + 1, 2, 13, P[d.coatLit] || coat);      // lit edge
+      px(c, cx + halfW - 2, bodyY + 1, 1, 13, coatD);                     // shadow edge
+      /* the seam down the front, and a button on it */
+      px(c, cx + 1, bodyY + 5, 1, 9, coatD);
+      px(c, cx + 1, bodyY + 8, 1, 1, P[d.coatLit] || coat);
       /* the hem, kicked by the stride */
-      px(c, cx - 7 - fat + (swing > 0 ? 1 : 0), bodyY + 13, 15 + fat * 2, 3, K0);
-      px(c, cx - 6 - fat + (swing > 0 ? 1 : 0), bodyY + 13, 13 + fat * 2, 2, coatD);
-      /* shirt and tie down the middle, if the coat is open */
+      px(c, cx - halfW + (swing > 0 ? 1 : 0), bodyY + 13, halfW * 2 + 1, 3, K0);
+      px(c, cx - halfW + 1 + (swing > 0 ? 1 : 0), bodyY + 13, halfW * 2 - 1, 2, coatD);
+      /* THE COLLAR. A narrow V of shirt with a lapel either side of it —
+         a wide slab of white here reads as a sheet of paper taped to him. */
       if (d.shirt !== null) {
-        px(c, cx - 2, bodyY + 2, 5, 8, shirt);
-        px(c, cx - 1, bodyY + 3, 2, 6, tie);
+        px(c, cx - 2, bodyY + 2, 4, 3, shirt);
+        px(c, cx - 1, bodyY + 5, 2, 3, shirt);
+        px(c, cx, bodyY + 8, 1, 2, shirt);
+        px(c, cx, bodyY + 4, 1, 5, tie);                                  // the tie, thin
+        px(c, cx, bodyY + 3, 1, 1, P.K);                                  // its knot
+        /* lapels, folded back off the collar */
+        px(c, cx - 4, bodyY + 2, 2, 2, coatD);
+        px(c, cx - 3, bodyY + 4, 1, 2, coatD);
+        px(c, cx + 2, bodyY + 2, 2, 2, coatD);
+        px(c, cx + 2, bodyY + 4, 1, 2, coatD);
       }
-      if (d.badge) { px(c, cx - 5, bodyY + 4, 3, 3, P.G); px(c, cx - 5, bodyY + 4, 1, 1, P.Y); }
+      if (d.badge) { px(c, cx - 5, bodyY + 5, 2, 3, P.G); px(c, cx - 5, bodyY + 5, 1, 1, P.Y); }
 
       /* --- the arm nearest us, swinging opposite the near leg --- */
       const ax = cx + (face > 0 ? 4 : -6) + fat * (face > 0 ? 1 : -1);
@@ -172,17 +187,25 @@ const SCENE = (() => {
 
   let oy = 0;                    // how far down the room sits in the frame
 
+  const CEIL_MAX = 38;           // world px of headroom, at most
+
   function scale() {
     const host = document.getElementById('scene-root');
     const w = window.innerWidth;
     const h = host ? host.clientHeight || (window.innerHeight - 66) : window.innerHeight - 66;
-    /* the frame wants about 300 world px across, and at least the room tall */
-    K = Math.max(2, Math.min(Math.floor(h / H), Math.floor(w / 300)));
+    /* Fill the height first — a room with more ceiling than room in it reads
+       as a bug — but never show less than about 200 world px across, or the
+       camera is inside somebody's coat. */
+    let k = Math.max(2, Math.floor(h / H));
+    while (k > 2 && w / k < 200) k--;
+    K = k;
     cv.width = Math.ceil(w / K) * K;
-    cv.height = Math.max(H, Math.floor(h / K)) * K;
+    /* whatever height is left over past the room and its headroom is a bar */
+    const worldH = Math.min(Math.max(H, Math.floor(h / K)), H + CEIL_MAX);
+    cv.height = worldH * K;
     cv.style.width = cv.width + 'px';
     cv.style.height = cv.height + 'px';
-    oy = Math.floor(cv.height / K) - H;      // the room stands on the bottom edge
+    oy = worldH - H;                 // the room stands on the bottom edge
   }
 
   function viewW() { return Math.ceil(cv.width / K); }
@@ -393,9 +416,15 @@ const SCENE = (() => {
     }
     near = best;
 
-    /* the camera: follow, but let a drag lead it, and never show past the walls */
-    if (!drag) camWant = me.x - viewW() / 2;
-    camWant = U.clamp(camWant, 0, Math.max(0, def.w - viewW()));
+    /* the camera: follow, but let a drag lead it, and never show past the
+       walls. A room narrower than the frame is centred in it instead. */
+    const vw = viewW();
+    if (def.w <= vw) {
+      camWant = -(vw - def.w) / 2;
+    } else {
+      if (!drag) camWant = me.x - vw / 2;
+      camWant = U.clamp(camWant, 0, def.w - vw);
+    }
     cam += (camWant - cam) * Math.min(1, dt * 6);
     if (Math.abs(cam - camWant) < 0.4) cam = camWant;
 
@@ -474,6 +503,7 @@ const SCENE = (() => {
     /* the diegetic label: what the thing under your hand is called */
     const show = hover && Math.abs(hover.x - me.x) < 300 ? hover : near;
     if (show && !busy) plate(show);
+    else { const pl = document.getElementById('scene-plate'); if (pl) pl.style.display = 'none'; }
     if (def.onHud) def.onHud(c, K, viewW(), cam);
   }
 
@@ -550,7 +580,8 @@ const SCENE = (() => {
       p.appendChild(SPR.speech({
         lines: [label],
         foot: inRange ? (hint || 'TAP') : null,
-        maxW: 190,
+        /* a plate that is half the width of a phone is a wall, not a label */
+        maxW: Math.max(90, Math.min(190, window.innerWidth * 0.42)),
         rim: inRange ? PIX.PAL.g : PIX.PAL.t,
       }));
     }
@@ -558,7 +589,8 @@ const SCENE = (() => {
     const r = cv.getBoundingClientRect();
     const sx = r.left + (o.x - cam) * K;
     const sy = r.top + ((o.top === undefined ? def.floorY - 46 : o.top) - 8 + oy) * K;
-    p.style.left = Math.round(sx) + 'px';
+    const halfW = (p.offsetWidth || 160) / 2;
+    p.style.left = Math.round(U.clamp(sx, halfW + 6, window.innerWidth - halfW - 6)) + 'px';
     p.style.top = Math.round(Math.max(6, sy - p.offsetHeight)) + 'px';
   }
 

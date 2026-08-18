@@ -38,6 +38,20 @@ const CINE = {
     return r;
   },
 
+  /* A DECISION GETS ITS OWN LAYER. Pickers used to share the cutscene
+     stage, so a cinematic ending half a second later wiped the cards out
+     from under the player's hand. */
+  pickRoot() {
+    let r = document.getElementById('cine-pick');
+    if (!r) {
+      r = U.el('div');
+      r.id = 'cine-pick';
+      r.className = 'hidden';
+      document.body.appendChild(r);
+    }
+    return r;
+  },
+
   amb() {
     let r = document.getElementById('cine-amb');
     if (!r) {
@@ -677,7 +691,7 @@ const CINE = {
       big: 'THE SWAMP KEEPS',
       huge: 'YOUR MARKER',
       sub: who ? 'TAKEN BY ' + who : '',
-      foot: 'FLOOR ' + G.ante + ' OF 8',
+      foot: STORY.chapter().title,
       col: PIX.PAL.R,
     }), K));
     root.appendChild(card);
@@ -700,13 +714,13 @@ const CINE = {
     root.className = 'ante-cut';
     root.innerHTML = '';
     const card = U.el('div', 'ante-card');
-    card.appendChild(UI.txt('ANTE ' + ante, { scale: 5, color: PIX.PAL.q }));
+    card.appendChild(UI.txt('THE ROOM IS', { scale: 5, color: PIX.PAL.q }));
     card.appendChild(UI.txt('CLEARED', { scale: 8, color: PIX.PAL.G, outline: PIX.PAL.K }));
     const row = U.el('div', 'load-row');
     row.appendChild(UI.txt('YOU KEEP ' + U.fmt(chips), { scale: 3, color: PIX.PAL.W }));
     row.appendChild(UI.icon('ic_chip', 3));
     card.appendChild(row);
-    card.appendChild(UI.txt('NEXT: ANTE ' + (ante + 1), { scale: 3, color: PIX.PAL.R }));
+    card.appendChild(UI.txt('THE BOARD IS ' + STORY.intelPct() + '% OF HIM', { scale: 3, color: PIX.PAL.R }));
     root.appendChild(card);
     /* the take falling past the lens */
     const chip = CINE.chipTex();
@@ -804,38 +818,6 @@ const CINE = {
     }
   },
 
-  /* ============================================================
-     THE CLIMB. Between antes: the house from the street with one
-     more floor of it behind you.
-     ============================================================ */
-  async climb(ante) {
-    const root = CINE.stage();
-    root.className = 'ante-cut';
-    root.innerHTML = '';
-    const card = U.el('div', 'ante-card climb');
-    card.appendChild(UI.txt('FLOOR ' + Math.min(ante, 8) + ' OF 8', { scale: 4, color: PIX.PAL.q }));
-    const art = U.el('div', 'climb-art');
-    const k = U.clamp(Math.floor(Math.min(window.innerWidth * 0.5 / 180,
-      window.innerHeight * 0.42 / 108)), 2, 6);
-    art.appendChild(SPR.clone(SPR.lorePanel('tower'), k));
-    /* the floor you have just cleared, marked on the front of the house */
-    const pip = U.el('i', 'climb-pip');
-    pip.style.bottom = (10 + Math.min(ante - 1, 7) * 11) * k + 'px';
-    pip.style.width = (64 * k) + 'px';
-    pip.style.height = (7 * k) + 'px';
-    art.appendChild(pip);
-    card.appendChild(art);
-    card.appendChild(UI.txt('ONE MORE BETWEEN YOU AND THE TOP', { scale: 3, color: PIX.PAL.w }));
-    root.appendChild(card);
-    await U.sleep(20);
-    card.classList.add('in');
-    SFX.chak();
-    await DUEL.sleep(1500);
-    card.classList.add('out');
-    await U.sleep(300);
-    root.innerHTML = '';
-    root.className = 'hidden';
-  },
 
 
   /* ============================================================
@@ -973,13 +955,49 @@ const CINE = {
           PIX.rect(c, 40, y + 8 + k * 3, 100, 1, 'rgba(255,233,163,' + (0.06 - k * 0.008) + ')');
         }
       }
-      /* two frogs running you in, seen from below: hands on the rail */
-      PIX.rect(c, 0, H - 34, 26, 34, P.K);
-      PIX.rect(c, 2, H - 32, 22, 32, '#2e7d5b');
-      PIX.rect(c, W - 26, H - 34, 26, 34, P.K);
-      PIX.rect(c, W - 24, H - 32, 22, 32, '#276a4c');
-      PIX.rect(c, 18, H - 30, 12, 6, P.K);
-      PIX.rect(c, W - 30, H - 26, 12, 6, P.K);
+      /* the gurney rails, running away from your own eyes */
+      for (let i = 0; i < 22; i++) {
+        const k2 = i / 22;
+        PIX.rect(c, Math.round(6 + k2 * 26), H - 2 - i * 2, 4, 2, 'rgba(154,163,184,' + (0.5 - k2 * 0.4) + ')');
+        PIX.rect(c, Math.round(W - 10 - k2 * 26), H - 2 - i * 2, 4, 2, 'rgba(154,163,184,' + (0.5 - k2 * 0.4) + ')');
+      }
+      /* the drip, swinging on its pole above you */
+      const sw = Math.round(Math.sin(t * 5) * 4);
+      PIX.rect(c, 30 + sw, 0, 2, 26, '#5a6270');
+      const bag = ART.art('ivbag', 2);
+      c.drawImage(bag, 22 + sw, 20);
+      /* the two of them running you in — from flat on your back they are
+         faces at the top of the frame, looking down at you, not walls */
+      const port = (px2, tone, dark, phase, sgn) => {
+        const lean = Math.round(Math.sin(t * 8 + phase) * 2);
+        const y0 = 1 + lean;
+        /* the shoulders, wedging in from the corner */
+        PIX.rect(c, px2 - 6 * sgn, y0 + 15, 34, 16, P.K);
+        PIX.rect(c, px2 - 5 * sgn, y0 + 16, 32, 14, tone);
+        PIX.rect(c, px2 - 5 * sgn, y0 + 16, 32, 2, 'rgba(255,255,255,.08)');
+        /* the head, upside down to us because he is over the top of you */
+        PIX.rect(c, px2, y0 + 4, 22, 13, P.K);
+        PIX.rect(c, px2 + 1, y0 + 5, 20, 11, tone);
+        PIX.rect(c, px2 + 1, y0 + 12, 20, 4, dark);
+        /* both bulbs, low on the skull from this angle */
+        [4, 13].forEach(ex => {
+          PIX.rect(c, px2 + ex, y0 + 13, 6, 5, P.K);
+          PIX.rect(c, px2 + ex + 1, y0 + 14, 4, 3, tone);
+          PIX.rect(c, px2 + ex + 2, y0 + 15, 2, 2, P.K);
+        });
+        /* the mouth line, and the white cap on top */
+        PIX.rect(c, px2 + 2, y0 + 9, 18, 1, dark);
+        PIX.rect(c, px2 - 1, y0 + 1, 24, 4, P.K);
+        PIX.rect(c, px2, y0 + 2, 22, 2, '#e8e2d0');
+        /* the arm coming down the edge of the frame, and the hand on the rail */
+        const ax = sgn > 0 ? px2 - 4 : px2 + 24;
+        PIX.rect(c, ax, y0 + 26, 8, 30, P.K);
+        PIX.rect(c, ax + 1, y0 + 27, 6, 28, tone);
+        PIX.rect(c, ax - 1, y0 + 54, 10, 7, P.K);
+        PIX.rect(c, ax, y0 + 55, 8, 5, dark);
+      };
+      port(14, '#2e7d5b', '#1c5540', 0, 1);
+      port(W - 36, '#276a4c', '#164434', 2.1, -1);
       /* the mask coming down over the lens */
       if (t > 1.1) {
         const a = Math.min(0.8, (t - 1.1) * 0.9);
@@ -1036,71 +1054,14 @@ const CINE = {
   },
 
   /* ============================================================
-     A CHOICE. Two drawn cards, one decision, no menu.
-     ============================================================ */
-  choice(o) {
-    return new Promise(res => {
-      const root = CINE.stage();
-      root.className = 'anim-cut choice';
-      root.innerHTML = '';
-      const wrap = U.el('div', 'ch-wrap');
-      const head = U.el('div', 'ch-head');
-      head.appendChild(UI.wrap(o.head, 30, { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
-      wrap.appendChild(head);
-      const row = U.el('div', 'ch-row');
-      [o.a, o.b].forEach(side => {
-        const card = U.el('div', 'ch-card' + (side.dim ? ' dim' : ''));
-        const K = U.clamp(Math.floor(window.innerWidth / 420), 2, 5);
-        const cv = document.createElement('canvas');
-        cv.width = 92 * K; cv.height = 116 * K;
-        cv.className = 'pix';
-        const c = cv.getContext('2d');
-        c.imageSmoothingEnabled = false;
-        c.scale(K, K);
-        /* the card face: ink, plate, and the thing itself drawn on it */
-        PIX.rect(c, 0, 0, 92, 116, PIX.PAL.K);
-        PIX.rect(c, 2, 2, 88, 112, side.dim ? '#191c22' : '#20262e');
-        PIX.rect(c, 2, 2, 88, 2, 'rgba(255,255,255,.1)');
-        for (let y = 6; y < 110; y += 3) PIX.rect(c, 4, y, 84, 1, 'rgba(0,0,0,.2)');
-        if (side.key === 'badge') {
-          const b = ART.art('badge', 4);
-          c.drawImage(b, 46 - b.width / 2, 20);
-          PIX.rect(c, 26, 62, 40, 3, side.dim ? '#3a3a3a' : '#9aa3b8');
-          PIX.rect(c, 30, 66, 32, 2, side.dim ? '#2a2a2a' : '#646d84');
-        } else {
-          const g = ART.art('gunprop', 4);
-          c.drawImage(g, 46 - g.width / 2, 26);
-          PIX.rect(c, 30, 62, 32, 3, '#d13b45');
-        }
-        const lab = PIXFONT.render(side.label, { scale: 2, color: side.dim ? PIX.PAL.q : PIX.PAL.W, shadow: null });
-        c.drawImage(lab, 46 - lab.width / 2, 76);
-        SPR.fitLines(side.sub, 22).forEach((ln, i) => {
-          const l2 = PIXFONT.render(ln, { scale: 1, color: PIX.PAL.q, shadow: null });
-          c.drawImage(l2, 46 - l2.width / 2, 90 + i * 8);
-        });
-        card.appendChild(cv);
-        card.onclick = () => {
-          SFX.chak();
-          root.innerHTML = ''; root.className = 'hidden';
-          res(side.key);
-        };
-        row.appendChild(card);
-      });
-      wrap.appendChild(row);
-      root.appendChild(wrap);
-      requestAnimationFrame(() => wrap.classList.add('in'));
-    });
-  },
-
-  /* ============================================================
      PICK ONE. A drawn spread of cards — questions to put to a
      room, evidence to turn over, a face to name. Tap one, or tap
      the dark to back out. No button strip anywhere.
      ============================================================ */
   pick(o) {
     return new Promise(res => {
-      const root = CINE.stage();
-      root.className = 'anim-cut choice';
+      const root = CINE.pickRoot();
+      root.className = 'choice';
       root.innerHTML = '';
       const wrap = U.el('div', 'ch-wrap pickwrap');
       if (o.head) {
@@ -1144,7 +1105,7 @@ const CINE = {
           c.drawImage(l, Math.round(W / 2 - l.width / 2), ty + j * 9);
         });
         if (it.sub) {
-          SPR.fitLines(it.sub, 14).slice(0, 3).forEach((ln, j) => {
+          SPR.fitLines(it.sub, 13).slice(0, 3).forEach((ln, j) => {
             const l2 = PIXFONT.render(ln, { scale: 1, color: '#8c2230', shadow: null });
             c.drawImage(l2, Math.round(W / 2 - l2.width / 2), ty + lab.length * 9 + 2 + j * 8);
           });
@@ -1186,80 +1147,150 @@ const CINE = {
     };
 
     if (kind === 'good') {
-      /* SHOT 1 — a courtroom, from the gallery */
+      /* SHOT 1 — a courtroom, from the back of the gallery.
+         Everybody in it is drawn with the walking rig, so they read as
+         frogs instead of boxes with eyes. */
+      const JUDGE = { key: 'judge', skin: ['w', 'q', 'k'], coat: 'K', coatDark: 'K', coatLit: 't',
+        shirt: 'W', tie: 'K', fat: true };
+      const BULL = { key: 'bullfrog-dock', skin: ['f', 'e', 'E'], coat: 't', coatDark: 'K', coatLit: 's',
+        shirt: 'W', tie: 'd', fat: true, hat: false, gold: true, scar: true };
+      const CLERK = { key: 'clerk', skin: ['B', 'b', 'u'], coat: 'T', coatDark: 'K', coatLit: 't',
+        shirt: 'W', tie: 'K', glasses: true };
       const court = (c, t, W, H) => {
-        PIX.rect(c, 0, 0, W, H, '#141019');
-        c.drawImage(ART.wall(W, 78, { tone: 'brick', railY: 52, seed: 61 }), 0, 0);
-        /* the high window with morning in it, the first light in the game */
-        const dawn = Math.min(1, t / 1.6);
-        PIX.rect(c, 118, 8, 44, 34, P.K);
-        PIX.rect(c, 120, 10, 40, 30, '#2a3a4a');
-        PIX.rect(c, 120, 10, 40, 30, 'rgba(255,220,150,' + (dawn * 0.6) + ')');
-        for (let i = 0; i < 8; i++) {
-          PIX.rect(c, 100 - i * 3, 40 + i * 6, 70, 4, 'rgba(255,225,160,' + (dawn * 0.05) + ')');
+        const dawn = Math.min(1, t / 1.7);
+        PIX.rect(c, 0, 0, W, H, '#14121a');
+        c.drawImage(ART.wall(W, 82, { tone: 'brick', railY: 56, seed: 61 }), 0, 0);
+        c.drawImage(ART.floor(W, H - 78, { tone: 'board', seed: 9 }), 0, 78);
+
+        /* two high windows with real panes, and the first daylight in the game */
+        [104, 148].forEach((wx, k) => {
+          PIX.rect(c, wx, 6, 34, 30, P.K);
+          /* sky in the top panes, low sun in the bottom ones */
+          for (let wy = 0; wy < 26; wy++) {
+            const kk = wy / 26;
+            PIX.rect(c, wx + 2, 8 + wy, 30, 1,
+              'rgb(' + Math.round(52 + kk * 130 + dawn * 60) + ',' +
+                       Math.round(72 + kk * 110 + dawn * 50) + ',' +
+                       Math.round(96 + kk * 60) + ')');
+          }
+          PIX.rect(c, wx + 2, 8, 30, 26, 'rgba(255,226,168,' + (dawn * 0.3) + ')');
+          PIX.rect(c, wx + 16, 8, 2, 26, P.K);
+          PIX.rect(c, wx + 2, 20, 30, 2, P.K);
+          PIX.rect(c, wx + 2, 8, 30, 1, 'rgba(255,255,255,.25)');
+          /* the shafts it throws down into the room */
+          for (let i2 = 0; i2 < 7; i2++) {
+            PIX.rect(c, wx - 4 - i2 * 3 + k * 2, 36 + i2 * 6, 30, 5,
+              'rgba(255,228,168,' + (dawn * 0.035) + ')');
+          }
+        });
+
+        /* the bench: panelled, with a rail and the state's seal on it */
+        PIX.rect(c, 44, 44, 92, 34, P.K);
+        PIX.rect(c, 46, 46, 88, 30, '#4d301a');
+        ART.grain(c, 47, 47, 86, 28, '#3a2414', '#6b4426', 5);
+        for (let px2 = 52; px2 < 128; px2 += 20) {
+          PIX.rect(c, px2, 52, 15, 20, '#3d2615');
+          PIX.rect(c, px2, 52, 15, 1, '#6b4426');
         }
-        /* the bench, the seal, the gavel */
-        PIX.rect(c, 20, 44, 96, 30, P.K);
-        PIX.rect(c, 22, 46, 92, 26, '#4d301a');
-        ART.grain(c, 24, 48, 88, 22, '#3a2414', '#6b4426', 5);
-        PIX.rect(c, 56, 34, 24, 12, P.h);                    // the seal
-        PIX.rect(c, 58, 36, 20, 8, P.G);
-        /* the judge, a small shape behind it */
-        PIX.rect(c, 60, 22, 18, 22, P.K);
-        PIX.rect(c, 62, 24, 14, 20, '#1c1a2c');
-        PIX.rect(c, 64, 26, 10, 8, '#4fae6d');
-        /* him, in the dock, in cuffs — the first time he is smaller than you */
-        const bx = 132;
-        PIX.rect(c, bx, 52, 22, 26, P.K);
-        PIX.rect(c, bx + 1, 53, 20, 24, '#3a3f52');
-        PIX.rect(c, bx + 4, 44, 15, 12, P.K);
-        PIX.rect(c, bx + 5, 45, 13, 10, '#2e7d5b');
-        PIX.rect(c, bx + 7, 48, 3, 2, P.W); PIX.rect(c, bx + 13, 48, 3, 2, P.W);
-        PIX.rect(c, bx + 6, 62, 12, 4, P.S);                 // the cuffs
-        PIX.rect(c, bx + 10, 63, 4, 2, P.M);
-        /* the gavel coming down on the last beat */
-        if (t > 1.5) {
-          const k = Math.min(1, (t - 1.5) * 8);
-          const gy = 30 + Math.round(k * 12);
-          PIX.rect(c, 96, gy, 12, 5, P.K);
-          PIX.rect(c, 97, gy + 1, 10, 3, '#6b4426');
-          PIX.rect(c, 100, gy + 5, 3, 8, '#4d301a');
-          if (k >= 1 && !court._bang) { court._bang = true; SFX.shot(); FX.screen.flash && FX.screen.flash(P.W, 0.2); }
+        PIX.rect(c, 44, 42, 92, 3, '#7a5230');
+        PIX.rect(c, 44, 42, 92, 1, '#a5741f');
+        PIX.rect(c, 82, 32, 18, 11, P.h);
+        PIX.rect(c, 84, 34, 14, 7, P.G);
+        PIX.rect(c, 88, 36, 6, 3, P.h);
+        /* the judge behind it, and the clerk below */
+        c.drawImage(SCENE.rig(JUDGE, 0, -1), 78, 12);
+        c.drawImage(SCENE.rig(CLERK, 0, 1), 34, 44);
+
+        /* the dock, stage right: him standing in it, cuffed to the rail,
+           smaller than he has ever been. The rail goes on AFTER him. */
+        PIX.rect(c, 148, 46, 42, 32, P.K);
+        PIX.rect(c, 150, 48, 38, 28, '#241a12');
+        c.drawImage(SCENE.rig(BULL, 0, -1), 156, 38);
+        PIX.rect(c, 148, 62, 42, 4, P.K);                     // the rail across him
+        PIX.rect(c, 149, 63, 40, 2, '#4d301a');
+        PIX.rect(c, 149, 63, 40, 1, '#6b4426');
+        for (let bx2 = 152; bx2 < 188; bx2 += 7) {            // and the bars under it
+          PIX.rect(c, bx2, 66, 2, 12, P.K);
+          PIX.rect(c, bx2, 66, 1, 12, '#3a2a1c');
         }
-        /* you, in the gallery, watching, out of focus in the foreground */
-        PIX.rect(c, 0, 74, 40, H - 74, '#0c0a12');
-        PIX.rect(c, 6, 66, 20, 14, '#0f0d16');
+        PIX.rect(c, 166, 58, 12, 4, P.S);                     // the cuffs
+        PIX.rect(c, 170, 59, 4, 2, P.M);
+
+        /* the gavel, coming down on the last beat */
+        if (t > 1.6) {
+          const k2 = Math.min(1, (t - 1.6) * 9);
+          const gy = 26 + Math.round(k2 * 14);
+          PIX.rect(c, 112, gy, 13, 6, P.K);
+          PIX.rect(c, 113, gy + 1, 11, 4, '#6b4426');
+          PIX.rect(c, 113, gy + 1, 11, 1, '#8a5c34');
+          PIX.rect(c, 117, gy + 6, 3, 9, '#4d301a');
+          if (k2 >= 1 && !court._bang) {
+            court._bang = true; SFX.shot();
+            FX.screen.flash && FX.screen.flash(P.W, 0.18);
+          }
+        }
+
+        /* the gallery: the backs of heads between us and all of it */
+        PIX.rect(c, 0, 82, W, 4, '#231a12');
+        for (let gx = 6; gx < W; gx += 26) {
+          PIX.rect(c, gx, 86, 18, 22, P.K);
+          PIX.rect(c, gx + 2, 88, 14, 20, '#1a1420');
+          PIX.rect(c, gx + 5, 84, 8, 5, P.K);
+        }
+        PIX.rect(c, 0, H - 8, W, 8, '#0e0a12');
       };
 
-      /* SHOT 2 — the two graves, and the rain finally stopping */
+      /* SHOT 2 — two stones, and the rain finally stopping */
       const graves = (c, t, W, H) => {
-        const amt = Math.max(0, 1 - t / 1.4);
-        PIX.rect(c, 0, 0, W, H, '#101820');
-        /* dawn coming up behind the hill */
-        for (let i = 0; i < 30; i++) {
-          PIX.rect(c, 0, i, W, 1, 'rgba(255,210,150,' + (0.02 + (1 - amt) * 0.04) * (1 - i / 30) + ')');
+        const amt = Math.max(0, 1 - t / 1.5);
+        /* the sky, going from wet grey to a low sun */
+        for (let y = 0; y < 66; y++) {
+          const k2 = y / 66;
+          const dawnk = (1 - amt);
+          PIX.rect(c, 0, y, W, 1,
+            'rgb(' + Math.round(16 + k2 * 30 + dawnk * 60) + ',' +
+                     Math.round(20 + k2 * 28 + dawnk * 40) + ',' +
+                     Math.round(28 + k2 * 20 + dawnk * 22) + ')');
         }
-        PIX.rect(c, 0, 62, W, H - 62, '#14231c');
-        ART.dither(c, 0, 62, W, H - 62, '#1c3327', 0.2, 9);
-        /* the stones, side by side */
-        [[64, 'wife'], [92, 'kid']].forEach(([gx]) => {
-          PIX.rect(c, gx, 44, 20, 22, P.K);
-          PIX.rect(c, gx + 1, 45, 18, 20, '#5a6068');
-          PIX.rect(c, gx + 1, 45, 18, 3, '#767c86');
-          PIX.rect(c, gx + 5, 52, 10, 1, '#3a3f46');
-          PIX.rect(c, gx + 6, 56, 8, 1, '#3a3f46');
-          PIX.rect(c, gx + 4, 66, 12, 3, P.K);
+        /* the city, far off and done with all of this */
+        for (let bx2 = 0; bx2 < W; bx2 += 17) {
+          const bh = 6 + ((bx2 * 7) % 13);
+          PIX.rect(c, bx2, 60 - bh, 15, bh, '#161c22');
+        }
+        PIX.rect(c, 0, 60, W, 3, '#101720');
+        /* the railing along the top of the hill */
+        for (let fx = 4; fx < W; fx += 9) PIX.rect(c, fx, 56, 1, 6, '#0e1216');
+        PIX.rect(c, 0, 57, W, 1, '#0e1216');
+        /* the grass, dark and wet, not a green field of noise */
+        PIX.rect(c, 0, 62, W, H - 62, '#15231b');
+        ART.dither(c, 0, 62, W, H - 62, '#1b2f22', 0.13, 9);
+        ART.dither(c, 0, 62, W, H - 62, '#0e1a14', 0.1, 21);
+        for (let gx = 0; gx < W; gx += 3) {
+          PIX.rect(c, gx, 62 + ((gx * 5) % 5), 1, 2, '#233c2b');
+        }
+        /* the two stones, with the light catching their tops */
+        [[62, 'M'], [92, 'K']].forEach(([gx]) => {
+          PIX.rect(c, gx, 40, 22, 26, P.K);
+          PIX.rect(c, gx + 1, 41, 20, 24, '#5d646c');
+          PIX.rect(c, gx + 1, 41, 20, 2, '#868d96');
+          PIX.rect(c, gx + 1, 41, 3, 24, '#6d747c');
+          PIX.rect(c, gx + 5, 47, 12, 1, '#3a4048');
+          PIX.rect(c, gx + 6, 51, 10, 1, '#3a4048');
+          PIX.rect(c, gx + 7, 55, 8, 1, '#3a4048');
+          PIX.rect(c, gx + 3, 66, 16, 3, P.K);
+          PIX.rect(c, gx + 4, 66, 14, 1, '#4a5058');
         });
-        /* flowers he sent, replaced by flowers you brought */
-        PIX.rect(c, 68, 68, 3, 3, '#d13b45'); PIX.rect(c, 74, 69, 3, 3, '#ff7edb');
-        PIX.rect(c, 96, 68, 3, 3, '#d13b45'); PIX.rect(c, 101, 69, 3, 3, '#ffd75e');
-        /* you and her, backs to us, standing far enough apart to be honest */
-        c.drawImage(SCENE.rig(SCENE.meDef(), 0, 1), 118, 38);
-        c.drawImage(SCENE.rig(ROOMS.MAY_RIG, 0, -1), 138, 38);
+        /* flowers: his, dead. yours, new. */
+        PIX.rect(c, 66, 69, 3, 3, '#4a3a2a');
+        PIX.rect(c, 71, 70, 3, 2, '#4a3a2a');
+        PIX.rect(c, 96, 68, 3, 3, '#d13b45');
+        PIX.rect(c, 100, 69, 3, 3, '#ff7edb');
+        PIX.rect(c, 104, 68, 2, 3, '#ffd75e');
+        /* the two of you, backs to us, far enough apart to be honest */
+        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 126, 34);
+        c.drawImage(SCENE.rig(ROOMS.MAY_RIG, 0, -1), 148, 34);
         rain(c, t, W, H, amt);
-        if (amt < 0.05) {
-          PIX.rect(c, 0, 0, W, H, 'rgba(255,225,170,.04)');
-        }
+        if (amt < 0.08) PIX.rect(c, 0, 0, W, H, 'rgba(255,226,170,.05)');
       };
 
       await CINE.film([
@@ -1305,21 +1336,39 @@ const CINE = {
         c.drawImage(ART.desk(84, 30, 4), 48, 66);
         c.drawImage(ART.art('desklamp', 1), 56, 54);
         c.drawImage(ART.art('gunprop', 1), 96, 60);
-        /* you, in the big chair, facing us, in silhouette */
-        PIX.rect(c, 76, 30, 30, 40, P.K);
-        PIX.rect(c, 78, 32, 26, 36, '#141019');
-        PIX.rect(c, 84, 22, 16, 12, P.K);
-        PIX.rect(c, 85, 23, 14, 10, '#1a2620');
+        /* you, in the big chair, facing us: a frog-shaped hole in the room */
+        PIX.rect(c, 72, 44, 38, 26, P.K);                // the chair back behind you
+        PIX.rect(c, 74, 46, 34, 24, '#100d16');
+        PIX.rect(c, 78, 34, 26, 36, P.K);                // shoulders, sloping
+        PIX.rect(c, 80, 36, 22, 34, '#141019');
+        PIX.rect(c, 76, 38, 30, 6, P.K);
+        PIX.rect(c, 77, 39, 28, 4, '#141019');
+        PIX.rect(c, 84, 22, 16, 14, P.K);                // the skull
+        PIX.rect(c, 85, 23, 14, 12, '#171a20');
+        PIX.rect(c, 82, 18, 20, 5, P.K);                 // the hat, still on indoors
+        PIX.rect(c, 83, 19, 18, 3, '#101318');
+        PIX.rect(c, 78, 21, 28, 2, P.K);                 // the brim
+        PIX.rect(c, 86, 25, 4, 3, P.K);                  // both bulbs
+        PIX.rect(c, 94, 25, 4, 3, P.K);
         PIX.rect(c, 87, 26, 3, 2, '#d13b45');            // two eyes, the wrong colour now
-        PIX.rect(c, 94, 26, 3, 2, '#d13b45');
+        PIX.rect(c, 95, 26, 3, 2, '#d13b45');
+        PIX.rect(c, 85, 32, 14, 1, '#241820');           // the mouth line
+        /* his glass, at your elbow now */
+        PIX.rect(c, 112, 62, 5, 6, P.K);
+        PIX.rect(c, 113, 63, 3, 4, '#6b4426');
         /* the board behind, burning down to nothing */
         const burn = Math.min(1, t / 2);
         c.drawImage(ART.corkboard(50, 32, 4), 8, 12);
-        PIX.rect(c, 8, 12, 50, Math.round(32 * burn), 'rgba(20,14,10,.85)');
-        for (let i = 0; i < 12; i++) {
-          const ex = 10 + (i * 7) % 46, ey = 12 + Math.round(32 * burn) - (i % 4);
-          PIX.rect(c, ex, ey, 1, 1, i % 2 ? '#ff9d3c' : '#ffd75e');
+        /* it burns from the bottom up, and what is left is char */
+        const eatenTo = 12 + Math.round(32 * (1 - burn));
+        PIX.rect(c, 8, eatenTo, 50, 12 + 32 - eatenTo, '#0d0a08');
+        ART.dither(c, 8, 12, 50, Math.max(1, eatenTo - 12), 'rgba(20,14,10,.7)', 0.3 * burn, 5);
+        for (let i = 0; i < 14; i++) {
+          const ex = 9 + (i * 7) % 48;
+          PIX.rect(c, ex, eatenTo - (i % 3), 1, 1, i % 2 ? '#ff9d3c' : '#ffd75e');
+          if (i % 4 === 0) PIX.rect(c, ex, eatenTo - 4 - (i % 5), 1, 1, 'rgba(255,157,60,.5)');
         }
+        PIX.rect(c, 8, eatenTo - 1, 50, 1, '#c9541e');
         rain(c, t, W, H, 1);
       };
 
