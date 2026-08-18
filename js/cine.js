@@ -518,12 +518,27 @@ const CINE = {
 
     const draw = (t) => {
       c.clearRect(0, 0, 180, 108);
-      PIX.rect(c, 0, 0, 180, 108, '#08090d');
-      PIX.rect(c, 0, 84, 180, 24, '#11131a');
-      PIX.rect(c, 0, 84, 180, 2, '#1d212c');
+      PIX.rect(c, 0, 0, 180, 108, '#0c0e14');
+      /* one bare bulb over the middle of the room, swinging a little */
+      const sw = Math.round(Math.sin(t * 2.2) * 3);
+      PIX.rect(c, 90 + sw, 0, 1, 14, '#2a2d38');
+      PIX.rect(c, 88 + sw, 14, 5, 4, '#3a3d48');
+      PIX.rect(c, 89 + sw, 18, 3, 3, '#ffe9a3');
+      PIX.rect(c, 88 + sw, 21, 5, 1, 'rgba(255,233,163,.5)');
+      for (let i = 0; i < 8; i++) {                        // a thin beam, not a wall
+        const yy = 22 + i * 8, hw = 3 + i * 3;
+        PIX.rect(c, 90 + sw - hw, yy, hw * 2, 8, 'rgba(255,233,163,.05)');
+        const cw = Math.max(2, Math.round(hw * 0.45));     // warmer core up the middle
+        PIX.rect(c, 90 + sw - cw, yy, cw * 2, 8, 'rgba(255,233,163,.06)');
+      }
+      PIX.rect(c, 0, 84, 180, 24, '#181c28');
+      PIX.rect(c, 0, 84, 180, 2, '#262b3a');
+      PIX.rect(c, 90 + sw - 30, 84, 60, 2, 'rgba(255,233,163,.22)');  // the pool it leaves
+      PIX.rect(c, 90 + sw - 22, 86, 44, 3, 'rgba(255,233,163,.09)');
       /* the doorway he is going through, stage left */
-      PIX.rect(c, 6, 40, 26, 46, '#181410');
-      PIX.rect(c, 9, 43, 20, 43, '#241c12');
+      PIX.rect(c, 6, 38, 26, 48, '#1f1913');
+      PIX.rect(c, 9, 41, 20, 45, '#2e2416');
+      PIX.rect(c, 25, 62, 2, 4, '#8d8672');               // knob
       const x0 = 150 - t * 34;                 // the sad little convoy
       const step = Math.floor(t * 6) % 2;
       /* him: flat on his back, arms trailing, fully intact */
@@ -534,15 +549,20 @@ const CINE = {
       PIX.rect(c, x0 + 40, 70, 9, 3, P.K);      // hat, sliding off
       PIX.rect(c, x0 + 16, 82, 4, 4, P.K);      // trailing hand
       PIX.rect(c, x0 + 24, 83, 4, 3, P.K);
-      /* you: bent over, walking backwards, boots in hand */
-      PIX.rect(c, x0 - 8, 62 + step, 14, 18, P.K);
-      PIX.rect(c, x0 - 7, 63 + step, 12, 16, '#2e7d5b');
-      PIX.rect(c, x0 - 4, 54 + step, 9, 9, P.K);
-      PIX.rect(c, x0 - 3, 55 + step, 7, 7, '#4fae6d');
-      PIX.rect(c, x0 - 6, 52 + step, 12, 3, P.K);          // your hat stays on
-      PIX.rect(c, x0 + 4, 72, 9, 4, P.K);                  // his boots, in your fists
-      PIX.rect(c, x0 - 6 + step * 2, 80, 5, 4, P.K);       // your feet, shuffling
-      PIX.rect(c, x0 + 1 - step * 2, 80, 5, 4, P.K);
+      /* you: leaned back into the pull, walking backwards, boots in hand */
+      PIX.rect(c, x0 - 6, 66 + step, 13, 14, P.K);         // torso, tipped
+      PIX.rect(c, x0 - 5, 67 + step, 11, 12, '#2e7d5b');
+      PIX.rect(c, x0 - 10, 58 + step, 9, 9, P.K);          // head thrown back
+      PIX.rect(c, x0 - 9, 59 + step, 7, 7, '#4fae6d');
+      PIX.rect(c, x0 - 12, 56 + step, 12, 3, P.K);         // your hat stays on
+      PIX.rect(c, x0 - 8, 57 + step, 2, 2, P.K);           // squeezed-shut eye
+      PIX.rect(c, x0 + 4, 70 + step, 8, 3, P.K);           // arms, straight to the boots
+      PIX.rect(c, x0 + 5, 71 + step, 6, 1, '#2e7d5b');
+      PIX.rect(c, x0 + 10, 72, 8, 4, P.K);                 // his boots, in your fists
+      PIX.rect(c, x0 - 8 + step * 2, 80, 5, 4, P.K);       // your feet, digging in
+      PIX.rect(c, x0 - 1 - step * 2, 80, 5, 4, P.K);
+      /* effort, in little pips */
+      if (step) { PIX.rect(c, x0 - 13, 54, 2, 2, '#bfe3ff'); PIX.rect(c, x0 - 15, 58, 1, 1, '#bfe3ff'); }
       /* the smear he leaves */
       PIX.rect(c, Math.round(x0 + 46), 82, Math.round(170 - x0 - 40), 2, 'rgba(87,18,32,.5)');
       /* dust off the boards */

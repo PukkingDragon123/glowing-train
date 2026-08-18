@@ -105,7 +105,7 @@ const E = {
     for (let i = 0; i < n; i++) {
       const t = (i + 0.5) / n;
       L.stains.push({
-        x: Math.round(292 - t * 92 + (rng() - 0.5) * 18),
+        x: Math.round(316 - t * 76 + (rng() - 0.5) * 14),
         y: Math.round(2 + t * 22 + (rng() - 0.5) * 7),    // offset from the floor line
         r: 8 + Math.round(rng() * 8),
         seed: (rng() * 100000) | 0,

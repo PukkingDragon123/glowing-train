@@ -496,10 +496,9 @@ const UI = {
   /* A wanted poster: his face, his name, and the pin that holds it up. */
   /* One frog in the line, full length, against the height chart. Crossed
      off, he goes grey under a stepped red X. Called out, he steps forward. */
-  posterEl(s, i, out, called, small) {
+  posterEl(s, i, out, called, k) {
     const p = U.el('div', 'suspect' + (out ? ' out' : '') + (called ? ' called' : ''));
     p.dataset.sus = i;
-    const k = small ? 2 : 3;
     const art = U.el('div', 'sus-art');
     const cvb = SPR.clone(SPR.fullBody(s.name, s.def), k);
     art.appendChild(cvb);
@@ -510,11 +509,26 @@ const UI = {
     }
     p.appendChild(art);
     const nm = U.el('div', 'sus-tag');
-    const sc = s.name.length > (small ? 8 : 10) ? 1 : small ? 1 : 2;
+    const sc = k >= 2 && s.name.length <= 10 ? 2 : 1;
     nm.appendChild(UI.txt('N.' + (i + 1), { scale: 1, color: PIX.PAL.q, shadow: null }));
     nm.appendChild(UI.txt(s.name, { scale: sc, color: PIX.PAL.K, shadow: null }));
     p.appendChild(nm);
     return p;
+  },
+
+  /* The whole line has to stand inside the frame — heads included. Try the
+     big scale first and walk down until every row fits both ways. */
+  lineupScale(c) {
+    const fb = SPR.fullBody(c.suspects[0].name, c.suspects[0].def);
+    const availW = Math.min(window.innerWidth * 0.94, 900) - 44;
+    const availH = Math.max(280, window.innerHeight - 250);
+    for (let k = 3; k >= 1; k--) {
+      if (fb.width * k > availW) continue;
+      const perRow = Math.max(1, Math.floor((availW + 10) / (fb.width * k + 10)));
+      const rows = Math.ceil(c.suspects.length / perRow);
+      if (rows * (fb.height * k + 42) <= availH) return k;
+    }
+    return 1;
   },
 
   buildBlindSelect(app) {
@@ -544,12 +558,13 @@ const UI = {
     svg.id = 'cork-strings';
     board.appendChild(svg);
 
-    const row = U.el('div', 'lineup-row' + (c.suspects.length > 5 ? ' wall' : ''));
+    const lk = UI.lineupScale(c);
+    const row = U.el('div', 'lineup-row' + (lk < 2 ? ' wall' : ''));
     const stand = c.known ? [true] : CASE.standing();
     c.suspects.forEach((s, i) => {
       const out = !stand[i];
       const called = c.done && c.accused === i;
-      const p = UI.posterEl(s, i, out, called, c.suspects.length > 5);
+      const p = UI.posterEl(s, i, out, called, lk);
       if (c.known) p.classList.add('solo');
       if (!c.done && !out) {
         p.classList.add('live');
