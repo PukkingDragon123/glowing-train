@@ -1,7 +1,7 @@
 'use strict';
 /* ============================================================
    SHELL & DEBT — meta.js
-   The stuff that survives death: account stats, trinket
+   The stuff that survives a case: account stats, learned
    unlocks, collection. localStorage with an in-memory
    fallback so the headless sim can run it.
    ============================================================ */
@@ -21,7 +21,7 @@ const META = {
       },
       bossSeen: {},   // boss id -> kills
       gunsOwned: { snub: true },
-      unlocked: {},   // trinket id -> true (only gated ones live here)
+
       tells: {},      // trait id -> true, once you've looted a frog that had it
       tutor: {},      // which of the captain's lines you have already heard
       trust: 0,       // Officer Maybelle. It adds up slowly, like anything real.
@@ -38,7 +38,6 @@ const META = {
         Object.assign(META.d.stats, saved.stats || {});
         Object.assign(META.d.bossSeen, saved.bossSeen || {});
         Object.assign(META.d.gunsOwned, saved.gunsOwned || {});
-        Object.assign(META.d.unlocked, saved.unlocked || {});
         Object.assign(META.d.tells, saved.tells || {});
         Object.assign(META.d.tutor, saved.tutor || {});
         if (typeof saved.trust === 'number') META.d.trust = saved.trust;
@@ -81,29 +80,9 @@ const META = {
 
   /* ---------- unlocks ---------- */
 
-  isUnlocked(tid) {
-    const t = TRINKETS[tid];
-    if (!t || !t.unlock) return true;
-    return !!META.load().unlocked[tid];
-  },
-
-  /* check every gated trinket against stats; returns newly unlocked defs */
-  check() {
-    const d = META.load();
-    const fresh = [];
-    for (const t of Object.values(TRINKETS)) {
-      if (!t.unlock || d.unlocked[t.id]) continue;
-      if ((d.stats[t.unlock.stat] || 0) >= t.unlock.need) {
-        d.unlocked[t.id] = true;
-        fresh.push(t);
-      }
-    }
-    if (fresh.length) META.save();
-    return fresh;
-  },
-
-  unlockAll() { // debug
-    for (const t of Object.values(TRINKETS)) if (t.unlock) META.load().unlocked[t.id] = true;
-    META.save();
-  },
+  /* Nothing is gated behind an account stat any more: the only thing that
+     carries between cases is what the department remembers about you, and
+     how much Maybelle trusts you. */
+  check() { return []; },
+  unlockAll() { /* nothing left to unlock */ },
 };

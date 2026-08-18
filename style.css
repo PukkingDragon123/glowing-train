@@ -196,11 +196,11 @@ canvas.pix, .pix, canvas { image-rendering: pixelated; image-rendering: crisp-ed
 #stamp-big canvas, #turn-stamp canvas { max-width: 94vw; }
 
 /* the balatro-style swirl — the whole casino floor */
-#bg-swirl {
-  position: fixed; inset: 0; z-index: 0;
-  width: 100vw; height: 100vh;
-  height: 100dvh;
-  image-rendering: pixelated;
+/* No paint swirl behind anything any more. Rooms paint their own walls;
+   what is left underneath is the night the city is having. */
+body {
+  background:
+    radial-gradient(120% 80% at 50% 0%, #12161d 0%, #0a0c11 60%, #06070a 100%);
 }
 
 /* CRT: scanlines + vignette. Both purely decorative, no hit area. */
@@ -1725,18 +1725,6 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 }
 
 /* ---- cards drifting behind the menus ---- */
-#cine-amb {
-  position: fixed; inset: 0; z-index: 0;
-  pointer-events: none; overflow: hidden; display: none;
-}
-#cine-amb.on { display: block; }
-.drift-card {
-  position: absolute; left: -12%;
-  background-repeat: no-repeat; background-size: 100% 100%;
-  image-rendering: pixelated;
-  opacity: .16;
-  animation: drift linear infinite;
-}
 @keyframes drift {
   0% { transform: translateX(0) rotate(0deg); }
   100% { transform: translateX(130vw) rotate(var(--spin, 20deg)); }
@@ -1744,9 +1732,8 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 
 @media (prefers-reduced-motion: reduce) {
   .wcol, .iris-lid, .cine-plate, #cine-bars i, .boss-sil { transition-duration: 1ms !important; }
-  .boss-slug, .ante-chip, .drift-card { animation: none !important; }
+  .boss-slug, .ante-chip { animation: none !important; }
   .ante-chip { display: none; }
-  #cine-amb { display: none !important; }
 }
 
 /* ============================================================
@@ -2381,3 +2368,122 @@ body.dread #dread-wash { opacity: 1; animation: dread-pulse 1.15s steps(6) infin
   24% { opacity: .6; }
   34% { opacity: .95; }
 }
+
+/* ============================================================
+   29. THE ROOMS YOU WALK AROUND IN
+   A scene is one canvas that fills the frame. Everything in it
+   is drawn; the only DOM is the little plate that names what is
+   under your hand.
+   ============================================================ */
+
+.scene-root {
+  position: relative;
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  background: #06070a;
+}
+.scene-cv {
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+  cursor: default;
+}
+/* the room sits under the CRT like everything else, but the page must not
+   scroll while you are walking around in it */
+body.in-scene { overflow: hidden; }
+body.in-scene #app { overflow: hidden; }
+
+/* the drawn name plate that follows what you are pointing at */
+.scene-plate {
+  position: fixed; z-index: 60;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: none;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,.6));
+  animation: plate-pop .12s steps(2);
+}
+.scene-plate canvas { display: block; image-rendering: pixelated; }
+@keyframes plate-pop { from { transform: translateX(-50%) translateY(3px); } }
+
+/* ============================================================
+   30. THE STORY HUD
+   No floors, no antes, no round pips: the chapter you are in and
+   how much of the Bullfrog is on the cork.
+   ============================================================ */
+
+.intel-track { display: inline-flex; gap: 3px; align-items: center; }
+.ipip {
+  width: 12px; height: 16px;
+  background: #241a10;
+  border: 2px solid #12101d;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.05);
+}
+.ipip.got {
+  background: #ded2b4;
+  box-shadow: inset 0 2px 0 #fff, inset 0 -3px 0 #b8232f;
+}
+
+/* ============================================================
+   31. A CHOICE, AND AN ENDING
+   ============================================================ */
+
+#cine-stage.choice { background: rgba(4,5,8,.93); }
+.ch-wrap {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px; padding: 20px;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .2s steps(3), transform .2s steps(3);
+}
+.ch-wrap.in { opacity: 1; transform: none; }
+.ch-head { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.ch-row { display: flex; gap: 26px; flex-wrap: wrap; justify-content: center; }
+.ch-card {
+  cursor: pointer;
+  filter: drop-shadow(0 6px 0 rgba(0,0,0,.6));
+  transition: transform .1s steps(2), filter .1s steps(2);
+}
+.ch-card canvas { display: block; image-rendering: pixelated; }
+.ch-card:hover { transform: translateY(-6px); filter: drop-shadow(0 10px 0 rgba(0,0,0,.6)) brightness(1.1); }
+.ch-card.dim { filter: grayscale(.7) brightness(.7); }
+.ch-card.dim:hover { filter: grayscale(.5) brightness(.8); }
+
+.tb-card {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; text-align: center;
+  background: #06070a;
+  opacity: 0;
+  transition: opacity .35s steps(4);
+}
+.tb-card.in { opacity: 1; }
+
+.end-wrap {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  padding: 24px; cursor: pointer; text-align: center;
+}
+.end-log {
+  display: flex; flex-direction: column; gap: 5px;
+  max-width: min(92vw, 640px);
+  padding: 14px 16px;
+  background: rgba(10,12,16,.7);
+  border: 3px solid #1c1a2c;
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.04);
+}
+.end-again { margin-top: 10px; animation: nudge 1.4s steps(2) infinite; }
+@keyframes nudge { 50% { opacity: .45; } }
+
+/* the drawn picker: questions, evidence, faces */
+.pickwrap { gap: 14px; }
+.pickrow { gap: 14px; max-width: min(96vw, 1100px); }
+.pick-card {
+  cursor: pointer;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,.55));
+  transition: transform .09s steps(2), filter .09s steps(2);
+}
+.pick-card canvas { display: block; image-rendering: pixelated; }
+.pick-card:hover { transform: translateY(-5px) rotate(-1deg); filter: drop-shadow(0 8px 0 rgba(0,0,0,.55)) brightness(1.06); }
+.pick-card.dim { filter: grayscale(.8) brightness(.6); cursor: default; }
+.pick-out { opacity: .75; }

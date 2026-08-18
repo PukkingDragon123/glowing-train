@@ -12,16 +12,27 @@
 const fs = require('fs');
 const path = require('path');
 const jsdir = path.join(__dirname, '..', 'js') + path.sep;
-const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'case.js', 'engine.js']
+const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'case.js', 'story.js', 'engine.js']
   .map(f => fs.readFileSync(jsdir + f, 'utf8')).join('\n;\n');
+
+/* The story layer talks to the screen when a human is watching. Headless,
+   the screen is a set of no-ops — every rule the bot exercises is in
+   engine.js and story.js, and none of it needs a canvas. */
+const STUBS = `
+  const UI = { render(){}, stampSmall(){}, stampBig(){}, syncChips(){}, chipTick(){},
+    shake(){}, syncDuel(){}, wrap(){}, txt(){}, goto(fn){ if (fn) fn(); return Promise.resolve(); } };
+  const TUTOR = { say: async () => {}, skipAll(){}, armed(){ return false; }, check(){} };
+  const SCENE = { close(){}, open(){}, walkTo(){} };
+  const CINE = { driveTo: async () => {}, ambulance: async () => {}, dragLoad: async () => {},
+    chapterCard: async () => {}, ending: async () => {}, titleBeat: async () => {},
+    choice: async () => 'bullet', pick: async () => -1, anteClear: async () => {} };
+`;
 
 function driver() {
 
   /* what the bot knows: visible counts (respects Blind Newt) */
   function visible() {
     if (E.countsHidden()) return null;
-    const d = G.duel;
-    if (E.has('counter')) return E.remaining();
     /* honest players track it themselves — the bot does too */
     return E.remaining();
   }
@@ -31,7 +42,6 @@ function driver() {
     return d.known[d.ptr]; // true=live, false=blank, null=unknown
   }
 
-  function trinketIdx(id) { return G.trinkets.findIndex(t => t.id === id); }
   function itemIdx(id) { return G.items.indexOf(id); }
   function useItemIf(id, cond) {
     const i = itemIdx(id);
@@ -55,9 +65,7 @@ function driver() {
 
   function botTurn() {
     const d = G.duel;
-    /* heal when hurting */
-    const cig = trinketIdx('cig');
-    if (cig >= 0 && G.hearts <= 2 && E.canUseTrinket(cig)) E.useTrinket(cig);
+    /* the belt, played the way a careful player plays it */
     useItemIf('whiskey', G.hearts <= E.maxHP() - 2);
     useItemIf('coinFlip', G.hearts >= E.maxHP() - 1 && d.opp.hp > 2);
     if (useItemIf('brassKnuckle', d.opp.hp === 1) && d.over) return null;
@@ -65,21 +73,11 @@ function driver() {
 
     let known = chamberKnown();
     const v = visible();
-    let p = v === null ? 0.5 : (v.l + v.b === 0 ? 0.5 : v.l / (v.l + v.b));
+    const p = v === null ? 0.5 : (v.l + v.b === 0 ? 0.5 : v.l / (v.l + v.b));
 
-    /* peek when uncertain */
-    if (known === null && p > 0.25 && p < 0.75) {
-      const gl = trinketIdx('glass');
-      if (gl >= 0 && E.canUseTrinket(gl)) { E.useTrinket(gl); known = chamberKnown(); }
-    }
-    /* mirror a known live into a free turn */
-    if (known === true) {
-      const mi = trinketIdx('mirror');
-      if (mi >= 0 && E.canUseTrinket(mi)) { E.useTrinket(mi); known = chamberKnown(); }
-    }
-    /* cuff the mark when he's dangerous and we're committed */
-    const cu = trinketIdx('cuffs');
-    if (cu >= 0 && E.canUseTrinket(cu) && d.opp.hp >= 3 && G.hearts <= 2) E.useTrinket(cu);
+    /* the pliers show the last shell, which is worth knowing late in a load */
+    if (known === null && E.shellsLeft() <= 2) useItemIf('pliers', true);
+    known = chamberKnown();
 
     if (known === false) return E.pull('self');
     if (known === true) {
@@ -90,19 +88,13 @@ function driver() {
     }
     /* nothing known and the drum looks hot: make the chamber safe */
     if (p >= 0.6 && useItemIf('lucky1', true)) return E.pull('self');
-    /* unknown: play the odds like the marks do */
-    if (p <= 0.42) {
-      const be = trinketIdx('beer');
-      if (p >= 0.3 && be >= 0 && E.canUseTrinket(be)) { E.useTrinket(be); return null; }
-      return E.pull('self');
-    }
+    if (p <= 0.42) return E.pull('self');
     if (p >= 0.85 && E.canUseGun('saw')) E.useGun('saw');
     return pullFoe();
   }
 
   /* rifle in tell-informed priority, bribe when it's worth it, pay the heat */
   const POCKET_ORDER = ['holster', 'tooth', 'vest', 'hand', 'hat', 'jacket', 'shirt', 'boot'];
-  const RARITY_VAL = { common: 1, uncommon: 2, rare: 3, legendary: 4 };
 
   function botLoot() {
     let guard = 0;
@@ -113,14 +105,6 @@ function driver() {
     while (G.phase === 'loot' && guard++ < 80) {
       E.lootTick(ACT);
       if (G.loot.done || G.phase !== 'loot') break;
-      if (G.loot.pendingCard) {
-        // swap over the cheapest-rarity card we hold, if the find is better
-        const worst = G.trinkets.reduce((w, t, i) =>
-          RARITY_VAL[TRINKETS[t.id].rarity] < RARITY_VAL[TRINKETS[G.trinkets[w].id].rarity] ? i : w, 0);
-        const found = RARITY_VAL[TRINKETS[G.loot.pendingCard].rarity];
-        E.resolveCard(found > RARITY_VAL[TRINKETS[G.trinkets[worst].id].rarity] ? worst : null);
-        continue;
-      }
       /* if the room is nearly too loud and there is clock to burn, wait */
       if (!G.loot.caught && G.loot.noise > 0.66 && G.loot.time > 12 && E.lootLeft() > 0) {
         E.lootTick(WAIT);
@@ -178,46 +162,111 @@ function driver() {
       if (bill.heat) G.messHeat = (G.messHeat || 0) + 1;
     }
     const res = E.endLoot();
-    if (res.heatDue !== undefined) E.payHeat(); // busts to 'over' on a short pocket
+    if (res.finale) return { finale: true };
+    if (res.heatDue !== undefined) E.payHeat();   // short pocket costs the badge
+    /* the UI walks you back to the bullpen; headless, go straight to the lead */
+    if (G.phase === 'loot') G.phase = 'blind';
+    return res;
+  }
+
+  /* THE CASE, PLAYED THROUGH. There is no game over any more: a bot that
+     loses a duel wakes up in the ward, gets patched up and goes back out.
+     What ends a run is the board filling up and the finale being taken, or
+     the case collapsing after too many trips to the infirmary. */
+  const WARD_LIMIT = 4;
+
+  function resumeCase() {
+    G.hearts = E.maxHP();
+    G.briefed = G.chapter;            // the captain re-briefs you
+    G.case = null;
+    if (!G.duel) E.startBlind();
+    G.phase = 'blind';
   }
 
   function playRun(seed, maxAnte) {
     E.newRun(seed);
-    if (G.phase === 'station') G.phase = 'blind';
-    let guard = 0;
-    while (G.phase !== 'over' && guard++ < 6000) {
-      if (G.phase === 'won') return { ante: ANTES, won: true };
-      if (G.ante > (maxAnte || 12)) return { ante: maxAnte, won: false }; // endless cap for sim
-      if (G.phase === 'blind') {
-        /* the bot skips a small blind only when it is already flush and healthy */
-        if (E.canSkip() && G.blind === 0 && G.chips >= HEAT_COST(G.ante) + 12 && Math.random() < 0.25) E.skipBlind();
-        else E.sitDown();
+    resumeCase();
+    let guard = 0, wardTrips = 0, finale = false;
+    while (guard++ < 6000) {
+      if (G.phase === 'ward') {
+        wardTrips++;
+        if (wardTrips > WARD_LIMIT) break;      // the case collapses
+        resumeCase();
         continue;
       }
-      if (G.phase === 'loot') { botLoot(); continue; }
+      if (G.ante > (maxAnte || 12)) break;
+      if (G.phase === 'precinct' || G.phase === 'board') { resumeCase(); continue; }
+      if (G.phase === 'blind') {
+        /* the bot works the room: it turns every free clue and asks every
+           free question, then names whoever is still standing */
+        workTheRoom();
+        E.sitDown();
+        continue;
+      }
+      if (G.phase === 'loot') {
+        const r = botLoot();
+        if (r && r.finale) { finale = true; break; }
+        continue;
+      }
+      /* Dying already ran STORY.wardCost() through E.onRunOver(), which
+         clears the table — so the ward is something we notice, not do. */
+      if ((G.wardTrips || 0) > wardTrips) {
+        wardTrips = G.wardTrips;
+        if (wardTrips > WARD_LIMIT) break;      // the case collapses
+      }
+      if (!G.duel) { resumeCase(); continue; }
+      if (G.duel.over) { if (G.phase === 'duel') G.phase = 'blind'; continue; }
       if (G.duel.turn === 'you') botTurn();
       else E.pull(E.oppDecide());
     }
-    return { ante: G.ante, won: false, blind: G.blind };
+    return {
+      chapter: G.chapter, cards: (G.intelCards || []).length, wardTrips, finale,
+      boardFull: STORY.canFinish(), badge: !G.badgePulled,
+    };
+  }
+
+  /* the identification game, played by a bot with no eyes: it uses the free
+     looks and questions, then names one of whoever is left */
+  function workTheRoom() {
+    if (!G.case) CASE.build();
+    const c = G.case;
+    if (c.known || c.done) return;
+    let guard = 0;
+    while (c.looks > 0 && guard++ < 20) {
+      const i = c.clues.findIndex(cl => !cl.seen);
+      if (i < 0) break;
+      CASE.flip(i);
+    }
+    guard = 0;
+    while (c.quiz > 0 && guard++ < 20) {
+      const i = (c.asks || []).findIndex((a, k) => CASE.canAsk(k));
+      if (i < 0) break;
+      CASE.ask(i);
+    }
+    /* one more look off the books, if it is affordable and the field is wide */
+    if (CASE.canGrease() && CASE.left() > 2 && G.chips >= CASE.greaseCost() * 2) CASE.grease();
+    const stand = CASE.standing();
+    const live = stand.map((ok, i) => ok ? i : -1).filter(i => i >= 0);
+    if (!live.length) return;
+    CASE.accuse(live[Math.floor(Math.random() * live.length)]);
   }
 
   const N = 500;
-  let crashes = 0, wins = 0, duels = 0, shots = 0, gunSum = 0, chipsAtDeath = 0;
-  const anteReached = {};
-  const bossDeaths = {};
+  let crashes = 0, finales = 0, boards = 0, badges = 0, goodEndings = 0;
+  let chapters = 0, cards = 0, wards = 0, duelsWon = 0, shots = 0, gunSum = 0;
+  const collapse = {};
 
   for (let run = 0; run < N; run++) {
     try {
       const r = playRun('SIM-' + run, 9);
-      const cleared = r.won ? ANTES : (G.ante - 1 + (G.blind / 3)); // fractional for reporting
-      anteReached[Math.floor(r.won ? 8 : G.ante - (G.blind === 0 && G.ante > 1 ? 0 : 0))] =
-        (anteReached[Math.floor(r.won ? 8 : G.ante)] || 0) + 1;
-      if (r.won) wins++;
-      else if (G.blind === 2 && G.duel && G.duel.opp.boss) {
-        bossDeaths[G.duel.opp.boss] = (bossDeaths[G.duel.opp.boss] || 0) + 1;
-      }
-      duels += G.run.duelsWon; shots += G.run.shots; gunSum += G.gunIdx;
-      chipsAtDeath += G.chips;
+      chapters += r.chapter; cards += r.cards; wards += r.wardTrips;
+      if (r.finale) finales++;
+      if (r.boardFull) boards++;
+      if (r.badge) badges++;
+      if (r.finale && r.boardFull && r.badge) goodEndings++;
+      const key = r.finale ? 'reached the Bullfrog' : r.wardTrips > 4 ? 'case collapsed' : 'ran out of leads';
+      collapse[key] = (collapse[key] || 0) + 1;
+      duelsWon += G.run.duelsWon; shots += G.run.shots; gunSum += G.gunIdx;
     } catch (e) {
       crashes++;
       console.log('CRASH run', run, e.message, e.stack.split('\n')[1]);
@@ -225,19 +274,18 @@ function driver() {
     }
   }
 
-  console.log('--- duel bot, N=' + N + ' ---');
-  const diedAt = Object.entries(anteReached).sort((a, b) => +a[0] - +b[0]);
-  const reached = (n) => diedAt.filter(([k]) => +k >= n).reduce((s, [, v]) => s + v, 0) + 0;
-  [2, 3, 4, 5, 6, 7, 8].forEach(n =>
-    console.log('reached ante ' + n + ': ' + (reached(n) / N * 100).toFixed(1) + '%'));
-  console.log('full wins (bullfrog down):', wins, '(' + (wins / N * 100).toFixed(1) + '%)');
-  console.log('avg duels won:', (duels / N).toFixed(1),
+  console.log('--- the case, N=' + N + ' bots ---');
+  console.log('board filled (all 5 pieces):', (boards / N * 100).toFixed(1) + '%');
+  console.log('took the finale:            ', (finales / N * 100).toFixed(1) + '%');
+  console.log('kept the badge:             ', (badges / N * 100).toFixed(1) + '%');
+  console.log('GOOD ending available:      ', (goodEndings / N * 100).toFixed(1) + '%');
+  console.log('avg chapters closed:', (chapters / N).toFixed(2),
+    '· avg pieces pinned:', (cards / N).toFixed(2),
+    '· avg ward trips:', (wards / N).toFixed(2));
+  console.log('avg duels won:', (duelsWon / N).toFixed(1),
     '· avg shots:', (shots / N).toFixed(1),
-    '· avg gun idx:', (gunSum / N).toFixed(2),
-    '· avg chips held:', (chipsAtDeath / N).toFixed(1));
-  console.log('items used per run:', (META.stats().itemsUsed / N).toFixed(2),
-    '· skips:', (META.stats().skips / N).toFixed(2));
-  console.log('boss table deaths:', JSON.stringify(bossDeaths));
+    '· avg gun idx:', (gunSum / N).toFixed(2));
+  console.log('how runs ended:', JSON.stringify(collapse));
   console.log('crashes:', crashes);
 
   /* --- fuzz: random flailing at every decision point --- */
@@ -245,31 +293,36 @@ function driver() {
   for (let run = 0; run < 200; run++) {
     try {
       E.newRun('FUZZ-' + run);
-      if (G.phase === 'station') G.phase = 'blind';
-      let guard = 0;
-      while (G.phase !== 'over' && G.phase !== 'won' && guard++ < 4000) {
+      resumeCase();
+      let guard = 0, trips = 0;
+      while (guard++ < 4000) {
+        if (G.phase === 'ward') { if (++trips > 4) break; resumeCase(); continue; }
+        if (G.phase === 'precinct' || G.phase === 'board' || G.phase === 'ending') { resumeCase(); continue; }
         if (G.phase === 'blind') {
-          if (Math.random() < 0.3 && E.canSkip()) E.skipBlind(); else E.sitDown();
+          if (Math.random() < 0.5) workTheRoom();
+          E.sitDown();
           continue;
         }
         if (G.phase === 'loot') {
           const r = Math.random();
-          if (G.loot.pendingCard) {
-            E.resolveCard(Math.random() < 0.5 ? null : Math.floor(Math.random() * G.trinkets.length));
-          } else if (r < 0.55) {
+          if (r < 0.55) {
             E.rifle(Math.floor(Math.random() * G.loot.pockets.length));
           } else if (r < 0.7) {
             E.bribe();
           } else {
             const res = E.endLoot();
+            if (res.finale) break;
             if (res.heatDue !== undefined) E.payHeat();
+            if (G.phase === 'loot') G.phase = 'blind';
           }
           continue;
         }
+        if ((G.wardTrips || 0) > trips) { trips = G.wardTrips; if (trips > 4) break; }
+        if (!G.duel) { resumeCase(); continue; }
+        if (G.duel.over) { if (G.phase === 'duel') G.phase = 'blind'; continue; }
         if (G.duel.turn === 'you') {
           const r = Math.random();
-          if (r < 0.25 && G.trinkets.length) E.useTrinket(Math.floor(Math.random() * G.trinkets.length));
-          else if (r < 0.3) E.useGun(Math.random() < 0.5 ? 'saw' : 'tommy');
+          if (r < 0.3) E.useGun(Math.random() < 0.5 ? 'saw' : 'tommy');
           else E.pull(Math.random() < 0.5 ? 'self' : 'foe');
         } else {
           E.pull(E.oppDecide());
@@ -284,4 +337,4 @@ function driver() {
   console.log('fuzz done, crashes:', fuzzCrashes);
 }
 
-new Function(src + '\n;(' + driver.toString() + ')();')();
+new Function(STUBS + '\n;' + src + '\n;(' + driver.toString() + ')();')();

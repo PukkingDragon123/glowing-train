@@ -7,7 +7,6 @@
 window.addEventListener('DOMContentLoaded', () => {
   SFX.loadMutePref();
   META.load();
-  BG.init();
   UI.initTooltip();
   UI.initKeys();
   BTN.init();
@@ -15,6 +14,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Audio contexts must wake on a user gesture.
   document.addEventListener('pointerdown', () => SFX.init(), { once: true });
 
+  STORY.reset && (G.log = G.log || []);
   G.phase = 'title';
   UI.render();
 
@@ -43,6 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
     mk('unlock all', () => { META.unlockAll(); });
     document.body.appendChild(bar);
     window.G2 = () => G; window.E = E; window.UI = UI; window.DUEL = DUEL; window.LOOT = LOOT;
-    window.CINE = CINE; window.COPS = COPS; window.BTN = BTN; // console access
+    window.CINE = CINE; window.COPS = COPS; window.BTN = BTN;
+    window.SCENE = SCENE; window.STORY = STORY; window.ROOMS = ROOMS; window.ART = ART;
   }
 });

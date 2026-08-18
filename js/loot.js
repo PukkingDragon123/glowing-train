@@ -163,30 +163,9 @@ const LOOT = {
     bribe.classList.toggle('pulse-red', heat && canBribe);
     if (heat && !COPS.active) { COPS.arrive(); LOOT.callout('THEY HEARD THAT', 'pay them or walk out now'); }
 
-    /* card swap flow */
+    /* the belt is full and his coat had one more thing in it */
     const swap = document.getElementById('card-swap');
-    if (L.pendingCard) {
-      swap.className = 'pop';
-      swap.innerHTML = '';
-      swap.appendChild(UI.txt('RACK FULL — SWAP?', { scale: 3, color: PIX.PAL.G }));
-      const row = U.el('div', 'swap-row');
-      const found = U.el('span', 'tcard');
-      found.appendChild(SPR.trinketCardEl(L.pendingCard, 4));
-      row.appendChild(found);
-      row.appendChild(UI.txt('FOR', { scale: 3, color: PIX.PAL.q }));
-      G.trinkets.forEach((t, i) => {
-        const c = U.el('button', 'tcard has-tip');
-        c.dataset.tipTrinket = t.id;
-        c.appendChild(SPR.trinketCardEl(t.id, 4));
-        c.onclick = () => { E.resolveCard(i); SFX.bank(); LOOT.sync(); };
-        row.appendChild(c);
-      });
-      const skip = U.el('button', 'pixbtn');
-      skip.appendChild(UI.txt('LEAVE IT', { scale: 3, shadow: null }));
-      skip.onclick = () => { E.resolveCard(null); SFX.click(); LOOT.sync(); };
-      row.appendChild(skip);
-      swap.appendChild(row);
-    } else if (L.pendingItem) {
+    if (L.pendingItem) {
       swap.className = 'pop';
       swap.innerHTML = '';
       swap.appendChild(UI.txt('BELT FULL — SWAP?', { scale: 3, color: PIX.PAL.G }));
@@ -320,9 +299,10 @@ const LOOT = {
     (res.learned || []).forEach((t, i) => setTimeout(() => UI.tellToast(t), 300 + i * 700));
     const fresh = META.check();
     fresh.forEach((t, i) => setTimeout(() => UI.unlockToast(t), 600 + i * 700));
-    if (res.won) { UI.goto(); return; }
+    if (res.finale) { SCENE.close(); DUEL.stop(); STORY.endgame(); return; }
     if (res.heatDue) { LOOT.heatOverlay(res.heatDue); return; }
-    UI.goto();      // next blind is already dealt
+    /* back to the bullpen: pin what you took to the board, get the next lead */
+    UI.goto(() => { G.phase = 'precinct'; });
   },
 
   /* after a boss: Swamp PD wants protection, or the marker */
@@ -351,11 +331,9 @@ const LOOT = {
       else { SFX.lose(); await COPS.bust(); }
       LOOT.retireCallout();
       o.className = 'hidden'; o.innerHTML = '';
-      if (ok) {
-        await CINE.anteClear(cleared, G.chips);
-        await CINE.climb(cleared);      // and one more floor of the house behind you
-      }
-      UI.goto();
+      if (ok) await CINE.anteClear(cleared, G.chips);
+      await CINE.chapterCard();         // one more rung of his organisation, gone
+      UI.goto(() => { G.phase = 'precinct'; });
     };
     card.appendChild(pay);
     o.appendChild(card);

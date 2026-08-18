@@ -18,34 +18,32 @@ const E = {
     G = {
       phase: 'duel',
       seedStr, rng: U.mulberry32(U.hashSeed(seedStr)),
-      ante: 1, blind: 0,                    // blind: 0 small · 1 big · 2 boss
+      ante: 1, blind: 0,                    // the internal difficulty rung; the
+                                            // player sees chapters, never numbers
       chips: ECON.start, gunIdx: 0,
-      trinkets: [],                         // { id, used:{duel,reload} }
       items: [],                            // belt: item ids (dupes allowed)
       hearts: PLAYER_HP,
       duel: null, loot: null,
       endless: false, wonRun: false, busted: false,
-      tag: null, tagsTaken: [], skipped: 0, messHeat: 0,
+      skipped: 0, messHeat: 0,
       case: null, caseBonus: false, caseMiss: false, intel: 0,
       mayTalked: false, mayLook: false, mayHeart: false, capTalked: false,
       run: { duelsWon: 0, shots: 0, damage: 0, called: 0, misnamed: 0 },
     };
     META.bump('runs');
-    /* No cards, no charms, no shop. A badge, a gun and a belt is the kit —
-       the rest of the old casino layer is gone. */
+    /* A badge, a gun, a belt and a board with five holes in it. */
+    STORY.reset();
     E.startBlind();
-    /* the night starts at the precinct, not at the wall */
-    G.phase = 'station';
+    /* the case starts in the bullpen */
+    G.phase = 'precinct';
     return G;
   },
 
   gun() { return GUNS[G.gunIdx]; },
-  has(tid) { return G.trinkets.some(t => t.id === tid); },
-  trinketBy(tid) { return G.trinkets.find(t => t.id === tid); },
   maxHP() { return PLAYER_HP + (G.mayHeart ? 1 : 0) + (G.gunIdx >= 4 ? 1 : 0); },
 
   /* ---- belt items ---- */
-  maxItems() { return MAX_ITEMS + (E.has('belt') ? 1 : 0); },
+  maxItems() { return MAX_ITEMS; },
   hasItem(id) { return G.items.indexOf(id) >= 0; },
   itemRoom() { return G.items.length < E.maxItems(); },
   giveItem(id) { if (!E.itemRoom()) return false; G.items.push(id); return true; },
@@ -72,7 +70,6 @@ const E = {
     if (!p) return 0;
     if (p.taken) return LOOT_TUNING.slitNoise;
     let n = LOOT_TUNING.noise[p.id] !== undefined ? LOOT_TUNING.noise[p.id] : 0.24;
-    if (E.has('glove')) n *= 0.75;             // the kid glove muffles it
     return n;
   },
 
@@ -85,7 +82,7 @@ const E = {
   },
 
   /* kept for the notebook copy that still talks about free pockets */
-  freePockets() { return 3 + (E.has('pockets') ? 1 : 0) + (G.tagPocket ? 1 : 0); },
+  freePockets() { return 3; },
 
   /* ============================================================
      THE MESS.
@@ -149,7 +146,7 @@ const E = {
     };
   },
 
-  /* damage outside the shell cycle (knuckles, shiv): flat, no gun/trinket bonuses */
+  /* damage outside the shell cycle (knuckles, shiv): flat, no gun bonuses */
   freeHit(dmg) {
     const d = G.duel;
     d.opp.hp -= dmg;
@@ -269,7 +266,6 @@ const E = {
         frog: null, def, traits,
       };
     }
-    if (E.has('edge')) opp.hp = Math.max(1, opp.hp - 1);
     opp.maxHP = opp.hp;
 
     G.hearts = E.maxHP();
@@ -277,15 +273,13 @@ const E = {
       opp, turn: 'you', over: null,
       shells: [], ptr: 0, known: [], lives: 0, blanks: 0, loads: 0, shots: 0,
       sawArmed: false, sawUsed: false, tommyUsed: false, extraShots: 0,
-      cuffed: false, coltSpent: false, snakePrimed: false, revived: false,
+      cuffed: false, coltSpent: false, revived: false,
       selfBlanks: 0, heartsLost: 0, dmgDealt: 0,
-      hollow: false, smoke: false, gauzeUsed: false,
+      hollow: false, smoke: false,
       aimWide: false, aimClean: false,
       payout: null,
     };
-    G.trinkets.forEach(t => { t.used = {}; });
     /* DUTCH COURAGE rides along for exactly one duel */
-    if (G.tag === 'nerve') { G.hearts += 1; G.duel.bonusHeart = true; G.tag = null; }
     G.phase = 'blind';                       // the board sits you down
     G.caseBonus = false; G.caseMiss = false;
     CASE.build();
@@ -299,7 +293,6 @@ const E = {
     const frac = Math.min(0.72, 0.32 + rng() * 0.30 + G.ante * 0.016);
     const lives = U.clamp(Math.round(total * frac), 1, total - 1);
     let blanks = total - lives;
-    if (E.has('scales')) blanks++;
     const arr = [];
     for (let i = 0; i < lives; i++) arr.push(true);
     for (let i = 0; i < blanks; i++) arr.push(false);
@@ -307,8 +300,6 @@ const E = {
     d.shells = arr; d.ptr = 0;
     d.known = arr.map(() => null);
     d.lives = lives; d.blanks = blanks;
-    G.trinkets.forEach(t => { t.used.reload = 0; });
-    if (E.has('deadeye')) d.known[0] = d.shells[0];
     return { lives, blanks, total: lives + blanks };
   },
 
@@ -322,42 +313,12 @@ const E = {
     return true;
   },
 
-  canSkip() { return false; },   // nobody skips a case they were assigned
-
-  rollTag() { return U.pick(G.rng, TAG_POOL); },
-
-  /* take the tag instead of the corpse */
-  skipBlind() {
-    if (!E.canSkip()) return null;
-    const id = E.rollTag();
-    G.tagsTaken.push(id);
-    G.skipped++;
-    META.bump('skips');
-    switch (id) {
-      case 'purse': G.chips += 10; break;
-      case 'item': {
-        const pool = ITEM_IDS.filter(x => ITEMS[x]);
-        const pick = U.pick(G.rng, pool);
-        if (!E.giveItem(pick)) G.tag = null;
-        break;
-      }
-      case 'pocket': G.tagPocket = true; break;
-      case 'nerve': G.tag = 'nerve'; break;
-      case 'iron': G.tagIron = true; break;
-    }
-    META.save();
-    E.nextBlind();
-    return TAGS[id];
-  },
-
   /* everything you are carrying, for the run panel */
   runInfo() {
     return {
       seed: G.seedStr, ante: G.ante, blind: G.blind, blindName: E.blindName(),
       chips: G.chips, hearts: G.hearts, maxHP: E.maxHP(), gun: E.gun(),
-      trinkets: G.trinkets.map(t => t.id),
       items: G.items.slice(),
-      tags: G.tagsTaken.slice(),
       duelsWon: G.run.duelsWon, shots: G.run.shots, damage: G.run.damage,
       skipped: G.skipped, endless: G.endless,
       next: E.peekNext(),
@@ -366,7 +327,7 @@ const E = {
 
   bossIs(id) { return !!(G.duel && G.duel.opp.boss === id); },
   countsHidden() { return E.bossIs('blindfold'); },
-  trinketsLocked() { return E.bossIs('cage'); },
+  beltLocked() { return E.bossIs('cage'); },
   gunLocked() { return E.bossIs('lily'); },
 
   /* live/blank still in the drum (the truth — UI decides what to show) */
@@ -398,10 +359,11 @@ const E = {
   /* target: 'self' | 'foe' — relative to whoever's turn it is */
   pull(target) {
     const d = G.duel, by = d.turn;
+    if (d.over) return null;          // nobody shoots a finished table
     const live = d.shells[d.ptr];
     const ev = {
       by, target, live, dmg: 0, victim: null,
-      fizzled: false, rosary: false, sawed: false,
+      fizzled: false, sawed: false,
       extraTurn: false, tommyShot: false, cuffSkip: false,
       shuffled: false, reloaded: null, over: null,
       croakHeal: 0, tonyTax: 0, revived: false, chips: 0,
@@ -421,10 +383,6 @@ const E = {
       if (by === 'you') {
         if (target === 'foe') {
           if (G.gunIdx >= 1 && !d.coltSpent) { dmg++; d.coltSpent = true; }
-          if (E.has('blood') && d.opp.hp === d.opp.maxHP) dmg++;
-          if (E.has('snake') && d.snakePrimed) { dmg++; d.snakePrimed = false; }
-          if (E.has('gator')) dmg++;
-          if (E.has('nail') && G.hearts === 1) dmg += 2;
           if (d.hollow) { dmg += 2; d.hollow = false; ev.hollow = true; }
         }
         if (d.sawArmed) { dmg *= 2; d.sawArmed = false; ev.sawed = true; }
@@ -440,17 +398,14 @@ const E = {
         if (d.opp.boss === 'owner' && d.revived) dmg = 2; // phase two: he's angry now
         if (target === 'foe') { // the mark is shooting YOU
           if (d.smoke) { d.smoke = false; ev.smoked = true; dmg = 0; }
-          else if (E.has('clover') && G.rng() < 1 / 6) { ev.fizzled = true; dmg = 0; }
-        } else if (E.has('dirt')) dmg++; // he did it to himself, on salted felt
+        }
       }
     } else {
       /* -- blank bookkeeping -- */
-      if (E.has('fly')) { G.chips += 1; ev.chips += 1; }
       if (by === 'opp' && target === 'foe' && d.smoke) { d.smoke = false; ev.smoked = true; }
       if (by === 'you' && target === 'self') {
         d.selfBlanks++;
         META.bump('selfBlanks');
-        if (E.has('shill')) { G.chips += 2; ev.chips += 2; }
       }
       if (by === 'you' && target === 'foe' && E.bossIs('croupier') &&
           d.opp.hp < d.opp.maxHP && (d.croakHeals || 0) < 1) {
@@ -465,20 +420,11 @@ const E = {
     if (live && dmg > 0) {
       const victim = target === 'self' ? by : (by === 'you' ? 'foe' : 'you');
       ev.victim = victim;
-      if (victim === 'you' && E.has('gauze') && !d.gauzeUsed) {
-        d.gauzeUsed = true; dmg = Math.max(0, dmg - 1); ev.gauze = true;
-      }
       if (victim === 'you') {
-        if (dmg >= G.hearts && E.has('rosary')) {
-          G.hearts = 1; ev.rosary = true; dmg = 0;
-          G.trinkets = G.trinkets.filter(t => t.id !== 'rosary');
-        } else {
-          G.hearts -= dmg;
-          d.heartsLost += dmg;
-          if (E.has('snake')) d.snakePrimed = true;
-          META.bump('liveTaken');
-          if (G.hearts <= 0) { G.hearts = 0; d.over = 'loss'; }
-        }
+        G.hearts -= dmg;
+        d.heartsLost += dmg;
+        META.bump('liveTaken');
+        if (G.hearts <= 0) { G.hearts = 0; d.over = 'loss'; }
       } else {
         d.opp.hp -= dmg;
         if (by === 'you') { d.dmgDealt += dmg; G.run.damage += dmg; }
@@ -539,71 +485,6 @@ const E = {
     return p >= 1 - a ? 'foe' : 'self';
   },
 
-  /* ================= trinket actives ================= */
-
-  chargesLeft(t) {
-    const def = TRINKETS[t.id];
-    if (!def.active) return 0;
-    if (def.active.per === 'duel') return t.used.duel ? 0 : 1;
-    const max = E.has('watch') ? 2 : 1;
-    return Math.max(0, max - (t.used.reload || 0));
-  },
-
-  canUseTrinket(i) {
-    const t = G.trinkets[i];
-    if (!t || G.phase !== 'duel' || G.duel.over || G.duel.turn !== 'you') return false;
-    if (E.trinketsLocked()) return false;
-    if (E.chargesLeft(t) <= 0) return false;
-    if (t.id === 'cig' && G.hearts >= E.maxHP()) return false;
-    if (t.id === 'cuffs' && G.duel.cuffed) return false;
-    if (t.id === 'dice' && E.shellsLeft() < 2) return false;
-    return true;
-  },
-
-  useTrinket(i) {
-    if (!E.canUseTrinket(i)) return null;
-    const t = G.trinkets[i], d = G.duel;
-    const def = TRINKETS[t.id];
-    if (def.active.per === 'duel') t.used.duel = 1;
-    else t.used.reload = (t.used.reload || 0) + 1;
-    META.bump('activesUsed');
-
-    switch (t.id) {
-      case 'cig':
-        G.hearts++;
-        return { type: 'heal' };
-      case 'beer': {
-        const was = d.shells[d.ptr];
-        was ? d.lives-- : d.blanks--;
-        d.ptr++;
-        const reloaded = d.ptr >= d.shells.length ? E.reload() : null;
-        return { type: 'eject', live: was, reloaded };
-      }
-      case 'glass':
-        d.known[d.ptr] = d.shells[d.ptr];
-        return { type: 'peek', live: d.shells[d.ptr] };
-      case 'cuffs':
-        d.cuffed = true;
-        return { type: 'cuffs' };
-      case 'mirror':
-        d.shells[d.ptr] = !d.shells[d.ptr];
-        d.known[d.ptr] = d.shells[d.ptr];
-        return { type: 'mirror', live: d.shells[d.ptr] };
-      case 'dice': {
-        const rest = d.shells.slice(d.ptr);
-        U.shuffle(G.rng, rest);
-        for (let i = 0; i < rest.length; i++) {
-          d.shells[d.ptr + i] = rest[i];
-          d.known[d.ptr + i] = null;
-        }
-        return { type: 'shuffle' };
-      }
-      case 'shiv':
-        return { type: 'shiv', dmg: E.freeHit(1) };
-    }
-    return null;
-  },
-
   /* ================= belt items ================= */
 
   canUseItem(i) {
@@ -613,7 +494,7 @@ const E = {
       const d = G.duel;
       if (!d || d.over || d.turn !== 'you') return false;
       if (!ITEM_PHASE_OK(id, 'duel')) return false;
-      if (E.trinketsLocked()) return false;              // Warden Wart takes the belt too
+      if (E.beltLocked()) return false;                  // Warden Wart takes the belt
       if (id === 'whiskey' && G.hearts >= E.maxHP()) return false;
       if (id === 'hollowPoint' && d.hollow) return false;
       if (id === 'smokeBomb' && d.smoke) return false;
@@ -622,7 +503,7 @@ const E = {
       return true;
     }
     if (G.phase === 'loot') {
-      if (!G.loot || G.loot.done || G.loot.pendingCard || G.loot.pendingItem) return false;
+      if (!G.loot || G.loot.done || G.loot.pendingItem) return false;
       if (!ITEM_PHASE_OK(id, 'loot')) return false;
       if (id === 'fileFolder') return (G.loot.caught || G.loot.noise > 0.35) && E.lootLeft() > 0;
       if (id === 'pliers') return G.loot.pockets.some(p => p.id === 'tooth' && !p.taken);
@@ -723,12 +604,9 @@ const E = {
     /* what's sewn into the corpse */
     let sub = E.purse() + G.hearts;
     for (const t of d.opp.traits) sub += TRAITS[t].chips || 0;
-    if (E.has('swarm') && d.heartsLost > 0) sub += 2 * d.heartsLost;
     let mult = 1;
     /* you named him before he sat down: the room paid for that */
     if (G.caseBonus) mult *= 1 + CASE_TUNING.hit;
-    if (E.has('feather') && d.selfBlanks > 0) mult *= 1 + 0.1 * d.selfBlanks;
-    if (E.has('ring')) mult *= 1.5;
     if (G.gunIdx >= 4) mult *= 1.5;
     const budget = Math.max(1, Math.round(sub * mult));
 
@@ -744,10 +622,12 @@ const E = {
   /* protection scales with the ante AND with every trail you left behind */
   heatDue() { return HEAT_COST(G.ante) + (G.messHeat || 0) * 8; },
 
+  /* You do not get a game over. You get an ambulance, a bill, and a chart
+     with your name on it. The case stays open because you are the only one
+     who still thinks it is a case. */
   onRunOver() {
-    META.bump('deaths');
     META.save();
-    G.phase = 'over';
+    return STORY.rushToWard();
   },
 
   /* ================= the loot ================= */
@@ -793,12 +673,13 @@ const E = {
     /* HIS PAPERS. Intel about the family, sewn into a coat more often than
        not: take it and one clue on the next line-up is already turned over
        when you walk in. This is what a detective is in the room FOR. */
-    if (rng() < 0.6 && !G.duel.opp.boss) {
+    const bossPaper = !!G.duel.opp.boss && !STORY.canFinish();
+    if ((bossPaper || (rng() < 0.18 && !G.duel.opp.boss)) && STORY.nextCard()) {
       const target = U.pick(rng, pockets.filter(p => !p.gun && p.id !== 'tooth'));
       if (target) target.dossier = true;
     }
     /* and maybe something for the belt */
-    if (rng() < (E.has('contract') ? 1 : LOOT_TUNING.itemChance[G.blind])) {
+    if (rng() < LOOT_TUNING.itemChance[G.blind]) {
       const rar = ['common', 'uncommon', 'rare', 'legendary'];
       const IW = ITEM_RW[G.blind];
       const pickId = U.wpick(rng, ITEM_IDS, id => IW[rar.indexOf(ITEMS[id].rarity)]);
@@ -809,12 +690,12 @@ const E = {
     /* something square shows through the cloth */
     pockets.forEach(p => { p.bulge = !!(p.dossier || p.gun || p.item); });
 
-    G.loot = { pockets, bribes: 0, pendingCard: null, pendingItem: null,
+    G.loot = { pockets, bribes: 0, pendingItem: null,
       done: false, tool: null, bonusFree: 0, dragged: false,
       stains: [], mess: 0,
       noise: 0, caught: false, busted: false,
       time: Math.max(18, LOOT_TUNING.seconds + LOOT_TUNING.secondsPerAnte * (G.ante - 1)
-        + (E.has('pockets') ? 8 : 0) + (G.tagPocket ? 8 : 0)),
+        ),
       maxTime: 0 };
     G.loot.maxTime = G.loot.time;
     G.phase = 'loot';
@@ -823,14 +704,14 @@ const E = {
 
   lootLeft() { return G.loot.pockets.filter(p => !p.taken).length; },
   canRifle() {
-    return G.phase === 'loot' && !G.loot.done && !G.loot.pendingCard && !G.loot.caught;
+    return G.phase === 'loot' && !G.loot.done && !G.loot.caught;
   },
   heatUp() { return G.phase === 'loot' && !G.loot.done && !!G.loot.caught; },
 
   /* can this pocket be gone into right now, and with what */
   canSearch(i) {
     const L = G.loot, p = L && L.pockets[i];
-    if (!p || G.phase !== 'loot' || L.done || L.pendingCard || L.caught) return false;
+    if (!p || G.phase !== 'loot' || L.done || L.caught) return false;
     if (p.taken) return L.tool === 'shiv' && !p.slit;        // the lining is still there
     return true;
   },
@@ -856,23 +737,9 @@ const E = {
     p.noise = loud;
     p.heard = E.addNoise(loud);
     if (p.gun) { G.gunIdx++; META.ownGun(GUNS[G.gunIdx].id); META.save(); }
-    if (p.card) {
-      if (G.trinkets.length < MAX_TRINKETS) G.trinkets.push({ id: p.card, used: {} });
-      else G.loot.pendingCard = p.card;
-    }
     if (p.item && !E.giveItem(p.item)) G.loot.pendingItem = p.item;
-    if (p.dossier) { G.intel = (G.intel || 0) + 1; p.foundDossier = true; }
+    if (p.dossier) { p.foundCard = STORY.onDossier(); p.foundDossier = true; }
     return p;
-  },
-
-  /* full trinket rack: swap or leave the found card */
-  resolveCard(replaceIdx) {
-    const card = G.loot.pendingCard;
-    if (!card) return;
-    if (replaceIdx !== null && G.trinkets[replaceIdx]) {
-      G.trinkets[replaceIdx] = { id: card, used: {} };
-    }
-    G.loot.pendingCard = null;
   },
 
   /* full belt: swap or leave the item you found */
@@ -884,10 +751,8 @@ const E = {
   },
 
   bribeCost() {
-    if (E.has('marked') && G.loot.bribes === 0) return 0;
     let c = LOOT_TUNING.bribeBase + G.ante * LOOT_TUNING.bribePerAnte +
-      (E.has('ledger') ? 0 : G.loot.bribes * LOOT_TUNING.bribeStep);
-    if (E.has('glove')) c = Math.max(1, c - 2);
+      G.loot.bribes * LOOT_TUNING.bribeStep;
     return c;
   },
 
@@ -906,27 +771,33 @@ const E = {
 
   /* walk out: learn his tells, then face the badges if it's a boss */
   endLoot() {
-    if (G.loot.pendingCard) G.loot.pendingCard = null; // left it on the corpse
     if (G.loot.pendingItem) G.loot.pendingItem = null;
     G.loot.done = true;
-    G.tagPocket = false;
     const learned = [];
     for (const t of G.duel.opp.traits) if (META.learnTrait(t)) learned.push(t);
     META.save();
-    if (G.wonRun) { G.phase = 'won'; return { learned, won: true }; }
+    /* the Bullfrog himself, on the floor of his own flat: that is the end of
+       the story, and the player picks which end it is */
+    if (G.duel.opp.boss === 'owner') return { learned, finale: true };
     if (G.blind === 2) return { learned, heatDue: E.heatDue() };
     E.nextBlind();
     return { learned };
   },
 
   /* protection money after a boss. Can't pay = they take the marker. */
+  /* Protection money. You cannot be run out of the game any more — if you
+     cannot pay, they take the badge instead, and a case with no badge behind
+     it can only ever end one way. */
   payHeat() {
     const cost = E.heatDue();
     if (G.chips < cost) {
-      G.busted = true;
-      META.bump('deaths');
+      G.chips = 0;
+      if (!G.badgePulled) {
+        G.badgePulled = true;
+        STORY.note('COULD NOT PAY. THEY TOOK THE BADGE AND LEFT YOU THE CASE.');
+      }
       META.save();
-      G.phase = 'over';
+      E.nextBlind();
       return false;
     }
     G.chips -= cost;
@@ -937,7 +808,7 @@ const E = {
 
   nextBlind() {
     G.blind++;
-    if (G.blind > 2) { G.blind = 0; G.ante++; }
+    if (G.blind > 2) { G.blind = 0; G.ante++; STORY.advance(); }
     return E.startBlind();
   },
 

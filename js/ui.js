@@ -7,7 +7,7 @@
    Mostly wordless: icons + pixel numerals, hover for truth.
    ============================================================ */
 
-/* item cards: the trinket chassis in brass, with belt-tag punch holes */
+/* item cards: brass chassis, belt-tag punch holes */
 SPR.itemCard = function (id) {
   return SPR.cached('icard_' + id, () => {
     const it = ITEMS[id], P = PIX.PAL;
@@ -67,28 +67,33 @@ const UI = {
     const app = document.getElementById('app');
     app.innerHTML = '';
     document.body.classList.toggle('at-corpse', G.phase === 'loot');
+    document.body.classList.toggle('in-scene', UI.isScene(G.phase));
     UI.closeModal();
     if (G.phase !== 'duel' && G.phase !== 'loot') DUEL.stop();
-    BG.set({
-      title: 'title', collection: 'title', station: 'title',
-      duel: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'round',
-      blind: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'casino',
-      loot: G.phase === 'loot' && G.loot && G.loot.dragged ? 'back' : 'casino',
-      over: 'dead', won: 'win',
-    }[G.phase] || 'round');
+    if (!UI.isScene(G.phase)) SCENE.close();
     switch (G.phase) {
       case 'title':      UI.buildTitle(app); break;
-      case 'collection': UI.buildCollection(app); break;
-      case 'station':    UI.buildStation(app); break;
-      case 'blind':      UI.buildBlindSelect(app); break;
+      case 'precinct':   UI.buildRoom(app, ROOMS.precinct()); break;
+      case 'board':      UI.buildRoom(app, ROOMS.boardRoom()); break;
+      case 'ward':       UI.buildRoom(app, ROOMS.ward()); break;
+      case 'blind':      UI.buildRoom(app, ROOMS.lineup()); break;
       case 'duel':
       case 'loot':       UI.buildDuel(app); DUEL.enter(); break;
+      case 'ending':     UI.buildEnding(app); break;
       case 'over':       UI.buildEnd(app, false); break;
       case 'won':        UI.buildEnd(app, true); break;
     }
-    /* card backs drifting behind the quiet screens */
-    CINE.ambient(G.phase === 'title' || G.phase === 'collection' || G.phase === 'blind' || G.phase === 'station');
     if (typeof TUTOR !== 'undefined' && TUTOR.armed()) setTimeout(() => TUTOR.check(), 260);
+  },
+
+  isScene(ph) { return ph === 'precinct' || ph === 'board' || ph === 'ward' || ph === 'blind'; },
+
+  /* a room you walk around in: the story HUD, then the scene */
+  buildRoom(app, room) {
+    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
+    const host = U.el('div'); host.id = 'scene-root'; host.className = 'scene-root';
+    app.appendChild(host);
+    SCENE.open(room);
   },
 
   /* Every screen change goes behind the card-rack wipe. fn does whatever
@@ -131,32 +136,24 @@ const UI = {
     const L = U.el('div', 'tb-side'), C = U.el('div', 'tb-side'), R = U.el('div', 'tb-side');
 
     const logo = U.el('span', 'has-tip');
-    logo.dataset.tipText = 'SHELL & DEBT — seed ' + G.seedStr;
+    logo.dataset.tipText = 'SHELL & DEBT - case ' + G.seedStr;
     logo.appendChild(UI.txt('S&D', { scale: 3, color: PIX.PAL.g }));
     L.appendChild(logo);
 
-    /* ante + blind pips */
-    const ante = U.el('span', 'has-tip tb-chip');
-    ante.dataset.tipKey = 'ante';
-    ante.appendChild(UI.txt('FLOOR ' + G.ante, { scale: 3, color: PIX.PAL.W }));
-    C.appendChild(ante);
-    const pips = U.el('span', 'ante-track has-tip');
-    pips.dataset.tipKey = 'blind';
-    const LAB = ['S', 'B', '*'];
-    for (let i = 0; i < 3; i++) {
-      if (i) pips.appendChild(U.el('i', 'at-link' + (i <= G.blind ? ' done' : '')));
-      const seg = U.el('span', 'at-seg' + (i < G.blind ? ' done' : i === G.blind ? ' now' : '') + (i === 2 ? ' boss' : ''));
-      const lab = U.el('span', 'at-lab'); lab.textContent = LAB[i];
-      seg.appendChild(lab);
-      seg.appendChild(U.el('span', 'bpip'));
-      pips.appendChild(seg);
-    }
-    C.appendChild(pips);
-    const purse = U.el('span', 'tb-chip has-tip');
-    purse.dataset.tipKey = 'purse';
-    purse.appendChild(UI.txt(String(E.purse()), { scale: 3, color: PIX.PAL.G }));
-    purse.appendChild(UI.icon('ic_chip', 3));
-    C.appendChild(purse);
+    /* which chapter of the case you are in, by name — no floors, no antes */
+    const ch = STORY.chapter();
+    const chip = U.el('span', 'has-tip tb-chip');
+    chip.dataset.tipText = ch.obj;
+    chip.appendChild(UI.txt(ch.title, { scale: 3, color: PIX.PAL.W }));
+    C.appendChild(chip);
+
+    /* the board: five pieces of him, filled in as you take them */
+    const track = U.el('span', 'intel-track has-tip');
+    track.dataset.tipText = 'THE BULLFROG BOARD - ' + STORY.intelPct() + '% OF HIM';
+    INTEL_CARDS.forEach(card => {
+      track.appendChild(U.el('i', 'ipip' + (STORY.hasCard(card.id) ? ' got' : '')));
+    });
+    C.appendChild(track);
 
     /* chips */
     const chips = U.el('span', 'tb-chip has-tip');
@@ -341,155 +338,10 @@ const UI = {
   /* The night starts here: the captain behind his counter, Maybelle at
      the front desk, and the board waiting in the next room. Talking is
      optional. It is also the only warm thing in the game. */
-  buildStation(app) {
-    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
-    const wrap = U.el('div', 'station-wrap');
-
-    /* the room, drawn */
-    const cv = document.createElement('canvas');
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 200, (window.innerHeight - 220) / 120)), 2, 7);
-    cv.width = 190 * K; cv.height = 112 * K;
-    cv.className = 'pix station-room';
-    const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.scale(K, K);
-    const P = PIX.PAL;
-    PIX.rect(c, 0, 0, 190, 112, '#141822');
-    for (let y = 0; y < 74; y += 5) PIX.rect(c, 0, y, 190, 1, 'rgba(0,0,0,.16)');
-    PIX.rect(c, 0, 74, 190, 38, '#1a1610');                       // floorboards
-    for (let i = 0; i < 10; i++) PIX.rect(c, i * 20, 74, 1, 38, 'rgba(0,0,0,.3)');
-    PIX.rect(c, 0, 74, 190, 2, '#2c2114');
-    /* the notice board, with the tiny wall of faces */
-    PIX.rect(c, 10, 14, 52, 38, '#241a10');
-    PIX.rect(c, 12, 16, 48, 34, '#6b4426');
-    for (let i = 0; i < 6; i++) {
-      PIX.rect(c, 16 + (i % 3) * 15, 20 + Math.floor(i / 3) * 16, 11, 12, '#ded2b4');
-      PIX.rect(c, 18 + (i % 3) * 15, 22 + Math.floor(i / 3) * 16, 7, 7, '#141820');
-    }
-    /* the counter the captain lives behind */
-    PIX.rect(c, 118, 52, 64, 26, P.K);
-    PIX.rect(c, 120, 54, 60, 22, '#2c2114');
-    PIX.rect(c, 120, 54, 60, 3, '#3a2c18');
-    /* the hanging light */
-    PIX.rect(c, 94, 0, 2, 12, '#232018');
-    PIX.rect(c, 88, 12, 14, 5, '#3a3020');
-    c.globalAlpha = 0.13; c.fillStyle = '#ffd75e';
-    c.beginPath(); c.moveTo(95, 16); c.lineTo(60, 82); c.lineTo(130, 82); c.closePath(); c.fill();
-    c.globalAlpha = 1;
-    /* the cell, stage right */
-    for (let i = 0; i < 5; i++) PIX.rect(c, 168 + i * 4, 14, 2, 38, '#0e1118');
-    wrap.appendChild(cv);
-
-    /* the two of them, standing in the room */
-    const folk = U.el('div', 'station-folk');
-    const cap = U.el('div', 'st-frog st-cap');
-    cap.appendChild(SPR.clone(SPR.frogCustom('handler', HANDLER_DEF), 3));
-    cap.appendChild(UI.txt('THE CAPTAIN', { scale: 2, color: PIX.PAL.L }));
-    folk.appendChild(cap);
-    const may = U.el('div', 'st-frog st-may');
-    may.appendChild(SPR.clone(SPR.frogCustom('maybelle', MAYBELLE_DEF), 3));
-    const heartRow = U.el('div', 'st-hearts');
-    const tr = META.load().trust || 0;
-    for (let i = 0; i < 3; i++) {
-      heartRow.appendChild(PIX.el(tr >= (i + 1) * 3 ? 'ic_heart' : 'ic_heart_e', 1));
-    }
-    may.appendChild(UI.txt('OFFICER MAYBELLE', { scale: 2, color: PIX.PAL.P }));
-    may.appendChild(heartRow);
-    folk.appendChild(may);
-    wrap.appendChild(folk);
-
-    /* the choices */
-    const btns = U.el('div', 'blind-btns');
-    const go = U.el('button', 'pixbtn gold primary big-deal');
-    go.id = 'btn-board';
-    go.appendChild(UI.txt('THE CASE BOARD', { scale: 4, shadow: null, color: PIX.PAL.K }));
-    const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
-    go.appendChild(kh);
-    go.onclick = () => { SFX.chak(); UI.goto(() => { G.phase = 'blind'; }); };
-    btns.appendChild(go);
-
-    const tc = U.el('button', 'pixbtn cop');
-    tc.id = 'btn-talk-cap';
-    tc.appendChild(UI.txt('TALK: CAPTAIN', { scale: 3, shadow: null }));
-    tc.onclick = () => UI.talkCaptain();
-    btns.appendChild(tc);
-
-    const tm = U.el('button', 'pixbtn');
-    tm.id = 'btn-talk-may';
-    tm.appendChild(UI.txt('TALK: MAYBELLE', { scale: 3, shadow: null }));
-    tm.onclick = () => UI.talkMaybelle();
-    btns.appendChild(tm);
-    wrap.appendChild(btns);
-
-    app.appendChild(wrap);
-  },
 
   /* the captain: one job, three moods */
-  async talkCaptain() {
-    if (UI._talking) return;
-    UI._talking = true;
-    try {
-      const cap = { art: SPR.frogCustom('handler', HANDLER_DEF), name: 'THE CAPTAIN', nameCol: PIX.PAL.L };
-      if (!G.capTalked) {
-        G.capTalked = true;
-        const brief = E.blindName() + (G.duel.opp.boss ? '. IT IS ' + G.duel.opp.name + '. NO LINE-UP TONIGHT.' :
-          '. ' + (G.case ? G.case.suspects.length : 3) + ' OF THEM IN THE ROOM.');
-        await TUTOR.say('FLOOR ' + G.ante + '. ' + brief, cap);
-        await TUTOR.say(U.pick(Math.random, [
-          'PAPERWORK SAYS YOU WERE NEVER THERE. KEEP IT THAT WAY.',
-          'THE CITY PAYS ME TO NOT LOOK. DO NOT MAKE IT HARD.',
-          'COME BACK IN ONE PIECE OR DO NOT COME BACK AT ALL.',
-        ]), cap);
-      } else {
-        await TUTOR.say('THE BOARD, DETECTIVE. IT IS NOT GETTING ANY COLDER.', cap);
-      }
-    } finally { UI._talking = false; }
-  },
 
   /* Maybelle: trust is slow, real, and it helps */
-  async talkMaybelle() {
-    if (UI._talking) return;
-    UI._talking = true;
-    try {
-      const may = { art: SPR.frogCustom('maybelle', MAYBELLE_DEF), name: 'OFFICER MAYBELLE', nameCol: PIX.PAL.P, rim: PIX.PAL.p };
-      const d = META.load();
-      if (G.mayTalked) {
-        await TUTOR.say(U.pick(Math.random, [
-          'GO ON. AND COME BACK.',
-          'I WILL KEEP THE COFFEE WARM.',
-          'YOU KNOW WHERE I AM.',
-        ]), may);
-        return;
-      }
-      G.mayTalked = true;
-      d.trust = (d.trust || 0) + 1;
-      META.save();
-      const t = d.trust;
-      if (t < 3) {
-        await TUTOR.say(U.pick(Math.random, [
-          'LATE ONE AGAIN? I SIGNED YOU IN AT EIGHT. YOU OWE ME NOTHING.',
-          'THE DESK SERGEANT ASKED WHO STILL BRINGS YOU CASES. I SAID NOBODY ASKS THAT.',
-          'YOU LOOK TIRED, DETECTIVE. THAT IS NOT A CRITICISM. IT IS A WORRY.',
-        ]), may);
-      } else if (t < 6) {
-        G.chips += 4; UI.syncChips(); UI.chipTick(4);
-        await TUTOR.say('I PUT COFFEE MONEY IN YOUR COAT. DO NOT ARGUE WITH ME ABOUT IT.', may);
-        UI.stampSmall('+4 FROM MAYBELLE');
-      } else if (t < 9) {
-        G.mayLook = true;
-        if (G.case && !G.case.done && !G.case.known) G.case.looks++;
-        await TUTOR.say('I PULLED THE FILE BEFORE THE SHIFT CHANGE. ONE MORE LOOK IS IN THERE FOR YOU.', may);
-        UI.stampSmall('MAYBELLE: +1 LOOK, ALL NIGHT');
-      } else {
-        G.mayHeart = true;
-        G.hearts = E.maxHP();
-        await TUTOR.say('WHATEVER HAPPENS UP THERE... COME HOME AFTER. YOU HEAR ME?', may);
-        await TUTOR.say('...I MEAN IT.', may);
-        UI.stampSmall('MAYBELLE: +1 HEART, ALL NIGHT');
-        SFX.bank();
-      }
-    } finally { UI._talking = false; }
-  },
 
   /* ================= the board ================= */
 
@@ -531,191 +383,6 @@ const UI = {
     return 1;
   },
 
-  buildBlindSelect(app) {
-    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
-    const opp = G.duel.opp;
-    if (!G.case) CASE.build();
-    const c = G.case;
-    const wrap = U.el('div', 'board-wrap');
-
-    const head = U.el('div', 'board-head');
-    head.appendChild(UI.txt('FLOOR ' + G.ante + (G.endless ? ' · ENDLESS' : ' OF ' + ANTES),
-      { scale: 3, color: PIX.PAL.q }));
-    head.appendChild(UI.txt(c.known ? 'YOU KNOW THIS ONE'
-      : c.suspects.length + ' IN THE ROOM - ONE OF THEM IS HIM',
-      { scale: 4, color: c.known ? PIX.PAL.R : PIX.PAL.W, outline: PIX.PAL.K }));
-    const pay = U.el('div', 'board-purse');
-    pay.appendChild(UI.txt('BOUNTY ' + BLIND_PURSE(G.ante, G.blind), { scale: 3, color: PIX.PAL.G }));
-    pay.appendChild(UI.icon('ic_chip', 3));
-    head.appendChild(pay);
-    wrap.appendChild(head);
-
-    /* ---- the line-up room: the height wall, and everybody against it ---- */
-    const board = U.el('div', 'cork lineup');
-    board.id = 'cork';
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'strings');
-    svg.id = 'cork-strings';
-    board.appendChild(svg);
-
-    const lk = UI.lineupScale(c);
-    const row = U.el('div', 'lineup-row' + (lk < 2 ? ' wall' : ''));
-    const stand = c.known ? [true] : CASE.standing();
-    c.suspects.forEach((s, i) => {
-      const out = !stand[i];
-      const called = c.done && c.accused === i;
-      const p = UI.posterEl(s, i, out, called, lk);
-      if (c.known) p.classList.add('solo');
-      if (!c.done && !out) {
-        p.classList.add('live');
-        p.onclick = () => {
-          SFX.chak();
-          const right = CASE.accuse(i);
-          UI.render();
-          UI.callOut(right);
-        };
-      }
-      if (c.done && c.accused === i) {
-        const st = U.el('div', 'sus-stamp');
-        st.appendChild(UI.wrap(c.right ? 'THAT IS HIM' : 'WRONG MAN', 8,
-          { scale: 2, color: c.right ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K }));
-        p.appendChild(st);
-      }
-      row.appendChild(p);
-    });
-    board.appendChild(row);
-
-    /* ---- the case file: evidence you can turn over ---- */
-    if (!c.known) {
-      const file = U.el('div', 'casefile');
-      const fh = U.el('div', 'cf-head');
-      fh.appendChild(UI.txt('CASE FILE', { scale: 3, color: PIX.PAL.W }));
-      fh.appendChild(UI.txt(c.done ? 'CLOSED'
-        : c.looks + (c.looks === 1 ? ' LOOK LEFT' : ' LOOKS LEFT'),
-        { scale: 3, color: c.looks > 0 && !c.done ? PIX.PAL.G : PIX.PAL.q }));
-      file.appendChild(fh);
-      const cards = U.el('div', 'ev-row');
-      c.clues.forEach((cl, i) => {
-        const ev = U.el('div', 'ev' + (cl.seen ? ' up' : ''));
-        ev.dataset.clue = i;
-        if (cl.seen) {
-          ev.appendChild(PIX.el(cl.icon, 3));
-          ev.appendChild(UI.wrap(cl.text, 10, { scale: 2, color: PIX.PAL.K, shadow: null }));
-        } else {
-          ev.appendChild(SPR.clone(SPR.cardBack(), 3));
-          if (!c.done && c.looks > 0) {
-            ev.classList.add('live');
-            ev.onclick = () => { if (CASE.flip(i)) { SFX.deal(); UI.render(); } };
-          }
-        }
-        cards.appendChild(ev);
-      });
-      file.appendChild(cards);
-      board.appendChild(file);
-
-      /* ---- and the questions: you ask, the room answers, faces come down ---- */
-      const quiz = U.el('div', 'casefile asks');
-      const qh = U.el('div', 'cf-head');
-      qh.appendChild(UI.txt('ASK THE ROOM', { scale: 3, color: PIX.PAL.W }));
-      qh.appendChild(UI.txt(c.done ? 'NOBODY IS TALKING NOW'
-        : c.quiz + (c.quiz === 1 ? ' QUESTION LEFT' : ' QUESTIONS LEFT'),
-        { scale: 3, color: c.quiz > 0 && !c.done ? PIX.PAL.N : PIX.PAL.q }));
-      qh.appendChild(UI.txt(CASE.left() + ' STILL IN IT', { scale: 3, color: PIX.PAL.O }));
-      quiz.appendChild(qh);
-      const qrow = U.el('div', 'ask-row');
-      (c.asks || []).forEach((a, i) => {
-        const b = U.el('button', 'pixbtn ask' + (a.asked ? ' asked' : ''));
-        b.disabled = a.asked || !CASE.canAsk(i);
-        const col = U.el('div', 'ask-col');
-        col.appendChild(UI.wrap(a.ask, 22, { scale: 2, color: a.asked ? PIX.PAL.q : PIX.PAL.W }));
-        if (a.asked) col.appendChild(UI.wrap(a.reply, 24, { scale: 2, color: PIX.PAL.N }));
-        b.appendChild(col);
-        if (!a.asked) {
-          b.onclick = () => {
-            const ev = CASE.ask(i);
-            if (!ev) { SFX.dud(); return; }
-            SFX.chak();
-            UI.render();
-            UI.askedToast(ev);
-          };
-        }
-        qrow.appendChild(b);
-      });
-      quiz.appendChild(qrow);
-      board.appendChild(quiz);
-    }
-    wrap.appendChild(board);
-
-    /* ---- his tells, once you have named him ---- */
-    if (c.done && c.right && opp.traits && opp.traits.length) {
-      const tl = U.el('div', 'tell-row');
-      opp.traits.forEach(t => {
-        const known = META.knowsTell(t);
-        const chip = U.el('span', 'bc-tell has-tip' + (known ? '' : ' unknown'));
-        chip.appendChild(UI.txt(known ? TRAITS[t].name : '???',
-          { scale: 3, color: known ? PIX.PAL.N : PIX.PAL.q }));
-        chip.dataset.tipText = known ? TRAITS[t].desc
-          : TRAITS[t].hint + ' - you have not read this tell yet.';
-        tl.appendChild(chip);
-      });
-      wrap.appendChild(tl);
-    }
-
-    const btns = U.el('div', 'blind-btns');
-    const sit = U.el('button', 'pixbtn gold primary big-deal');
-    sit.id = 'btn-sit';
-    sit.appendChild(SPR.gunEl(E.gun().id, 2));
-    sit.appendChild(UI.txt('MOVE IN', { scale: 4, shadow: null, color: PIX.PAL.K }));
-    const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
-    sit.appendChild(kh);
-    sit.onclick = () => { SFX.chak(); UI.goto(() => E.sitDown()); };
-    btns.appendChild(sit);
-
-    if (!c.known && !c.done) {
-      /* No shop and nothing to own. When the file runs dry you can still put
-         something in somebody's hand for one more look, and it costs more
-         every time you ask. */
-      const g = U.el('button', 'pixbtn cop has-tip');
-      g.id = 'btn-grease';
-      g.disabled = !CASE.canGrease();
-      g.dataset.tipText = 'Somebody in this room will turn one more card over ' +
-        'for money. The price goes up every time you ask.';
-      g.appendChild(UI.txt('GREASE A PALM', { scale: 3, shadow: null }));
-      g.appendChild(UI.txt(String(CASE.greaseCost()), { scale: 3, color: PIX.PAL.G, shadow: null }));
-      g.appendChild(PIX.el('ic_chip', 2));
-      g.onclick = () => { if (CASE.grease()) { SFX.coin(); UI.render(); } else SFX.dud(); };
-      btns.appendChild(g);
-    }
-
-    if (E.canSkip()) {
-      const skip = U.el('button', 'pixbtn ghost has-tip');
-      skip.id = 'btn-skip';
-      skip.dataset.tipText = 'Walk past this chair: no purse and no corpse to go through, ' +
-        'but somebody in the room owes you a favour instead.';
-      skip.appendChild(UI.txt('SKIP FOR A TAG', { scale: 3, shadow: null }));
-      const k2 = U.el('span', 'key-hint'); k2.textContent = 'S';
-      skip.appendChild(k2);
-      skip.onclick = () => {
-        let t = null;
-        SFX.deal();
-        UI.goto(() => { t = E.skipBlind(); }).then(() => {
-          if (t) UI.tagToast(t);
-        });
-      };
-      btns.appendChild(skip);
-    }
-
-    const info = U.el('button', 'pixbtn has-tip');
-    info.id = 'btn-run';
-    info.dataset.tipText = 'Everything you are carrying. [TAB]';
-    info.appendChild(UI.txt('THE RUN', { scale: 3, shadow: null }));
-    info.onclick = () => UI.showRunInfo();
-    btns.appendChild(info);
-    wrap.appendChild(btns);
-
-    app.appendChild(wrap);
-    requestAnimationFrame(UI.drawStrings);
-  },
 
   /* Red string, pinned from a clue to every poster it rules out. This is
      the whole point of the board: you can SEE the field closing. */
@@ -854,7 +521,7 @@ const UI = {
     wrap.appendChild(holder);
     app.appendChild(wrap);
 
-    /* bottom: trinkets + gun + controls */
+    /* bottom: the belt, the iron, the trigger */
     const bottom = U.el('div'); bottom.id = 'duel-bottom';
 
     const belt = U.el('div', 'item-belt'); belt.id = 'item-belt'; bottom.appendChild(belt);
@@ -902,17 +569,12 @@ const UI = {
       }
     }
 
-    /* counts: banner numbers live only with the bead counter */
+    /* what the drum was loaded with — Blind Newt hides it */
     const counts = document.getElementById('strip-counts');
     if (counts) {
       counts.innerHTML = '';
       if (E.countsHidden()) {
         counts.appendChild(UI.txt('? / ?', { scale: 3, color: PIX.PAL.q }));
-      } else if (E.has('counter')) {
-        const { l, b } = E.remaining();
-        counts.appendChild(UI.txt(l + '', { scale: 3, color: PIX.PAL.R }));
-        counts.appendChild(UI.txt('/', { scale: 3, color: PIX.PAL.q }));
-        counts.appendChild(UI.txt(b + '', { scale: 3, color: PIX.PAL.w }));
       } else {
         counts.appendChild(UI.txt(d.lives + '', { scale: 3, color: PIX.PAL.R }));
         counts.appendChild(UI.txt('/', { scale: 3, color: PIX.PAL.q }));
@@ -1003,41 +665,11 @@ const UI = {
     const fire = document.getElementById('btn-fire');
     if (fire) fire.disabled = !(!DUEL.busy && !d.over && d.turn === 'you');
 
-    UI.syncTrinkets();
     UI.syncItems();
     UI.syncGunPanel();
     if (typeof TUTOR !== 'undefined' && TUTOR.armed()) TUTOR.check();
   },
 
-  syncTrinkets() {
-    const tr = document.getElementById('trinket-row');
-    if (!tr) return;
-    tr.innerHTML = '';
-    for (let i = 0; i < MAX_TRINKETS; i++) {
-      const t = G.trinkets[i];
-      if (!t) { tr.appendChild(U.el('span', 'tslot-empty')); continue; }
-      const def = TRINKETS[t.id];
-      const card = U.el('button', 'tcard has-tip rq-' + def.rarity);
-      card.dataset.tipTrinket = t.id;
-      card.appendChild(SPR.trinketCardEl(t.id, 4));
-      if (def.active) {
-        const key = U.el('span', 'key-hint tk'); key.textContent = i + 1;
-        card.appendChild(key);
-        const pips = U.el('span', 'charge-pips');
-        const left = E.chargesLeft(t);
-        const max = def.active.per === 'reload' ? (E.has('watch') ? 2 : 1) : 1;
-        for (let c = 0; c < max; c++) pips.appendChild(U.el('i', 'cpip' + (c < left ? ' on' : '')));
-        card.appendChild(pips);
-        card.disabled = !E.canUseTrinket(i) || DUEL.busy;
-        card.onclick = () => DUEL.useTrinket(i);
-      } else {
-        card.disabled = false;
-        card.classList.add('passive');
-      }
-      if (G.phase === 'duel' && E.trinketsLocked() && def.active) card.classList.add('locked');
-      tr.appendChild(card);
-    }
-  },
 
   syncItems() {
     const belt = document.getElementById('item-belt');
@@ -1223,20 +855,42 @@ const UI = {
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 2600);
   },
 
-  unlockToast(t) {
+  /* something got pinned to the board: say so, on paper */
+  cardToast(card) {
     const box = document.getElementById('fx-particles');
     const el = U.el('div', 'unlock-toast pop');
-    el.appendChild(SPR.trinketCardEl(t.id, 2));
     const col = U.el('div');
-    col.appendChild(UI.txt('NEW TRINKET', { scale: 3, color: PIX.PAL.G }));
-    col.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.W }));
+    col.appendChild(UI.txt('PINNED TO THE BOARD', { scale: 3, color: PIX.PAL.G }));
+    col.appendChild(UI.txt(card.name, { scale: 3, color: PIX.PAL.W }));
     el.appendChild(col);
     box.appendChild(el);
-    SFX.jackpot();
+    SFX.bank();
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 2600);
   },
 
   /* ================= end screens ================= */
+
+  /* the last card of the story: which ending you got, and the log */
+  buildEnding(app) {
+    const good = G.ending === 'good';
+    const wrap = U.el('div', 'end-wrap');
+    wrap.appendChild(UI.wrap(good ? 'CASE CLOSED' : 'CASE BURIED', 16,
+      { scale: 7, color: good ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K }));
+    wrap.appendChild(UI.wrap(good
+      ? 'HE IS IN A CELL AND YOU ARE STILL A COP. THE FILE HELD.'
+      : 'HE IS IN THE GROUND AND SO IS THE FILE. NOBODY WROTE IT DOWN.', 40,
+      { scale: 3, color: PIX.PAL.w }));
+    const log = U.el('div', 'end-log');
+    (G.log || []).slice(-8).forEach(line => {
+      log.appendChild(UI.wrap(line, 46, { scale: 2, color: PIX.PAL.q }));
+    });
+    wrap.appendChild(log);
+    const again = U.el('div', 'end-again');
+    again.appendChild(UI.wrap('TAP TO OPEN A NEW CASE', 30, { scale: 3, color: PIX.PAL.G }));
+    wrap.appendChild(again);
+    wrap.onclick = () => UI.goto(() => { G.phase = 'title'; });
+    app.appendChild(wrap);
+  },
 
   buildEnd(app, won) {
     const wrap = U.el('div', 'splash');
@@ -1297,87 +951,6 @@ const UI = {
 
   /* ================= collection ================= */
 
-  buildCollection(app) {
-    const meta = META.load();
-    const wrap = U.el('div', 'coll-wrap');
-
-    const head = U.el('div', 'coll-head');
-    head.appendChild(UI.txt('THE COLLECTION', { scale: 5, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    const back = U.el('button', 'pixbtn primary');
-    back.id = 'btn-back';
-    back.appendChild(UI.txt('BACK', { scale: 3, shadow: null }));
-    back.onclick = () => { UI.goto(() => { G.phase = 'title'; }); };
-    head.appendChild(back);
-    wrap.appendChild(head);
-
-    /* trinkets */
-    const t1 = U.el('div', 'coll-sec');
-    t1.appendChild(UI.txt('TRINKETS', { scale: 3, color: PIX.PAL.w }));
-    const tg = U.el('div', 'coll-grid');
-    Object.values(TRINKETS).forEach(t => {
-      const open = META.isUnlocked(t.id);
-      const cardw = U.el('span', 'has-tip coll-card');
-      if (open) {
-        cardw.dataset.tipTrinket = t.id;
-        cardw.appendChild(SPR.trinketCardEl(t.id, 4));
-      } else {
-        cardw.dataset.tipText = 'LOCKED — ' + t.unlock.hint + '.';
-        cardw.appendChild(SPR.clone(SPR.cardBack(), 4));
-      }
-      tg.appendChild(cardw);
-    });
-    t1.appendChild(tg);
-    wrap.appendChild(t1);
-
-    /* guns */
-    const t2 = U.el('div', 'coll-sec');
-    t2.appendChild(UI.txt('THE IRON', { scale: 3, color: PIX.PAL.w }));
-    const gg = U.el('div', 'coll-grid');
-    GUNS.forEach(g => {
-      const owned = meta.gunsOwned[g.id];
-      const w = U.el('span', 'has-tip coll-gun');
-      w.dataset.tipGun = g.id;
-      const el = SPR.gunEl(g.id, 2);
-      if (!owned) el.style.filter = 'brightness(0) opacity(.45)';
-      w.appendChild(el);
-      gg.appendChild(w);
-    });
-    t2.appendChild(gg);
-    wrap.appendChild(t2);
-
-    /* the mob */
-    const t3 = U.el('div', 'coll-sec');
-    t3.appendChild(UI.txt('THE MOB', { scale: 3, color: PIX.PAL.w }));
-    const bg2 = U.el('div', 'coll-grid');
-    BOSSES.forEach(b => {
-      const kills = meta.bossSeen[b.id] || 0;
-      const w = U.el('span', 'has-tip coll-boss');
-      const el = SPR.frogEl(b.id, 3);
-      if (kills) {
-        w.dataset.tipBoss = b.id;
-        const k = U.el('div', 'boss-kills');
-        k.appendChild(UI.txt('×' + kills, { scale: 3, color: PIX.PAL.G }));
-        w.appendChild(el); w.appendChild(k);
-      } else {
-        w.dataset.tipText = '??? — nobody\'s collected on him yet.';
-        el.style.filter = 'brightness(0) opacity(.55)';
-        w.appendChild(el);
-      }
-      bg2.appendChild(w);
-    });
-    t3.appendChild(bg2);
-    wrap.appendChild(t3);
-
-    /* account line */
-    const s = meta.stats;
-    const line = U.el('div', 'best-line');
-    line.appendChild(UI.txt(
-      'RUNS ' + s.runs + '   SHOTS ' + s.shots + '   SELF-BLANKS ' + s.selfBlanks +
-      '   BOSSES DROPPED ' + s.bossKills, { scale: 3, color: PIX.PAL.q }));
-    wrap.appendChild(line);
-
-    app.appendChild(wrap);
-  },
 
   /* ================= fx (dom layer) ================= */
 
@@ -1487,21 +1060,12 @@ const UI = {
     mess: () => `<b>THE TRAIL</b> — what he left on the boards coming through the door. Tap a stain to go over it with the rag: it costs you seconds and a little noise. Walk out over the rest and somebody finds it in the morning — that is chips now and dearer protection later.`,
     counts: () => E.countsHidden()
       ? `<b>THE LOAD</b> — Blind Newt keeps the count to himself.`
-      : `<b>THE LOAD</b> — this drum loaded with <b>${G.duel.lives} LIVE</b>, <b>${G.duel.blanks} blank</b>.${E.has('counter') ? ' Your bead counter tracks what\'s left.' : ' What\'s left is on you to count.'}`,
+      : `<b>THE LOAD</b> — this drum loaded with <b>${G.duel.lives} LIVE</b>, <b>${G.duel.blanks} blank</b>. What's left is on you to count.`,
     strip: () => `<b>THE DRUM</b> — shells in firing order. The one under the ${'▲'} hammer goes next. Blank on yourself = you keep the turn.`,
   },
 
   tooltipFor(el) {
     const ds = el.dataset;
-    if (ds.tipTrinket) {
-      const t = TRINKETS[ds.tipTrinket];
-      const r = RARITY_META[t.rarity].label;
-      const act = t.active
-        ? `<div class="tt-odds">ACTIVE — once a ${t.active.per === 'duel' ? 'duel' : 'load'}</div>`
-        : `<div class="tt-odds">passive</div>`;
-      return `<div class="tt-name">${t.name} <span class="rar-${t.rarity}">${r}</span></div>
-        <div class="tt-desc">${t.desc}</div>${act}`;
-    }
     if (ds.tipOppTells) {
       const opp = G.duel && G.duel.opp;
       if (!opp) return null;
@@ -1517,7 +1081,7 @@ const UI = {
     }
     if (ds.tipItem) {
       const it = ITEMS[ds.tipItem];
-      const r = RARITY_META[it.rarity].label;
+      const r = it.rarity.toUpperCase();
       const when = it.use === 'loot' ? 'at the corpse' : it.use === 'duel' ? 'at the table' : 'anywhere';
       return `<div class="tt-name">${it.name} <span class="rar-${it.rarity}">${r}</span></div>
         <div class="tt-desc">${it.desc}</div><div class="tt-odds">ONE SHOT — ${when}</div>`;
@@ -1655,7 +1219,6 @@ const UI = {
         if (k === 'a' || e.key === 'ArrowLeft') DUEL.setAim('self');
         else if (k === 'd' || e.key === 'ArrowRight') DUEL.setAim('foe');
         else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); DUEL.onFire(); }
-        else if (k >= '1' && k <= '5') DUEL.useTrinket(+k - 1);
         else if (k >= '6' && k <= '9') UI.onUseItem(+k - 6);
         else if (k === 'q') DUEL.useGunActive('saw');
         else if (k === 'e') DUEL.useGunActive('tommy');

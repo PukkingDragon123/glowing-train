@@ -2492,7 +2492,6 @@ const DUEL = {
       DUEL.room = 'back';
       DUEL.pool = 14;
       COPS.GROUND = DUEL.FY - 8;
-      BG.set('back');
       E.makeMess();
     }, 120);
     /* the little convoy: you, walking backwards, him by the boots */
@@ -2560,7 +2559,6 @@ const DUEL = {
     SFX.coin();
   },
 
-  useTrinket: null,
 
   useGunActive(kind) {
     if (DUEL.busy) return;
@@ -2648,34 +2646,3 @@ const DUEL = {
   },
 };
 
-DUEL.useTrinket = async function (i) {
-  if (DUEL.busy || !E.canUseTrinket(i)) return;
-  const ev = E.useTrinket(i);
-  if (!ev) return;
-  switch (ev.type) {
-    case 'heal':
-      SFX.bank(); UI.stampSmall('+1 HEART');
-      FX.sparks(24, 122, 8, 1.2);
-      FX.floatText(28, 112, '+1', PIX.PAL.R);
-      break;
-    case 'eject': {
-      SFX.jamSfx();
-      UI.stampSmall(ev.live ? 'RACKED — LIVE' : 'RACKED — blank');
-      DUEL.casings.push({ x: 180, y: 118, vx: 1.5, vy: -2.5, vr: 0.3, rot: 0, t: 0 });
-      if (ev.reloaded) { SFX.spin(); await UI.loadBanner(); }
-      break;
-    }
-    case 'peek':
-      SFX.click(); UI.stampSmall(ev.live ? 'CHAMBERED: LIVE' : 'CHAMBERED: blank');
-      break;
-    case 'cuffs':
-      SFX.chak(); UI.stampSmall('CUFFED');
-      DUEL.setExpr('angry', 90);
-      break;
-    case 'mirror':
-      SFX.spin(); DUEL.whitePulse = 0.5;
-      UI.stampSmall(ev.live ? 'FLIPPED: LIVE' : 'FLIPPED: blank');
-      break;
-  }
-  UI.syncDuel();
-};

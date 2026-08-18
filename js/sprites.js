@@ -3624,78 +3624,9 @@ const TRINKET_RAR = {
   legendary: ['g', 'H'],
 };
 
-SPR.trinketCard = function (id) {
-  return SPR.cached('tcard_' + id, () => {
-    const t = TRINKETS[id];
-    const P = PIX.PAL;
-    const rc = TRINKET_RAR[t.rarity];
-    const W = 22, H = 28;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
-    // chunky card: ink border, rarity frame, dark face
-    PIX.rect(ctx, 1, 0, W - 2, H, P.K); PIX.rect(ctx, 0, 1, W, H - 2, P.K);
-    PIX.rect(ctx, 2, 1, W - 4, H - 2, P[rc[0]]);
-    PIX.rect(ctx, 1, 2, W - 2, H - 4, P[rc[0]]);
-    PIX.rect(ctx, 3, 3, W - 6, H - 6, P[rc[1]]);
-    PIX.rect(ctx, 3, 3, W - 6, 1, P.k);
-    // face texture
-    for (let y = 5; y < H - 5; y += 2) PIX.rect(ctx, 4, y, W - 8, 1, 'rgba(0,0,0,.18)');
-    // glyph, centered in the upper area
-    const rows = (t.glyph || []).filter(r => r && r.length);
-    const gw = Math.max(...rows.map(r => r.length), 1);
-    const ox = Math.floor((W - gw) / 2), oy = Math.floor((H - 8 - rows.length) / 2) + 1;
-    rows.forEach((row, j) => {
-      for (let i = 0; i < row.length; i++) {
-        const c = row[i];
-        if (c !== '.' && c !== ' ') {
-          ctx.fillStyle = P[c] || P.W;
-          ctx.fillRect(ox + i, oy + j, 1, 1);
-        }
-      }
-    });
-    // rarity gem at the bottom
-    PIX.rect(ctx, W / 2 - 2, H - 7, 4, 3, P.K);
-    PIX.rect(ctx, W / 2 - 1, H - 6, 2, 1, P[rc[0]]);
-    if (t.rarity === 'legendary') { // gold corner sparks
-      PIX.rect(ctx, 3, 3, 2, 2, P.G); PIX.rect(ctx, W - 5, 3, 2, 2, P.G);
-      PIX.rect(ctx, 3, H - 5, 2, 2, P.G); PIX.rect(ctx, W - 5, H - 5, 2, 2, P.G);
-    }
-    return cv;
-  });
-};
 
-SPR.trinketCardEl = function (id, scale, cls) {
-  return SPR.clone(SPR.trinketCard(id), scale, cls);
-};
 
 /* face-down card for locked collection slots */
-SPR.cardBack = function () {
-  return SPR.cached('tcard_back', () => {
-    const P = PIX.PAL;
-    const W = 22, H = 28;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
-    PIX.rect(ctx, 1, 0, W - 2, H, P.K); PIX.rect(ctx, 0, 1, W, H - 2, P.K);
-    PIX.rect(ctx, 2, 1, W - 4, H - 2, P.t);
-    PIX.rect(ctx, 1, 2, W - 2, H - 4, P.t);
-    PIX.rect(ctx, 3, 3, W - 6, H - 6, P.T);
-    for (let y = 4; y < H - 4; y += 3) {
-      for (let x = 4 + (y % 2); x < W - 4; x += 3) {
-        PIX.rect(ctx, x, y, 1, 1, P.t);
-      }
-    }
-    // big ? in the middle
-    const q = ['.WWW.', 'W...W', '...W.', '..W..', '.....', '..W..'];
-    q.forEach((row, j) => {
-      for (let i = 0; i < row.length; i++) {
-        if (row[i] === 'W') { ctx.fillStyle = P.q; ctx.fillRect(8 + i, 10 + j, 1, 1); }
-      }
-    });
-    return cv;
-  });
-};
 
 /* swamp pd badge */
 PIX.def('ic_badge', `

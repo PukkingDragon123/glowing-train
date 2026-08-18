@@ -63,8 +63,33 @@ const CINE = {
     return CINE._urls[key];
   },
 
-  /* the card back, tileable */
-  tex() { return CINE.url('back', SPR.cardBack(), 3); },
+  /* The wipe used to be a rack of card backs. This is a murder case, not
+     a card game: the screen now closes behind a bank of venetian blinds
+     with a case-file tab riveted to each slat. */
+  slat() {
+    return ART.cached('slatcol', () => {
+      const W = 34, H = 96;
+      const o = ART.cv(W, H), c = o.c, P = PIX.PAL;
+      ART.px(c, 0, 0, W, H, '#10131a');
+      for (let y = 0; y < H; y += 6) {
+        ART.px(c, 0, y, W, 5, '#1b2028');
+        ART.px(c, 0, y, W, 1, '#2b323c');
+        ART.px(c, 0, y + 4, W, 1, '#0a0d12');
+      }
+      /* the pull cord and its knot, down the middle */
+      ART.px(c, W / 2 - 1, 0, 1, H, '#3a4250');
+      ART.px(c, W / 2 - 2, H / 2, 3, 4, '#5a6270');
+      /* a paper tab, taped on, because everything here is evidence */
+      ART.px(c, 4, 30, 26, 16, P.K);
+      ART.px(c, 5, 31, 24, 14, '#ded2b4');
+      ART.px(c, 7, 34, 20, 1, '#8d8672');
+      ART.px(c, 7, 37, 14, 1, '#8d8672');
+      ART.px(c, 7, 40, 18, 1, '#8d8672');
+      ART.px(c, 5, 31, 24, 2, '#b8232f');
+      return o.cv;
+    });
+  },
+  tex() { return CINE.url('slat', CINE.slat(), 1); },
   chipTex() { return CINE.url('chip', PIX.make('ic_chip', 1), 4); },
 
   /* ============================================================
@@ -394,7 +419,8 @@ const CINE = {
      THE DRIVE. Rain, wipers, two depths of skyline going by, and
      the precinct at the end of it. This is the loading screen.
      ============================================================ */
-  async driveTo() {
+  async driveTo(dest) {
+    dest = dest || 'THE PRECINCT';
     const root = CINE.stage();
     root.className = 'anim-cut';
     root.innerHTML = '';
@@ -471,8 +497,11 @@ const CINE = {
         const ry = (i * 53) % 100;
         PIX.rect(c, 180 - rx, ry, 2, 1, 'rgba(127,215,255,.22)');
       }
-      const lab = PIXFONT.render('TO THE PRECINCT', { scale: 1, color: P.q, shadow: null });
+      const lab = PIXFONT.render('TO ' + dest, { scale: 1, color: P.q, shadow: null });
       c.drawImage(lab, Math.round(90 - lab.width / 2), 99);
+      const dots = '.'.repeat(1 + (Math.floor(t * 2) % 3));
+      const d2 = PIXFONT.render(dots, { scale: 1, color: P.q, shadow: null });
+      c.drawImage(d2, Math.round(90 + lab.width / 2 + 2), 99);
     };
 
     try {
@@ -808,26 +837,540 @@ const CINE = {
     root.className = 'hidden';
   },
 
+
   /* ============================================================
-     AMBIENCE. Card backs drifting across the menus, because an
-     empty swirl behind a title screen is a wasted swirl.
+     A CANVAS FILM STRIP.
+     Every cinematic below runs on the same rig: one pixel canvas
+     blown up by an integer, a draw(t) per shot, tap to skip.
+     Shots are listed with their length so a scene can be cut
+     like a scene instead of animated like a loop.
      ============================================================ */
-  ambient(on) {
-    const r = CINE.amb();
-    r.innerHTML = '';
-    r.className = on ? 'on' : '';
-    if (!on) return;
-    const tex = CINE.tex();
-    for (let i = 0; i < 7; i++) {
-      const c = U.el('i', 'drift-card');
-      c.style.backgroundImage = 'url(' + tex.url + ')';
-      c.style.width = tex.w + 'px';
-      c.style.height = tex.h + 'px';
-      c.style.top = (Math.random() * 92) + '%';
-      c.style.animationDuration = (16 + Math.random() * 16) + 's';
-      c.style.animationDelay = (-Math.random() * 24) + 's';
-      c.style.setProperty('--spin', (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 26) + 'deg');
-      r.appendChild(c);
+  async film(shots, opts) {
+    opts = opts || {};
+    const root = CINE.stage();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const W = opts.w || 180, H = opts.h || 108;
+    const cv = document.createElement('canvas');
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / (W + 10), window.innerHeight / (H + 22))), 2, 8);
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix anim-frame';
+    root.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    if (opts.bars) CINE.letterbox(true);
+
+    let skip = false, skipAll = false;
+    const bail = () => { skip = true; if (opts.skipAll) skipAll = true; };
+    window.addEventListener('pointerdown', bail);
+    window.addEventListener('keydown', bail);
+    try {
+      for (const shot of shots) {
+        skip = false;
+        if (shot.snd) shot.snd();
+        const t0 = performance.now();
+        for (;;) {
+          const t = (performance.now() - t0) / 1000;
+          if (t > shot.len || skipAll) break;
+          if (skip && t > 0.12) break;
+          c.clearRect(0, 0, W, H);
+          shot.draw(c, t, W, H);
+          /* the caption, if the shot carries one */
+          if (shot.cap) {
+            const lab = PIXFONT.render(shot.cap, { scale: 1, color: PIX.PAL.W, shadow: PIX.PAL.K });
+            c.drawImage(lab, Math.round(W / 2 - lab.width / 2), H - 12);
+          }
+          await U.sleep(28);
+        }
+      }
+    } finally {
+      window.removeEventListener('pointerdown', bail);
+      window.removeEventListener('keydown', bail);
+      root.innerHTML = '';
+      root.className = 'hidden';
+      if (opts.bars) CINE.letterbox(false);
     }
+  },
+
+  /* ============================================================
+     THE AMBULANCE. You do not get a game over; you get a bill.
+     Two shots: the wagon coming through the rain, and the
+     ceiling of the corridor going past your own eyes.
+     ============================================================ */
+  async ambulance(bill, lostName) {
+    const P = PIX.PAL;
+    const rng = U.mulberry32(773);
+    const stars = Array.from({ length: 30 }, () => [rng() * 180, rng() * 30]);
+
+    const street = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#05070c');
+      stars.forEach(([x, y]) => PIX.rect(c, Math.round(x), Math.round(y), 1, 1, 'rgba(200,220,255,.25)'));
+      /* skyline going by */
+      const off = Math.round(t * 90) % 120;
+      for (let i = -1; i < 3; i++) {
+        const bx = i * 120 - off;
+        PIX.rect(c, bx, 40, 46, 42, '#0c1018');
+        PIX.rect(c, bx + 52, 30, 30, 52, '#0a0e16');
+        PIX.rect(c, bx + 88, 46, 24, 36, '#0e1220');
+        for (let w = 0; w < 10; w++) {
+          if ((w + i) % 3) continue;
+          PIX.rect(c, bx + 5 + (w % 5) * 9, 46 + Math.floor(w / 5) * 14, 3, 4, '#8a6a1e');
+        }
+      }
+      /* wet road with the light of the wagon smeared down it */
+      PIX.rect(c, 0, 82, W, H - 82, '#0b0e14');
+      PIX.rect(c, 0, 82, W, 2, '#1a2030');
+      const strobe = Math.sin(t * 22) > 0 ? '#d13b45' : '#3f89c4';
+      for (let i = 0; i < 26; i++) {
+        PIX.rect(c, (i * 13 + Math.round(t * 200)) % W, 86 + (i % 5) * 4, 8, 1,
+          i % 3 ? 'rgba(255,255,255,.06)' : strobe.replace(')', ',.25)').replace('#', 'rgba(').length ? 'rgba(200,60,70,.18)' : '');
+      }
+      /* the wagon, side on, coming toward the right of frame */
+      const ax = -50 + t * 130;
+      PIX.rect(c, ax, 58, 56, 24, P.K);
+      PIX.rect(c, ax + 1, 59, 54, 22, '#e8e2d0');            // the box
+      PIX.rect(c, ax + 1, 59, 54, 3, P.W);
+      PIX.rect(c, ax + 4, 64, 14, 10, '#9aa3b8');            // the window
+      PIX.rect(c, ax + 5, 65, 12, 8, '#2b3a4a');
+      PIX.rect(c, ax + 24, 66, 26, 3, '#d13b45');            // the stripe
+      PIX.rect(c, ax + 34, 71, 4, 10, '#d13b45');            // the cross
+      PIX.rect(c, ax + 31, 74, 10, 4, '#d13b45');
+      PIX.rect(c, ax + 46, 52, 12, 7, P.K);                  // the light bar
+      PIX.rect(c, ax + 47, 53, 10, 5, strobe);
+      PIX.disc(c, ax + 12, 82, 5, P.K); PIX.disc(c, ax + 12, 82, 3, '#3f465c');
+      PIX.disc(c, ax + 44, 82, 5, P.K); PIX.disc(c, ax + 44, 82, 3, '#3f465c');
+      /* what the light does to the street */
+      c.globalAlpha = 0.16; c.fillStyle = strobe;
+      c.fillRect(0, 40, W, H - 40);
+      c.globalAlpha = 1;
+      /* rain, hard, sideways */
+      for (let i = 0; i < 70; i++) {
+        const rx = (i * 31 + Math.round(t * 260)) % (W + 10) - 5;
+        const ry = (i * 47) % H;
+        PIX.rect(c, W - rx, ry, 3, 1, 'rgba(160,200,235,.20)');
+      }
+    };
+
+    const corridor = (c, t, W, H) => {
+      /* your own view, flat on your back, being run down a corridor */
+      PIX.rect(c, 0, 0, W, H, '#0a0f14');
+      /* ceiling tiles rushing away over you */
+      const sp = Math.max(0, 1 - t * 0.22);
+      const off = Math.round((t * 150) % 30);
+      for (let i = -1; i < 6; i++) {
+        const y = i * 30 - off;
+        PIX.rect(c, 0, y, W, 2, '#161d24');
+        for (let x = 0; x < W; x += 34) PIX.rect(c, x, y, 2, 30, '#141a20');
+      }
+      /* the strip lights, one every other tile, streaking with the speed */
+      for (let i = -1; i < 6; i++) {
+        const y = i * 60 - Math.round((t * 150) % 60);
+        PIX.rect(c, 52, y, 76, 7, '#2a333c');
+        PIX.rect(c, 54, y + 1, 72, 5, '#ffe9a3');
+        PIX.rect(c, 54 - Math.round(sp * 10), y + 2, 72 + Math.round(sp * 20), 3, '#fffbe8');
+        for (let k = 0; k < 6; k++) {
+          PIX.rect(c, 40, y + 8 + k * 3, 100, 1, 'rgba(255,233,163,' + (0.06 - k * 0.008) + ')');
+        }
+      }
+      /* two frogs running you in, seen from below: hands on the rail */
+      PIX.rect(c, 0, H - 34, 26, 34, P.K);
+      PIX.rect(c, 2, H - 32, 22, 32, '#2e7d5b');
+      PIX.rect(c, W - 26, H - 34, 26, 34, P.K);
+      PIX.rect(c, W - 24, H - 32, 22, 32, '#276a4c');
+      PIX.rect(c, 18, H - 30, 12, 6, P.K);
+      PIX.rect(c, W - 30, H - 26, 12, 6, P.K);
+      /* the mask coming down over the lens */
+      if (t > 1.1) {
+        const a = Math.min(0.8, (t - 1.1) * 0.9);
+        c.globalAlpha = a; c.fillStyle = '#e8e2d0';
+        c.fillRect(30, H - 60, W - 60, 40);
+        c.globalAlpha = 1;
+      }
+      /* the edges closing in */
+      const vig = Math.min(0.75, t * 0.24);
+      for (let i = 0; i < 16; i++) {
+        const a = vig * (1 - i / 16);
+        PIX.rect(c, 0, i, W, 1, 'rgba(0,0,0,' + a + ')');
+        PIX.rect(c, 0, H - 1 - i, W, 1, 'rgba(0,0,0,' + a + ')');
+        PIX.rect(c, i, 0, 1, H, 'rgba(0,0,0,' + a * 0.7 + ')');
+        PIX.rect(c, W - 1 - i, 0, 1, H, 'rgba(0,0,0,' + a * 0.7 + ')');
+      }
+    };
+
+    const bench = (c, t, W, H) => {
+      /* the bill, on a form, on a clipboard */
+      PIX.rect(c, 0, 0, W, H, '#0c1014');
+      PIX.rect(c, 40, 14, 100, 84, P.K);
+      PIX.rect(c, 42, 16, 96, 80, '#ded2b4');
+      PIX.rect(c, 42, 16, 96, 6, '#b8232f');
+      const head = PIXFONT.render('CITY INFIRMARY', { scale: 1, color: '#141820', shadow: null });
+      c.drawImage(head, 90 - head.width / 2, 26);
+      for (let i = 0; i < 5; i++) PIX.rect(c, 50, 36 + i * 6, 60 + (i % 2) * 18, 1, '#8d8672');
+      const b1 = PIXFONT.render('GUNSHOT - TREATED', { scale: 1, color: '#3a3428', shadow: null });
+      c.drawImage(b1, 50, 68);
+      const b2 = PIXFONT.render(bill + ' CHIPS', { scale: 2, color: '#8c2230', shadow: null });
+      c.drawImage(b2, 50, 78);
+      if (lostName && t > 0.7) {
+        const b3 = PIXFONT.render('LOST: ' + lostName, { scale: 1, color: '#8c2230', shadow: null });
+        c.drawImage(b3, 44, 92);
+      }
+      /* a stamp coming down at the end */
+      if (t > 1.2) {
+        const k = Math.min(1, (t - 1.2) * 6);
+        const s = Math.round(3 - k * 2);
+        const st = PIXFONT.render('DISCHARGED', { scale: s, color: 'rgba(140,34,48,.85)', shadow: null });
+        c.save();
+        c.translate(92, 60); c.rotate(-0.14);
+        c.drawImage(st, -st.width / 2, -st.height / 2);
+        c.restore();
+        if (k >= 1 && !bench._rang) { bench._rang = true; SFX.chak(); }
+      }
+    };
+
+    await CINE.film([
+      { len: 1.7, draw: street, cap: 'THEY GOT TO YOU FIRST', snd: () => { SFX.tone(880, 0.4, 'square', 0.06); SFX.tone(660, 0.4, 'square', 0.06, 0.4); } },
+      { len: 1.9, draw: corridor, snd: () => SFX.tone(1100, 0.06, 'sine', 0.05) },
+      { len: 1.9, draw: bench, cap: 'AGAINST MEDICAL ADVICE' },
+    ], { bars: true });
+  },
+
+  /* ============================================================
+     A CHOICE. Two drawn cards, one decision, no menu.
+     ============================================================ */
+  choice(o) {
+    return new Promise(res => {
+      const root = CINE.stage();
+      root.className = 'anim-cut choice';
+      root.innerHTML = '';
+      const wrap = U.el('div', 'ch-wrap');
+      const head = U.el('div', 'ch-head');
+      head.appendChild(UI.wrap(o.head, 30, { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
+      wrap.appendChild(head);
+      const row = U.el('div', 'ch-row');
+      [o.a, o.b].forEach(side => {
+        const card = U.el('div', 'ch-card' + (side.dim ? ' dim' : ''));
+        const K = U.clamp(Math.floor(window.innerWidth / 420), 2, 5);
+        const cv = document.createElement('canvas');
+        cv.width = 92 * K; cv.height = 116 * K;
+        cv.className = 'pix';
+        const c = cv.getContext('2d');
+        c.imageSmoothingEnabled = false;
+        c.scale(K, K);
+        /* the card face: ink, plate, and the thing itself drawn on it */
+        PIX.rect(c, 0, 0, 92, 116, PIX.PAL.K);
+        PIX.rect(c, 2, 2, 88, 112, side.dim ? '#191c22' : '#20262e');
+        PIX.rect(c, 2, 2, 88, 2, 'rgba(255,255,255,.1)');
+        for (let y = 6; y < 110; y += 3) PIX.rect(c, 4, y, 84, 1, 'rgba(0,0,0,.2)');
+        if (side.key === 'badge') {
+          const b = ART.art('badge', 4);
+          c.drawImage(b, 46 - b.width / 2, 20);
+          PIX.rect(c, 26, 62, 40, 3, side.dim ? '#3a3a3a' : '#9aa3b8');
+          PIX.rect(c, 30, 66, 32, 2, side.dim ? '#2a2a2a' : '#646d84');
+        } else {
+          const g = ART.art('gunprop', 4);
+          c.drawImage(g, 46 - g.width / 2, 26);
+          PIX.rect(c, 30, 62, 32, 3, '#d13b45');
+        }
+        const lab = PIXFONT.render(side.label, { scale: 2, color: side.dim ? PIX.PAL.q : PIX.PAL.W, shadow: null });
+        c.drawImage(lab, 46 - lab.width / 2, 76);
+        SPR.fitLines(side.sub, 22).forEach((ln, i) => {
+          const l2 = PIXFONT.render(ln, { scale: 1, color: PIX.PAL.q, shadow: null });
+          c.drawImage(l2, 46 - l2.width / 2, 90 + i * 8);
+        });
+        card.appendChild(cv);
+        card.onclick = () => {
+          SFX.chak();
+          root.innerHTML = ''; root.className = 'hidden';
+          res(side.key);
+        };
+        row.appendChild(card);
+      });
+      wrap.appendChild(row);
+      root.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('in'));
+    });
+  },
+
+  /* ============================================================
+     PICK ONE. A drawn spread of cards — questions to put to a
+     room, evidence to turn over, a face to name. Tap one, or tap
+     the dark to back out. No button strip anywhere.
+     ============================================================ */
+  pick(o) {
+    return new Promise(res => {
+      const root = CINE.stage();
+      root.className = 'anim-cut choice';
+      root.innerHTML = '';
+      const wrap = U.el('div', 'ch-wrap pickwrap');
+      if (o.head) {
+        const head = U.el('div', 'ch-head');
+        head.appendChild(UI.wrap(o.head, 34, { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
+        if (o.sub) head.appendChild(UI.wrap(o.sub, 44, { scale: 2, color: PIX.PAL.q }));
+        wrap.appendChild(head);
+      }
+      const row = U.el('div', 'ch-row pickrow');
+      const K = U.clamp(Math.floor(window.innerWidth / 520), 2, 4);
+      const anyArt = (o.items || []).some(it => it.art);
+      (o.items || []).forEach((it, i) => {
+        const card = U.el('div', 'pick-card' + (it.dim ? ' dim' : ''));
+        const cv = document.createElement('canvas');
+        const W = 84, Hh = anyArt ? 100 : 62;
+        cv.width = W * K; cv.height = Hh * K;
+        cv.className = 'pix';
+        const c = cv.getContext('2d');
+        c.imageSmoothingEnabled = false;
+        c.scale(K, K);
+        /* a paper card, taped at the top, typed on */
+        PIX.rect(c, 0, 0, W, Hh, PIX.PAL.K);
+        PIX.rect(c, 1, 1, W - 2, Hh - 2, it.dim ? '#8f8a7a' : '#ded2b4');
+        PIX.rect(c, 1, 1, W - 2, 2, it.dim ? '#a09a88' : '#efe6cc');
+        PIX.rect(c, 1, Hh - 3, W - 2, 2, 'rgba(0,0,0,.18)');
+        for (let y = 6; y < Hh - 4; y += 4) PIX.rect(c, 3, y, W - 6, 1, 'rgba(0,0,0,.05)');
+        PIX.rect(c, W / 2 - 9, -1, 18, 4, 'rgba(240,235,220,.55)');
+        /* the art, fitted into its window rather than spilling over the type */
+        if (it.art) {
+          const a = it.art, bw = 72, bh = 52;
+          const k2 = Math.min(bw / a.width, bh / a.height);
+          const aw = Math.max(1, Math.round(a.width * k2)), ah = Math.max(1, Math.round(a.height * k2));
+          PIX.rect(c, 5, 5, W - 10, bh + 2, '#141820');
+          PIX.rect(c, 5, 5, W - 10, 1, 'rgba(0,0,0,.5)');
+          c.drawImage(a, Math.round(W / 2 - aw / 2), 6 + Math.round((bh - ah) / 2), aw, ah);
+        }
+        const ty = anyArt ? 62 : 10;
+        const lab = SPR.fitLines(it.label, 14).slice(0, 3);
+        lab.forEach((ln, j) => {
+          const l = PIXFONT.render(ln, { scale: 1, color: '#141820', shadow: null });
+          c.drawImage(l, Math.round(W / 2 - l.width / 2), ty + j * 9);
+        });
+        if (it.sub) {
+          SPR.fitLines(it.sub, 14).slice(0, 3).forEach((ln, j) => {
+            const l2 = PIXFONT.render(ln, { scale: 1, color: '#8c2230', shadow: null });
+            c.drawImage(l2, Math.round(W / 2 - l2.width / 2), ty + lab.length * 9 + 2 + j * 8);
+          });
+        }
+        card.appendChild(cv);
+        if (!it.dim) card.onclick = (ev) => {
+          ev.stopPropagation();
+          SFX.deal();
+          root.innerHTML = ''; root.className = 'hidden';
+          res(i);
+        };
+        row.appendChild(card);
+      });
+      wrap.appendChild(row);
+      if (o.cancel !== false) {
+        const out = U.el('div', 'pick-out');
+        out.appendChild(UI.wrap('TAP THE DARK TO STEP BACK', 34, { scale: 2, color: PIX.PAL.q }));
+        wrap.appendChild(out);
+        root.onclick = () => { root.innerHTML = ''; root.className = 'hidden'; res(-1); };
+      }
+      root.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('in'));
+    });
+  },
+
+  /* ============================================================
+     THE TWO ENDINGS.
+     ============================================================ */
+  async ending(kind) {
+    const P = PIX.PAL;
+
+    /* --- shared: rain that can stop --- */
+    const rain = (c, t, W, H, amt) => {
+      for (let i = 0; i < Math.round(70 * amt); i++) {
+        const rx = (i * 29 + Math.round(t * 190)) % (W + 8) - 4;
+        const ry = (i * 41 + Math.round(t * 260)) % H;
+        PIX.rect(c, rx, ry, 1, 3, 'rgba(160,200,235,.18)');
+      }
+    };
+
+    if (kind === 'good') {
+      /* SHOT 1 — a courtroom, from the gallery */
+      const court = (c, t, W, H) => {
+        PIX.rect(c, 0, 0, W, H, '#141019');
+        c.drawImage(ART.wall(W, 78, { tone: 'brick', railY: 52, seed: 61 }), 0, 0);
+        /* the high window with morning in it, the first light in the game */
+        const dawn = Math.min(1, t / 1.6);
+        PIX.rect(c, 118, 8, 44, 34, P.K);
+        PIX.rect(c, 120, 10, 40, 30, '#2a3a4a');
+        PIX.rect(c, 120, 10, 40, 30, 'rgba(255,220,150,' + (dawn * 0.6) + ')');
+        for (let i = 0; i < 8; i++) {
+          PIX.rect(c, 100 - i * 3, 40 + i * 6, 70, 4, 'rgba(255,225,160,' + (dawn * 0.05) + ')');
+        }
+        /* the bench, the seal, the gavel */
+        PIX.rect(c, 20, 44, 96, 30, P.K);
+        PIX.rect(c, 22, 46, 92, 26, '#4d301a');
+        ART.grain(c, 24, 48, 88, 22, '#3a2414', '#6b4426', 5);
+        PIX.rect(c, 56, 34, 24, 12, P.h);                    // the seal
+        PIX.rect(c, 58, 36, 20, 8, P.G);
+        /* the judge, a small shape behind it */
+        PIX.rect(c, 60, 22, 18, 22, P.K);
+        PIX.rect(c, 62, 24, 14, 20, '#1c1a2c');
+        PIX.rect(c, 64, 26, 10, 8, '#4fae6d');
+        /* him, in the dock, in cuffs — the first time he is smaller than you */
+        const bx = 132;
+        PIX.rect(c, bx, 52, 22, 26, P.K);
+        PIX.rect(c, bx + 1, 53, 20, 24, '#3a3f52');
+        PIX.rect(c, bx + 4, 44, 15, 12, P.K);
+        PIX.rect(c, bx + 5, 45, 13, 10, '#2e7d5b');
+        PIX.rect(c, bx + 7, 48, 3, 2, P.W); PIX.rect(c, bx + 13, 48, 3, 2, P.W);
+        PIX.rect(c, bx + 6, 62, 12, 4, P.S);                 // the cuffs
+        PIX.rect(c, bx + 10, 63, 4, 2, P.M);
+        /* the gavel coming down on the last beat */
+        if (t > 1.5) {
+          const k = Math.min(1, (t - 1.5) * 8);
+          const gy = 30 + Math.round(k * 12);
+          PIX.rect(c, 96, gy, 12, 5, P.K);
+          PIX.rect(c, 97, gy + 1, 10, 3, '#6b4426');
+          PIX.rect(c, 100, gy + 5, 3, 8, '#4d301a');
+          if (k >= 1 && !court._bang) { court._bang = true; SFX.shot(); FX.screen.flash && FX.screen.flash(P.W, 0.2); }
+        }
+        /* you, in the gallery, watching, out of focus in the foreground */
+        PIX.rect(c, 0, 74, 40, H - 74, '#0c0a12');
+        PIX.rect(c, 6, 66, 20, 14, '#0f0d16');
+      };
+
+      /* SHOT 2 — the two graves, and the rain finally stopping */
+      const graves = (c, t, W, H) => {
+        const amt = Math.max(0, 1 - t / 1.4);
+        PIX.rect(c, 0, 0, W, H, '#101820');
+        /* dawn coming up behind the hill */
+        for (let i = 0; i < 30; i++) {
+          PIX.rect(c, 0, i, W, 1, 'rgba(255,210,150,' + (0.02 + (1 - amt) * 0.04) * (1 - i / 30) + ')');
+        }
+        PIX.rect(c, 0, 62, W, H - 62, '#14231c');
+        ART.dither(c, 0, 62, W, H - 62, '#1c3327', 0.2, 9);
+        /* the stones, side by side */
+        [[64, 'wife'], [92, 'kid']].forEach(([gx]) => {
+          PIX.rect(c, gx, 44, 20, 22, P.K);
+          PIX.rect(c, gx + 1, 45, 18, 20, '#5a6068');
+          PIX.rect(c, gx + 1, 45, 18, 3, '#767c86');
+          PIX.rect(c, gx + 5, 52, 10, 1, '#3a3f46');
+          PIX.rect(c, gx + 6, 56, 8, 1, '#3a3f46');
+          PIX.rect(c, gx + 4, 66, 12, 3, P.K);
+        });
+        /* flowers he sent, replaced by flowers you brought */
+        PIX.rect(c, 68, 68, 3, 3, '#d13b45'); PIX.rect(c, 74, 69, 3, 3, '#ff7edb');
+        PIX.rect(c, 96, 68, 3, 3, '#d13b45'); PIX.rect(c, 101, 69, 3, 3, '#ffd75e');
+        /* you and her, backs to us, standing far enough apart to be honest */
+        c.drawImage(SCENE.rig(SCENE.meDef(), 0, 1), 118, 38);
+        c.drawImage(SCENE.rig(ROOMS.MAY_RIG, 0, -1), 138, 38);
+        rain(c, t, W, H, amt);
+        if (amt < 0.05) {
+          PIX.rect(c, 0, 0, W, H, 'rgba(255,225,170,.04)');
+        }
+      };
+
+      await CINE.film([
+        { len: 2.4, draw: court, cap: 'THE STATE VERSUS THE BULLFROG' },
+        { len: 2.6, draw: graves, cap: 'IT STOPPED RAINING' },
+      ], { bars: true });
+      await CINE.titleBeat('CASE CLOSED', 'YOU STAYED A COP.', P.G);
+    } else {
+      /* SHOT 1 — the room, one flash, and what is left of you in it */
+      const room = (c, t, W, H) => {
+        PIX.rect(c, 0, 0, W, H, '#08090d');
+        c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 56, seed: 71 }), 0, 0);
+        c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 3 }), 0, 76);
+        c.drawImage(ART.hangLamp(16, 24, true), 84, 0);
+        /* him on the floor, intact, and you standing over it */
+        PIX.rect(c, 60, 84, 40, 8, P.K);
+        PIX.rect(c, 61, 85, 38, 6, '#3a3f52');
+        PIX.disc(c, 58, 88, 6, P.K); PIX.disc(c, 58, 88, 5, '#2e7d5b');
+        PIX.rect(c, 96, 86, 26, 3, 'rgba(87,18,32,.6)');
+        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 104, 52);
+        /* the flash, once, hard */
+        if (t > 0.5 && t < 0.62) {
+          PIX.rect(c, 0, 0, W, H, 'rgba(255,251,232,.85)');
+          if (!room._bang) { room._bang = true; SFX.shot(); }
+        }
+        /* the smoke off it, and the file you never filed on the floor */
+        if (t > 0.62) {
+          for (let i = 0; i < 8; i++) {
+            const sy = 60 - (t - 0.62) * 22 - i * 3;
+            PIX.rect(c, 100 + Math.round(Math.sin(i + t * 3) * 3), sy, 3, 2, 'rgba(180,180,190,' + (0.16 - i * 0.018) + ')');
+          }
+          PIX.rect(c, 126, 88, 16, 3, '#ded2b4');
+          PIX.rect(c, 128, 86, 12, 3, '#c9c0a8');
+        }
+      };
+
+      /* SHOT 2 — you in his chair, with his room around you */
+      const chair = (c, t, W, H) => {
+        PIX.rect(c, 0, 0, W, H, '#0a0810');
+        c.drawImage(ART.wall(W, 80, { tone: 'brick', railY: 58, seed: 83 }), 0, 0);
+        c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 8 }), 0, 76);
+        /* his desk, his bottle, his lamp — now yours */
+        c.drawImage(ART.desk(84, 30, 4), 48, 66);
+        c.drawImage(ART.art('desklamp', 1), 56, 54);
+        c.drawImage(ART.art('gunprop', 1), 96, 60);
+        /* you, in the big chair, facing us, in silhouette */
+        PIX.rect(c, 76, 30, 30, 40, P.K);
+        PIX.rect(c, 78, 32, 26, 36, '#141019');
+        PIX.rect(c, 84, 22, 16, 12, P.K);
+        PIX.rect(c, 85, 23, 14, 10, '#1a2620');
+        PIX.rect(c, 87, 26, 3, 2, '#d13b45');            // two eyes, the wrong colour now
+        PIX.rect(c, 94, 26, 3, 2, '#d13b45');
+        /* the board behind, burning down to nothing */
+        const burn = Math.min(1, t / 2);
+        c.drawImage(ART.corkboard(50, 32, 4), 8, 12);
+        PIX.rect(c, 8, 12, 50, Math.round(32 * burn), 'rgba(20,14,10,.85)');
+        for (let i = 0; i < 12; i++) {
+          const ex = 10 + (i * 7) % 46, ey = 12 + Math.round(32 * burn) - (i % 4);
+          PIX.rect(c, ex, ey, 1, 1, i % 2 ? '#ff9d3c' : '#ffd75e');
+        }
+        rain(c, t, W, H, 1);
+      };
+
+      await CINE.film([
+        { len: 2.3, draw: room, cap: 'NOBODY WROTE IT DOWN' },
+        { len: 2.6, draw: chair, cap: 'SOMEBODY HAS TO RUN IT' },
+      ], { bars: true });
+      await CINE.titleBeat('CASE BURIED', 'YOU BECAME THE ADDRESS.', P.R);
+    }
+  },
+
+  /* the card between chapters: what you closed, and what is left of him */
+  async chapterCard() {
+    const ch = STORY.chapter();
+    const pct = STORY.intelPct();
+    const root = CINE.stage();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const wrap = U.el('div', 'tb-card');
+    wrap.appendChild(UI.wrap('THE CASE MOVES', 22, { scale: 4, color: PIX.PAL.q }));
+    wrap.appendChild(UI.wrap(ch.title, 20, { scale: 7, color: PIX.PAL.W, outline: PIX.PAL.K }));
+    wrap.appendChild(UI.wrap(ch.obj, 36, { scale: 3, color: PIX.PAL.G }));
+    wrap.appendChild(UI.wrap('THE BOARD IS ' + pct + '% OF HIM', 30, { scale: 3, color: pct >= 100 ? PIX.PAL.G : PIX.PAL.R }));
+    root.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    SFX.bank();
+    await U.sleep(1500);
+    await new Promise(res => {
+      const done = () => { window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); res(); };
+      window.addEventListener('pointerdown', done); window.addEventListener('keydown', done);
+      setTimeout(done, 2600);
+    });
+    root.innerHTML = ''; root.className = 'hidden';
+  },
+
+  /* a full-bleed card at the end of a reel */
+  async titleBeat(head, sub, col) {
+    const root = CINE.stage();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const wrap = U.el('div', 'tb-card');
+    wrap.appendChild(UI.wrap(head, 20, { scale: 8, color: col || PIX.PAL.W, outline: PIX.PAL.K }));
+    wrap.appendChild(UI.wrap(sub, 34, { scale: 3, color: PIX.PAL.q }));
+    root.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    SFX.bank();
+    await new Promise(res => {
+      const done = () => { window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); res(); };
+      setTimeout(() => { window.addEventListener('pointerdown', done); window.addEventListener('keydown', done); }, 400);
+      setTimeout(done, 4200);
+    });
+    root.innerHTML = ''; root.className = 'hidden';
   },
 };
