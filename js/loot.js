@@ -10,25 +10,16 @@ const LOOT = {
 
   /* the loot panel rides the duel scene's overlay */
   overlay() {
+    LOOT.ready = true;
     const o = document.getElementById('duel-overlay');
     if (!o) return;
-    o.className = 'loot-in';
+    o.className = 'loot-in fp';
     o.innerHTML = '';
 
-    const panel = U.el('div', 'loot-panel pop');
-    panel.id = 'loot-panel';
-
-    const head = U.el('div', 'loot-head');
-    head.appendChild(UI.txt('THE TAKE', { scale: 3, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    const who = U.el('span', 'has-tip');
-    who.dataset.tipOppTells = '1';
-    who.appendChild(UI.txt(G.duel.opp.name, { scale: 3, color: PIX.PAL.w }));
-    head.appendChild(who);
-    panel.appendChild(head);
-
-    /* three meters: how long you have, how loud you are being, and how
-       much of him is still on the floor behind you */
-    const meters = U.el('div', 'meters');
+    /* FIRST PERSON. No panel, no list of buttons: the room is the
+       interface. A thin strip of meters up top, your tools in one corner,
+       the way out in the other. Everything else is the corpse. */
+    const strip = U.el('div', 'fp-strip');
     ['time', 'noise', 'mess'].forEach(kind => {
       const w = U.el('div', 'meter has-tip m-' + kind);
       w.dataset.tipKey = kind === 'time' ? 'clock' : kind === 'noise' ? 'noise' : 'mess';
@@ -39,25 +30,21 @@ const LOOT = {
       bar.appendChild(fill);
       if (kind === 'noise') { const line = U.el('i', 'm-line'); bar.appendChild(line); }
       w.appendChild(bar);
-      meters.appendChild(w);
+      strip.appendChild(w);
     });
-    panel.appendChild(meters);
+    o.appendChild(strip);
 
-    /* the tools you can put into him, and which one is in your hand */
     const tools = U.el('div'); tools.id = 'loot-tools';
-    panel.appendChild(tools);
+    o.appendChild(tools);
 
-    const hint = U.el('div', 'loot-hint');
-    hint.appendChild(UI.txt('TAP HIM TO SEARCH', { scale: 3, color: PIX.PAL.q }));
-    panel.appendChild(hint);
-
-    const list = U.el('div'); list.id = 'pocket-list';
-    panel.appendChild(list);
+    const hint = U.el('div', 'loot-hint fp-hint');
+    hint.appendChild(UI.txt('SEARCH HIM · WIPE THE TRAIL · EDGES TO LOOK', { scale: 2, color: PIX.PAL.q }));
+    o.appendChild(hint);
 
     const swap = U.el('div'); swap.id = 'card-swap'; swap.className = 'hidden';
-    panel.appendChild(swap);
+    o.appendChild(swap);
 
-    const acts = U.el('div'); acts.id = 'loot-actions';
+    const acts = U.el('div', 'fp-acts'); acts.id = 'loot-actions';
     const bribe = U.el('button', 'pixbtn'); bribe.id = 'btn-bribe';
     bribe.onclick = () => LOOT.onBribe();
     acts.appendChild(bribe);
@@ -67,9 +54,8 @@ const LOOT = {
     walk.appendChild(kh);
     walk.onclick = () => LOOT.onWalk();
     acts.appendChild(walk);
-    panel.appendChild(acts);
+    o.appendChild(acts);
 
-    o.appendChild(panel);
     LOOT.sync();
   },
 
@@ -123,41 +109,9 @@ const LOOT = {
     const L = G.loot;
     const heat = E.heatUp();
 
-    /* pockets */
+    /* no pocket list in first person: the corpse is the list */
     const list = document.getElementById('pocket-list');
-    if (!list) return;
-    list.innerHTML = '';
-    let keyN = 0;
-    L.pockets.forEach((p, i) => {
-      const b = U.el('button', 'pocket-btn' + (p.taken ? ' taken' : ''));
-      const lab = U.el('span', 'pocket-lab');
-      lab.appendChild(UI.txt(p.label, { scale: 2, color: p.taken ? PIX.PAL.q : PIX.PAL.W }));
-      b.appendChild(lab);
-      const val = U.el('span', 'pocket-val');
-      if (p.taken) {
-        if (p.gun) val.appendChild(SPR.gunEl(GUNS[G.gunIdx].id, 1));
-        else if (p.card) val.appendChild(SPR.trinketCardEl(p.card, 1));
-        else if (p.item) val.appendChild(SPR.itemCardEl(p.item, 1));
-        if (p.lint && !p.card) val.appendChild(UI.txt('LINT', { scale: 2, color: PIX.PAL.q }));
-        else if (p.chips > 0) {
-          val.appendChild(UI.txt('+' + p.chips, { scale: 2, color: PIX.PAL.G }));
-          val.appendChild(UI.icon('ic_chip', 2));
-        }
-      }
-      if (!p.taken) {
-        keyN++;
-        if (p.bulge && p.seen) b.classList.add('rq-rare');
-        const k = U.el('span', 'key-hint tk'); k.textContent = keyN;
-        b.appendChild(k);
-        val.appendChild(UI.txt('?', { scale: 2, color: PIX.PAL.q }));
-      } else if (p.slit) {
-        val.appendChild(UI.txt('SLIT', { scale: 2, color: PIX.PAL.q }));
-      }
-      b.disabled = DUEL.busy || !E.canSearch(i);
-      b.onclick = () => DUEL.searchAt(i);
-      b.appendChild(val);
-      list.appendChild(b);
-    });
+    if (list) list.innerHTML = '';
 
     /* the tool rack */
     const tools = document.getElementById('loot-tools');
@@ -191,8 +145,10 @@ const LOOT = {
 
     LOOT.tick();
 
-    /* bribe button */
+    /* bribe button — the overlay may not be up yet (the drag loader plays
+       first), and a sync that fires in that window must not explode */
     const bribe = document.getElementById('btn-bribe');
+    if (!bribe) return;
     bribe.innerHTML = '';
     BTN.paint(bribe);                      // innerHTML just evicted its face
     const cost = E.bribeCost();
@@ -291,7 +247,12 @@ const LOOT = {
     DUEL.lootFx(p, sx, sy);
     if (G.chips > before) UI.chipTick(G.chips - before);
     if (p.gun) UI.stampSmall('HIS IRON IS YOURS — ' + E.gun().name);
-    if (p.card) SFX.jackpot();
+    if (p.foundDossier) {
+      SFX.jackpot();
+      UI.stampBig('HIS PAPERS', PIX.PAL.N, true);
+      UI.stampSmall('NEXT LINE-UP: ONE CLUE ALREADY TURNED');
+      FX.floatText(sx || 175, (sy || 128) - 10, 'INTEL', PIX.PAL.N);
+    }
     /* the sound of it: a ring on the meter, and the room going quiet */
     const loud = p.noise || 0;
     if (loud > 0.3) { FX.screen.shake(Math.round(loud * 12)); SFX.jamSfx(); }

@@ -49,6 +49,7 @@ const DUEL = {
   react: null,               // what his hand came up out of the dark to say
   dying: 0,                  // 0 = you are fine; 1 = he is standing over you
   slug: null,                // the round, in the air, in bullet time
+  panX: 0, panT: 0,          // the look-around, out back
   aimBar: null,              // the steady check, while it is running
   myGore: 0,                 // what is on YOUR face, and stays there
   blood: [],                 // what is on HIS, in his own space, and grows
@@ -220,7 +221,7 @@ const DUEL = {
     DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
-    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = []; DUEL.dying = 0; DUEL.slug = null;
+    DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = []; DUEL.dying = 0; DUEL.slug = null; DUEL.panX = 0; DUEL.panT = 0;
     DUEL.view = 'table'; DUEL.viewT = 0;
     DUEL.initTongue();
     /* G.loot survives from the LAST corpse until the next one is opened, so
@@ -362,8 +363,23 @@ const DUEL = {
     DUEL.viewT += (vt - DUEL.viewT) * 0.18;
     if (Math.abs(DUEL.viewT - vt) < 0.004) DUEL.viewT = vt;
     if (DUEL.react && ++DUEL.react.t >= DUEL.react.life) DUEL.react = null;
+    /* LAST HEART. The edges of the room come in and your own chest is the
+       loudest thing in it. Two thumps, a pause, again. */
+    const dread = G.phase === 'duel' && G.duel && !G.duel.over && G.hearts === 1;
+    if (dread !== DUEL._dread) {
+      DUEL._dread = dread;
+      document.body.classList.toggle('dread', dread);
+      DUEL._dreadT = 0;
+    }
+    if (dread && ++DUEL._dreadT % 68 === 0) {
+      SFX.tone(46, 0.1, 'sine', 0.34);
+      SFX.tone(40, 0.12, 'sine', 0.30, 0.16);
+      FX.screen.vignette(PIX.PAL.d, 0.35, 0.05);
+    }
     if (DUEL.dying > 0 && DUEL.dying < 1) DUEL.dying = Math.min(1, DUEL.dying + 0.018);
     DUEL.stepAim();
+    DUEL.panX += (DUEL.panT - DUEL.panX) * 0.12;
+    if (Math.abs(DUEL.panX - DUEL.panT) < 0.05) DUEL.panX = DUEL.panT;
     /* the round, crawling down the bore line with its own wake */
     if (DUEL.slug) {
       const sl = DUEL.slug;
@@ -446,7 +462,8 @@ const DUEL = {
     x.imageSmoothingEnabled = false;
     const fso = FX.shakeOffset();
     const sx = (Math.random() - 0.5) * DUEL.shake + fso.x, sy = (Math.random() - 0.5) * DUEL.shake + fso.y;
-    x.translate(Math.round(DUEL.OX + sx), Math.round(DUEL.OY + sy));
+    const panOff = DUEL.room === 'back' ? Math.round(DUEL.panX) : 0;
+    x.translate(Math.round(DUEL.OX + sx - panOff), Math.round(DUEL.OY + sy));
 
     /* --- lamp cone over the swirl --- */
     const sway = Math.sin(DUEL.t / 90) * 3;
@@ -1579,16 +1596,17 @@ const DUEL = {
       const gx2 = Math.round(gw.x + kk.dx), gy2 = Math.round(gw.y + kk.dy);
       const side = gx2 > 180 ? 1 : -1;
       const gr = DUEL.GRIPS[DUEL.oppGrip] || DUEL.GRIPS.low;
-      /* the shoulder he is working from — under the coat, at the table line */
-      const SHY = 142;
-      SPR.povTube(x, 180 + side * 44, SHY, gx2 + side * 8, gy2 + 9,
-        15, 11, sC, 'rgba(0,0,0,.45)', sL);
+      /* THE ARM IS PART OF HIM. It starts inside the coat at his shoulder
+         and grows out over the chest — an arm that started below the table
+         edge read as furniture peeking out, not as his. */
+      SPR.povTube(x, 180 + side * 26, 100, gx2 + side * 8, gy2 + 9,
+        14, 11, sC, 'rgba(0,0,0,.45)', sL);
       SPR.povCuff(x, gx2 + side * 3, gy2 + 7, od, side);
       /* BOTH HANDS: the off hand comes across and wraps the first one */
       if (gr.two) {
         const ox2 = gx2 - side * 11, oy2 = gy2 + 5;
-        SPR.povTube(x, 180 - side * 40, SHY + 2, ox2 - side * 6, oy2 + 8,
-          14, 10, sC, 'rgba(0,0,0,.45)', sL);
+        SPR.povTube(x, 180 - side * 26, 102, ox2 - side * 6, oy2 + 8,
+          13, 10, sC, 'rgba(0,0,0,.45)', sL);
         SPR.povCuff(x, ox2 - side * 3, oy2 + 6, od, -side);
         x.save();
         x.translate(ox2, oy2);
@@ -1882,6 +1900,9 @@ const DUEL = {
 
   reactAt(kind) {
     if (!DUEL.REACTS[kind] || DUEL.opp.gone || DUEL.opp.fall >= 0) return;
+    /* his hands are busy: the gun arm and a gesture arm at once made him
+       a frog with two right arms */
+    if (G.duel && G.duel.turn === 'opp') return;
     DUEL.react = { kind, t: 0, life: DUEL.REACTS[kind].life };
     const s = DUEL.REACTS[kind].snd;
     if (SFX[s]) SFX[s]();
@@ -1903,12 +1924,11 @@ const DUEL = {
     const O = C.overcoat || C.jacket || C.gown || C.shirt || null;
     const cl = (O && O.col) || d.suit;
     const sC = P[cl] || P.T, sD = 'rgba(0,0,0,.45)', sL = P[LIGHTER[cl]] || P.t;
-    const TOP = 130;                                   // the table edge he comes up over
-
-    /* one arm, or two */
+    /* one arm, or two — and they are HIS arms: they start at his
+       shoulders, inside the coat, not somewhere under the table */
     const arms = r.kind === 'shrug' ? [-1, 1] : [-1];
     arms.forEach(sgn => {
-      const rest = { x: 180 + sgn * 34, y: TOP - 4 };
+      const rest = { x: 180 + sgn * 28, y: 104 };
       let tip;
       if (r.kind === 'facepalm') tip = { x: 180 + sgn * 3, y: 54 };
       else if (r.kind === 'finger') tip = { x: 180 + sgn * 46, y: 72 };
@@ -1916,7 +1936,7 @@ const DUEL = {
       const hx = Math.round(rest.x + (tip.x - rest.x) * ease);
       const hy = Math.round(rest.y + (tip.y - rest.y) * ease);
       /* the sleeve starts ABOVE the far rail: below it the felt eats the arm */
-      SPR.povTube(x, rest.x + sgn * 4, TOP + 16, hx, hy + 11, 18, 13, sC, sD, sL);
+      SPR.povTube(x, rest.x + sgn * 2, rest.y - 2, hx, hy + 11, 16, 12, sC, sD, sL);
       /* a cuff at the wrist, or the hand and the sleeve read as one green post */
       SPR.povCuff(x, hx, hy + 6, d, sgn);
       x.save();
@@ -2281,6 +2301,17 @@ const DUEL = {
          longest of all when what it lands in is you. */
       FX.screen.slowmo(ev.victim === 'you' ? 900 : 700, 0.42);
       if (!ev.fizzled) DUEL.fireSlug(tip, ang, 100);
+      /* the cut-in: whoever just committed, crossing the frame */
+      if (!ev.fizzled && ev.victim) {
+        if (ev.by === 'you' && ev.victim === 'foe') {
+          CINE.cutIn(SPR.frogCustom('me-ci', DUEL.myDef(), 'angry'),
+            ev.clean ? 'THROUGH THE EYE.' : 'BANG.',
+            { red: G.duel.opp.hp - ev.dmg <= 0 });
+        } else if (ev.by === 'opp' && ev.victim === 'you') {
+          CINE.cutIn(DUEL.composite('grin').cv, G.hearts - ev.dmg <= 1 ? 'STAY DOWN.' : 'MINE.',
+            { red: G.hearts - ev.dmg <= 1 });
+        }
+      }
       if (ev.fizzled) {
         await U.sleep(160);
         UI.stampBig('FIZZLE', PIX.PAL.N); SFX.dud();
@@ -2410,6 +2441,7 @@ const DUEL = {
       const choice = E.oppDecide();
       /* IT COMES UP OUT OF HIS LAP. Three beats so you can see it happen:
          off the felt, half way, then level with whichever head he picked. */
+      DUEL.react = null;               // both hands on the job now
       DUEL.setPose('oppUp');
       SFX.tick();
       await DUEL.sleep(200);
@@ -2452,14 +2484,20 @@ const DUEL = {
       DUEL.opp.gone = true;
       DUEL.corpse = true;
       DUEL.ghost = null;
+      /* the body goes to the back room INTACT. What you did shows in the
+         pool under him, not in pieces of him. */
+      DUEL.wounds = [];
+      DUEL.blood = [];
       G.loot.dragged = true;
       DUEL.room = 'back';
-      DUEL.pool = 16;
+      DUEL.pool = 14;
       COPS.GROUND = DUEL.FY - 8;
       BG.set('back');
       E.makeMess();
-      LOOT.overlay();
-    }, 320);
+    }, 120);
+    /* the little convoy: you, walking backwards, him by the boots */
+    await CINE.dragLoad();
+    LOOT.overlay();
     DUEL.busy = false;
   },
 
@@ -2538,7 +2576,8 @@ const DUEL = {
   sceneXY(e) {
     const r = DUEL.cv.getBoundingClientRect();
     return {
-      x: (e.clientX - r.left) / r.width * DUEL.W - DUEL.OX,
+      x: (e.clientX - r.left) / r.width * DUEL.W - DUEL.OX +
+        (DUEL.room === 'back' ? Math.round(DUEL.panX) : 0),
       y: (e.clientY - r.top) / r.height * DUEL.H - DUEL.OY,
     };
   },
@@ -2563,6 +2602,13 @@ const DUEL = {
       return;
     }
     const q = DUEL.sceneXY(e);
+    /* out back the camera follows your eye: push the pointer to a side of
+       the screen and the room slides over */
+    if (DUEL.room === 'back') {
+      const r = DUEL.cv.getBoundingClientRect();
+      const fx = (e.clientX - r.left) / r.width;
+      DUEL.panT = fx < 0.3 ? -26 * (1 - fx / 0.3) : fx > 0.7 ? 26 * ((fx - 0.7) / 0.3) : 0;
+    }
     const i = DUEL.spotAt(q.x, q.y);
     if (i !== DUEL.hoverSpot) { DUEL.hoverSpot = i; if (i >= 0) SFX.tick(); }
     const st = i >= 0 ? -1 : DUEL.stainAt(q.x, q.y);

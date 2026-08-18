@@ -70,7 +70,7 @@ const UI = {
     UI.closeModal();
     if (G.phase !== 'duel' && G.phase !== 'loot') DUEL.stop();
     BG.set({
-      title: 'title', collection: 'title',
+      title: 'title', collection: 'title', station: 'title',
       duel: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'round',
       blind: G.duel && G.duel.opp && G.duel.opp.boss ? 'boss' : 'casino',
       loot: G.phase === 'loot' && G.loot && G.loot.dragged ? 'back' : 'casino',
@@ -79,6 +79,7 @@ const UI = {
     switch (G.phase) {
       case 'title':      UI.buildTitle(app); break;
       case 'collection': UI.buildCollection(app); break;
+      case 'station':    UI.buildStation(app); break;
       case 'blind':      UI.buildBlindSelect(app); break;
       case 'duel':
       case 'loot':       UI.buildDuel(app); DUEL.enter(); break;
@@ -86,7 +87,7 @@ const UI = {
       case 'won':        UI.buildEnd(app, true); break;
     }
     /* card backs drifting behind the quiet screens */
-    CINE.ambient(G.phase === 'title' || G.phase === 'collection' || G.phase === 'blind');
+    CINE.ambient(G.phase === 'title' || G.phase === 'collection' || G.phase === 'blind' || G.phase === 'station');
     if (typeof TUTOR !== 'undefined' && TUTOR.armed()) setTimeout(() => TUTOR.check(), 260);
   },
 
@@ -137,7 +138,7 @@ const UI = {
     /* ante + blind pips */
     const ante = U.el('span', 'has-tip tb-chip');
     ante.dataset.tipKey = 'ante';
-    ante.appendChild(UI.txt('ANTE ' + G.ante, { scale: 3, color: PIX.PAL.W }));
+    ante.appendChild(UI.txt('FLOOR ' + G.ante, { scale: 3, color: PIX.PAL.W }));
     C.appendChild(ante);
     const pips = U.el('span', 'ante-track has-tip');
     pips.dataset.tipKey = 'blind';
@@ -202,101 +203,317 @@ const UI = {
 
   buildTitle(app) {
     const s = META.stats();
-    const wrap = U.el('div', 'splash');
+    const wrap = U.el('div', 'splash board-title');
 
-    const frogs = U.el('div', 'title-frogs');
-    ['vig', 'croupier', 'player', 'owner', 'lily'].forEach((id, i) => {
-      const f = SPR.frogEl(id, id === 'player' ? 5 : 4, i % 2 ? 'breathe2' : 'breathe');
-      if (id !== 'player') f.style.filter = 'brightness(.62)';
-      frogs.appendChild(f);
+    /* ---- the murder board: everything on it is pinned, taped or stabbed ---- */
+    const board = U.el('div', 'mboard');
+
+    /* red string first, under everything */
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'strings');
+    svg.id = 'title-strings';
+    board.appendChild(svg);
+
+    /* the case-file masthead, stabbed through with the knife */
+    const head = U.el('div', 'mb-pin mb-title');
+    head.appendChild(SPR.clone(SPR.titleCard({
+      big: 'HOMICIDE DIVISION - AFTER HOURS',
+      huge: 'SHELL & DEBT',
+      sub: 'A DETECTIVE FROG STORY',
+      col: PIX.PAL.R,
+    }), U.clamp(Math.floor(window.innerWidth / 340), 2, 4)));
+    const knife = PIX.el('prop_knife', 3);
+    knife.className = 'mb-knife';
+    head.appendChild(knife);
+    board.appendChild(head);
+
+    /* the family, pinned up where you cannot stop looking at them */
+    const MUGS = [
+      ['vig', 'DON BUFO'], ['lily', 'SLICK LILY'], ['owner', 'THE BULLFROG'],
+      ['cage', 'WARDEN WART'], ['collector', 'TAXTOAD TONY'],
+    ];
+    MUGS.forEach(([id, nm], i) => {
+      const m = U.el('div', 'mb-pin mb-mug mb-mug' + i);
+      m.appendChild(U.el('i', 'poster-pin'));
+      m.appendChild(SPR.clone(SPR.mugshot(id, FROG_DEFS[id], 1), 2));
+      const tag = U.el('div', 'mb-name');
+      tag.appendChild(UI.txt(nm, { scale: 2, color: PIX.PAL.K, shadow: null }));
+      m.appendChild(tag);
+      if (i === 2) {   // the Bullfrog gets the red ring
+        const ring = U.el('i', 'mb-ring');
+        m.appendChild(ring);
+      }
+      board.appendChild(m);
     });
-    wrap.appendChild(frogs);
 
-    const logo = U.el('div', 'logo-stack');
-    logo.appendChild(UI.txt('SHELL & DEBT', { scale: 7, color: PIX.PAL.G, outline: PIX.PAL.K }));
-    logo.appendChild(UI.txt('RUSSIAN ROULETTE WITH THE FROG MOB', { scale: 3, color: PIX.PAL.w }));
-    wrap.appendChild(logo);
+    /* what somebody thought of the investigation */
+    [[0, '18%', '30%'], [1, '74%', '22%'], [0, '64%', '72%']].forEach(([small, lx, ty], i) => {
+      const h = PIX.el(small ? 'prop_hole2' : 'prop_hole', 3);
+      h.className = 'mb-hole';
+      h.style.left = lx; h.style.top = ty;
+      board.appendChild(h);
+    });
 
-    const seedRow = U.el('div', 'seed-row');
+    /* the case number, on a manila tag you can type on */
+    const tagWrap = U.el('div', 'mb-pin mb-seed');
+    tagWrap.appendChild(U.el('i', 'poster-pin'));
+    tagWrap.appendChild(UI.txt('CASE NO.', { scale: 2, color: PIX.PAL.K, shadow: null }));
     const inp = U.el('input');
     inp.id = 'seed-input';
     inp.maxLength = 24;
     inp.placeholder = U.randSeedStr();
     inp.spellcheck = false;
-    seedRow.appendChild(inp);
-    wrap.appendChild(seedRow);
+    tagWrap.appendChild(inp);
+    board.appendChild(tagWrap);
 
+    /* your record, on an index card */
+    if (s.runs > 0) {
+      const rec = U.el('div', 'mb-pin mb-record');
+      rec.appendChild(U.el('i', 'poster-pin'));
+      rec.appendChild(UI.txt('DET. VERDE - RECORD', { scale: 2, color: PIX.PAL.K, shadow: null }));
+      rec.appendChild(UI.txt('BEST FLOOR ' + s.bestAnte + ' / CLOSED ' + s.wins + ' / LOST ' + s.deaths,
+        { scale: 2, color: PIX.PAL.d, shadow: null }));
+      board.appendChild(rec);
+    }
+
+    wrap.appendChild(board);
+
+    /* ---- the buttons, on the rail under the board ---- */
+    const btns = U.el('div', 'end-btns title-btns');
     const deal = U.el('button', 'pixbtn gold big-deal');
     deal.id = 'btn-deal';
     deal.appendChild(PIX.el('gun_snub', 2));
-    deal.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
+    deal.appendChild(UI.txt('OPEN THE CASE', { scale: 4, shadow: null, color: PIX.PAL.K }));
     deal.onclick = () => {
       SFX.chak();
-      /* the whole story the first time, the last two panels after that —
-         a story you cannot get out of is a wall, so any tap skips it */
+      /* the whole story the first time; after that just the last panel.
+         Then the load-up, the drive, and the precinct. */
       const seen = META.stats().loreSeen > 0;
       UI.goto(() => E.newRun(inp.value)).then(() => {
         META.bump('loreSeen'); META.save();
         return CINE.lore(seen);
-      }).then(() => TUTOR.open());
+      }).then(() => CINE.reloadRoom())
+        .then(() => CINE.driveTo())
+        .then(() => { UI.render(); return TUTOR.open(); });
     };
-    wrap.appendChild(deal);
+    btns.appendChild(deal);
 
-    const row2 = U.el('div', 'end-btns');
-    const coll = U.el('button', 'pixbtn');
-    coll.id = 'btn-collection';
-    coll.appendChild(UI.txt('COLLECTION', { scale: 3, shadow: null }));
-    coll.onclick = () => { UI.goto(() => { G.phase = 'collection'; }); };
-    row2.appendChild(coll);
     const hlp = U.el('button', 'pixbtn');
     hlp.appendChild(UI.txt('HOUSE RULES', { scale: 3, shadow: null }));
     hlp.onclick = () => UI.showHelp();
-    row2.appendChild(hlp);
+    btns.appendChild(hlp);
 
-    /* the handler said his piece once; this is how you get him back */
     if (META.load().tutor && META.load().tutor.opening) {
       const again = U.el('button', 'pixbtn ghost has-tip');
       again.id = 'btn-tutor';
-      again.dataset.tipText = 'Have the handler walk you through it again on your next run.';
+      again.dataset.tipText = 'Have the captain walk you through it again on your next case.';
       again.appendChild(UI.txt('BRIEF ME AGAIN', { scale: 3, shadow: null }));
       again.onclick = () => { TUTOR.replay(); SFX.bank(); UI.stampSmall('HE WILL BE WAITING'); };
-      row2.appendChild(again);
+      btns.appendChild(again);
     }
-    wrap.appendChild(row2);
-
-    if (s.runs > 0) {
-      const best = U.el('div', 'best-line');
-      best.appendChild(UI.txt(
-        'BEST ANTE ' + s.bestAnte + '   WINS ' + s.wins + '   MARKERS LOST ' + s.deaths,
-        { scale: 3, color: PIX.PAL.q }));
-      wrap.appendChild(best);
-    }
+    wrap.appendChild(btns);
     app.appendChild(wrap);
+
+    /* string the board up once everything has a rect */
+    requestAnimationFrame(() => {
+      const R = board.getBoundingClientRect();
+      if (!R.width) return;
+      svg.setAttribute('viewBox', '0 0 ' + Math.round(R.width) + ' ' + Math.round(R.height));
+      const pins = board.querySelectorAll('.mb-mug .poster-pin, .mb-seed .poster-pin');
+      const pts = [];
+      pins.forEach(pin => {
+        const r = pin.getBoundingClientRect();
+        pts.push([r.left - R.left + r.width / 2, r.top - R.top + r.height / 2]);
+      });
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const ln = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 + 16;
+        ln.setAttribute('d', 'M' + a[0] + ' ' + a[1] + ' Q' + mx + ' ' + my + ' ' + b[0] + ' ' + b[1]);
+        ln.setAttribute('class', 'str');
+        svg.appendChild(ln);
+      }
+    });
+  },
+
+  /* ================= the precinct ================= */
+
+  /* The night starts here: the captain behind his counter, Maybelle at
+     the front desk, and the board waiting in the next room. Talking is
+     optional. It is also the only warm thing in the game. */
+  buildStation(app) {
+    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
+    const wrap = U.el('div', 'station-wrap');
+
+    /* the room, drawn */
+    const cv = document.createElement('canvas');
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 200, (window.innerHeight - 220) / 120)), 2, 7);
+    cv.width = 190 * K; cv.height = 112 * K;
+    cv.className = 'pix station-room';
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    const P = PIX.PAL;
+    PIX.rect(c, 0, 0, 190, 112, '#141822');
+    for (let y = 0; y < 74; y += 5) PIX.rect(c, 0, y, 190, 1, 'rgba(0,0,0,.16)');
+    PIX.rect(c, 0, 74, 190, 38, '#1a1610');                       // floorboards
+    for (let i = 0; i < 10; i++) PIX.rect(c, i * 20, 74, 1, 38, 'rgba(0,0,0,.3)');
+    PIX.rect(c, 0, 74, 190, 2, '#2c2114');
+    /* the notice board, with the tiny wall of faces */
+    PIX.rect(c, 10, 14, 52, 38, '#241a10');
+    PIX.rect(c, 12, 16, 48, 34, '#6b4426');
+    for (let i = 0; i < 6; i++) {
+      PIX.rect(c, 16 + (i % 3) * 15, 20 + Math.floor(i / 3) * 16, 11, 12, '#ded2b4');
+      PIX.rect(c, 18 + (i % 3) * 15, 22 + Math.floor(i / 3) * 16, 7, 7, '#141820');
+    }
+    /* the counter the captain lives behind */
+    PIX.rect(c, 118, 52, 64, 26, P.K);
+    PIX.rect(c, 120, 54, 60, 22, '#2c2114');
+    PIX.rect(c, 120, 54, 60, 3, '#3a2c18');
+    /* the hanging light */
+    PIX.rect(c, 94, 0, 2, 12, '#232018');
+    PIX.rect(c, 88, 12, 14, 5, '#3a3020');
+    c.globalAlpha = 0.13; c.fillStyle = '#ffd75e';
+    c.beginPath(); c.moveTo(95, 16); c.lineTo(60, 82); c.lineTo(130, 82); c.closePath(); c.fill();
+    c.globalAlpha = 1;
+    /* the cell, stage right */
+    for (let i = 0; i < 5; i++) PIX.rect(c, 168 + i * 4, 14, 2, 38, '#0e1118');
+    wrap.appendChild(cv);
+
+    /* the two of them, standing in the room */
+    const folk = U.el('div', 'station-folk');
+    const cap = U.el('div', 'st-frog st-cap');
+    cap.appendChild(SPR.clone(SPR.frogCustom('handler', HANDLER_DEF), 3));
+    cap.appendChild(UI.txt('THE CAPTAIN', { scale: 2, color: PIX.PAL.L }));
+    folk.appendChild(cap);
+    const may = U.el('div', 'st-frog st-may');
+    may.appendChild(SPR.clone(SPR.frogCustom('maybelle', MAYBELLE_DEF), 3));
+    const heartRow = U.el('div', 'st-hearts');
+    const tr = META.load().trust || 0;
+    for (let i = 0; i < 3; i++) {
+      heartRow.appendChild(PIX.el(tr >= (i + 1) * 3 ? 'ic_heart' : 'ic_heart_e', 1));
+    }
+    may.appendChild(UI.txt('OFFICER MAYBELLE', { scale: 2, color: PIX.PAL.P }));
+    may.appendChild(heartRow);
+    folk.appendChild(may);
+    wrap.appendChild(folk);
+
+    /* the choices */
+    const btns = U.el('div', 'blind-btns');
+    const go = U.el('button', 'pixbtn gold primary big-deal');
+    go.id = 'btn-board';
+    go.appendChild(UI.txt('THE CASE BOARD', { scale: 4, shadow: null, color: PIX.PAL.K }));
+    const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
+    go.appendChild(kh);
+    go.onclick = () => { SFX.chak(); UI.goto(() => { G.phase = 'blind'; }); };
+    btns.appendChild(go);
+
+    const tc = U.el('button', 'pixbtn cop');
+    tc.id = 'btn-talk-cap';
+    tc.appendChild(UI.txt('TALK: CAPTAIN', { scale: 3, shadow: null }));
+    tc.onclick = () => UI.talkCaptain();
+    btns.appendChild(tc);
+
+    const tm = U.el('button', 'pixbtn');
+    tm.id = 'btn-talk-may';
+    tm.appendChild(UI.txt('TALK: MAYBELLE', { scale: 3, shadow: null }));
+    tm.onclick = () => UI.talkMaybelle();
+    btns.appendChild(tm);
+    wrap.appendChild(btns);
+
+    app.appendChild(wrap);
+  },
+
+  /* the captain: one job, three moods */
+  async talkCaptain() {
+    if (UI._talking) return;
+    UI._talking = true;
+    try {
+      const cap = { art: SPR.frogCustom('handler', HANDLER_DEF), name: 'THE CAPTAIN', nameCol: PIX.PAL.L };
+      if (!G.capTalked) {
+        G.capTalked = true;
+        const brief = E.blindName() + (G.duel.opp.boss ? '. IT IS ' + G.duel.opp.name + '. NO LINE-UP TONIGHT.' :
+          '. ' + (G.case ? G.case.suspects.length : 3) + ' OF THEM IN THE ROOM.');
+        await TUTOR.say('FLOOR ' + G.ante + '. ' + brief, cap);
+        await TUTOR.say(U.pick(Math.random, [
+          'PAPERWORK SAYS YOU WERE NEVER THERE. KEEP IT THAT WAY.',
+          'THE CITY PAYS ME TO NOT LOOK. DO NOT MAKE IT HARD.',
+          'COME BACK IN ONE PIECE OR DO NOT COME BACK AT ALL.',
+        ]), cap);
+      } else {
+        await TUTOR.say('THE BOARD, DETECTIVE. IT IS NOT GETTING ANY COLDER.', cap);
+      }
+    } finally { UI._talking = false; }
+  },
+
+  /* Maybelle: trust is slow, real, and it helps */
+  async talkMaybelle() {
+    if (UI._talking) return;
+    UI._talking = true;
+    try {
+      const may = { art: SPR.frogCustom('maybelle', MAYBELLE_DEF), name: 'OFFICER MAYBELLE', nameCol: PIX.PAL.P, rim: PIX.PAL.p };
+      const d = META.load();
+      if (G.mayTalked) {
+        await TUTOR.say(U.pick(Math.random, [
+          'GO ON. AND COME BACK.',
+          'I WILL KEEP THE COFFEE WARM.',
+          'YOU KNOW WHERE I AM.',
+        ]), may);
+        return;
+      }
+      G.mayTalked = true;
+      d.trust = (d.trust || 0) + 1;
+      META.save();
+      const t = d.trust;
+      if (t < 3) {
+        await TUTOR.say(U.pick(Math.random, [
+          'LATE ONE AGAIN? I SIGNED YOU IN AT EIGHT. YOU OWE ME NOTHING.',
+          'THE DESK SERGEANT ASKED WHO STILL BRINGS YOU CASES. I SAID NOBODY ASKS THAT.',
+          'YOU LOOK TIRED, DETECTIVE. THAT IS NOT A CRITICISM. IT IS A WORRY.',
+        ]), may);
+      } else if (t < 6) {
+        G.chips += 4; UI.syncChips(); UI.chipTick(4);
+        await TUTOR.say('I PUT COFFEE MONEY IN YOUR COAT. DO NOT ARGUE WITH ME ABOUT IT.', may);
+        UI.stampSmall('+4 FROM MAYBELLE');
+      } else if (t < 9) {
+        G.mayLook = true;
+        if (G.case && !G.case.done && !G.case.known) G.case.looks++;
+        await TUTOR.say('I PULLED THE FILE BEFORE THE SHIFT CHANGE. ONE MORE LOOK IS IN THERE FOR YOU.', may);
+        UI.stampSmall('MAYBELLE: +1 LOOK, ALL NIGHT');
+      } else {
+        G.mayHeart = true;
+        G.hearts = E.maxHP();
+        await TUTOR.say('WHATEVER HAPPENS UP THERE... COME HOME AFTER. YOU HEAR ME?', may);
+        await TUTOR.say('...I MEAN IT.', may);
+        UI.stampSmall('MAYBELLE: +1 HEART, ALL NIGHT');
+        SFX.bank();
+      }
+    } finally { UI._talking = false; }
   },
 
   /* ================= the board ================= */
 
   /* A wanted poster: his face, his name, and the pin that holds it up. */
+  /* One frog in the line, full length, against the height chart. Crossed
+     off, he goes grey under a stepped red X. Called out, he steps forward. */
   posterEl(s, i, out, called, small) {
-    const p = U.el('div', 'poster' + (out ? ' out' : '') + (called ? ' called' : ''));
+    const p = U.el('div', 'suspect' + (out ? ' out' : '') + (called ? ' called' : ''));
     p.dataset.sus = i;
-    p.appendChild(U.el('i', 'poster-pin'));
-    const hd = U.el('div', 'po-head');
-    hd.appendChild(UI.txt('WANTED', { scale: small ? 2 : 3, color: PIX.PAL.K, shadow: null }));
-    p.appendChild(hd);
-    const art = U.el('div', 'po-art');
-    art.appendChild(SPR.clone(SPR.frogCustom('sus:' + s.name, s.def), 4));
+    const k = small ? 2 : 3;
+    const art = U.el('div', 'sus-art');
+    const cvb = SPR.clone(SPR.fullBody(s.name, s.def), k);
+    art.appendChild(cvb);
+    if (out) {
+      const xw = U.el('div', 'sus-x');
+      xw.appendChild(SPR.clone(SPR.bigX(52, 74), k));
+      art.appendChild(xw);
+    }
     p.appendChild(art);
-    const nm = U.el('div', 'po-name');
-    /* long names get set smaller rather than running off the paper */
-    const sc = small ? (s.name.length > 8 ? 1 : 2) : (s.name.length > 9 ? 2 : 3);
+    const nm = U.el('div', 'sus-tag');
+    const sc = s.name.length > (small ? 8 : 10) ? 1 : small ? 1 : 2;
+    nm.appendChild(UI.txt('N.' + (i + 1), { scale: 1, color: PIX.PAL.q, shadow: null }));
     nm.appendChild(UI.txt(s.name, { scale: sc, color: PIX.PAL.K, shadow: null }));
     p.appendChild(nm);
-    if (out) {
-      const x = U.el('div', 'po-stamp');
-      x.appendChild(UI.txt('NOT HIM', { scale: 3, color: PIX.PAL.r, shadow: null }));
-      p.appendChild(x);
-    }
     return p;
   },
 
@@ -308,26 +525,26 @@ const UI = {
     const wrap = U.el('div', 'board-wrap');
 
     const head = U.el('div', 'board-head');
-    head.appendChild(UI.txt('ANTE ' + G.ante + (G.endless ? ' · ENDLESS' : ' OF ' + ANTES),
+    head.appendChild(UI.txt('FLOOR ' + G.ante + (G.endless ? ' · ENDLESS' : ' OF ' + ANTES),
       { scale: 3, color: PIX.PAL.q }));
     head.appendChild(UI.txt(c.known ? 'YOU KNOW THIS ONE'
       : c.suspects.length + ' IN THE ROOM - ONE OF THEM IS HIM',
       { scale: 4, color: c.known ? PIX.PAL.R : PIX.PAL.W, outline: PIX.PAL.K }));
     const pay = U.el('div', 'board-purse');
-    pay.appendChild(UI.txt('PURSE ' + BLIND_PURSE(G.ante, G.blind), { scale: 3, color: PIX.PAL.G }));
+    pay.appendChild(UI.txt('BOUNTY ' + BLIND_PURSE(G.ante, G.blind), { scale: 3, color: PIX.PAL.G }));
     pay.appendChild(UI.icon('ic_chip', 3));
     head.appendChild(pay);
     wrap.appendChild(head);
 
-    /* ---- the cork, the posters, and the string between them ---- */
-    const board = U.el('div', 'cork');
+    /* ---- the line-up room: the height wall, and everybody against it ---- */
+    const board = U.el('div', 'cork lineup');
     board.id = 'cork';
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('class', 'strings');
     svg.id = 'cork-strings';
     board.appendChild(svg);
 
-    const row = U.el('div', 'poster-row' + (c.suspects.length > 5 ? ' wall' : ''));
+    const row = U.el('div', 'lineup-row' + (c.suspects.length > 5 ? ' wall' : ''));
     const stand = c.known ? [true] : CASE.standing();
     c.suspects.forEach((s, i) => {
       const out = !stand[i];
@@ -344,9 +561,9 @@ const UI = {
         };
       }
       if (c.done && c.accused === i) {
-        const st = U.el('div', 'po-stamp big');
-        st.appendChild(UI.wrap(c.right ? 'THAT IS HIM' : 'WRONG MAN', 7,
-          { scale: 3, color: c.right ? PIX.PAL.G : PIX.PAL.R, shadow: null }));
+        const st = U.el('div', 'sus-stamp');
+        st.appendChild(UI.wrap(c.right ? 'THAT IS HIM' : 'WRONG MAN', 8,
+          { scale: 2, color: c.right ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K }));
         p.appendChild(st);
       }
       row.appendChild(p);
@@ -429,25 +646,11 @@ const UI = {
       wrap.appendChild(tl);
     }
 
-    if (G.tagsTaken.length) {
-      const tr = U.el('div', 'tag-row');
-      tr.appendChild(UI.txt('TAGS TAKEN', { scale: 3, color: PIX.PAL.q }));
-      G.tagsTaken.slice(-6).forEach(id => {
-        const t = TAGS[id];
-        const chip = U.el('span', 'tag-chip has-tip');
-        chip.dataset.tipText = t.name + ' - ' + t.desc;
-        chip.appendChild(PIX.el(t.icon, 2));
-        chip.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.G }));
-        tr.appendChild(chip);
-      });
-      wrap.appendChild(tr);
-    }
-
     const btns = U.el('div', 'blind-btns');
     const sit = U.el('button', 'pixbtn gold primary big-deal');
     sit.id = 'btn-sit';
     sit.appendChild(SPR.gunEl(E.gun().id, 2));
-    sit.appendChild(UI.txt('SIT DOWN', { scale: 4, shadow: null, color: PIX.PAL.K }));
+    sit.appendChild(UI.txt('MOVE IN', { scale: 4, shadow: null, color: PIX.PAL.K }));
     const kh = U.el('span', 'key-hint'); kh.textContent = 'ENTER';
     sit.appendChild(kh);
     sit.onclick = () => { SFX.chak(); UI.goto(() => E.sitDown()); };
@@ -512,7 +715,7 @@ const UI = {
       const r = el.getBoundingClientRect();
       return [r.left - R.left + r.width * fx, r.top - R.top + r.height * fy];
     };
-    const posters = cork.querySelectorAll('.poster');
+    const posters = cork.querySelectorAll('.suspect');
     cork.querySelectorAll('.ev.up').forEach(ev => {
       const cl = G.case.clues[+ev.dataset.clue];
       if (!cl) return;
@@ -567,15 +770,9 @@ const UI = {
 
   showRunInfo() {
     const r = E.runInfo();
-    const cards = r.trinkets.length
-      ? r.trinkets.map(id => '<div class="ri-row"><b>' + TRINKETS[id].name + '</b><span>' + TRINKETS[id].desc + '</span></div>').join('')
-      : '<div class="ri-row"><span>Nothing but the iron.</span></div>';
     const items = r.items.length
       ? r.items.map(id => '<div class="ri-row"><b>' + ITEMS[id].name + '</b><span>' + ITEMS[id].desc + '</span></div>').join('')
       : '<div class="ri-row"><span>Belt loops empty.</span></div>';
-    const tags = r.tags.length
-      ? r.tags.map(id => '<span class="ri-pill">' + TAGS[id].name + '</span>').join('')
-      : '<span class="ri-pill off">none</span>';
     const nb = r.next;
     UI.modal(
       '<button class="pixbtn m-close" id="mm-close"></button>' +
@@ -591,9 +788,7 @@ const UI = {
       '<div class="ri-stat"><b>' + r.skipped + '</b><span>SKIPPED</span></div>' +
       '</div>' +
       '<div class="ri-sec"><h4>YOUR IRON</h4><div class="ri-row"><b>' + r.gun.name + '</b><span>' + r.gun.desc + '</span></div></div>' +
-      '<div class="ri-sec"><h4>TRINKETS ' + r.trinkets.length + '/' + MAX_TRINKETS + '</h4>' + cards + '</div>' +
       '<div class="ri-sec"><h4>BELT ' + r.items.length + '/' + E.maxItems() + '</h4>' + items + '</div>' +
-      '<div class="ri-sec"><h4>TAGS</h4><div class="ri-pills">' + tags + '</div></div>' +
       '<p class="ri-foot">Next up: <b>' + nb.name + '</b>' + (nb.boss ? ' - ' + nb.boss.name : '') +
       ', purse ' + nb.purse + '. Swamp PD wants ' + E.heatDue() + ' after this ante\'s boss.</p>'
     );
@@ -626,6 +821,7 @@ const UI = {
     wrap.appendChild(stripRow);
 
     /* the scene */
+    const dread = U.el('div'); dread.id = 'dread-wash'; app.appendChild(dread);
     const holder = U.el('div'); holder.id = 'scene-holder';
     const cv = U.el('canvas'); cv.id = 'scene'; cv.className = 'pix';
     cv.width = DUEL.W; cv.height = DUEL.H;
@@ -645,7 +841,7 @@ const UI = {
 
     /* bottom: trinkets + gun + controls */
     const bottom = U.el('div'); bottom.id = 'duel-bottom';
-    const tr = U.el('div'); tr.id = 'trinket-row'; bottom.appendChild(tr);
+
     const belt = U.el('div', 'item-belt'); belt.id = 'item-belt'; bottom.appendChild(belt);
     /* No aim rail. You click the thing you mean to shoot: his face to put
        the sights on him, your own end of the table to turn it round. The

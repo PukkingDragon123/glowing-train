@@ -26,21 +26,23 @@ const E = {
       duel: null, loot: null,
       endless: false, wonRun: false, busted: false,
       tag: null, tagsTaken: [], skipped: 0, messHeat: 0,
-      case: null, caseBonus: false, caseMiss: false,
+      case: null, caseBonus: false, caseMiss: false, intel: 0,
+      mayTalked: false, mayLook: false, mayHeart: false, capTalked: false,
       run: { duelsWon: 0, shots: 0, damage: 0, called: 0, misnamed: 0 },
     };
     META.bump('runs');
-    /* grandpa's keepsake: one common card so you never walk in empty-handed */
-    const commons = Object.values(TRINKETS).filter(t => t.rarity === 'common');
-    G.trinkets.push({ id: commons[Math.floor(G.rng() * commons.length)].id, used: {} });
+    /* No cards, no charms, no shop. A badge, a gun and a belt is the kit —
+       the rest of the old casino layer is gone. */
     E.startBlind();
+    /* the night starts at the precinct, not at the wall */
+    G.phase = 'station';
     return G;
   },
 
   gun() { return GUNS[G.gunIdx]; },
   has(tid) { return G.trinkets.some(t => t.id === tid); },
   trinketBy(tid) { return G.trinkets.find(t => t.id === tid); },
-  maxHP() { return PLAYER_HP + (E.has('totem') ? 1 : 0) + (G.gunIdx >= 4 ? 1 : 0); },
+  maxHP() { return PLAYER_HP + (G.mayHeart ? 1 : 0) + (G.gunIdx >= 4 ? 1 : 0); },
 
   /* ---- belt items ---- */
   maxItems() { return MAX_ITEMS + (E.has('belt') ? 1 : 0); },
@@ -320,7 +322,7 @@ const E = {
     return true;
   },
 
-  canSkip() { return G.phase === 'blind' && G.blind !== 2; },
+  canSkip() { return false; },   // nobody skips a case they were assigned
 
   rollTag() { return U.pick(G.rng, TAG_POOL); },
 
@@ -430,8 +432,9 @@ const E = {
            puts it through the eye, a bad one throws the round into the wall
            behind him and the chamber is spent all the same. */
         if (target === 'foe') {
+          /* skill pays double now that there is no card rack to lean on */
           if (d.aimWide) { dmg = 0; ev.wide = true; }
-          else if (d.aimClean) { dmg += 1; ev.clean = true; }
+          else if (d.aimClean) { dmg += 2; ev.clean = true; }
         }
       } else {
         if (d.opp.boss === 'owner' && d.revived) dmg = 2; // phase two: he's angry now
@@ -787,27 +790,24 @@ const E = {
     }
     pockets.forEach(p => { if (p.fixed !== undefined) p.chips = p.fixed; p.taken = false; });
 
-    /* maybe a trinket card in one of them */
-    if (rng() < LOOT_TUNING.trinketChance[G.blind]) {
-      const RW = [[60, 30, 9, 1], [45, 35, 16, 4], [15, 40, 32, 13]][G.blind];
-      const rar = ['common', 'uncommon', 'rare', 'legendary'];
-      const pool = Object.values(TRINKETS).filter(t => META.isUnlocked(t.id) && !E.has(t.id));
-      if (pool.length) {
-        const card = U.wpick(rng, pool, t => RW[rar.indexOf(t.rarity)]);
-        U.pick(rng, pockets.filter(p => !p.gun)).card = card.id;
-      }
+    /* HIS PAPERS. Intel about the family, sewn into a coat more often than
+       not: take it and one clue on the next line-up is already turned over
+       when you walk in. This is what a detective is in the room FOR. */
+    if (rng() < 0.6 && !G.duel.opp.boss) {
+      const target = U.pick(rng, pockets.filter(p => !p.gun && p.id !== 'tooth'));
+      if (target) target.dossier = true;
     }
     /* and maybe something for the belt */
     if (rng() < (E.has('contract') ? 1 : LOOT_TUNING.itemChance[G.blind])) {
       const rar = ['common', 'uncommon', 'rare', 'legendary'];
       const IW = ITEM_RW[G.blind];
       const pickId = U.wpick(rng, ITEM_IDS, id => IW[rar.indexOf(ITEMS[id].rarity)]);
-      const spots = pockets.filter(p => !p.gun && !p.card);
+      const spots = pockets.filter(p => !p.gun && !p.dossier);
       if (pickId && spots.length) U.pick(rng, spots).item = pickId;
     }
 
     /* something square shows through the cloth */
-    pockets.forEach(p => { p.bulge = !!(p.card || p.gun || p.item); });
+    pockets.forEach(p => { p.bulge = !!(p.dossier || p.gun || p.item); });
 
     G.loot = { pockets, bribes: 0, pendingCard: null, pendingItem: null,
       done: false, tool: null, bonusFree: 0, dragged: false,
@@ -861,6 +861,7 @@ const E = {
       else G.loot.pendingCard = p.card;
     }
     if (p.item && !E.giveItem(p.item)) G.loot.pendingItem = p.item;
+    if (p.dossier) { G.intel = (G.intel || 0) + 1; p.foundDossier = true; }
     return p;
   },
 

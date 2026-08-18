@@ -183,6 +183,7 @@ function driver() {
 
   function playRun(seed, maxAnte) {
     E.newRun(seed);
+    if (G.phase === 'station') G.phase = 'blind';
     let guard = 0;
     while (G.phase !== 'over' && guard++ < 6000) {
       if (G.phase === 'won') return { ante: ANTES, won: true };
@@ -244,6 +245,7 @@ function driver() {
   for (let run = 0; run < 200; run++) {
     try {
       E.newRun('FUZZ-' + run);
+      if (G.phase === 'station') G.phase = 'blind';
       let guard = 0;
       while (G.phase !== 'over' && G.phase !== 'won' && guard++ < 4000) {
         if (G.phase === 'blind') {

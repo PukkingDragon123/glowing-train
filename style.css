@@ -2163,3 +2163,212 @@ body.heard #siren-wash { opacity: 1; }
 /* how he is holding it, next to his name */
 #opp-grip { display: inline-flex; opacity: .9; }
 #opp-grip.hidden { display: none; }
+
+/* full-frame drawn animation cut (reload, drive, drag) */
+#cine-stage.anim-cut {
+  display: flex; align-items: center; justify-content: center;
+  background: #05060a;
+}
+.anim-frame { image-rendering: pixelated; box-shadow: 0 10px 0 rgba(0,0,0,.55); }
+
+/* ============================================================
+   26. THE PRECINCT
+   ============================================================ */
+
+.station-wrap {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; padding: 14px;
+  position: relative; z-index: 2; min-height: 0;
+  overflow-y: auto; scrollbar-width: none;
+}
+.station-wrap::-webkit-scrollbar { display: none; }
+.station-room { display: block; box-shadow: 0 8px 0 rgba(0,0,0,.5); }
+.station-folk {
+  display: flex; gap: 64px; align-items: flex-end; justify-content: center;
+  margin-top: -86px; pointer-events: none; position: relative; z-index: 3;
+}
+.st-frog { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.st-frog canvas { image-rendering: pixelated; }
+.st-hearts { display: flex; gap: 2px; }
+
+/* the murder-board title */
+.board-title { gap: 10px; }
+.mboard {
+  position: relative;
+  width: min(94vw, 900px); height: min(62vh, 520px);
+  border: var(--bd) solid #2a1a10;
+  background:
+    repeating-linear-gradient(37deg, rgba(0,0,0,.10) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-51deg, rgba(255,255,255,.05) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #6b4426, #4d301a);
+  box-shadow: inset 0 0 0 4px rgba(0,0,0,.30), 0 10px 0 rgba(0,0,0,.45);
+}
+.mb-pin { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mb-title { left: 50%; top: 7%; transform: translateX(-50%) rotate(-1deg); }
+.mb-title canvas { box-shadow: 0 6px 0 rgba(0,0,0,.4); }
+.mb-knife {
+  position: absolute; right: -20px; top: -22px;
+  filter: drop-shadow(3px 4px 0 rgba(0,0,0,.5));
+}
+.mb-mug { background: transparent; }
+.mb-mug canvas { box-shadow: 0 5px 0 rgba(0,0,0,.4); }
+.mb-mug0 { left: 6%; top: 16%; transform: rotate(-3deg); }
+.mb-mug1 { left: 22%; top: 52%; transform: rotate(2deg); }
+.mb-mug2 { left: 44%; top: 44%; transform: rotate(-1.4deg); }
+.mb-mug3 { right: 20%; top: 56%; transform: rotate(3deg); }
+.mb-mug4 { right: 5%; top: 18%; transform: rotate(-2deg); }
+.mb-name { background: #ded2b4; padding: 1px 5px; border: 2px solid #12101d; }
+.mb-ring {
+  position: absolute; inset: -8px -6px 14px -6px;
+  border: 4px solid rgba(209,59,69,.85);
+  transform: rotate(-2deg);
+  pointer-events: none;
+}
+.mb-hole { position: absolute; }
+.mb-seed { right: 7%; bottom: 8%; transform: rotate(1.6deg); background: #cfb681; border: 3px solid #12101d; padding: 8px 10px 10px; }
+.mb-seed input {
+  width: 150px; background: #e8dcbe; color: #12101d;
+  border: 2px solid #12101d; padding: 4px 6px;
+  font: 700 14px monospace; letter-spacing: 1px; text-transform: uppercase;
+}
+.mb-record { left: 6%; bottom: 8%; transform: rotate(-1.6deg); background: #ded2b4; border: 3px solid #12101d; padding: 8px 10px; gap: 3px; }
+.title-btns { position: relative; z-index: 3; }
+
+@media (max-width: 720px) {
+  .mboard { height: min(56vh, 430px); }
+  .mb-mug1 { left: 12%; }
+  .mb-mug3 { right: 12%; }
+  .station-folk { gap: 30px; margin-top: -64px; }
+}
+
+/* ============================================================
+   27. THE LINE-UP
+   Full frogs against the height chart. Crossed off, they grey
+   out under a stepped X. No paper, no pins: a police wall.
+   ============================================================ */
+
+.cork.lineup {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 24px, rgba(18,16,29,.55) 24px 27px),
+    linear-gradient(180deg, #9c9478, #7e765c 70%, #23201a 70%, #1b1914);
+  border-color: #12101d;
+  padding: 14px 16px 12px;
+}
+.lineup-row {
+  display: flex; gap: 10px; align-items: flex-end; justify-content: center;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+.suspect {
+  position: relative; display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  transition: transform .1s steps(2), filter .1s steps(2);
+}
+.suspect canvas { image-rendering: pixelated; display: block; }
+.suspect.live { cursor: pointer; }
+.suspect.live:hover { transform: translateY(-6px); }
+.suspect.out .sus-art > canvas:first-child { filter: grayscale(.9) brightness(.55); }
+.suspect.called { transform: translateY(-8px); }
+.sus-art { position: relative; }
+.sus-x {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.sus-tag {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: #ded2b4; border: 2px solid #12101d; padding: 2px 5px;
+}
+.suspect.out .sus-tag { background: #8f8a7a; }
+.sus-stamp {
+  position: absolute; top: 26%; left: 50%; transform: translateX(-50%) rotate(-5deg);
+  background: rgba(12,16,13,.72); border: 3px solid currentColor; padding: 2px 5px;
+  pointer-events: none;
+}
+
+/* ============================================================
+   28. FIRST PERSON, OUT BACK
+   The room is the interface: a strip of meters, a tool tray,
+   and the way out. Nothing else between you and him.
+   ============================================================ */
+
+#duel-overlay.loot-in.fp { display: block; pointer-events: none; }
+#duel-overlay.loot-in.fp > * { pointer-events: auto; }
+.fp-strip {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 14px; align-items: center;
+  background: rgba(6,10,8,.88); border: 3px solid var(--line);
+  padding: 6px 12px;
+}
+.fp-strip .meter { width: 150px; }
+.fp-strip .m-lab { min-width: 44px; }
+#duel-overlay.fp #loot-tools {
+  position: absolute; left: 10px; bottom: 84px;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+}
+.fp-hint {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(6,10,8,.85); border: 2px solid var(--line);
+  padding: 4px 10px;
+}
+.fp-acts {
+  position: absolute; right: 12px; bottom: 74px;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+}
+#duel-overlay.fp #card-swap {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: rgba(6,10,8,.94); border: 3px solid var(--line); padding: 12px;
+}
+@media (max-width: 720px) {
+  .fp-strip { gap: 8px; padding: 4px 8px; }
+  .fp-strip .meter { width: 96px; }
+}
+
+/* ============================================================
+   29. THE CUT-IN
+   A skewed banner with a face on it, crossing the frame for
+   half a second when a live round commits.
+   ============================================================ */
+
+.cutin {
+  position: fixed; inset: 0; z-index: 156; pointer-events: none;
+  overflow: hidden;
+}
+.ci-band {
+  position: absolute; left: -12%; right: -12%; top: 34%;
+  height: 26%;
+  background: #0a0e14;
+  border-top: 5px solid #12101d; border-bottom: 5px solid #12101d;
+  box-shadow: 0 0 0 3px rgba(244,239,224,.14);
+  transform: skewY(-4deg) translateX(-108%);
+}
+.cutin.go .ci-band { animation: ci-cross .56s steps(12) forwards; }
+.cutin.red .ci-band { background: #2b0810; border-color: #571220; }
+@keyframes ci-cross {
+  0%   { transform: skewY(-4deg) translateX(-108%); }
+  32%  { transform: skewY(-4deg) translateX(-2%); }
+  68%  { transform: skewY(-4deg) translateX(2%); }
+  100% { transform: skewY(-4deg) translateX(110%); }
+}
+.ci-inner {
+  position: relative; height: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 26px;
+}
+.ci-lines { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
+.ci-face canvas { image-rendering: pixelated; display: block; filter: drop-shadow(4px 4px 0 rgba(0,0,0,.6)); }
+.ci-word { position: relative; }
+.ci-word canvas { display: block; }
+
+/* last heart: the room closes in and your chest is in your ears */
+#dread-wash {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 46%, rgba(87,18,32,.55) 100%);
+}
+body.dread #dread-wash { opacity: 1; animation: dread-pulse 1.15s steps(6) infinite; }
+@keyframes dread-pulse {
+  0%, 100% { opacity: .45; }
+  12% { opacity: 1; }
+  24% { opacity: .6; }
+  34% { opacity: .95; }
+}

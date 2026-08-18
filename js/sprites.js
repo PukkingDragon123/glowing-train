@@ -3778,28 +3778,44 @@ SPR.lorePanel = function (name) {
     const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false;
 
-    if (name === 'home') {
-      /* the kitchen, lit by one bulb, before any of it */
-      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#2a1d14');
-      for (let y = 0; y < 74; y += 6) PIX.rect(c, 0, y, LORE_W, 1, 'rgba(0,0,0,.16)');
-      PIX.rect(c, 0, 74, LORE_W, LORE_H - 74, '#1a120c');
-      PIX.rect(c, 22, 14, 40, 34, '#0d1520');                     // the window
-      PIX.rect(c, 24, 16, 36, 30, '#16243a');
-      PIX.rect(c, 41, 16, 2, 30, '#0d1520');
-      PIX.rect(c, 24, 30, 36, 2, '#0d1520');
-      /* the bulb and its cone */
-      PIX.rect(c, 118, 0, 2, 16, '#4a3a28');
-      PIX.disc(c, 119, 18, 4, '#ffd75e');
-      c.globalAlpha = 0.14; c.fillStyle = '#ffd75e';
-      c.beginPath(); c.moveTo(119, 20); c.lineTo(80, 82); c.lineTo(160, 82); c.closePath(); c.fill();
-      c.globalAlpha = 1;
-      SPR.rrect(c, 84, 66, 74, 8, 3, '#3a2a1a');                  // the table
-      PIX.rect(c, 92, 74, 4, 14, '#2a1d12');
-      PIX.rect(c, 146, 74, 4, 14, '#2a1d12');
-      loreSit(c, 100, 68, 0.8, '#0d0a08', false);                 // two small ones
-      loreSit(c, 142, 68, 0.8, '#0d0a08', false);
-      loreSit(c, 121, 70, 1.0, '#0d0a08', true);                  // and one in a hat
-      PIX.disc(c, 121, 60, 3, '#e0a63c');                         // supper on the table
+    if (name === 'lineup') {
+      /* the identification room: four of them under the lights behind the
+         glass, and you on the dark side of it, pointing */
+      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#0a0d12');
+      PIX.rect(c, 12, 12, LORE_W - 24, 58, '#241f18');            // the window frame
+      PIX.rect(c, 15, 15, LORE_W - 30, 52, '#cfc2a0');            // the lit wall
+      for (let y = 20; y < 64; y += 9) PIX.rect(c, 15, y, LORE_W - 30, 1, '#a89a78');
+      for (let i = 0; i < 4; i++) {
+        loreStand(c, 40 + i * 34, 66, 0.72, '#1c1812', i !== 2);
+      }
+      /* the one you picked, boxed in red */
+      PIX.rect(c, 96, 18, 32, 2, '#d13b45'); PIX.rect(c, 96, 62, 32, 2, '#d13b45');
+      PIX.rect(c, 96, 18, 2, 46, '#d13b45'); PIX.rect(c, 126, 18, 2, 46, '#d13b45');
+      /* you, this side of the glass, arm up */
+      loreStand(c, 30, 118, 1.05, '#04060a', true);
+      PIX.rect(c, 38, 74, 26, 5, '#04060a');                      // the pointing arm
+      PIX.rect(c, 62, 72, 6, 4, '#04060a');
+      PIX.rect(c, 0, 100, LORE_W, 8, '#06080c');
+      return cv;
+    }
+
+    if (name === 'verdict') {
+      /* the courthouse steps. He walks, and he looks straight at you. */
+      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#10131a');
+      PIX.rect(c, 52, 6, 76, 70, '#1d2027');                      // the doorway column
+      PIX.rect(c, 66, 12, 48, 62, '#e8dcbe');                     // the light inside
+      PIX.rect(c, 70, 12, 6, 62, '#cfc2a0');
+      for (let i = 0; i < 4; i++) PIX.rect(c, 0, 76 + i * 8, LORE_W, 5, i % 2 ? '#22262e' : '#191d24');
+      loreStand(c, 66, 86, 0.8, '#0a0806', true);                 // a goon
+      loreStand(c, 114, 86, 0.8, '#0a0806', true);                // a goon
+      /* him: wide, tall hat, mid-frame */
+      loreStand(c, 90, 92, 1.0, '#070604', true);
+      PIX.rect(c, 82, 30, 17, 3, '#3a2c18');                      // cigar line
+      /* the flashbulbs going off */
+      [[24, 40], [150, 34], [38, 62]].forEach(([fx, fy]) => {
+        PIX.rect(c, fx - 4, fy, 9, 1, '#fff3b0'); PIX.rect(c, fx, fy - 4, 1, 9, '#fff3b0');
+        PIX.rect(c, fx - 1, fy - 1, 3, 3, '#ffffff');
+      });
       return cv;
     }
 
@@ -3814,7 +3830,6 @@ SPR.lorePanel = function (name) {
       loreStand(c, 78, 106, 0.78, '#0a0705', true);
       loreStand(c, 100, 108, 0.86, '#0a0705', true);
       loreStand(c, 120, 106, 0.78, '#0a0705', true);
-      /* the flash, off the one in the middle */
       PIX.disc(c, 112, 62, 9, '#fff3b0');
       PIX.disc(c, 112, 62, 5, '#ffffff');
       for (let i = 0; i < 7; i++) {
@@ -3824,72 +3839,84 @@ SPR.lorePanel = function (name) {
       return cv;
     }
 
-    if (name === 'after') {
-      /* the same room, an hour later, and one of you left standing in it */
-      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#0f141c');
-      for (let y = 0; y < 74; y += 6) PIX.rect(c, 0, y, LORE_W, 1, 'rgba(0,0,0,.22)');
-      PIX.rect(c, 0, 74, LORE_W, LORE_H - 74, '#080b10');
-      PIX.rect(c, 22, 14, 40, 34, '#070a10');
-      PIX.rect(c, 24, 16, 36, 30, '#101b2c');
-      /* the bulb, still swinging */
-      PIX.rect(c, 114, 0, 2, 18, '#2a2a30');
-      PIX.disc(c, 115, 20, 4, '#6b6f7a');
-      SPR.rrect(c, 84, 66, 74, 8, 3, '#1a1a22');
-      PIX.rect(c, 92, 74, 4, 14, '#141419');
-      /* the chair gone over */
-      PIX.rect(c, 60, 84, 22, 4, '#141419');
-      PIX.rect(c, 60, 88, 4, 12, '#141419');
-      /* what is on the boards */
-      SPR.ellipse(c, 108, 92, 22, 5, '#2a0a12');
-      SPR.ellipse(c, 104, 91, 13, 3, '#571220');
-      loreStand(c, 143, 100, 0.72, '#05070a', true);              // you, in the doorway
-      loreRain(c, 7, 26, 'rgba(127,215,255,.10)');
+    if (name === 'funeral') {
+      /* it rained. He sent flowers. */
+      PIX.rect(c, 0, 0, LORE_W, LORE_H, '#171c26');
+      PIX.rect(c, 0, 84, LORE_W, LORE_H - 84, '#10141c');         // the wet grass
+      PIX.rect(c, 0, 84, LORE_W, 2, '#222b3a');
+      /* three stones: two small, one tall */
+      [[58, 66, 14, 20], [86, 62, 16, 24], [116, 68, 13, 18]].forEach(([sx, sy, w, h]) => {
+        PIX.rect(c, sx - 1, sy - 1, w + 2, h + 2, '#0b0e14');
+        PIX.rect(c, sx, sy, w, h, '#3a4152');
+        PIX.rect(c, sx, sy, w, 3, '#4a5266');
+        PIX.rect(c, sx + 2, sy + 6, w - 4, 1, '#2b3140');
+        PIX.rect(c, sx + 2, sy + 9, w - 4, 1, '#2b3140');
+      });
+      /* his flowers, at the tall one. You know whose they are. */
+      PIX.rect(c, 88, 82, 12, 5, '#1c5540');
+      [[89, 80], [93, 79], [97, 81]].forEach(([fx, fy]) => PIX.rect(c, fx, fy, 2, 2, '#d13b45'));
+      /* you, alone, under an umbrella */
+      loreStand(c, 32, 106, 0.95, '#05070b', false);
+      PIX.rect(c, 16, 44, 34, 4, '#0b0d12');                      // the canopy
+      PIX.rect(c, 20, 40, 26, 4, '#0b0d12');
+      PIX.rect(c, 31, 48, 2, 22, '#0b0d12');                      // the stick
+      loreRain(c, 23, 110, 'rgba(127,215,255,.20)');
       return cv;
     }
 
     if (name === 'tower') {
-      /* the house, from the street, in the rain */
+      /* the family's tower, from the street, in the rain — the climb card */
       PIX.rect(c, 0, 0, LORE_W, LORE_H, '#080c14');
       for (let i = 0; i < 40; i++) {
         PIX.disc(c, (i * 41) % LORE_W, (i * 17) % 40, 1, 'rgba(200,220,255,.10)');
       }
-      PIX.rect(c, 54, 10, 72, 98, '#161b28');                     // the tower
+      PIX.rect(c, 54, 10, 72, 98, '#161b28');
       PIX.rect(c, 54, 10, 4, 98, '#20273a');
       PIX.rect(c, 122, 10, 4, 98, '#0e1220');
-      for (let f = 0; f < 8; f++) {                               // eight floors of it
+      for (let f = 0; f < 8; f++) {
         const y = 96 - f * 11;
         const lit = f < 3 ? '#e0a63c' : f < 6 ? '#a5741f' : '#6e4c12';
         PIX.rect(c, 58, y, 64, 2, '#0a0d14');
         for (let w = 0; w < 5; w++) PIX.rect(c, 62 + w * 12, y - 6, 7, 5, lit);
       }
-      PIX.rect(c, 60, 4, 60, 8, '#12101d');                       // the sign on the roof
+      PIX.rect(c, 60, 4, 60, 8, '#12101d');
       PIX.rect(c, 62, 5, 56, 6, '#ff6a5e');
       PIX.rect(c, 66, 6, 4, 4, '#fff3b0');
       PIX.rect(c, 74, 6, 4, 4, '#fff3b0');
       PIX.rect(c, 82, 6, 4, 4, '#fff3b0');
-      SPR.ellipse(c, 90, 108, 46, 6, 'rgba(224,166,60,.14)');     // wet street
+      SPR.ellipse(c, 90, 108, 46, 6, 'rgba(224,166,60,.14)');
       loreStand(c, 90, 108, 0.6, '#04060a', true);
       loreRain(c, 11, 70, 'rgba(127,215,255,.16)');
       return cv;
     }
 
-    /* 'stairs' — the bottom of the only staircase that matters */
-    PIX.rect(c, 0, 0, LORE_W, LORE_H, '#0b0f16');
-    for (let s = 0; s < 9; s++) {
-      const y = 100 - s * 9, w = 108 - s * 8;
-      PIX.rect(c, 90 - w / 2, y, w, 5, '#1d2330');
-      PIX.rect(c, 90 - w / 2, y, w, 1, '#2b3346');
-      PIX.rect(c, 90 - w / 2, y + 5, w, 4, '#101520');
-    }
-    c.globalAlpha = 0.20; c.fillStyle = '#ffd75e';
-    c.beginPath(); c.moveTo(90, 12); c.lineTo(40, 108); c.lineTo(140, 108); c.closePath(); c.fill();
+    /* 'oath' — the badge stays on the desk light. So does the iron. */
+    PIX.rect(c, 0, 0, LORE_W, LORE_H, '#0b0e13');
+    /* rain on the window behind */
+    PIX.rect(c, 118, 10, 46, 40, '#070a10');
+    PIX.rect(c, 120, 12, 42, 36, '#101b2c');
+    PIX.rect(c, 140, 12, 2, 36, '#070a10');
+    loreRain(c, 31, 26, 'rgba(127,215,255,.14)');
+    /* the lamp and its cone */
+    PIX.rect(c, 28, 18, 3, 14, '#232018');
+    PIX.rect(c, 20, 30, 20, 6, '#3a3020');
+    c.globalAlpha = 0.16; c.fillStyle = '#ffd75e';
+    c.beginPath(); c.moveTo(30, 34); c.lineTo(8, 78); c.lineTo(78, 78); c.closePath(); c.fill();
     c.globalAlpha = 1;
-    PIX.rect(c, 70, 6, 40, 16, '#e8c86a');                        // the door at the top
-    PIX.rect(c, 74, 8, 32, 14, '#ffd75e');
-    loreStand(c, 90, 104, 0.9, '#05070b', true);
-    /* the iron, in his hand, held low */
-    PIX.rect(c, 106, 84, 12, 4, '#05070b');
-    PIX.rect(c, 116, 82, 4, 8, '#05070b');
+    /* the desk */
+    PIX.rect(c, 4, 76, 172, 5, '#2c2114');
+    PIX.rect(c, 4, 81, 172, 22, '#1d160e');
+    /* the badge: a star in a circle of tin */
+    PIX.disc(c, 44, 70, 7, '#0b0e13');
+    PIX.disc(c, 44, 70, 6, '#7fd7ff');
+    PIX.disc(c, 44, 70, 4, '#3f89c4');
+    PIX.rect(c, 43, 66, 2, 8, '#b6e9ff'); PIX.rect(c, 40, 69, 8, 2, '#b6e9ff');
+    /* the iron beside it */
+    PIX.rect(c, 58, 66, 22, 4, '#12101d');
+    PIX.rect(c, 58, 64, 14, 3, '#272c3d');
+    PIX.rect(c, 74, 68, 5, 7, '#12101d');
+    /* you, head down over both */
+    loreSit(c, 96, 84, 1.1, '#04060a', true);
     return cv;
   });
 };
@@ -4120,6 +4147,167 @@ SPR.floorStain = function (seed, R) {
       const a = rng() * Math.PI * 2;
       PIX.rect(c, Math.round(cx + Math.cos(a) * R * 1.0),
         Math.round(cy + Math.sin(a) * cy * 1.05), 1 + ((rng() * 2) | 0), 1, P.D);
+    }
+    return cv;
+  });
+};
+
+/* ============================================================
+   THE MURDER BOARD — props for the title screen.
+   A knife somebody put through a photograph, the holes somebody
+   else put through the board, and the tape holding the rest up.
+   ============================================================ */
+
+PIX.def('prop_knife', `
+..............KK
+.............KWK
+............KWSK
+...........KWSK.
+..........KWSK..
+.........KWSK...
+........KWSK....
+.......KWSK.....
+......KWSK......
+.....KWSK.......
+....KKKK........
+...KuUK.........
+..KuUK..........
+.KuUK...........
+KUUK............
+KKK.............`);
+
+PIX.def('prop_hole', `
+...KKK...
+..KkkkK..
+.KkZZZkK.
+KkZZZZZkK
+KkZZZZZkK
+KkZZZZZkK
+.KkZZZkK.
+..KkkkK..
+...KKK...`);
+
+PIX.def('prop_hole2', `
+..KK..
+.KZZK.
+KZZZZK
+KZZZZK
+.KZZK.
+..KK..`);
+
+/* a strip of aged sticky tape, drawn once and rotated by CSS */
+SPR.tapeStrip = function (w) {
+  return SPR.cached('tape_' + w, () => {
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = 7;
+    const c = cv.getContext('2d');
+    c.fillStyle = 'rgba(220,205,160,.72)';
+    c.fillRect(0, 0, w, 7);
+    c.fillStyle = 'rgba(255,255,255,.25)';
+    c.fillRect(0, 0, w, 2);
+    c.fillStyle = 'rgba(0,0,0,.18)';
+    c.fillRect(0, 5, w, 2);
+    /* torn ends */
+    c.clearRect(0, 0, 1, 2); c.clearRect(0, 5, 1, 2);
+    c.clearRect(w - 1, 1, 1, 2); c.clearRect(w - 1, 4, 1, 3);
+    return cv;
+  });
+};
+
+/* a polaroid of a frog, for pinning to the board */
+SPR.mugshot = function (key, def, k) {
+  return SPR.cached('mug_' + key + '_' + k, () => {
+    const head = SPR.frogCustom('mug:' + key, def);
+    const w = head.width * k + 12, h = head.height * k + 22;
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    PIX.rect(c, 0, 0, w, h, PIX.PAL.K);
+    PIX.rect(c, 1, 1, w - 2, h - 2, '#ded2b4');
+    PIX.rect(c, 5, 5, w - 10, head.height * k + 2, '#141820');
+    c.drawImage(head, 6, 6, head.width * k, head.height * k);
+    return cv;
+  });
+};
+
+/* ============================================================
+   FULL LENGTH.
+   The line-up needs the whole frog: the torso rig, then legs in
+   the same suit, then shoes. Nobody has drawn these frogs below
+   the belt before because the table always hid it.
+   ============================================================ */
+SPR.fullBody = function (key, def) {
+  return SPR.cached('full_' + key, () => {
+    const P = PIX.PAL;
+    const head = SPR.frogCustom('fb:' + key, def);
+    const body = SPR.bodyCustom('fb:' + key, def, false);
+    const hs = 1.35, NECK = 8, LEGS = 26;
+    const hw = Math.round(head.width * hs), hh = Math.round(head.height * hs);
+    const W = Math.max(body.width, hw) + 2;
+    const H = hh + body.height - NECK + LEGS;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    const bodyTop = hh - NECK;
+    const cx = Math.round(W / 2);
+
+    /* legs first, so the coat hem sits over them */
+    const C = SPR.costumeOf(def);
+    const O = C.overcoat || C.jacket || null;
+    const legC = P[(O && O.dark) || 'k'] || P.k;
+    const hipY = bodyTop + body.height - 6;
+    const spread = def.fat ? 11 : 8;
+    [-1, 1].forEach(sgn => {
+      const lx = cx + sgn * spread;
+      PIX.rect(c, lx - 6, hipY, 12, LEGS, P.K);
+      PIX.rect(c, lx - 5, hipY, 10, LEGS - 2, legC);
+      PIX.rect(c, lx - 5, hipY, 2, LEGS - 2, 'rgba(255,255,255,.07)');
+      PIX.rect(c, lx + 2, hipY, 3, LEGS - 2, 'rgba(0,0,0,.28)');
+      /* trouser crease + cuff */
+      PIX.rect(c, lx - 5, hipY + LEGS - 8, 10, 2, 'rgba(0,0,0,.3)');
+      /* the shoe, pointed out */
+      PIX.rect(c, lx - 7 + sgn * 2, hipY + LEGS - 4, 14, 6, P.K);
+      PIX.rect(c, lx - 6 + sgn * 2, hipY + LEGS - 3, 12, 4, '#1c1a2c');
+      PIX.rect(c, lx - 6 + sgn * 2, hipY + LEGS - 3, 12, 1, 'rgba(255,255,255,.16)');
+    });
+
+    c.drawImage(body, Math.round((W - body.width) / 2), bodyTop);
+    c.drawImage(head, Math.round((W - hw) / 2), 0, hw, hh);
+    return cv;
+  });
+};
+
+/* a big stepped X, for crossing somebody off the line-up */
+SPR.bigX = function (w, h) {
+  return SPR.cached('bigx_' + w + '_' + h, () => {
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const c = cv.getContext('2d');
+    const P = PIX.PAL;
+    const T = Math.max(4, Math.round(w / 12));
+    const steps = Math.max(8, Math.round(h / 4));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const y = Math.round(t * (h - T));
+      const x1 = Math.round(t * (w - T));
+      const x2 = Math.round((1 - t) * (w - T));
+      c.fillStyle = P.K;
+      c.fillRect(x1 - 1, y - 1, T + 2, T + 2);
+      c.fillRect(x2 - 1, y - 1, T + 2, T + 2);
+    }
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const y = Math.round(t * (h - T));
+      const x1 = Math.round(t * (w - T));
+      const x2 = Math.round((1 - t) * (w - T));
+      c.fillStyle = P.r;
+      c.fillRect(x1, y, T, T);
+      c.fillRect(x2, y, T, T);
+      c.fillStyle = P.R;
+      c.fillRect(x1, y, T, 2);
+      c.fillRect(x2, y, T, 2);
     }
     return cv;
   });

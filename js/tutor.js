@@ -13,10 +13,18 @@
    marked in the save so a second run is silent.
    ============================================================ */
 
+/* THE CAPTAIN. Thirty years on the job, grey all through, and exactly one
+   detective left that he does not ask questions about. */
 const HANDLER_DEF = {
-  skin: ['B', 'b', 'u'], fat: false, suit: 'u', shirt: 'w', tie: 'd',
-  costume: 'trench', hat: 'fedora', hatCol: 'u', band: 'K', cigar: true,
-  scar: true,
+  skin: ['s', 't', 'T'], fat: true, suit: 't', shirt: 'l', tie: null,
+  costume: 'cop', flatcap: true, cigar: true, warts: true, scar: true,
+};
+
+/* OFFICER MAYBELLE, on the front desk. The one person in the building who
+   still says good morning like she means it. */
+const MAYBELLE_DEF = {
+  skin: ['P', 'p', 'X'], fat: false, suit: 't', shirt: 'l', tie: null,
+  costume: 'cop', flatcap: true, lips: 'R', lashes: true,
 };
 
 /* whoever it is behind the bar that answers when you ask */
@@ -30,11 +38,11 @@ const TUTOR = {
   /* ---------------- the opening, before the first board ---------------- */
 
   OPENING: [
-    'YOU CAME DOWN HERE FOR A NAME. I HAVE FIVE.',
-    'THREE OF THEM WILL BE DRINKING IN THAT ROOM TONIGHT.',
-    'ONE OF THEM IS THE ONE THAT WENT THROUGH YOUR DOOR.',
-    'WORK THE BOARD. NAME HIM. SIT DOWN WITH HIM.',
-    'AND WHATEVER YOU DO IN THERE, CLEAN UP AFTER IT.',
+    'SIX YEARS I PUT INTO THAT FAMILY, DETECTIVE. THE COURTS HANDED THEM BACK EVERY TIME.',
+    'AFTER WHAT THEY DID TO YOUR HOUSE, NOBODY HERE IS GOING TO ASK HOW YOU CLOSE A CASE.',
+    'WORK THE FILE. PICK HIM OUT OF THE LINE. BE SURE.',
+    'BE SURE. THE WRONG NAME AND THE RIGHT FROG HEARS YOU COMING.',
+    'AND CLEAN UP AFTER YOURSELF. IF I HAVE TO SEE IT, I HAVE TO REPORT IT.',
   ],
 
   /* ---------------- the three things that keep you alive ---------------- */
@@ -129,7 +137,7 @@ const TUTOR = {
       const holder = U.el('div', 'tut-plate');
       holder.appendChild(TUTOR.plate({
         art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
-        name: opts.name || 'THE HANDLER',
+        name: opts.name || 'THE CAPTAIN',
         nameCol: opts.nameCol,
         rim: opts.rim,
         line,

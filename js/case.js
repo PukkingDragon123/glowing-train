@@ -297,12 +297,18 @@ const CASE = {
     G.case = {
       suspects, clues: deck.slice(0, Math.max(3, Math.ceil(suspects.length / 2))),
       asks: asks.slice(0, 6),
-      looks: CASE_TUNING.looks(G.ante),
+      looks: CASE_TUNING.looks(G.ante) + (G.mayLook ? 1 : 0),
       quiz: CASE_TUNING.asks(G.ante),
       grease: 0,
       accused: -1, right: null, done: false,
       realIdx: suspects.findIndex(s => s.real),
     };
+    /* the papers you took off the last one: a clue is already turned over */
+    const deck2 = G.case.clues;
+    while ((G.intel || 0) > 0 && deck2.some(c => !c.seen)) {
+      deck2.find(c => !c.seen).seen = true;
+      G.intel--;
+    }
     return G.case;
   },
 

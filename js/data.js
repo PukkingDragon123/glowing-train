@@ -10,7 +10,7 @@
    ------------------------------------------------------------ */
 
 const ANTES = 8;              // beat the ante-8 boss to clear your marker
-const PLAYER_HP = 5;          // base hearts (totem +1, golden gun +1)
+const PLAYER_HP = 6;          // base hearts (the golden gun still adds one)
 const MAX_TRINKETS = 5;
 const MAX_ITEMS = 3;          // belt loops: one-shot consumables you loot off corpses
 
@@ -52,7 +52,7 @@ const LOOT_TUNING = {
   slitNoise: 0.12,            // the shiv is quiet; that is the point of it
   bribeBase: 3, bribePerAnte: 1, bribeStep: 3, // bribe = base + ante + step*bribesPaid
   trinketChance: [0.5, 0.65, 1.0],             // per blind: odds one pocket hides a card
-  itemChance: [0.45, 0.6, 0.9],                // per blind: odds one pocket hides a belt item
+  itemChance: [0.6, 0.75, 1.0],                // per blind: odds one pocket hides a belt item
 };
 
 /* item rarity weights per blind — same shape/order as the trinket table's RW rows */
@@ -233,10 +233,10 @@ const TAGS = {
 };
 const TAG_POOL = ['purse', 'pocket', 'item', 'nerve', 'iron'];
 
-const BLIND_NAMES = ['SMALL BLIND', 'BIG BLIND', 'BOSS BLIND'];
+const BLIND_NAMES = ['STREET CASE', 'MAJOR CASE', 'THE KINGPIN'];
 
 /* mook hearts: small blind / big blind opponents */
-const MOOK_STEP = [0, 1, 1, 2, 3, 3, 4, 4];
+const MOOK_STEP = [0, 0, 1, 1, 2, 2, 3, 3];   // eased: the card rack that once carried you is gone
 function MOOK_HP(ante, blind) {
   const step = ante <= 8 ? MOOK_STEP[ante - 1] : 3 + (ante - 8);
   return (blind === 0 ? 2 : 3) + step;
@@ -484,25 +484,25 @@ const BOSSES = [
   { id: 'croupier', traits: ['bowler'], name: 'CROAKER', hp: 2, aggro: 0.42,
     rule: 'SWALLOWS BLANKS',
     desc: 'House croupier. Blanks you fire at him HEAL him 1 — aim like you mean it.' },
-  { id: 'blindfold', traits: ['scar'], name: 'BLIND NEWT', hp: 5, aggro: 0.5,
+  { id: 'blindfold', traits: ['scar'], name: 'BLIND NEWT', hp: 4, aggro: 0.5,
     rule: 'PLAYS IT BLIND',
     desc: 'He can\'t see the load. Now neither can you: LIVE / BLANK counts stay hidden.' },
-  { id: 'collector', traits: ['vest', 'goldtooth'], name: 'TAXTOAD TONY', hp: 6, aggro: 0.5,
+  { id: 'collector', traits: ['vest', 'goldtooth'], name: 'TAXTOAD TONY', hp: 5, aggro: 0.5,
     rule: 'CHARGES THE SEAT',
     desc: 'The vig runs while you sit: every trigger pull YOU take costs 1 chip.' },
-  { id: 'spinner', traits: ['sweats'], name: 'DIZZY SAL', hp: 6, aggro: null, // null = coin-flip brain
+  { id: 'spinner', traits: ['sweats'], name: 'DIZZY SAL', hp: 5, aggro: null, // null = coin-flip brain
     rule: 'NEVER SITS STILL',
     desc: 'The drum re-shuffles after EVERY shot. Peeks don\'t survive him. Neither does math.' },
-  { id: 'lily', traits: ['rings'], name: 'SLICK LILY', hp: 7, aggro: 0.6,
+  { id: 'lily', traits: ['rings'], name: 'SLICK LILY', hp: 6, aggro: 0.6,
     rule: 'DISARMING',
     desc: 'She already charmed your iron: your GUN tricks are locked this duel.' },
-  { id: 'cage', traits: ['patch'], name: 'WARDEN WART', hp: 7, aggro: 0.55,
+  { id: 'cage', traits: ['patch'], name: 'WARDEN WART', hp: 6, aggro: 0.55,
     rule: 'NO TOYS IN THE YARD',
     desc: 'Everything on the table stays on the table: trinket ACTIVES are locked this duel.' },
-  { id: 'vig', traits: ['tophat', 'rings', 'cigar'], name: 'DON BUFO', hp: 9, aggro: 0.5,
+  { id: 'vig', traits: ['tophat', 'rings', 'cigar'], name: 'DON BUFO', hp: 6, aggro: 0.5,
     rule: 'TOO FAT TO FALL',
     desc: 'Nine hearts of blubber. There is no trick. Start shooting.' },
-  { id: 'owner', traits: ['tophat', 'goldtooth', 'rings', 'scar'], name: 'THE BULLFROG', hp: 9, aggro: 0.65,
+  { id: 'owner', traits: ['tophat', 'goldtooth', 'rings', 'scar'], name: 'THE BULLFROG', hp: 7, aggro: 0.65,
     rule: 'THE DEBT HIMSELF',
     desc: 'The first time he dies, he gets back up — and hits for 2 once he\'s angry.' },
 ];

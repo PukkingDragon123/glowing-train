@@ -303,6 +303,318 @@ const CINE = {
   },
 
   /* ============================================================
+     LOADING UP.
+     The camera pulls back from the board to the desk: the drum is
+     open, six shells go in one at a time, it snaps shut, it spins.
+     Any tap skips it.
+     ============================================================ */
+  async reloadRoom() {
+    const root = CINE.stage();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    CINE.letterbox(true);
+    const cv = document.createElement('canvas');
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 190, window.innerHeight / 130)), 2, 7);
+    cv.width = 180 * K; cv.height = 108 * K;
+    cv.className = 'pix anim-frame';
+    root.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+
+    let skip = false;
+    const bail = () => { skip = true; };
+    window.addEventListener('pointerdown', bail);
+    window.addEventListener('keydown', bail);
+
+    const P = PIX.PAL;
+    const draw = (t) => {
+      c.clearRect(0, 0, 180, 108);
+      PIX.rect(c, 0, 0, 180, 108, '#0b0e13');
+      /* the lamp cone */
+      c.globalAlpha = 0.15; c.fillStyle = '#ffd75e';
+      c.beginPath(); c.moveTo(92, 0); c.lineTo(30, 92); c.lineTo(156, 92); c.closePath(); c.fill();
+      c.globalAlpha = 1;
+      PIX.rect(c, 0, 88, 180, 20, '#1d160e');            // the desk
+      PIX.rect(c, 0, 88, 180, 3, '#2c2114');
+      /* the drum, open, huge in frame */
+      const cx = 92, cy = 56;
+      PIX.disc(c, cx, cy, 26, P.K);
+      PIX.disc(c, cx, cy, 24, P.t);
+      PIX.disc(c, cx, cy, 22, P.s);
+      const shells = Math.min(6, Math.floor(t / 0.36));
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2 - Math.PI / 2 + (t > 2.6 ? t * 9 : 0);
+        const sx = Math.round(cx + Math.cos(a) * 13), sy = Math.round(cy + Math.sin(a) * 13);
+        PIX.disc(c, sx, sy, 6, P.K);
+        PIX.disc(c, sx, sy, 5, i < shells ? P.g : '#0d1015');
+        if (i < shells) PIX.disc(c, sx, sy, 2, P.G);
+      }
+      PIX.disc(c, cx, cy, 4, P.K);
+      /* your hands, blocks at the frame edge */
+      PIX.rect(c, 40, 74, 26, 20, P.K);
+      PIX.rect(c, 42, 76, 22, 18, '#2e7d5b');
+      PIX.rect(c, 116, 70, 24, 24, P.K);
+      PIX.rect(c, 118, 72, 20, 22, '#2e7d5b');
+      /* one shell held up, on its way in */
+      if (shells < 6) {
+        const hy = 40 - (t % 0.36) * 40;
+        PIX.rect(c, 124, Math.round(hy), 6, 10, P.K);
+        PIX.rect(c, 125, Math.round(hy) + 1, 4, 8, P.g);
+      }
+      if (t > 2.6) {
+        const lab = PIXFONT.render('LOADED.', { scale: 1, color: P.W, shadow: null });
+        c.drawImage(lab, Math.round(92 - lab.width / 2), 96);
+      }
+    };
+
+    try {
+      const t0 = performance.now();
+      let last = -1;
+      while (!skip) {
+        const t = (performance.now() - t0) / 1000;
+        if (t > 3.4) break;
+        draw(t);
+        const beat = Math.floor(t / 0.36);
+        if (beat !== last && beat < 6) { SFX.click(); last = beat; }
+        if (beat === 6 && last === 5) { SFX.chak(); last = 7; }
+        if (t > 2.6 && last === 7) { SFX.spin(); last = 8; }
+        await U.sleep(33);
+      }
+    } finally {
+      window.removeEventListener('pointerdown', bail);
+      window.removeEventListener('keydown', bail);
+      root.innerHTML = '';
+      root.className = 'hidden';
+      CINE.letterbox(false);
+    }
+  },
+
+  /* ============================================================
+     THE DRIVE. Rain, wipers, two depths of skyline going by, and
+     the precinct at the end of it. This is the loading screen.
+     ============================================================ */
+  async driveTo() {
+    const root = CINE.stage();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const cv = document.createElement('canvas');
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 190, window.innerHeight / 130)), 2, 7);
+    cv.width = 180 * K; cv.height = 108 * K;
+    cv.className = 'pix anim-frame';
+    root.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+
+    let skip = false;
+    const bail = () => { skip = true; };
+    window.addEventListener('pointerdown', bail);
+    window.addEventListener('keydown', bail);
+    const P = PIX.PAL;
+    const rng = U.mulberry32(99);
+    const stars = [];
+    for (let i = 0; i < 26; i++) stars.push([rng() * 180, rng() * 40]);
+
+    const draw = (t) => {
+      c.clearRect(0, 0, 180, 108);
+      PIX.rect(c, 0, 0, 180, 108, '#070a12');
+      stars.forEach(([sx, sy]) => PIX.rect(c, Math.round(sx), Math.round(sy), 1, 1, 'rgba(200,220,255,.35)'));
+      /* far skyline, slow */
+      const off1 = Math.round(t * 26) % 90;
+      for (let i = -1; i < 4; i++) {
+        const bx = i * 90 - off1;
+        PIX.rect(c, bx, 34, 34, 46, '#10141f');
+        PIX.rect(c, bx + 40, 24, 26, 56, '#0e1220');
+        PIX.rect(c, bx + 70, 42, 16, 38, '#111627');
+        for (let w = 0; w < 8; w++) {
+          PIX.rect(c, bx + 4 + (w % 4) * 8, 40 + Math.floor(w / 4) * 12, 3, 4,
+            (w + i) % 3 ? '#3a3520' : '#a5741f');
+        }
+      }
+      /* near buildings, fast */
+      const off2 = Math.round(t * 78) % 140;
+      for (let i = -1; i < 3; i++) {
+        const bx = i * 140 - off2;
+        PIX.rect(c, bx, 52, 60, 30, '#151a28');
+        PIX.rect(c, bx + 12, 56, 8, 10, '#e0a63c');
+        PIX.rect(c, bx + 80, 46, 40, 36, '#121624');
+        PIX.rect(c, bx + 88, 52, 7, 9, '#6e4c12');
+        /* a streetlight */
+        PIX.rect(c, bx + 66, 44, 2, 38, '#0b0e14');
+        PIX.rect(c, bx + 62, 42, 10, 3, '#0b0e14');
+        PIX.disc(c, bx + 67, 47, 3, '#fff3b0');
+      }
+      /* the road */
+      PIX.rect(c, 0, 82, 180, 26, '#0d1016');
+      PIX.rect(c, 0, 82, 180, 2, '#1c2230');
+      const dash = Math.round(t * 120) % 24;
+      for (let i = -1; i < 9; i++) PIX.rect(c, i * 24 - dash, 94, 12, 2, 'rgba(200,200,210,.35)');
+      /* the car, bobbing */
+      const bob = Math.round(Math.sin(t * 9) * 1);
+      const carY = 70 + bob;
+      PIX.rect(c, 56, carY + 2, 52, 12, P.K);
+      PIX.rect(c, 58, carY + 3, 48, 10, '#2b3346');
+      PIX.rect(c, 66, carY - 6, 30, 10, P.K);
+      PIX.rect(c, 68, carY - 5, 26, 8, '#2b3346');
+      PIX.rect(c, 70, carY - 3, 10, 5, '#7fd7ff');       // glass
+      PIX.rect(c, 84, carY - 3, 8, 5, '#7fd7ff');
+      PIX.disc(c, 66, carY + 14, 5, P.K); PIX.disc(c, 66, carY + 14, 3, '#3f465c');
+      PIX.disc(c, 98, carY + 14, 5, P.K); PIX.disc(c, 98, carY + 14, 3, '#3f465c');
+      /* headlight */
+      c.globalAlpha = 0.2; c.fillStyle = '#fff3b0';
+      c.beginPath(); c.moveTo(108, carY + 4); c.lineTo(150, carY - 2); c.lineTo(150, carY + 14); c.closePath(); c.fill();
+      c.globalAlpha = 1;
+      /* rain, driving sideways */
+      for (let i = 0; i < 60; i++) {
+        const rx = (i * 37 + Math.round(t * 220)) % 190 - 5;
+        const ry = (i * 53) % 100;
+        PIX.rect(c, 180 - rx, ry, 2, 1, 'rgba(127,215,255,.22)');
+      }
+      const lab = PIXFONT.render('TO THE PRECINCT', { scale: 1, color: P.q, shadow: null });
+      c.drawImage(lab, Math.round(90 - lab.width / 2), 99);
+    };
+
+    try {
+      SFX.tone(60, 2.4, 'sawtooth', 0.05, 0, 4);
+      const t0 = performance.now();
+      while (!skip) {
+        const t = (performance.now() - t0) / 1000;
+        if (t > 2.6) break;
+        draw(t);
+        await U.sleep(33);
+      }
+    } finally {
+      window.removeEventListener('pointerdown', bail);
+      window.removeEventListener('keydown', bail);
+      root.innerHTML = '';
+      root.className = 'hidden';
+    }
+  },
+
+  /* ============================================================
+     CLEANING UP.
+     The little loading scene between the shot and the back room:
+     you, small, dragging him by the boots across the dark.
+     ============================================================ */
+  async dragLoad() {
+    const root = CINE.stage();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const cv = document.createElement('canvas');
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 190, window.innerHeight / 130)), 2, 7);
+    cv.width = 180 * K; cv.height = 108 * K;
+    cv.className = 'pix anim-frame';
+    root.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+
+    let skip = false;
+    const bail = () => { skip = true; };
+    window.addEventListener('pointerdown', bail);
+    window.addEventListener('keydown', bail);
+    const P = PIX.PAL;
+
+    const draw = (t) => {
+      c.clearRect(0, 0, 180, 108);
+      PIX.rect(c, 0, 0, 180, 108, '#08090d');
+      PIX.rect(c, 0, 84, 180, 24, '#11131a');
+      PIX.rect(c, 0, 84, 180, 2, '#1d212c');
+      /* the doorway he is going through, stage left */
+      PIX.rect(c, 6, 40, 26, 46, '#181410');
+      PIX.rect(c, 9, 43, 20, 43, '#241c12');
+      const x0 = 150 - t * 34;                 // the sad little convoy
+      const step = Math.floor(t * 6) % 2;
+      /* him: flat on his back, arms trailing, fully intact */
+      PIX.rect(c, x0 + 12, 74, 30, 9, P.K);
+      PIX.rect(c, x0 + 13, 75, 28, 7, '#272c3d');
+      PIX.disc(c, x0 + 44, 77, 6, P.K);
+      PIX.disc(c, x0 + 44, 77, 5, '#2e7d5b');   // his head, lolling
+      PIX.rect(c, x0 + 40, 70, 9, 3, P.K);      // hat, sliding off
+      PIX.rect(c, x0 + 16, 82, 4, 4, P.K);      // trailing hand
+      PIX.rect(c, x0 + 24, 83, 4, 3, P.K);
+      /* you: bent over, walking backwards, boots in hand */
+      PIX.rect(c, x0 - 8, 62 + step, 14, 18, P.K);
+      PIX.rect(c, x0 - 7, 63 + step, 12, 16, '#2e7d5b');
+      PIX.rect(c, x0 - 4, 54 + step, 9, 9, P.K);
+      PIX.rect(c, x0 - 3, 55 + step, 7, 7, '#4fae6d');
+      PIX.rect(c, x0 - 6, 52 + step, 12, 3, P.K);          // your hat stays on
+      PIX.rect(c, x0 + 4, 72, 9, 4, P.K);                  // his boots, in your fists
+      PIX.rect(c, x0 - 6 + step * 2, 80, 5, 4, P.K);       // your feet, shuffling
+      PIX.rect(c, x0 + 1 - step * 2, 80, 5, 4, P.K);
+      /* the smear he leaves */
+      PIX.rect(c, Math.round(x0 + 46), 82, Math.round(170 - x0 - 40), 2, 'rgba(87,18,32,.5)');
+      /* dust off the boards */
+      if (step) PIX.rect(c, x0 + 8, 78, 2, 2, 'rgba(141,134,114,.4)');
+      const lab = PIXFONT.render('CLEANING UP', { scale: 1, color: P.q, shadow: null });
+      c.drawImage(lab, Math.round(90 - lab.width / 2), 96);
+      const dots = '.'.repeat(1 + (Math.floor(t * 2) % 3));
+      const d2 = PIXFONT.render(dots, { scale: 1, color: P.q, shadow: null });
+      c.drawImage(d2, Math.round(90 + lab.width / 2 + 2), 96);
+    };
+
+    try {
+      const t0 = performance.now();
+      let lastGrunt = -1;
+      while (!skip) {
+        const t = (performance.now() - t0) / 1000;
+        if (t > 2.4) break;
+        draw(t);
+        const g = Math.floor(t / 0.66);
+        if (g !== lastGrunt) { SFX.tick(); lastGrunt = g; }
+        await U.sleep(33);
+      }
+    } finally {
+      window.removeEventListener('pointerdown', bail);
+      window.removeEventListener('keydown', bail);
+      root.innerHTML = '';
+      root.className = 'hidden';
+    }
+  },
+
+  /* ============================================================
+     THE CUT-IN.
+     Half a second of somebody's face crossing the frame on a
+     skewed banner the moment a live round commits — the Persona
+     beat. Red variant for the ones that end people.
+     ============================================================ */
+  cutIn(art, word, opts) {
+    opts = opts || {};
+    const layer = U.el('div', 'cutin' + (opts.red ? ' red' : ''));
+    const band = U.el('div', 'ci-band');
+    const inner = U.el('div', 'ci-inner');
+    /* speed lines, drawn */
+    const lines = document.createElement('canvas');
+    lines.width = 480; lines.height = 120;
+    const lc = lines.getContext('2d');
+    for (let i = 0; i < 26; i++) {
+      const y = (i * 37) % 120;
+      lc.fillStyle = i % 3 ? 'rgba(244,239,224,.16)' : 'rgba(244,239,224,.34)';
+      lc.fillRect((i * 53) % 200, y, 180 + (i * 29) % 160, 2);
+    }
+    lines.className = 'ci-lines pix';
+    inner.appendChild(lines);
+    const face = U.el('div', 'ci-face');
+    face.appendChild(SPR.clone(art, U.clamp(Math.floor(window.innerHeight / 220), 2, 5)));
+    inner.appendChild(face);
+    if (word) {
+      const w = U.el('div', 'ci-word');
+      w.appendChild(PIXFONT.render(word, {
+        scale: U.clamp(Math.floor(window.innerHeight / 170), 2, 6),
+        color: opts.red ? PIX.PAL.R : PIX.PAL.W, outline: PIX.PAL.K,
+      }));
+      inner.appendChild(w);
+    }
+    band.appendChild(inner);
+    layer.appendChild(band);
+    document.body.appendChild(layer);
+    SFX.chak();
+    requestAnimationFrame(() => layer.classList.add('go'));
+    setTimeout(() => layer.remove(), 620);
+  },
+
+  /* ============================================================
      THE MARKER CHANGES HANDS.
      One card, drawn, held long enough to read.
      ============================================================ */
@@ -377,11 +689,11 @@ const CINE = {
      cannot get out of is not a story, it is a wall.
      ============================================================ */
   LORE: [
-    ['home',   'THEY ATE AT SIX. ALL OF THEM.'],
-    ['door',   'AT SEVEN, THE DOOR CAME IN.'],
-    ['after',  'THE HOUSE TOOK EVERYTHING BUT YOU.'],
-    ['tower',  'THE HOUSE IS EIGHT FLOORS HIGH.'],
-    ['stairs', 'THEY ARE ALL UPSTAIRS.'],
+    ['lineup',  'YOU PICKED HIM OUT OF THE LINE. GOOD POLICE WORK.'],
+    ['verdict', 'HIS LAWYERS HAD HIM OUT BY NOON.'],
+    ['door',    'AT SEVEN, THE DOOR CAME IN.'],
+    ['funeral', 'IT RAINED. HE SENT FLOWERS.'],
+    ['oath',    'YOU KEPT THE BADGE. AND THE GUN.'],
   ],
 
   loreSkip: false,
@@ -405,7 +717,7 @@ const CINE = {
     };
 
     try {
-      const reel = short ? CINE.LORE.slice(3) : CINE.LORE;
+      const reel = short ? CINE.LORE.slice(4) : CINE.LORE;
       for (const [art, line] of reel) {
         if (CINE.loreSkip) break;
         root.innerHTML = "";
@@ -427,7 +739,7 @@ const CINE = {
       if (short) return;
       const tail = U.el('div', 'lore-card lore-tail');
       tail.appendChild(UI.txt('SHELL & DEBT', { scale: 7, color: PIX.PAL.R, outline: PIX.PAL.K }));
-      tail.appendChild(UI.txt('ONE FLOOR AT A TIME', { scale: 3, color: PIX.PAL.q }));
+      tail.appendChild(UI.txt('FIND THEM FIRST', { scale: 3, color: PIX.PAL.q }));
       root.innerHTML = '';
       root.appendChild(tail);
       await U.sleep(20);

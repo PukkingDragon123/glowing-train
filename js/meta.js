@@ -23,7 +23,8 @@ const META = {
       gunsOwned: { snub: true },
       unlocked: {},   // trinket id -> true (only gated ones live here)
       tells: {},      // trait id -> true, once you've looted a frog that had it
-      tutor: {},      // which of the handler's lines you have already heard
+      tutor: {},      // which of the captain's lines you have already heard
+      trust: 0,       // Officer Maybelle. It adds up slowly, like anything real.
     };
   },
 
@@ -40,6 +41,7 @@ const META = {
         Object.assign(META.d.unlocked, saved.unlocked || {});
         Object.assign(META.d.tells, saved.tells || {});
         Object.assign(META.d.tutor, saved.tutor || {});
+        if (typeof saved.trust === 'number') META.d.trust = saved.trust;
       }
     } catch (e) { /* node / private mode: memory only */ }
     return META.d;

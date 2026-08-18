@@ -68,6 +68,19 @@ fs.mkdirSync(SHOTS, { recursive: true });
     over: G2().duel ? G2().duel.over : null,
     busy: DUEL.busy, chips: G2().chips, hearts: G2().hearts,
   }));
+  /* click away every speech plate that is up, waiting for late ones */
+  const clearPlates = async (expect) => {
+    if (expect) await page.waitForFunction(
+      () => document.querySelector('#tutor-root:not(.hidden)'), null, { timeout: 4000 }).catch(() => {});
+    for (let i = 0; i < 16; i++) {
+      if (await page.locator('#tutor-root:not(.hidden)').count() === 0) {
+        await page.waitForTimeout(240);
+        if (await page.locator('#tutor-root:not(.hidden)').count() === 0) break;
+      }
+      await page.locator('#tutor-root').click({ position: { x: 30, y: 30 } }).catch(() => {});
+      await page.waitForTimeout(300);
+    }
+  };
   const settle = () => page.waitForFunction(
     () => !DUEL.busy || G2().phase !== 'duel' ||
       document.querySelector('#duel-overlay:not(.hidden) .primary'),
@@ -112,7 +125,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
     }
     await page.waitForFunction(() => DUEL.room === 'back', null, { timeout: 25000 });
     await page.waitForFunction(() => typeof CINE === 'undefined' || !CINE.busy, null, { timeout: 15000 });
-    await page.waitForSelector('#loot-panel', { timeout: 25000 });
+    await page.waitForSelector('#btn-walk', { timeout: 25000 });
     await page.waitForTimeout(300);
   }
 
@@ -187,19 +200,10 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForTimeout(700);
     await shot('01-title');
 
-    /* collection round-trip */
-    await click('#btn-collection');
-    await wiped();
-    await page.waitForTimeout(300);
-    await shot('02-collection');
-    await click('#btn-back');
-    await wiped();
-    await page.waitForTimeout(200);
 
     /* deal in */
     await page.fill('#seed-input', 'SMOKE-7');
     await click('#btn-deal');
-    await page.waitForSelector('#btn-sit', { timeout: 10000 });
     await wiped();
     /* the lore reel plays over the board on a fresh run */
     await page.waitForTimeout(900);
@@ -211,24 +215,35 @@ fs.mkdirSync(SHOTS, { recursive: true });
       () => !document.querySelector('#cine-stage.lore-cut'), null, { timeout: 20000 });
     await page.waitForTimeout(400);
 
-    /* the handler: he says his piece once, and a click gets rid of each line */
+    /* the reload and the drive play as the loading screen — catch them */
     await page.waitForFunction(
-      () => document.querySelector('#tutor-root:not(.hidden)'), null, { timeout: 15000 })
-      .catch(() => {});
-    if (await page.locator('#tutor-root:not(.hidden)').count() > 0) {
-      await shot('01c-handler');
-      for (let i = 0; i < 8; i++) {
-        if (await page.locator('#tutor-root:not(.hidden)').count() === 0) break;
-        await page.locator('#tutor-root').click({ position: { x: 30, y: 30 } });
-        await page.waitForTimeout(320);
-      }
+      () => document.querySelector('#cine-stage.anim-cut'), null, { timeout: 25000 }).catch(() => {});
+    if (await page.locator('#cine-stage.anim-cut').count() > 0) {
+      await page.waitForTimeout(900);
+      await shot('01e-reload');
+      await page.waitForTimeout(2700);
+      if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('01f-drive');
     }
-    /* and once on the board, in the middle of the thing he is talking about */
+    /* the precinct */
+    await page.waitForSelector('#btn-board', { timeout: 30000 });
     await page.waitForTimeout(500);
+    /* the captain's opening plays here — read one plate, then click through */
+    if (await page.locator('#tutor-root:not(.hidden)').count() > 0) await shot('01c-captain');
+    await clearPlates(true);
+    await shot('01g-station');
+    await click('#btn-talk-may');
+    await page.waitForTimeout(500);
+    await shot('01h-maybelle');
+    await clearPlates(false);
+    await click('#btn-board');
+    await wiped();
+    await page.waitForSelector('#btn-sit', { timeout: 15000 });
+    await page.waitForTimeout(600);
     if (await page.locator('#tutor-root:not(.hidden)').count() > 0) {
-      await shot('01d-handler-board');
+      await shot('01d-captain-board');
     }
     await page.evaluate(() => TUTOR.skipAll());
+    await clearPlates(false);
     await page.waitForTimeout(200);
     await shot('02b-blind-select');
     /* the board: turn a clue over, watch the string reach a poster, name him */
