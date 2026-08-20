@@ -94,10 +94,105 @@ const UI = {
 
   /* a room you walk around in: the story HUD, then the scene */
   buildRoom(app, room) {
-    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
     const host = U.el('div'); host.id = 'scene-root'; host.className = 'scene-root';
     app.appendChild(host);
     SCENE.open(room);
+    UI.buildCorner(app, 'scene');
+  },
+
+  /* ============================================================
+     THE CORNERS.
+
+     There is no bar across the top of the game any more. What was
+     in it lives in two places: the phone in your coat, and a plate
+     in the corner that says what you are supposed to be doing.
+     Both are drawn pixel art at whole-number scales, and both are
+     big enough to hit with a thumb.
+     ============================================================ */
+  buildCorner(app, kind) {
+    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;         // icon scale
+    const wrap = U.el('div', 'corner-ui corner-' + kind);
+
+    if (kind === 'scene') {
+      /* what you are doing, top left, with the mark that goes with it */
+      const ob = STORY.objective();
+      const plate = U.el('div', 'obj-plate');
+      plate.id = 'obj-plate';
+      plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
+      const col = U.el('div', 'obj-col');
+      col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
+      col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+      plate.appendChild(col);
+      plate.onclick = () => PHONE.open('job');
+      wrap.appendChild(plate);
+    }
+
+    /* the right-hand stack: the phone, the money, and the two switches */
+    const stack = U.el('div', 'corner-stack');
+
+    if (kind === 'scene') {
+      const ph = U.el('button', 'big-btn phone-btn');
+      ph.id = 'btn-phone';
+      ph.appendChild(SPR.clone(ART.art('ic_phone', K + 1), 1));
+      ph.appendChild(UI.txt('PHONE', { scale: K, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+      ph.onclick = () => PHONE.toggle('map');
+      stack.appendChild(ph);
+    }
+
+    const cash = U.el('div', 'corner-chip has-tip');
+    cash.id = 'corner-cash';
+    cash.dataset.tipKey = 'chips';
+    cash.appendChild(SPR.clone(ART.art('ic_coin', K - 1), 1));
+    const num = U.el('span'); num.id = 'tb-chip-num';
+    num.appendChild(UI.num(G.chips, { scale: K, color: PIX.PAL.G }));
+    cash.appendChild(num);
+    stack.appendChild(cash);
+
+    if (kind === 'scene' && typeof CITY !== 'undefined') {
+      const clk = U.el('div', 'corner-chip');
+      clk.id = 'corner-clock';
+      clk.appendChild(SPR.clone(ART.art('ic_clock', K - 1), 1));
+      const cc = U.el('span');
+      cc.appendChild(UI.txt(CITY.hhmm(), { scale: K,
+        color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.W }));
+      clk.appendChild(cc);
+      stack.appendChild(clk);
+    }
+
+    const sw = U.el('div', 'corner-row');
+    const mute = U.el('button', 'big-btn sq');
+    mute.id = 'btn-mute';
+    mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: K, shadow: null, color: PIX.PAL.w }));
+    mute.onclick = () => {
+      SFX.toggleMute();
+      UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: K, shadow: null, color: PIX.PAL.w }));
+    };
+    sw.appendChild(mute);
+    const help = U.el('button', 'big-btn sq');
+    help.appendChild(UI.txt('?', { scale: K, shadow: null, color: PIX.PAL.G }));
+    help.onclick = () => UI.showHelp();
+    sw.appendChild(help);
+    stack.appendChild(sw);
+
+    wrap.appendChild(stack);
+    app.appendChild(wrap);
+  },
+
+  /* the objective changed under us: repaint the plate in place */
+  syncObjective() {
+    const plate = document.getElementById('obj-plate');
+    if (!plate || typeof STORY === 'undefined') return;
+    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;
+    const ob = STORY.objective();
+    if (plate.dataset.line === ob.line) return;
+    plate.dataset.line = ob.line;
+    plate.innerHTML = '';
+    plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
+    const col = U.el('div', 'obj-col');
+    col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
+    col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+    plate.appendChild(col);
+    plate.classList.remove('bump'); void plate.offsetWidth; plate.classList.add('bump');
   },
 
   /* Every screen change goes behind the card-rack wipe. fn does whatever
@@ -114,6 +209,18 @@ const UI = {
   num(n, opts) { return UI.txt(U.fmt(Math.round(n)), opts); },
   /* PIXFONT renders one canvas per string, so a long line has to be broken
      into lines before it is drawn or it just runs off whatever holds it */
+  /* the same break, but as strings, for anybody drawing their own lines */
+  wrapLines(str, per) {
+    const out = [];
+    let line = '';
+    String(str || '').split(' ').forEach(w => {
+      if (line && (line + ' ' + w).length > per) { out.push(line); line = ''; }
+      line = line ? line + ' ' + w : w;
+    });
+    if (line) out.push(line);
+    return out;
+  },
+
   wrap(str, per, opts) {
     const box = U.el('div', 'txt-lines');
     let line = '';
@@ -133,93 +240,20 @@ const UI = {
     return w;
   },
 
-  /* ================= topbar ================= */
-
-  buildTopbar(bar) {
-    bar.id = 'topbar';
-    const L = U.el('div', 'tb-side'), C = U.el('div', 'tb-side'), R = U.el('div', 'tb-side');
-
-    const logo = U.el('span', 'has-tip');
-    logo.dataset.tipText = 'SHELL & DEBT - case ' + G.seedStr;
-    logo.appendChild(UI.txt('S&D', { scale: 3, color: PIX.PAL.g }));
-    L.appendChild(logo);
-
-    /* THE NIGHT. The hour, and what the sky is doing — both of them are
-       real: the clock is the budget and the weather is a modifier. */
-    if (typeof CITY !== 'undefined' && G.phase !== 'title') {
-      const sky = CITY.sky();
-      const nite = U.el('span', 'tb-chip has-tip tb-clock');
-      nite.id = 'tb-clock';
-      nite.dataset.tipText = CITY.watch().word + ' - ' + sky.word + ' - ' +
-        Math.max(0, Math.round(CITY.minutesLeft() / 60)) + ' HOURS OF SHIFT LEFT';
-      nite.appendChild(UI.txt(CITY.hhmm(), {
-        scale: 2, color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.q }));
-      nite.appendChild(UI.txt(sky.word, { scale: 1, color: PIX.PAL.u }));
-      L.appendChild(nite);
-    }
-
-    /* which chapter of the case you are in, by name — no floors, no antes.
-       On a narrow phone the name sets a size down so it never runs into
-       the hearts. */
-    const ch = STORY.chapter();
-    const chip = U.el('span', 'has-tip tb-chip');
-    chip.dataset.tipText = ch.obj;
-    chip.appendChild(UI.txt(ch.title, { scale: window.innerWidth < 520 ? 2 : 3, color: PIX.PAL.W }));
-    C.appendChild(chip);
-
-    /* the board: five pieces of him, filled in as you take them */
-    const track = U.el('span', 'intel-track has-tip');
-    track.dataset.tipText = 'THE BULLFROG BOARD - ' + STORY.intelPct() + '% OF HIM';
-    INTEL_CARDS.forEach(card => {
-      track.appendChild(U.el('i', 'ipip' + (STORY.hasCard(card.id) ? ' got' : '')));
-    });
-    C.appendChild(track);
-
-    /* chips */
-    const chips = U.el('span', 'tb-chip has-tip');
-    chips.id = 'tb-chips';
-    chips.dataset.tipKey = 'chips';
-    chips.appendChild(UI.icon('ic_chip', 3));
-    const cnum = U.el('span'); cnum.id = 'tb-chip-num';
-    cnum.appendChild(UI.num(G.chips, { color: PIX.PAL.G }));
-    chips.appendChild(cnum);
-    R.appendChild(chips);
-
-    /* the two corner buttons set a size down on a phone so the help button
-       never gets pushed off the edge; the CSS keeps them tappable */
-    const bk = window.innerWidth < 420 ? 2 : 3;
-    const mute = U.el('button', 'pixbtn tb-btn');
-    mute.id = 'btn-mute';
-    mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: bk, shadow: null, color: PIX.PAL.w }));
-    mute.onclick = () => { SFX.toggleMute(); UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: bk, shadow: null, color: PIX.PAL.w })); };
-    R.appendChild(mute);
-    /* the phone lives in your coat; the topbar just reminds you it is there */
-    if (typeof PHONE !== 'undefined' && UI.isScene(G.phase)) {
-      const ph = U.el('button', 'pixbtn tb-btn tb-phone has-tip');
-      ph.dataset.tipText = 'THE FROGGOPHONE - map, case file  (P)';
-      ph.appendChild(UI.txt('PH', { scale: bk, shadow: null, color: PIX.PAL.G }));
-      ph.onclick = () => PHONE.toggle('map');
-      R.appendChild(ph);
-    }
-    const help = U.el('button', 'pixbtn tb-btn');
-    help.appendChild(UI.txt('?', { scale: bk, shadow: null, color: PIX.PAL.G }));
-    help.onclick = () => UI.showHelp();
-    R.appendChild(help);
-
-    bar.appendChild(L); bar.appendChild(C); bar.appendChild(R);
-  },
 
   /* the clock moved: repaint the corner without rebuilding the room */
   syncStory() {
-    const n = document.getElementById('tb-clock');
-    if (!n || typeof CITY === 'undefined') return;
-    const sky = CITY.sky();
-    n.innerHTML = '';
-    n.dataset.tipText = CITY.watch().word + ' - ' + sky.word + ' - ' +
-      Math.max(0, Math.round(CITY.minutesLeft() / 60)) + ' HOURS OF SHIFT LEFT';
-    n.appendChild(UI.txt(CITY.hhmm(), {
-      scale: 2, color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.q }));
-    n.appendChild(UI.txt(sky.word, { scale: 1, color: PIX.PAL.u }));
+    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;
+    const clk = document.getElementById('corner-clock');
+    if (clk && typeof CITY !== 'undefined') {
+      clk.innerHTML = '';
+      clk.appendChild(SPR.clone(ART.art('ic_clock', K - 1), 1));
+      const cc = U.el('span');
+      cc.appendChild(UI.txt(CITY.hhmm(), { scale: K,
+        color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.W }));
+      clk.appendChild(cc);
+    }
+    UI.syncObjective();
   },
 
   syncChips() {
@@ -690,8 +724,6 @@ const UI = {
   /* ================= the duel frame ================= */
 
   buildDuel(app) {
-    const bar = U.el('div'); UI.buildTopbar(bar); app.appendChild(bar);
-
     const wrap = U.el('div'); wrap.id = 'duel-wrap';
 
     /* cylinder strip */
@@ -746,6 +778,7 @@ const UI = {
     const gunP = U.el('div'); gunP.id = 'gun-panel'; bottom.appendChild(gunP);
     app.appendChild(bottom);
 
+    UI.buildCorner(app, 'duel');
     UI.syncDuel();
   },
 

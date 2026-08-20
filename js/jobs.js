@@ -6,6 +6,7 @@
 
      THE TAPS     pull three pints without wearing them
      THE FRYER    turn out a tray of donuts
+     THE DRUMS    put a lid on three rats
 
    Both are the same shape — a moving thing you have to stop in
    the right place, three times — and both pay in the two things
@@ -226,6 +227,121 @@ const JOBS = (() => {
     }
   }
 
+  /* ---------------------------------------------------------
+     THE DRUMS. A rat runs the pipe over the washers. You have one
+     lid and you drop it when he is over the open drum. He is fast,
+     he is fat, and there are three of him.
+     --------------------------------------------------------- */
+  function drawRats(c, W, H, s) {
+    const P = PIX.PAL;
+    /* the wash-house: tile, damp, and a light that does not reach the floor */
+    ART.px(c, 0, 0, W, H, '#151a1e');
+    ART.dither(c, 0, 0, W, H, 'rgba(0,0,0,.32)', 0.1, 17);
+    for (let y = 4; y < 46; y += 7) ART.px(c, 0, y, W, 1, 'rgba(240,235,220,.045)');
+    for (let x = 6; x < W; x += 11) ART.px(c, x, 0, 1, 46, 'rgba(240,235,220,.035)');
+    ART.px(c, 0, H - 20, W, 20, '#1b2226');
+    ART.px(c, 0, H - 20, W, 1, 'rgba(240,235,220,.07)');
+    /* standing water, because it is always standing */
+    ART.px(c, 0, H - 6, W, 6, 'rgba(90,150,150,.10)');
+    for (let x = 3; x < W; x += 13) ART.px(c, x, H - 5, 6, 1, 'rgba(160,220,220,.10)');
+
+    /* THE WASHERS. Three of them, and the middle one is open. */
+    const DR = [16, 58, 100];
+    DR.forEach((dx, i) => {
+      ART.px(c, dx - 13, H - 46, 26, 28, P.K);
+      ART.px(c, dx - 12, H - 45, 24, 26, '#3a4248');
+      ART.px(c, dx - 12, H - 45, 24, 2, '#525d64');
+      PIX.disc(c, dx, H - 32, 9, P.K);
+      PIX.disc(c, dx, H - 32, 8, i === 1 ? '#0c0f12' : '#26343a');
+      if (i !== 1) PIX.disc(c, dx - 2, H - 34, 3, 'rgba(200,230,235,.16)');
+      ART.px(c, dx - 10, H - 19, 20, 3, P.K);
+    });
+
+    /* THE OPEN DRUM slides to where the lid is going to come down */
+    const tx = 8 + Math.round((W - 16) * s.centre);
+    const half = Math.max(6, Math.round((W - 16) * s.band / 2));
+    ART.px(c, tx - half, 46, half * 2, H - 62, 'rgba(111,247,216,.10)');
+    ART.px(c, tx - half, 46, half * 2, 1, 'rgba(111,247,216,.35)');
+    ART.px(c, tx - half, 46, 1, H - 62, 'rgba(111,247,216,.35)');
+    ART.px(c, tx + half - 1, 46, 1, H - 62, 'rgba(111,247,216,.35)');
+    /* the lid, hanging over it on a chain */
+    ART.px(c, tx - 1, 2, 2, 12, '#6a7480');
+    ART.px(c, tx - 11, 13, 22, 5, P.K);
+    ART.px(c, tx - 10, 14, 20, 3, '#98a2ab');
+    ART.px(c, tx - 10, 14, 20, 1, '#cfd8de');
+
+    /* THE PIPE he runs along */
+    const py = 44;
+    ART.px(c, 0, py, W, 5, P.K);
+    ART.px(c, 0, py + 1, W, 3, '#4a4038');
+    ART.px(c, 0, py + 1, W, 1, '#655648');
+    for (let x = 10; x < W; x += 22) { ART.px(c, x, py - 1, 3, 7, P.K); ART.px(c, x, py, 3, 5, '#5d5044'); }
+
+    /* THE RAT. Fat, wet, and going the other way in a second.
+       Authored facing right and mirrored through R/D, so there is one rat
+       and not two that disagree about where his face is. */
+    if (s.live || s.flash > 0) {
+      const rx = 14 + Math.round((W - 28) * s.x), ry = py - 10;
+      const back = s.x > 0.5 ? -1 : 1;
+      const dark = '#231c2c', body = '#6b6076', lit = '#988ca2', pink = '#c4909c';
+      const R = (dx, dy, w, h, col) =>
+        ART.px(c, back > 0 ? rx + dx : rx - dx - w, ry + dy, w, h, col);
+      const D = (dx, dy, r, col) =>
+        PIX.disc(c, back > 0 ? rx + dx : rx - dx, ry + dy, r, col);
+      const step = Math.round(s.x * 30) % 2;
+
+      /* his shadow, and the tail out behind him */
+      ART.px(c, rx - 12, py - 1, 26, 1, 'rgba(0,0,0,.45)');
+      for (let i = 0; i < 11; i++) {
+        const ty = 4 - Math.round(Math.sin(i * 0.55 + s.x * 10) * 2);
+        R(-10 - i, ty, 2, 2, dark);
+        if (i > 8) R(-10 - i, ty, 2, 1, pink);
+      }
+      /* the silhouette, one size up, so he has an edge on the dark pipe */
+      D(-4, 0, 6, dark); D(2, 1, 5, dark); D(8, 1, 4, dark); D(13, 3, 4, dark);
+      R(16, 4, 5, 4, dark);
+      /* and the wet fur inside it */
+      D(-4, 0, 5, body); D(2, 1, 4, body); D(8, 1, 3, body); D(13, 3, 3, body);
+      R(17, 5, 3, 2, body);
+      /* the light is over him, so the back of him catches it */
+      D(-4, -2, 3, lit); D(2, -1, 3, lit); D(8, -1, 2, lit);
+      /* the ear, the eye, the nose */
+      R(7, -6, 5, 5, dark);
+      R(8, -5, 3, 3, pink);
+      R(12, 1, 3, 3, dark);
+      R(12, 1, 2, 2, '#ffe07a');
+      R(12, 1, 1, 1, '#fffbe6');
+      R(19, 6, 2, 2, pink);
+      /* whiskers */
+      R(20, 3, 5, 1, 'rgba(240,235,220,.30)');
+      R(20, 8, 5, 1, 'rgba(240,235,220,.22)');
+      /* three feet on the pipe and one in the air */
+      R(-7, 6, 3, 3 - step, dark);
+      R(-1, 6, 3, 2 + step, dark);
+      R(6, 6, 3, 3 - step, dark);
+    }
+
+    /* THE LID COMING DOWN, on the frame you dropped it */
+    if (s.flash > 0.15) {
+      const drop = Math.round((1 - s.flash) * (H - 34));
+      ART.px(c, tx - 13, 15 + drop, 26, 7, P.K);
+      ART.px(c, tx - 12, 16 + drop, 24, 5, '#b6c0c8');
+      ART.px(c, tx - 12, 16 + drop, 24, 2, '#e2e9ee');
+      for (let i = 0; i < 5; i++) {
+        ART.px(c, tx - 16 - i * 2, 18 + drop - i, 2, 2, 'rgba(240,235,220,.2)');
+        ART.px(c, tx + 14 + i * 2, 18 + drop - i, 2, 2, 'rgba(240,235,220,.2)');
+      }
+    }
+
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(160,255,230,' + (s.flash * 0.16).toFixed(3) + ')');
+
+    /* the sack, with tonight's catch in it */
+    ART.px(c, W - 22, H - 16, 18, 14, P.K);
+    ART.px(c, W - 21, H - 15, 16, 12, '#4b4436');
+    ART.px(c, W - 21, H - 15, 16, 2, '#665d49');
+    for (let i = 0; i < s.hits; i++) ART.px(c, W - 19 + i * 5, H - 12, 3, 6, '#5b5163');
+  }
+
   return {
     meter,
 
@@ -239,6 +355,20 @@ const JOBS = (() => {
         draw: drawGlass,
       });
       const pay = r.hits * 14 + r.perfect * 6;
+      G.chips += pay;
+      return { pay, hits: r.hits, perfect: r.perfect, rounds: r.rounds };
+    },
+
+    /* three rats out of a launderer's drums. He pays in what he found. */
+    async rats() {
+      const r = await meter({
+        head: 'CLEAR THE DRUMS',
+        sub: 'THREE RATS. DROP THE LID ON THE OPEN ONE.',
+        key: 'TAP TO DROP THE LID',
+        rounds: 3, band: 0.16, speed: 1.55,
+        draw: drawRats,
+      });
+      const pay = r.hits * 6 + r.perfect * 4;
       G.chips += pay;
       return { pay, hits: r.hits, perfect: r.perfect, rounds: r.rounds };
     },

@@ -62,14 +62,42 @@ const SCENE = (() => {
      same coat, same four-fingered hands.
      ============================================================ */
 
-  const DOWN = 3;                // portrait scale : room scale
+  /* ============================================================
+     HOW BIG A PERSON IS, AND HOW MUCH OF HIM YOU GET.
 
+     A frog stands FOOT rig-pixels to the room's one, so his
+     footprint in the room never changes and every desk, doorway and
+     hotspot stays where it was. What does change is which copy of
+     him gets drawn into that footprint: at a frame scale where the
+     numbers come out even, the room draws the FULL 102x129 rig and
+     lets the screen blow it up by a whole number, which is three
+     times the detail it used to have. Where that would land on a
+     fraction — and a fraction means some rows doubled and some not,
+     which looks like a broken sprite — it falls back to a properly
+     resampled and re-inked smaller copy.
+     ============================================================ */
+  const FOOT = 3;                // rig pixels per room pixel
+
+  function lodFor() {
+    for (const down of [1, 2, 3]) if ((K * down) % FOOT === 0) return down;
+    return FOOT;
+  }
+
+  /* { cv, w, h } — the picture, and the room-space box it goes in */
   function rig(d, frame, face) {
-    return SPR.sceneFrog(d.key || SPR.defKey(d), d.def || d, frame, face, DOWN);
+    const down = lodFor();
+    const cv = SPR.rigLOD(d.key || SPR.defKey(d), d.def || d, frame, face, down);
+    return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
   }
 
   /* how tall a person is in this room, for placing hotspots */
-  function rigH(d) { return rig(d, 0, 1).height; }
+  function rigH(d) { return rig(d, 0, 1).h; }
+
+  /* a plain canvas at room scale, for the cinematics that stage their own
+     little rooms and do not have a camera scale to be even with */
+  function rigPic(d, frame, face, down) {
+    return SPR.rigLOD(d.key || SPR.defKey(d), d.def || d, frame, face, down || FOOT);
+  }
 
   /* ============================================================
      BUILD
@@ -87,11 +115,20 @@ const SCENE = (() => {
        as a bug — but never show less than about 200 world px across, or the
        camera is inside somebody's coat. */
     let k = Math.max(2, Math.floor(h / H));
+    /* A FRAME SCALE THAT IS A MULTIPLE OF THREE pays for itself: it is the
+       only one where the full-detail rig blows up by a whole number, so the
+       cast gets three times the pixels. If stepping up to one only costs a
+       few rows off the foreground floor, take it. */
+    if ((k + 1) % 3 === 0 && h / (k + 1) >= H) k += 1;
     while (k > 2 && w / k < 200) k--;
     K = k;
     cv.width = Math.ceil(w / K) * K;
-    /* whatever height is left over past the room and its headroom is a bar */
-    const worldH = Math.min(Math.max(H, Math.floor(h / K)), H + CEIL_MAX);
+    /* How many world rows the frame can actually hold. More than the room
+       is headroom and gets a ceiling; fewer means the bottom strip of
+       foreground floor goes over the edge, which nobody misses — cropping
+       the TOP would take the lamps, the signs and the arches with it. */
+    const rows = Math.max(60, Math.floor(h / K));
+    const worldH = Math.min(rows, H + CEIL_MAX);
     cv.height = worldH * K;
     cv.style.width = cv.width + 'px';
     cv.style.height = cv.height + 'px';
@@ -100,7 +137,7 @@ const SCENE = (() => {
        filter at K times its size, which is exactly what "the scene is
        blurry" looks like. */
     ctx.imageSmoothingEnabled = false;
-    oy = worldH - H;                 // the room stands on the bottom edge
+    oy = Math.max(0, worldH - H);    // the room stands on the bottom edge
   }
 
   function viewW() { return Math.ceil(cv.width / K); }
@@ -124,6 +161,8 @@ const SCENE = (() => {
     host.appendChild(cv);
     scale();
     back = paintBack(d);
+    rats.length = 0; drips.length = 0; mark = null;
+    ratClock = 1.5 + Math.random() * 3;
     me.x = d.enterX === undefined ? 40 : d.enterX;
     me.face = d.enterFace || 1;
     me.target = null; me.act = null; me.walk = 0; me.frame = 0;
@@ -250,6 +289,7 @@ const SCENE = (() => {
     if (!def) return;
     me.target = U.clamp(x, 12, def.w - 12);
     me.act = null;
+    setMark(me.target);
   }
 
   /* walk over there and then do the thing */
@@ -257,6 +297,7 @@ const SCENE = (() => {
     const stand = o.x + (o.standOff === undefined ? (me.x > o.x ? 16 : -16) : o.standOff);
     me.target = U.clamp(stand, 12, def.w - 12);
     me.act = o;
+    setMark(o.x);
     if (Math.abs(me.x - me.target) < 6) { me.target = null; use(o); }
   }
 
@@ -348,7 +389,224 @@ const SCENE = (() => {
     cam = U.approach(cam, camWant, 5, dt);
     if (Math.abs(cam - camWant) < 0.4) cam = camWant;
 
+    stepCritters(dt, 0);
     if (def.onTick) def.onTick(dt, me);
+  }
+
+  /* ============================================================
+     DEPTH.
+
+     Three layers behind and in front of the room itself, all moving
+     at different rates, because a side-on room with one layer in it
+     reads as a painted flat:
+
+       THE VAULT   the headroom over the room becomes the city it is
+                   buried in — brick arches going away, a pipe run,
+                   sodium lights a long way off. Scrolls at 0.4.
+       THE ROOM    the painted set. Scrolls at 1.
+       THE FORE    pipes, chains and grime across the lens, almost
+                   black, scrolling at 1.3 so it reads as close.
+
+     Every room gets all three without having to ask: the vault and
+     the fore are generated from the room's id, so they are the same
+     every time you walk in and different in every place.
+     ============================================================ */
+
+  function vaultCv(d, oyy, vw) {
+    const key = 'vault:' + d.id + ':' + oyy + ':' + vw;
+    return ART.cached(key, () => {
+      const w = Math.max(vw + 40, Math.ceil(d.w * 0.45) + vw);
+      const o = ART.cv(w, Math.max(4, oyy + 4)), c = o.c;
+      const rng = U.mulberry32(U.hashSeed('vault:' + d.id));
+      /* the dark of the vault, and the damp on it */
+      ART.px(c, 0, 0, w, oyy + 4, '#080b12');
+      for (let i = 0; i < oyy; i += 2) {
+        ART.px(c, 0, i, w, 1, 'rgba(30,42,60,' + (0.05 + (i / oyy) * 0.12).toFixed(3) + ')');
+      }
+      /* brick arches, going away from you */
+      const pitch = 74;
+      for (let x = -20; x < w; x += pitch) {
+        const aw = 54, ah = Math.max(8, oyy - 6);
+        ART.px(c, x, oyy - ah, aw, ah, '#0c1220');
+        for (let i = 0; i < 8; i++) {
+          const t = i / 8, iw = Math.round(aw * (1 - t * 0.22));
+          ART.px(c, x + Math.round((aw - iw) / 2), oyy - ah + Math.round(t * 5), iw, 2, '#101827');
+        }
+        /* the keystone and the sodium light hung in it */
+        ART.px(c, x + (aw >> 1) - 3, oyy - ah - 2, 6, 4, '#141d2e');
+        if (rng() < 0.5) {
+          const ly = oyy - Math.round(ah * 0.55);
+          ART.px(c, x + (aw >> 1) - 2, ly, 4, 3, '#3a2f18');
+          ART.px(c, x + (aw >> 1) - 1, ly + 1, 2, 2, '#ffcf6a');
+          for (let g = 1; g < 5; g++) {
+            ART.px(c, x + (aw >> 1) - g, ly + 3, g * 2, 1, 'rgba(255,207,106,' + (0.06 / g).toFixed(3) + ')');
+          }
+        }
+      }
+      /* the pipe run, with brackets and a slow drip */
+      const py = Math.max(2, Math.round(oyy * 0.3));
+      ART.px(c, 0, py, w, 5, '#1b2230');
+      ART.px(c, 0, py, w, 1, '#2c3648');
+      ART.px(c, 0, py + 4, w, 1, '#0a0e16');
+      for (let x = 12; x < w; x += 38) {
+        ART.px(c, x, py - 2, 4, 9, '#141a26');
+        ART.px(c, x + 1, py - 2, 1, 9, '#28323f');
+      }
+      return o.cv;
+    });
+  }
+
+  function foreCv(d, vw) {
+    const key = 'fore:' + d.id + ':' + vw;
+    return ART.cached(key, () => {
+      const w = Math.max(vw + 60, Math.ceil(d.w * 1.3) + 40);
+      const o = ART.cv(w, H + 40), c = o.c;
+      const rng = U.mulberry32(U.hashSeed('fore:' + d.id));
+      /* a fat pipe across the very top, close enough to be out of focus */
+      ART.px(c, 0, 0, w, 9, '#05070c');
+      ART.px(c, 0, 9, w, 2, 'rgba(120,150,180,.05)');
+      for (let x = 0; x < w; x += 46) {
+        ART.px(c, x, 0, 6, 14, '#05070c');
+        if (rng() < 0.4) {                        // a chain hanging off it
+          const cl = 10 + Math.floor(rng() * 22);
+          for (let i = 0; i < cl; i += 3) ART.px(c, x + 2, 12 + i, 2, 2, '#04060a');
+        }
+      }
+      /* grime up the sides of the lens */
+      for (let i = 0; i < 90; i++) {
+        const gx = Math.floor(rng() * w), gy = Math.floor(rng() * (H + 30));
+        const edge = Math.min(gx % vw, vw - (gx % vw));
+        if (edge > vw * 0.22) continue;
+        ART.px(c, gx, gy, 1 + Math.floor(rng() * 3), 1, 'rgba(4,6,10,.5)');
+      }
+      return o.cv;
+    });
+  }
+
+  /* ============================================================
+     WHAT LIVES HERE.
+
+     Rats, mostly. They come out of one wall, run the floor line and
+     go into the other one; they stop, they think about it, they go
+     on. There is a drip in every room and something in the air near
+     every lamp. None of it is interactive and all of it is why the
+     room does not look like a photograph.
+     ============================================================ */
+
+  const rats = [];
+  const drips = [];
+  let ratClock = 2 + Math.random() * 4;
+
+  function spawnRat() {
+    if (!def || rats.length > 2) return;
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    rats.push({
+      x: dir > 0 ? -8 : def.w + 8,
+      dir, v: 26 + Math.random() * 26,
+      y: def.floorY - 1,
+      pause: 0, t: Math.random() * 6,
+      big: Math.random() < 0.35,
+    });
+  }
+
+  function stepCritters(dt, T) {
+    ratClock -= dt;
+    if (ratClock <= 0) { spawnRat(); ratClock = 5 + Math.random() * 9; }
+    for (let i = rats.length - 1; i >= 0; i--) {
+      const r = rats[i];
+      r.t += dt;
+      if (r.pause > 0) { r.pause -= dt; continue; }
+      r.x += r.dir * r.v * dt;
+      if (Math.random() < dt * 0.5) r.pause = 0.2 + Math.random() * 0.5;
+      if (r.x < -20 || r.x > def.w + 20) rats.splice(i, 1);
+    }
+    /* the drip: one per room, from a fixed seam, forever */
+    if (!drips.length && def) {
+      const rng = U.mulberry32(U.hashSeed('drip:' + def.id));
+      const n = 1 + Math.floor(rng() * 2);
+      for (let i = 0; i < n; i++) {
+        drips.push({ x: 30 + Math.floor(rng() * Math.max(40, def.w - 60)), y: 0, v: 0, t: rng() * 3 });
+      }
+    }
+    for (const d2 of drips) {
+      d2.t -= dt;
+      if (d2.t <= 0) {
+        d2.y += (d2.v += 220 * dt) * dt;
+        if (d2.y > def.floorY - 2) { d2.y = 0; d2.v = 0; d2.t = 1.4 + Math.random() * 3; d2.splash = 0.4; }
+      }
+      if (d2.splash > 0) d2.splash -= dt;
+    }
+  }
+
+  function drawCritters(c, T) {
+    /* the drips, and the ring they leave */
+    for (const d2 of drips) {
+      if (d2.t <= 0) ART.px(c, Math.round(d2.x), Math.round(d2.y), 1, 3, 'rgba(150,200,230,.5)');
+      if (d2.splash > 0) {
+        const a = d2.splash / 0.4;
+        ART.px(c, Math.round(d2.x - 2 * (1 - a) - 1), def.floorY - 2, 2, 1, 'rgba(170,215,240,' + (a * 0.5).toFixed(2) + ')');
+        ART.px(c, Math.round(d2.x + 2 * (1 - a)), def.floorY - 2, 2, 1, 'rgba(170,215,240,' + (a * 0.5).toFixed(2) + ')');
+      }
+    }
+    /* the rats */
+    for (const r of rats) {
+      const k = r.big ? 1 : 0;
+      const x = Math.round(r.x), y = Math.round(r.y);
+      const run = Math.sin(r.t * 22) > 0 ? 0 : 1;
+      /* A RAT ON A BLACK FLOOR HAS TO BE PAINTED LIGHT or it is a rumour:
+         wet grey-brown with a lit back, not the near-black it would be. */
+      const body = '#5b5163', dark = '#2b2436', lit = '#7d7288';
+      ART.px(c, x - 5, y, 11 + k, 1, 'rgba(0,0,0,.35)');       // his shadow
+      ART.px(c, x - 4, y - 4 - k, 9 + k, 4 + k, body);
+      ART.px(c, x - 4, y - 4 - k, 9 + k, 1, lit);
+      ART.px(c, x - 4, y - 1, 9 + k, 1, dark);
+      /* head, pointing where he is going */
+      const hx = r.dir > 0 ? x + 5 + k : x - 6;
+      ART.px(c, hx, y - 4 - k, 3, 3, body);
+      ART.px(c, hx, y - 4 - k, 3, 1, lit);
+      ART.px(c, r.dir > 0 ? hx + 3 : hx - 1, y - 3 - k, 1, 1, '#ff9dc0');   // nose
+      ART.px(c, r.dir > 0 ? hx + 1 : hx + 1, y - 4 - k, 1, 1, '#f4efe0');   // eye
+      /* ears */
+      ART.px(c, hx + (r.dir > 0 ? 0 : 1), y - 6 - k, 2, 2, dark);
+      /* tail, with a kink in it */
+      const tx = r.dir > 0 ? x - 5 : x + 4 + k;
+      for (let i = 0; i < 5; i++) {
+        ART.px(c, tx - r.dir * i, y - 3 - k + (i > 2 ? 1 : 0) + (run && i > 1 ? 1 : 0), 1, 1, dark);
+      }
+      /* feet */
+      ART.px(c, x - 3 + run, y - 1, 2, 1, dark);
+      ART.px(c, x + 2 - run + k, y - 1, 2, 1, dark);
+    }
+  }
+
+  /* ============================================================
+     THE MARKER.
+
+     You tapped there. It draws where "there" is, counts itself down
+     and goes out when he arrives — without it, a tap on the floor
+     is an act of faith.
+     ============================================================ */
+  let mark = null;
+
+  function setMark(x) { mark = { x, t: 0 }; }
+
+  function drawMark(c, T) {
+    if (!mark) return;
+    if (me.target === null) { mark.t += 0.06; if (mark.t > 1) { mark = null; return; } }
+    else mark.t = 0;
+    const a = 1 - mark.t;
+    const x = Math.round(mark.x), y = def.floorY;
+    const bob = Math.round(Math.sin(T * 7) * 1.5);
+    /* a stepped chevron over a ring on the floor */
+    ART.px(c, x - 5, y - 2, 11, 2, 'rgba(255,215,94,' + (0.16 * a).toFixed(3) + ')');
+    ART.px(c, x - 7, y - 1, 15, 1, 'rgba(255,215,94,' + (0.22 * a).toFixed(3) + ')');
+    for (let i = 0; i < 4; i++) {
+      const w = 7 - i * 2;
+      ART.px(c, x - (w >> 1), y - 12 - bob + i * 2, w, 2, i === 0
+        ? 'rgba(255,243,176,' + a.toFixed(2) + ')'
+        : 'rgba(255,215,94,' + (a * (1 - i * 0.18)).toFixed(2) + ')');
+    }
+    ART.px(c, x - 1, y - 20 - bob, 2, 6, 'rgba(255,215,94,' + (a * 0.6).toFixed(2) + ')');
   }
 
   function draw(now) {
@@ -387,9 +645,39 @@ const SCENE = (() => {
       }
       ART.px(c, 0, oy, vw2, 2, '#05060a');
     }
+    /* THE VAULT, over the room, going by at less than half the rate */
+    if (oy > 2) {
+      const vau = vaultCv(def, oy, vw2);
+      c.drawImage(vau, -Math.round(cam * 0.4) % Math.max(1, vau.width - vw2), 0);
+    }
+
     c.translate(-Math.round(cam), oy);
     /* the painted room */
     c.drawImage(back, 0, 0);
+
+    /* ---- THE BACKGROUND, seen through the holes in the room ----
+       A wall with nothing behind it is a flat. Every room declares the
+       openings it has — an arch, a doorway, a window onto the canal — and
+       the vault behind them slides past at a third of the rate. */
+    for (const dp of (def.depth || [])) {
+      const vau = vaultCv(def, Math.max(10, dp.h), viewW());
+      c.save();
+      c.beginPath();
+      c.rect(dp.x, dp.y, dp.w, dp.h);
+      c.clip();
+      const span = Math.max(1, vau.width - dp.w);
+      const off = dp.x - (Math.round(cam * 0.33) % span);
+      c.drawImage(vau, off, dp.y + dp.h - vau.height);
+      c.drawImage(vau, off + span, dp.y + dp.h - vau.height);
+      /* the dark that always sits in a hole in a wall */
+      ART.px(c, dp.x, dp.y, dp.w, 2, 'rgba(0,0,0,.55)');
+      ART.px(c, dp.x, dp.y, 2, dp.h, 'rgba(0,0,0,.4)');
+      ART.px(c, dp.x + dp.w - 2, dp.y, 2, dp.h, 'rgba(0,0,0,.4)');
+      for (let i = 0; i < 6; i++) {
+        ART.px(c, dp.x, dp.y + dp.h - 1 - i, dp.w, 1, 'rgba(0,0,0,' + (0.06 * (6 - i)).toFixed(2) + ')');
+      }
+      c.restore();
+    }
     if (def.onPaintOver) def.onPaintOver(c, T, cam, viewW());
 
     /* everybody in it, back to front by x-depth then y */
@@ -399,6 +687,8 @@ const SCENE = (() => {
       cast.push({ y: a.y === undefined ? def.floorY : a.y, draw: () => drawActor(c, a, T) });
     }
     cast.push({ y: def.floorY + 0.5, draw: () => drawMe(c, T) });
+    drawMark(c, T);
+    drawCritters(c, T);
     cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
 
     /* furniture that people stand behind */
@@ -411,6 +701,13 @@ const SCENE = (() => {
     /* dust in the air, cheap and constant */
     motes(c, T);
     if (def.onPaintFore) def.onPaintFore(c, T, cam, viewW());
+
+    /* THE FORE: pipes and grime across the lens, moving faster than the room */
+    {
+      const fo = foreCv(def, vw2);
+      const off = -Math.round(cam * 1.3) % Math.max(1, fo.width - vw2);
+      c.drawImage(fo, Math.round(cam) + off, -oy);
+    }
 
     /* ============================================================
        THE NIGHT ITSELF.
@@ -476,14 +773,14 @@ const SCENE = (() => {
     const face = a.face === undefined ? -1 : a.face;
     /* somebody stood in a room still shifts his weight now and then */
     const idle = a.still ? 0 : (Math.sin(T * 1.3 + (a.x % 9)) > 0.9 ? 1 : 0);
-    const cvv = rig(a, idle, face);
+    const r = rig(a, idle, face);
     const fy = a.y === undefined ? def.floorY : a.y;
-    ART.px(c, Math.round(a.x - cvv.width / 3), fy, Math.round(cvv.width * 0.66), 2, 'rgba(0,0,0,.32)');
-    c.drawImage(cvv, Math.round(a.x - cvv.width / 2), Math.round(fy - cvv.height + 1));
+    ART.px(c, Math.round(a.x - r.w / 3), fy, Math.round(r.w * 0.66), 2, 'rgba(0,0,0,.32)');
+    c.drawImage(r.cv, Math.round(a.x - r.w / 2), Math.round(fy - r.h + 1), r.w, r.h);
   }
 
   function drawMe(c, T) {
-    const cvv = rig(SCENE.meDef(), me.frame, me.face);
+    const r = rig(SCENE.meDef(), me.frame, me.face);
     const fy = def.floorY;
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
@@ -494,11 +791,11 @@ const SCENE = (() => {
        the floor so his feet never leave it */
     const sq = me.land * 0.16;
     const st = Math.min(0.05, Math.abs(me.v) / SPEED * 0.05);
-    const w = Math.max(1, Math.round(cvv.width * (1 + sq - st * 0.5)));
-    const h = Math.max(1, Math.round(cvv.height * (1 - sq + st)));
-    const shW = Math.round(cvv.width * (0.66 + sq));
+    const w = Math.max(1, Math.round(r.w * (1 + sq - st * 0.5)));
+    const h = Math.max(1, Math.round(r.h * (1 - sq + st)));
+    const shW = Math.round(r.w * (0.66 + sq));
     ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
-    c.drawImage(cvv, Math.round(me.x - w / 2), Math.round(fy - h + 1), w, h);
+    c.drawImage(r.cv, Math.round(me.x - w / 2), Math.round(fy - h + 1), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
@@ -582,7 +879,11 @@ const SCENE = (() => {
   }
 
   return {
-    H, open, close, walkTo, rig, rigH,
+    H, open, close, walkTo, rig, rigH, rigPic,
+    /* the ?debug harness pokes these so a screenshot can catch the vermin */
+    debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
+    debugRatCount() { return rats.length; },
+    debugRatsWhere() { return rats.map(r => ({ x: Math.round(r.x), d: r.dir, v: Math.round(r.v) })); },
     get def() { return def; },
     get me() { return me; },
     at(x) { me.x = x; },

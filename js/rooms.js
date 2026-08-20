@@ -118,6 +118,15 @@ const ROOMS = (() => {
       px(c, 276, 58, 12, 2, '#6d6656');
       px(c, 294, 72, 3, 5, p.G);                         // the handle
 
+      /* ============ the corridor: a hole with the city behind it ============ */
+      px(c, 172, 26, 78, 5, '#1a1f26');
+      px(c, 172, 26, 78, 1, '#2b333d');
+      px(c, 172, 31, 4, 44, '#171c22');
+      px(c, 246, 31, 4, 44, '#12161b');
+      px(c, 170, 75, 82, 3, '#232a32');
+      px(c, 170, 75, 82, 1, '#39424e');
+      for (let bx = 181; bx < 244; bx += 12) px(c, bx, 31, 2, 44, '#0a0d11');
+
       /* ============ the stairs down to the line-up room ============ */
       px(c, 306, 30, 40, 76, p.K);
       px(c, 309, 33, 34, 73, '#101a1e');
@@ -254,6 +263,7 @@ const ROOMS = (() => {
 
     return {
       id: 'precinct', w: W, floorY: FY, paint, onPaintFront: front, actors, spots,
+      depth: [{ x: 176, y: 31, w: 70, h: 44 }],
       enterX: 46, enterFace: 1,
       lights: [{ x: 120, y: 14, r: 40 }, { x: 240, y: 14, r: 40 },
                { x: 360, y: 14, r: 40, flicker: true }, { x: 480, y: 14, r: 40 }],

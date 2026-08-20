@@ -20,6 +20,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (new URLSearchParams(location.search).has('debug')) {
     const bar = U.el('div', '');
+    bar.id = 'dev-bar';          // so a screenshot can hide it
     bar.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:300;display:flex;gap:6px;opacity:.85';
     const mk = (label, fn) => {
       const b = U.el('button', '', label);

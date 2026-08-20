@@ -57,12 +57,42 @@ fs.mkdirSync(SHOTS, { recursive: true });
       const plate = page.locator('#tutor-root:not(.hidden)');
       if (await plate.count() === 0) { quiet++; await page.waitForTimeout(130); continue; }
       quiet = 0;
+      /* A RACK OF REPLIES WILL NOT CLEAR ITSELF. Somebody has to say one of
+         them, and the way out is always the last one on the rack. */
+      if (await page.locator('#tutor-root.asking').count() > 0) {
+        await page.evaluate(() => { if (TUTOR.typing && TUTOR.finishTyping) TUTOR.finishTyping(); });
+        await page.waitForTimeout(150);
+        const btns = page.locator('#tutor-root.asking .reply-btn');
+        const n = await btns.count();
+        if (n) {
+          await btns.nth(n - 1).click({ timeout: 5000 }).catch(() => {});
+          await page.waitForTimeout(260);
+          continue;
+        }
+      }
       const box = await plate.first().boundingBox().catch(() => null);
       if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height - 20);
       else await page.mouse.click(720, 620);
       await page.waitForTimeout(210);
     }
     return await page.locator('#tutor-root:not(.hidden)').count() === 0;
+  };
+
+  /* ---------- and what you say back ----------
+     Pick a reply off the rack by index; leave it out for the way out. */
+  const reply = async (n) => {
+    const up = await page.waitForSelector('#tutor-root.asking .reply-btn', { timeout: 9000 })
+      .catch(() => null);
+    if (!up) return 0;
+    await page.evaluate(() => { if (TUTOR.typing && TUTOR.finishTyping) TUTOR.finishTyping(); });
+    await page.waitForTimeout(180);
+    const btns = page.locator('#tutor-root.asking .reply-btn');
+    const count = await btns.count();
+    if (!count) return 0;
+    const i = (n === undefined || n < 0) ? count - 1 : Math.min(n, count - 1);
+    await btns.nth(i).click({ timeout: 6000 }).catch(() => {});
+    await page.waitForTimeout(320);
+    return count;
   };
   /* a plate types itself on; a picture of half a word looks like a bug */
   const finishType = async () => {
@@ -200,6 +230,8 @@ fs.mkdirSync(SHOTS, { recursive: true });
   try {
     /* ================= 1. the murder board ================= */
     await page.goto(GAME);
+    /* the ?debug cheat bar is for the harness, not for the pictures */
+    await page.addStyleTag({ content: '#dev-bar{display:none!important}' });
     await page.waitForTimeout(700);
     await shot('01-title');
     await page.evaluate(() => { const i = document.getElementById('seed-input'); if (i) i.value = 'SMOKE'; });
@@ -245,11 +277,28 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await shot('07-maybelle');
     await clearPlates();
 
-    /* the captain, and the brief */
+    /* the captain, and the brief. It ends in a rack of things you can ask
+       him: take one for real, photograph it, then take the way out. */
     await page.evaluate(() => { STORY.talkCaptain(); });
     await page.waitForTimeout(500);
     await finishType();
     await shot('08-captain');
+    for (let i = 0; i < 14; i++) {
+      if (await page.locator('#tutor-root.asking .reply-btn').count() > 0) break;
+      const plate = page.locator('#tutor-root:not(.hidden)');
+      if (await plate.count() === 0) { await page.waitForTimeout(160); continue; }
+      const box = await plate.first().boundingBox().catch(() => null);
+      if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height - 20);
+      await page.waitForTimeout(230);
+    }
+    const rackSize = await page.locator('#tutor-root.asking .reply-btn').count();
+    if (!rackSize) errors.push('[dialogue] the captain never offered a reply');
+    else {
+      await shot('08b-replies');
+      await reply(0);                       // ask him something
+      await clearPlates(8);
+      await reply();                        // and then get to work
+    }
     await clearPlates(18);
     const briefed = await state();
     if (!briefed.briefed) errors.push('[flow] the captain never handed over a lead');
@@ -298,7 +347,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
       return G2().case.clues.filter(c => !c.seen).map(c => ({ at: c.at, prop: c.prop }));
     });
     console.log('  the case is buried in: ' + plan.map(x => x.at + '/' + x.prop).join(', '));
-    let dug = 0;
+    let dug = 0, errandRun = 0;
     for (const step of plan) {
       await page.evaluate((x) => { STORY.travel(x); }, step.at);
       await page.waitForFunction((x) => G2().phase === 'place' && G2().place === x && !CINE.busy,
@@ -306,6 +355,62 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await settle();
       await clearPlates(6);
       if (!dug) { await shot('12-' + step.at); }
+
+      /* THE FROG BEHIND THE COUNTER WANTS A FAVOUR FIRST. Take it: the
+         laundry one is a lid and three rats, the rest are legwork. */
+      if (!errandRun) {
+        const q = await page.evaluate((x) => {
+          const q2 = STORY.questAt(x);
+          return q2 && STORY.questState(q2.id) === 'none' ? { id: q2.id, kind: q2.kind } : null;
+        }, step.at);
+        if (q) {
+          errandRun = 1;
+          await page.evaluate((x) => { STORY.askWitness(x, 'wit'); }, step.at);
+          await page.waitForSelector('#tutor-root.asking .reply-btn', { timeout: 9000 })
+            .catch(() => errors.push('[errand] nobody offered you anything'));
+          await page.waitForTimeout(400);
+          await shot('12b-errand');
+          await reply(0);                                  // yes, I will do it
+          if (q.kind === 'job') {
+            const card = await page.waitForSelector('.job-card', { timeout: 9000 }).catch(() => null);
+            if (!card) errors.push('[errand] the drums never opened');
+            else {
+              await page.waitForTimeout(700);
+              await shot('12c-rats');
+              for (let t = 0; t < 3; t++) {
+                await page.mouse.click(640, 400);
+                await page.waitForTimeout(800);
+              }
+              await page.waitForTimeout(700);
+            }
+          }
+          await clearPlates(10);
+          await page.mouse.click(700, 120);                 // clear a clue card if he paid in one
+          await page.waitForTimeout(500);
+          await clearPlates(8);
+          let st = await page.evaluate((id) => STORY.questState(id), q.id);
+          /* THE RATS GET AWAY SOMETIMES — they are supposed to. Take it again
+             with a clean catch so the pay-off gets driven too. */
+          if (q.kind === 'job' && st === 'none') {
+            await page.evaluate(() => {
+              JOBS.rats = async () => ({ hits: 3, perfect: 3, pay: 30, rounds: 3 });
+            });
+            await page.evaluate((x) => { STORY.askWitness(x, 'wit'); }, step.at);
+            await page.waitForTimeout(900);
+            await reply(0);
+            await page.waitForTimeout(1400);
+            await clearPlates(10);
+            await page.mouse.click(700, 120);
+            await page.waitForTimeout(500);
+            await clearPlates(8);
+            st = await page.evaluate((id) => STORY.questState(id), q.id);
+          }
+          console.log('  errand ' + q.id + ': ' + st);
+          if (st !== 'paid' && st !== 'ready' && st !== 'taken') {
+            errors.push('[errand] the errand went nowhere: ' + st);
+          }
+        }
+      }
       /* walk over to it, then put your hand in it */
       await page.evaluate((pr) => {
         const sp = SCENE.def.spots.find(s2 => s2.id === pr);
@@ -320,6 +425,16 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await clearPlates(8);
       dug++;
     }
+    /* the phone, with the night's work on it */
+    await page.evaluate(() => { PHONE.open('job'); });
+    await page.waitForTimeout(500);
+    await shot('14b-phone-job');
+    await page.evaluate(() => { PHONE.open('kit'); });
+    await page.waitForTimeout(400);
+    await shot('14c-phone-kit');
+    await page.evaluate(() => { PHONE.close(); });
+    await page.waitForTimeout(300);
+
     const left = await page.evaluate(() => CASE.left());
     console.log('  clues dug: ' + dug + ', faces still fitting: ' + left);
     if (dug && left >= (await page.evaluate(() => G2().case.suspects.length))) {

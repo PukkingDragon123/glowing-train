@@ -107,12 +107,15 @@ const TUTOR = {
   },
 
   plate(o) {
-    const per = o.big ? 30 : 34;
+    const per = o.big ? 30 : (o.asking ? 30 : 34);
     return SPR.speech({
       /* A line nobody is waiting on gets a smaller plate: at full size the
-         portrait alone covered the board it was talking about. */
+         portrait alone covered the board it was talking about. A line you
+         have to answer gets a middling one, so the replies under it are
+         not a mile wide. */
       maxW: o.small ? Math.min(window.innerWidth - 40, 560)
-        : Math.min(window.innerWidth - 28, 1180),
+        : o.asking ? Math.min(window.innerWidth - 40, 860)
+          : Math.min(window.innerWidth - 28, 1180),
       portrait: o.art,
       name: o.name,
       nameCol: o.nameCol,
@@ -123,6 +126,17 @@ const TUTOR = {
     });
   },
 
+  /* ------------------------------------------------------------
+     WHILE SOMEBODY IS TALKING, THE CORNERS GET OUT OF THE WAY.
+
+     The reply rack lands exactly where the objective plate lives,
+     and a conversation is a scene, not a HUD: the plate and the
+     phone fade down for the length of it and come back after.
+     ------------------------------------------------------------ */
+  hush(on) {
+    if (document.body) document.body.classList.toggle('talking', !!on);
+  },
+
   /* one line, with his face on it. Resolves when it is dismissed. */
   say(line, opts) {
     opts = opts || {};
@@ -130,6 +144,10 @@ const TUTOR = {
       const root = TUTOR.root();
       root.className = 'plate-on' + (opts.big ? ' big' : '') +
         (opts.hold ? ' pass' : '') + (opts.top ? ' top' : '');
+      /* a plate nobody is waiting on does not own the frame, so it does not
+         push the corners out of the way either */
+      const hushed = !opts.hold;
+      if (hushed) TUTOR.hush(true);
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
       const build = (reveal) => {
@@ -174,15 +192,23 @@ const TUTOR = {
         if (typing) { finishTyping(); return; }
         if (closed) return;
         closed = true;
+        TUTOR._close = null;
         holder.classList.add('out');
         root.removeEventListener('pointerdown', done);
         window.removeEventListener('keydown', key);
         setTimeout(() => {
-          if (root.firstChild === holder) { root.innerHTML = ''; root.className = 'hidden'; }
+          if (root.firstChild === holder) {
+            root.innerHTML = ''; root.className = 'hidden';
+            if (hushed) TUTOR.hush(false);
+          }
           res();
         }, 180);
       };
       const key = (e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') done(); };
+      /* SOMETHING ELSE MAY TAKE THE SCREEN — a scene change, a death, a
+         cinematic. If the plate is torn down from outside, the promise still
+         has to settle or every await behind it waits for a tap forever. */
+      TUTOR._close = () => { if (typing) finishTyping(); done(); };
       if (opts.hold) {
         setTimeout(() => { finishTyping(); done(); }, opts.hold);
       } else {
@@ -192,9 +218,122 @@ const TUTOR = {
     });
   },
 
+  /* ============================================================
+     AND WHAT YOU SAY BACK.
+
+     Same plate, but the foot is a rack of things you can actually
+     say. The line types itself on first; the replies arrive after
+     it, big enough to hit, and the promise resolves with the index
+     of the one you picked. Cancel is not an option in a
+     conversation — one of them is always "leave it".
+     ============================================================ */
+  ask(line, replies, opts) {
+    opts = opts || {};
+    return new Promise(res => {
+      const root = TUTOR.root();
+      root.className = 'plate-on asking' + (opts.big ? ' big' : '');
+      TUTOR.hush(true);
+      root.innerHTML = '';
+      const holder = U.el('div', 'tut-plate');
+      const rack = U.el('div', 'reply-rack');
+
+      const build = (reveal) => {
+        holder.innerHTML = '';
+        holder.appendChild(TUTOR.plate({
+          art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
+          name: opts.name || 'THE CAPTAIN',
+          nameCol: opts.nameCol,
+          rim: opts.rim,
+          line,
+          reveal,
+          foot: null,
+          asking: true,
+        }));
+      };
+      build(0);
+      root.appendChild(holder);
+      root.appendChild(rack);
+      requestAnimationFrame(() => holder.classList.add('in'));
+      if (SFX[opts.snd || 'tick']) SFX[opts.snd || 'tick']();
+
+      let typed = 0, typing = null, done = false;
+      const k = window.innerWidth < 560 ? 2 : 3;
+
+      const showReplies = () => {
+        rack.innerHTML = '';
+        replies.forEach((r, i) => {
+          const b = U.el('button', 'reply-btn' + (r.dim ? ' dim' : ''));
+          b.appendChild(PIXFONT.render('>', { scale: k, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+          const col = U.el('span', 'reply-col');
+          UI.wrapLines(typeof r === 'string' ? r : r.label, 38).forEach(t => {
+            col.appendChild(PIXFONT.render(t, { scale: k, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+          });
+          if (r.note) col.appendChild(PIXFONT.render(r.note, { scale: Math.max(1, k - 2), color: PIX.PAL.q, shadow: null }));
+          b.appendChild(col);
+          b.onclick = () => finish(i);
+          rack.appendChild(b);
+        });
+        requestAnimationFrame(() => rack.classList.add('in'));
+      };
+
+      const finishTyping = () => {
+        if (typing) { clearInterval(typing); typing = null; }
+        TUTOR.typing = false;
+        typed = line.length;
+        build(null);
+        showReplies();
+      };
+      TUTOR.typing = true;
+      /* torn down from outside: nobody answered, so it resolves as the
+         way out rather than hanging the conversation for good */
+      TUTOR._close = () => finish(-1);
+      TUTOR.finishTyping = finishTyping;
+      typing = setInterval(() => {
+        typed += 2;
+        if (typed >= line.length) { finishTyping(); return; }
+        build(typed);
+        if (typed % 6 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
+      }, 24);
+
+      const finish = (i) => {
+        if (done) return;
+        done = true;
+        if (typing) { clearInterval(typing); typing = null; }
+        TUTOR.typing = false;
+        TUTOR._close = null;
+        SFX.chak && SFX.chak();
+        holder.classList.add('out');
+        rack.classList.remove('in');
+        root.removeEventListener('pointerdown', skip);
+        window.removeEventListener('keydown', key);
+        setTimeout(() => {
+          if (root.firstChild === holder) { root.innerHTML = ''; root.className = 'hidden'; TUTOR.hush(false); }
+          res(i);
+        }, 170);
+      };
+      /* a tap while it is still typing just gets to the end of the line */
+      const skip = (e) => {
+        if (e.target && e.target.closest && e.target.closest('.reply-btn')) return;
+        if (typing) finishTyping();
+      };
+      const key = (e) => {
+        if (typing && (e.key === ' ' || e.key === 'Enter')) { finishTyping(); return; }
+        const n = parseInt(e.key, 10);
+        if (n >= 1 && n <= replies.length) finish(n - 1);
+      };
+      root.addEventListener('pointerdown', skip);
+      window.addEventListener('keydown', key);
+    });
+  },
+
   hide() {
+    const close = TUTOR._close;
+    TUTOR._close = null;
+    if (close) close();                 // settle the promise before the DOM goes
     const r = document.getElementById('tutor-root');
     if (r) { r.innerHTML = ''; r.className = 'hidden'; }
+    TUTOR.hush(false);
+    TUTOR.typing = false;
     TUTOR.cur = null;
   },
 

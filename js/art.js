@@ -105,6 +105,269 @@ const ART = (() => {
     MAPS[name] = { rows: rows.filter(r => r !== undefined), map: map || {} };
   }
 
+  /* ============================================================
+     THE ICON SET.
+
+     Hand-drawn 14x14 marks: one for every app on the phone and one
+     for every stop on the map. They are the only pictures in the
+     interface, so they carry the whole thing — no glyphs, no emoji,
+     no rounded chrome. Drawn one character per pixel like everything
+     else, and blown up by whole numbers.
+     ============================================================ */
+
+  paint('ic_phone', [
+    '..KKKKKKKKKK..',
+    '..KSSSSSSSSK..',
+    '..KStttttSSK..',
+    '..KStLLLtSSK..',
+    '..KStLLLtSSK..',
+    '..KStttttSSK..',
+    '..KSSSSSSSSK..',
+    '..KSGKSGKSGK..',
+    '..KSKKSKKSKK..',
+    '..KSGKSGKSGK..',
+    '..KSKKSKKSKK..',
+    '..KSGKSGKSGK..',
+    '..KSSSSSSSSK..',
+    '..KKKKKKKKKK..',
+  ]);
+
+  paint('ic_map', [
+    'KKKKKKKKKKKKKK',
+    'KWWWWWWWWWWWWK',
+    'KWWKKKWWWWWWWK',
+    'KWKlllKWWWWWWK',
+    'KWKlllKKWWWWWK',
+    'KWWKKKWlKWWWWK',
+    'KWWWWWWWlKWWWK',
+    'KWWWWWWWWlKKKK',
+    'KWWWWWWWWWlKGK',
+    'KWWKKWWWWWlKGK',
+    'KWKddKWWWWKKKK',
+    'KWKddKWWWWWWWK',
+    'KWWKKWWWWWWWWK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_case', [
+    '....KKKKKK....',
+    '....KuuuuK....',
+    'KKKKKKKKKKKKKK',
+    'KuuuuuuuuuuuuK',
+    'KuBBBBBBBBBBuK',
+    'KuBWWWWWWWWBuK',
+    'KuBWqqqqqqWBuK',
+    'KuBWWWWWWWWBuK',
+    'KuBWqqqqWWWBuK',
+    'KuBWWWWWWWWBuK',
+    'KuBBBBGGBBBBuK',
+    'KuuuuuGGuuuuuK',
+    'KKKKKKKKKKKKKK',
+    '..............',
+  ]);
+
+  paint('ic_bag', [
+    '.....KKKK.....',
+    '....KuuuuK....',
+    '...KuKKKKuK...',
+    '..KKKKKKKKKK..',
+    '..KuuuuuuuuK..',
+    '..KuBBBBBBuK..',
+    '..KuBGGGGBuK..',
+    '..KuBGWWGBuK..',
+    '..KuBGWWGBuK..',
+    '..KuBGGGGBuK..',
+    '..KuBBBBBBuK..',
+    '..KuuuuuuuuK..',
+    '..KKKKKKKKKK..',
+    '..............',
+  ]);
+
+  paint('ic_star', [
+    '......KK......',
+    '.....KGGK.....',
+    '.....KGGK.....',
+    '..KKKKGGKKKK..',
+    '.KGGGGGGGGGGK.',
+    '..KGGGGGGGGK..',
+    '...KGGGGGGK...',
+    '...KGGKKGGK...',
+    '..KGGK..KGGK..',
+    '..KGK....KGK..',
+    '..KK......KK..',
+    '..............',
+    '..............',
+    '..............',
+  ]);
+
+  paint('ic_badge', [
+    '.....KKKK.....',
+    '...KKGGGGKK...',
+    '..KGGGGGGGGK..',
+    '.KGGKKGGKKGGK.',
+    '.KGKWWWWWWKGK.',
+    '.KGKWttttWKGK.',
+    '.KGKWtGGtWKGK.',
+    '.KGKWttttWKGK.',
+    '.KGKWWWWWWKGK.',
+    '.KGGKKGGKKGGK.',
+    '..KGGGGGGGGK..',
+    '...KKGGGGKK...',
+    '.....KKKK.....',
+    '..............',
+  ]);
+
+  paint('ic_drum', [
+    '.KKKKKKKKKKKK.',
+    '.KWWWWWWWWWWK.',
+    '.KWttKWWWKtWK.',
+    '.KWWWWWWWWWWK.',
+    '.KWKKKKKKKKWK.',
+    '.KWKttttttKWK.',
+    '.KWKtLLLLtKWK.',
+    '.KWKtLLLLtKWK.',
+    '.KWKttttttKWK.',
+    '.KWKKKKKKKKWK.',
+    '.KWWWWWWWWWWK.',
+    '.KWWWWWWWWWWK.',
+    '.KKKKKKKKKKKK.',
+    '..............',
+  ]);
+
+  paint('ic_anchor', [
+    '......KK......',
+    '.....KSSK.....',
+    '.....KttK.....',
+    '......SS......',
+    '...KKKSSKKK...',
+    '...KSSSSSSK...',
+    '......SS......',
+    '..K...SS...K..',
+    '..KS..SS..SK..',
+    '..KS..SS..SK..',
+    '..KSSKSSKSSK..',
+    '...KSSSSSSK...',
+    '....KKKKKK....',
+    '..............',
+  ]);
+
+  paint('ic_ring', [
+    '......KK......',
+    '.....KGGK.....',
+    '....KGWWGK....',
+    '.....KGGK.....',
+    '...KKKKKKKK...',
+    '..KGGGGGGGGK..',
+    '.KGGKKKKKKGGK.',
+    '.KGKK....KKGK.',
+    '.KGK......KGK.',
+    '.KGKK....KKGK.',
+    '.KGGKKKKKKGGK.',
+    '..KGGGGGGGGK..',
+    '...KKKKKKKK...',
+    '..............',
+  ]);
+
+  paint('ic_cup', [
+    '..............',
+    '..KKKKKKKK....',
+    '..KWWWWWWK....',
+    '..KWuuuuWKKK..',
+    '..KWuuuuWKWK..',
+    '..KWuuuuWKWK..',
+    '..KWWWWWWKKK..',
+    '..KWWWWWWK....',
+    '..KKWWWWKK....',
+    '...KKKKKK.....',
+    '..KKKKKKKK....',
+    '..KwwwwwwK....',
+    '..KKKKKKKK....',
+    '..............',
+  ]);
+
+  paint('ic_glass', [
+    '.KKKKKKKKKKKK.',
+    '.KLllllllllLK.',
+    '.KLGGGGGGGGLK.',
+    '.KLGGGGGGGGLK.',
+    '..KLGGGGGGLK..',
+    '..KKLGGGGLKK..',
+    '....KLGGLK....',
+    '.....KLLK.....',
+    '......KK......',
+    '......KK......',
+    '....KKKKKK....',
+    '...KWWWWWWK...',
+    '...KKKKKKKK...',
+    '..............',
+  ]);
+
+  paint('ic_rat', [
+    '................',
+    '..KK........KK..',
+    '.KttK......KttK.',
+    '.KtttKKKKKKtttK.',
+    'KtPttttttttttttK',
+    'KtWtttttttttttttKK',
+    'KKttttttttttttttttK',
+    '.KtttttttttttttKKK',
+    '..KKtttttttttKK.',
+    '...KtKKKKKtKK...',
+    '...KKK...KKK....',
+    '................',
+  ]);
+
+  paint('ic_drop', [
+    '......KK......',
+    '.....KLLK.....',
+    '.....KLLK.....',
+    '....KLLLLK....',
+    '....KLLLLK....',
+    '...KLLWWLLK...',
+    '...KLLWWLLK...',
+    '..KLLLLLLLLK..',
+    '..KLLLLLLLLK..',
+    '..KLLLLLLLLK..',
+    '...KLLLLLLK...',
+    '....KKKKKK....',
+    '..............',
+    '..............',
+  ]);
+
+  paint('ic_clock', [
+    '....KKKKKK....',
+    '..KKWWWWWWKK..',
+    '.KWWWWWWWWWWK.',
+    'KWWKWWWWWWKWWK',
+    'KWWWWWKWWWWWWK',
+    'KWWWWWKWWWWWWK',
+    'KWWWWWKWWWWWWK',
+    'KWWWWWKKKKWWWK',
+    'KWWWWWWWWWWWWK',
+    'KWWKWWWWWWKWWK',
+    '.KWWWWWWWWWWK.',
+    '..KKWWWWWWKK..',
+    '....KKKKKK....',
+    '..............',
+  ]);
+
+  paint('ic_coin', [
+    '....KKKKKK....',
+    '..KKGGGGGGKK..',
+    '.KGGGGGGGGGGK.',
+    'KGGGKGGGGKGGGK',
+    'KGGGKGGGGKGGGK',
+    'KGGGKKKKKKGGGK',
+    'KGGGGKGGKGGGGK',
+    'KGGGGKGGKGGGGK',
+    'KGGGKKKKKKGGGK',
+    'KGGGKGGGGKGGGK',
+    '.KGGKGGGGKGGK.',
+    '..KKGGGGGGKK..',
+    '....KKKKKK....',
+    '..............',
+  ]);
+
   function art(name, k) {
     k = k || 1;
     return cached('art:' + name + '@' + k, () => {

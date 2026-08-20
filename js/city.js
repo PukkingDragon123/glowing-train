@@ -27,32 +27,32 @@ const CITY = (() => {
   const PLACES = {
     precinct: {
       id: 'precinct', name: 'THE PRECINCT', sub: 'HOMICIDE DIVISION - AFTER HOURS',
-      short: 'PRECINCT', x: 52, y: 62, icon: 'badge', hub: true,
+      short: 'PRECINCT', x: 52, y: 62, icon: 'ic_badge', hub: true,
       blurb: 'YOUR DESK. THE BOARD. THE CAPTAIN.',
     },
     laundry: {
       id: 'laundry', name: 'THE CANAL LAUNDRY', sub: 'WHERE THEY FOUND HIM',
-      short: 'LAUNDRY', x: 22, y: 30, icon: 'drop', scene: true,
+      short: 'LAUNDRY', x: 22, y: 30, icon: 'ic_drum', scene: true,
       blurb: 'THE BODY WAS IN HERE. THE MACHINES ARE STILL WARM.',
     },
     docks: {
       id: 'docks', name: 'PIER NINETEEN', sub: 'THE CANAL GOES OUT TO THE BAY',
-      short: 'THE PIER', x: 14, y: 74, icon: 'anchor', scene: true,
+      short: 'THE PIER', x: 14, y: 74, icon: 'ic_anchor', scene: true,
       blurb: 'CRATES NOBODY SIGNED FOR AND A CRANE THAT RUNS AT NIGHT.',
     },
     pawn: {
       id: 'pawn', name: 'MARSH ROW PAWN', sub: 'OPEN LATE, ASKS NOTHING',
-      short: 'PAWN SHOP', x: 74, y: 34, icon: 'ring', scene: true,
+      short: 'PAWN SHOP', x: 74, y: 34, icon: 'ic_ring', scene: true,
       blurb: 'EVERYTHING TAKEN OFF A BODY ENDS UP BEHIND THIS GLASS.',
     },
     diner: {
       id: 'diner', name: 'THE FLY TRAP', sub: 'COFFEE, DONUTS, NO QUESTIONS',
-      short: 'THE DINER', x: 60, y: 18, icon: 'cup', scene: true,
+      short: 'THE DINER', x: 60, y: 18, icon: 'ic_cup', scene: true,
       blurb: 'THE NIGHT SHIFT EATS HERE. SO DOES EVERYBODY ELSE.',
     },
     bar: {
       id: 'bar', name: 'THE GREEN LAMP', sub: 'THE CREW DRINKS HERE',
-      short: 'THE BAR', x: 86, y: 78, icon: 'glass', scene: true,
+      short: 'THE BAR', x: 86, y: 78, icon: 'ic_glass', scene: true,
       blurb: 'IF HE HAS FRIENDS, THEY ARE AT THIS BAR TONIGHT.',
     },
   };
@@ -98,6 +98,12 @@ const CITY = (() => {
     G.weather = rollWeather();
     G.searched = {};
     G.jobsDone = {};
+    /* the errands are a NIGHT's worth of goodwill, not a run's: whoever
+       you did a favour for last night wants something else tonight */
+    G.quests = {};
+    G.cargo = {};
+    G.capAsked = {};
+    G.burned = {};
   }
 
   /* minutes past midnight, wrapped, so 20:40 -> 02:10 counts up */

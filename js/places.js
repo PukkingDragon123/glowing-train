@@ -60,6 +60,34 @@ const PLACES = (() => {
     }
   }
 
+  /* THE FRAME ROUND A HOLE. The scene fills the hole itself with the
+     sewer vault, sliding past at a third of the rate; this is the
+     brickwork, the lintel and the bars that sit in front of it. */
+  function archFrame(c, x, y, w, h, opt) {
+    opt = opt || {};
+    const p = P();
+    /* the lintel and the jambs, stepped like real brick */
+    px(c, x - 4, y - 5, w + 8, 5, '#1a1f26');
+    px(c, x - 4, y - 5, w + 8, 1, '#2b333d');
+    for (let i = 0; i < w + 8; i += 9) px(c, x - 4 + i, y - 5, 1, 5, 'rgba(0,0,0,.4)');
+    px(c, x - 4, y, 4, h, '#171c22');
+    px(c, x + w, y, 4, h, '#12161b');
+    px(c, x - 4, y + h - 2, w + 8, 3, '#0d1116');
+    /* the sill, wet */
+    px(c, x - 5, y + h, w + 10, 3, '#232a32');
+    px(c, x - 5, y + h, w + 10, 1, '#39424e');
+    if (opt.bars) {
+      for (let bx = x + 5; bx < x + w - 3; bx += 11) {
+        px(c, bx, y, 2, h, '#0a0d11');
+        px(c, bx, y, 1, h, 'rgba(140,170,200,.10)');
+      }
+      px(c, x, y + Math.round(h * 0.45), w, 2, '#0a0d11');
+    }
+    if (opt.grate) {
+      for (let gy = y + 4; gy < y + h - 2; gy += 6) px(c, x, gy, w, 2, 'rgba(10,14,18,.7)');
+    }
+  }
+
   /* a hanging shop sign, lit */
   function sign(c, x, y, w, word, col) {
     px(c, x, y, w, 12, P().K);
@@ -147,6 +175,10 @@ const PLACES = (() => {
       ART.dither(c, 288, FY - 8, 30, 10, 'rgba(120,170,200,.18)', 0.3, 13);
       px(c, 294, FY - 6, 18, 6, p.K);
       for (let i = 0; i < 4; i++) px(c, 296 + i * 4, FY - 5, 2, 4, '#0b0f13');
+      /* THE CANAL ARCH. The laundry backs onto the water: this is the hole
+         it backs onto, and the vault behind it slides past on its own. */
+      archFrame(c, 232, 24, 84, 44, { bars: true });
+
       /* the strip light, and the damp in the corners */
       for (const lx of [110, 210, 310]) c.drawImage(ART.hangLamp(16, 22, false), lx - 8, 0);
       ART.dither(c, 0, FY - 24, W, 24, 'rgba(0,0,0,.2)', 0.1, 31);
@@ -180,6 +212,7 @@ const PLACES = (() => {
     ];
 
     return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+      depth: [{ x: 232, y: 24, w: 84, h: 44 }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 110, y: 14, r: 40 }, { x: 210, y: 14, r: 42, flicker: true },
                { x: 310, y: 14, r: 40 }] };
@@ -314,6 +347,7 @@ const PLACES = (() => {
     ];
 
     return { id: 'docks', w: W, floorY: FY, paint, actors, spots, outdoor: true,
+      depth: [{ x: 0, y: 0, w: W, h: 44 }],
       enterX: 26, enterFace: 1,
       lights: [{ x: 206, y: 60, r: 40, a: 0.1 }, { x: W - 144, y: 18, r: 46, flicker: true }] };
   }
@@ -367,6 +401,9 @@ const PLACES = (() => {
       c.drawImage(ART.hangLamp(18, 28, false), 270, 0);
       c.drawImage(ART.hangLamp(14, 20, false), 120, 0);
 
+      /* the way through to the back, where the good stuff is */
+      archFrame(c, 60, 34, 40, 66, {});
+
       /* a birdcage, because somebody pawned a bird */
       px(c, 232, 14, 22, 4, p.K);
       for (let x = 234; x < 254; x += 4) px(c, x, 18, 2, 26, p.K);
@@ -413,6 +450,7 @@ const PLACES = (() => {
     };
 
     return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+      depth: [{ x: 60, y: 34, w: 40, h: 66 }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 120, y: 20, r: 34 }, { x: 279, y: 28, r: 44 }] };
   }
@@ -435,9 +473,11 @@ const PLACES = (() => {
         }
       }
 
-      /* the street window, all down the near end */
-      nightWindow(c, 8, 20, 96, 40, seed % 23);
+      /* the street window, all down the near end: a real hole with the
+         city going past it rather than a picture of one */
+      archFrame(c, 10, 20, 92, 40, {});
       px(c, 6, 60, 100, 4, '#2a2f38');
+      px(c, 6, 60, 100, 1, '#454e5a');
       sign(c, 22, 8, 68, 'THE FLY TRAP', '#c94a4a');
 
       /* the back bar: urn, hatch, pie case, a donut tower */
@@ -525,6 +565,7 @@ const PLACES = (() => {
     };
 
     return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+      depth: [{ x: 10, y: 20, w: 92, h: 40 }],
       enterX: 30, enterFace: 1,
       lights: [{ x: 90, y: 14, r: 38 }, { x: 200, y: 14, r: 40 }, { x: 320, y: 14, r: 38, flicker: true }] };
   }
@@ -589,6 +630,9 @@ const PLACES = (() => {
       px(c, jx + 4, FY - 26, 22, 3, '#a5741f');
       px(c, jx, FY - 48, 30, 3, '#6e4c12');
 
+      /* the grate the smell comes in through */
+      archFrame(c, 250, 26, 66, 32, { grate: true });
+
       /* the door to the back room, where sit-downs happen */
       const dx = W - 26;
       px(c, dx, 42, 24, 64, p.K);
@@ -632,6 +676,7 @@ const PLACES = (() => {
     ];
 
     return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+      depth: [{ x: 250, y: 26, w: 66, h: 32 }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 142, y: 26, r: 44 }, { x: 300, y: 16, r: 40, a: 0.06 },
                { x: W - 47, y: 20, r: 34, flicker: true }] };

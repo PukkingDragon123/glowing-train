@@ -238,6 +238,7 @@ function driver() {
       chapter: G.chapter, cards: (G.intelCards || []).length, wardTrips, finale,
       boardFull: STORY.canFinish(), badge: !G.badgePulled,
       searches: G.simSearches || 0, nightsOut: G.simNightsOut || 0,
+      errands: G.simErrands || 0,
       named: G.run.called, misnamed: G.run.misnamed,
     };
   }
@@ -249,13 +250,62 @@ function driver() {
      left standing. Then it goes back to the station and says a name. A
      real player knows things this bot cannot — which is the point: these
      numbers are the floor, not the ceiling. */
+  /* ------------------------------------------------------------
+     AN ERRAND, HEADLESS.
+
+     The real thing is a conversation, a lid dropped on a rat and a
+     drive across town. What matters to the curve is the trade: a
+     slice of clock for a guaranteed piece of evidence. The bot pays
+     the same clock and takes the same payout, so the numbers below
+     are what a player who works the city actually sees.
+     ------------------------------------------------------------ */
+  function payErrand(q) {
+    G.quests[q.id] = 'paid';
+    CITY.spend('job', 0.5);
+    const clues = (G.case && G.case.clues) || [];
+    const cl = clues.find(c2 => !c2.seen && c2.at === q.place) || clues.find(c2 => !c2.seen);
+    if (cl) cl.seen = true;
+    return !!cl;
+  }
+
+  /* standing in front of the frog who is offering: take it or do not */
+  function tryErrand(place) {
+    const q = STORY.questAt(place);
+    if (!q) return 0;
+    const st = STORY.questState(q.id);
+    if (st === 'paid') return 0;
+    if (st === 'ready') { payErrand(q); return 1; }
+    if (st === 'taken') return 0;
+    if (Math.random() > 0.7) return 0;            // not every player says yes
+    G.quests = G.quests || {};
+    G.quests[q.id] = 'taken';
+    if (q.kind === 'job') {
+      /* three rats, one lid: the same die roll the duel's steady check gets */
+      if (Math.random() < 0.66) { payErrand(q); return 1; }
+      G.quests[q.id] = 'none';
+      return 0;
+    }
+    if (q.kind === 'wait') { CITY.spend('talk', q.mins / CITY.COST.talk); payErrand(q); return 1; }
+    if (q.kind === 'search') {
+      const props = CITY.unsearchedAt(place);
+      if (props.indexOf(q.prop) < 0) return 0;    // somebody already turned it over
+      CITY.markSearched(place, q.prop);
+      CITY.spend('search');
+      const clue = CITY.plantedAt(place, q.prop);
+      if (clue) clue.seen = true;
+      G.quests[q.id] = 'ready';
+      return 0;                                   // he pays when you go back to him
+    }
+    return 0;                                     // a carry pays off across town
+  }
+
   function workTheCity() {
     if (!G.case) CASE.build();
     const c = G.case;
     if (c.known || c.done) return;
     CITY.reset();                          // a fresh night per lead
     G.place = 'precinct';
-    let guard = 0, searches = 0;
+    let guard = 0, searches = 0, errands = 0;
     while (!CITY.nightOver() && CASE.left() > 1 && guard++ < 80) {
       /* somewhere with anything left to turn over */
       const open = CITY.ORDER.filter(id => CITY.unsearchedAt(id).length);
@@ -265,7 +315,11 @@ function driver() {
       const to = (tipped.length && Math.random() < 0.6 ? tipped : open)[
         Math.floor(Math.random() * (tipped.length && Math.random() < 0.6 ? tipped.length : open.length))
       ] || open[0];
-      if (!CITY.at(to)) { CITY.spend('travel'); CITY.visit(to); G.weather = CITY.rollWeather(); }
+      if (!CITY.at(to)) {
+        CITY.spend('travel'); CITY.visit(to); G.weather = CITY.rollWeather();
+        STORY.questWatch({ arrive: to });         // anything you were carrying is here
+      }
+      errands += tryErrand(to);
       /* search two or three things while it is here, then move on */
       let here = 0;
       while (here++ < 3 && !CITY.nightOver() && CASE.left() > 1) {
@@ -286,6 +340,7 @@ function driver() {
     }
     CITY.spend('lineup');
     G.simSearches = (G.simSearches || 0) + searches;
+    G.simErrands = (G.simErrands || 0) + errands;
     G.simNightsOut = (G.simNightsOut || 0) + (CITY.nightOver() ? 1 : 0);
     const stand = CASE.standing();
     const live = stand.map((ok, i) => ok ? i : -1).filter(i => i >= 0);
@@ -296,14 +351,14 @@ function driver() {
   const N = 500;
   let crashes = 0, finales = 0, boards = 0, badges = 0, goodEndings = 0;
   let chapters = 0, cards = 0, wards = 0, duelsWon = 0, shots = 0, gunSum = 0;
-  let searches = 0, nightsOut = 0, named = 0, misnamed = 0;
+  let searches = 0, nightsOut = 0, named = 0, misnamed = 0, errands = 0;
   const collapse = {};
 
   for (let run = 0; run < N; run++) {
     try {
       const r = playRun('SIM-' + run, 9);
       chapters += r.chapter; cards += r.cards; wards += r.wardTrips;
-      searches += r.searches; nightsOut += r.nightsOut;
+      searches += r.searches; nightsOut += r.nightsOut; errands += r.errands;
       named += r.named; misnamed += r.misnamed;
       if (r.finale) finales++;
       if (r.boardFull) boards++;
@@ -330,7 +385,8 @@ function driver() {
   console.log('avg duels won:', (duelsWon / N).toFixed(1),
     '· avg shots:', (shots / N).toFixed(1),
     '· avg gun idx:', (gunSum / N).toFixed(2));
-  console.log('the investigation: avg', (searches / N).toFixed(1), 'props searched per case ·',
+  console.log('errands run: avg', (errands / N).toFixed(2), 'per run');
+  console.log('the investigation: avg', (searches / N).toFixed(1), 'props searched per run ·',
     (named / N).toFixed(2), 'named right ·', (misnamed / N).toFixed(2), 'named wrong ·',
     (nightsOut / N).toFixed(2), 'nights ran out');
   console.log('how runs ended:', JSON.stringify(collapse));

@@ -102,9 +102,21 @@ town**, and the only way to it is the brick in your coat.
 **The FroggoPhone** (tap `PH`, or `P`) is the only menu in the game:
 
 - **FROGGOMAP** — the city drawn from above, the canal cutting through it,
-  five stops and the station. Tap one and you drive there.
+  five stops and the station. Tap one and you drive there. A stop with
+  something in it wears a gold `!`; a stop where somebody is owed a favour
+  wears the errand bag.
 - **CASE FILE** — what you have turned over, what each piece rules out, and
   which faces still fit.
+- **THE KIT** — your coat, laid out: the iron, the belt, every evidence bag
+  you are carrying, and anything you agreed to run across town for somebody
+  else.
+- **THE JOB** — what you are supposed to be doing *right now*, tonight's
+  chapter, the Bullfrog board, every errand you are in the middle of, and the
+  last few lines of the file.
+
+![The kit](docs/screen-kit.png)
+
+![The job](docs/screen-job.png)
 
 ![The case file](docs/screen-casefile.png)
 
@@ -149,6 +161,19 @@ Witnesses fill the gaps: the launderer, the watchman, the broker, the
 waitress, the barman. *Was he wearing a hat? Both eyes? Any gold in his
 mouth?* They answer honestly — and the weather decides how much they saw.
 
+### Talking back
+
+![What you say back](docs/screen-replies.png)
+
+Nobody talks *at* you any more. Every conversation in the game ends in a rack
+of things you can actually say, big enough to hit with a thumb and numbered
+if you would rather use the keys. The captain's brief is a conversation you
+can push on — *who else has read this file?* puts a pin on your map, *I want
+a car and a radio* gets you across town in half the time, *what if I name the
+wrong frog?* gets you the count of faces that still fit. The front desk, the
+hospital bed and the frog behind the line-up glass all answer the same way,
+and every rack has a way out on the bottom of it.
+
 ### Side work
 
 ![Working the taps](docs/screen-taps.png)
@@ -158,6 +183,33 @@ Nobody on this salary can afford petrol. **Work the taps** at the Green Lamp
 **Make a batch** at the Fly Trap (three donuts, stop the needle in the heat)
 and you eat one — *the only medicine in this game* — and the cook tells you
 which end of the city still has something in it.
+
+### Errands, which pay in evidence
+
+Everybody in this city wants something, and none of them take money. Ask a
+witness a question and he will ask you for a favour first — **and the favour
+pays in a piece of evidence he has been sitting on all night.** One per
+stop, one night each:
+
+![An errand](docs/screen-errand.png)
+
+| Who | What he wants | What it actually is |
+|---|---|---|
+| **THE LAUNDERER** | three rats out of his drums | drop the lid on a rat running the pipe, three times |
+| **THE WATCHMAN** | his tally book out of the canal | put your hand in the black water under the pier |
+| **THE BROKER** | a parcel run to Pier Nineteen | *and he told you not to look in it* |
+| **THE WAITRESS** | a tray of donuts to the night shift | drive it to the precinct before it goes cold |
+| **THE BARMAN** | twenty minutes on the door | twenty minutes off your clock, paid on the spot |
+
+![Clearing the drums](docs/screen-rats.png)
+
+The evidence comes out of *his own place first*, so a favour where you are
+standing is worth more than one across town. Refuse and nothing is lost —
+he still answers your questions. And the parcel is the interesting one:
+carry it to the pier and you can drop it and drive back for the full payoff,
+**or open it there** and keep what is inside tonight — which costs you his
+money and every answer he had, because he will not talk to you again before
+morning.
 
 ## The line-up
 
@@ -305,32 +357,33 @@ the frog leaning into a cut-in are the same frog.
 11. Saying the name: his mugshot, and the stamp that lands on it
 12. The taps — a glass filling, a head on it, and the line you are aiming for
 13. The fryer — oil moving, a needle sweeping, three donuts glazed
-14. The FroggoMap — a city from above with the rain falling on all of it
-15. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
-16. Lamp cones, floor pools, flickering tubes and dust in the air
-17. Dialogue under cinema bars: the camera holds, the line types, a key ticks
-18. The sit-down — dark room, his eyes, the lamp stuttering on
-19. A lieutenant's entrance under cinema bars, with his name stamped on it
-20. The four-beat cock: hammer, cylinder, the held beat, the drop
-21. The steady check — the sweep, the bands, and the break
-22. Muzzle flash, cordite, the casing on the felt
-23. The slug in the air, with a shock ring and a wake
-24. The Persona cut-in — skewed banner, speed lines, red when it is lethal
-25. His grip, in four styles, arm anchored at the shoulder
-26. His reactions — the facepalm, the raised digit, the shrug
-27. Blood that lands, runs and stays — on him, and on your lens
-28. The blood-splat kill wipe, coming off like a sleeve on glass
-29. The drag loader — you, him, one swinging bulb, a smear on the boards
-30. First-person searching: your arm out, dust off the lining, his weight
-31. The mop — three passes a stain
-32. The bribe — chips arcing into a glove, one at a time
-33. The last-heart dread: a closing vignette and a heartbeat, twice a bar
-34. The ambulance — the wagon in the rain, then the corridor from a gurney
-35. The chapter card, and the take raining past the lens
-36. The dawn card — the sky coming up grey and the shift ending on you
-37. The courtroom, the gavel, and the first daylight in the game
-38. Two headstones and the rain stopping
-39. A burning board, and a frog-shaped hole in a chair
+14. The drums — a fat wet rat running a pipe, and a lid on a chain
+15. The FroggoMap — a city from above with the rain falling on all of it
+16. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
+17. Lamp cones, floor pools, flickering tubes and dust in the air
+18. Dialogue under cinema bars: the camera holds, the line types, a key ticks
+19. The sit-down — dark room, his eyes, the lamp stuttering on
+20. A lieutenant's entrance under cinema bars, with his name stamped on it
+21. The four-beat cock: hammer, cylinder, the held beat, the drop
+22. The steady check — the sweep, the bands, and the break
+23. Muzzle flash, cordite, the casing on the felt
+24. The slug in the air, with a shock ring and a wake
+25. The Persona cut-in — skewed banner, speed lines, red when it is lethal
+26. His grip, in four styles, arm anchored at the shoulder
+27. His reactions — the facepalm, the raised digit, the shrug
+28. Blood that lands, runs and stays — on him, and on your lens
+29. The blood-splat kill wipe, coming off like a sleeve on glass
+30. The drag loader — you, him, one swinging bulb, a smear on the boards
+31. First-person searching: your arm out, dust off the lining, his weight
+32. The mop — three passes a stain
+33. The bribe — chips arcing into a glove, one at a time
+34. The last-heart dread: a closing vignette and a heartbeat, twice a bar
+35. The ambulance — the wagon in the rain, then the corridor from a gurney
+36. The chapter card, and the take raining past the lens
+37. The dawn card — the sky coming up grey and the shift ending on you
+38. The courtroom, the gavel, and the first daylight in the game
+39. Two headstones and the rain stopping
+40. A burning board, and a frog-shaped hole in a chair
 
 ## Keys
 
@@ -352,10 +405,10 @@ js/art.js         THE PROP SHOP: painted pixel maps + the shading kit
 js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
 js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
 js/places.js      the five stops, painted: laundry, pier, pawn, diner, bar
-js/phone.js       the FroggoPhone: the map, the case file, the only menu
-js/jobs.js        the side work: the taps and the fryer
+js/phone.js       the FroggoPhone: the map, the file, the kit, the only menu
+js/jobs.js        the side work: the taps, the fryer, the drums
 js/rooms.js       the station: bullpen, board room, ward, line-up room
-js/story.js       THE CASE: chapters, the board, dialogue, the two endings
+js/story.js       THE CASE: chapters, the board, dialogue, errands, endings
 js/data.js        the crew, the guns, the belt, the questions, the tuning
 js/meta.js        what survives a case: stats, learned tells, her trust
 js/sprites.js     THE ONE FROG MODEL, the iron rig, mugshots, splats, plates
@@ -365,7 +418,7 @@ js/duel.js        the drawn table: expressions, grips, the steady check
 js/cine.js        every cutscene, and the film rig they all run on
 js/cops.js        the uniforms: the walk-in, the bribe, the bust
 js/loot.js        out back: first-person searching, the meters, the mop
-js/tutor.js       the drawn speech plate, and what the mark says
+js/tutor.js       the drawn speech plate, the reply rack, and the handler
 js/ui.js          the story HUD, the live title room, the duel frame, help
 js/btn.js         the arcade buttons the few remaining screens use
 js/fx.js          smoke, gore, chip arcs, slow-mo, ambient dust

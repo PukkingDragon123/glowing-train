@@ -4292,22 +4292,96 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    survive, and nothing can drift out of step with the big rig
    because there is only one rig.
    ============================================================ */
-SPR.sceneFrog = function (key, def, frame, face, down) {
+/* ============================================================
+   THE SAME FROG, SMALLER, WITHOUT LOSING HIM.
+
+   Rooms used to take the 102x129 rig and throw away two pixels in
+   every three with nearest-neighbour, which is what killed him: a
+   shirt collar, a hat band and a pair of shades are all one or two
+   pixels wide, so most of them simply vanished and the rest turned
+   to mush.
+
+   This resamples properly — a box filter, which is what smoothing
+   ON does on a downscale — then hardens the result back up: alpha
+   is thresholded so there is no half-transparent fringe, and the
+   silhouette is re-inked one pixel deep so he still reads as a
+   drawing rather than a smudge.
+
+   Rooms now prefer to draw the full-detail rig and let the screen
+   scale it up by a whole number (see SCENE), so these LODs are for
+   the frame sizes where that does not come out even, plus mugshots
+   and pins.
+   ============================================================ */
+SPR.rigLOD = function (key, def, frame, face, down) {
   down = down || 3;
   const f = ((frame | 0) % 4 + 4) % 4;
   const fc = face < 0 ? -1 : 1;
-  return SPR.cached('scn_' + key + ':' + f + ':' + fc + ':' + down, () => {
+  return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down, () => {
     const src = SPR.frogWhole(key, def, { frame: f });
+    if (down === 1 && fc > 0) return src;
     const w = Math.max(1, Math.round(src.width / down));
     const h = Math.max(1, Math.round(src.height / down));
+
+    /* 1. the resample, with smoothing ON because this is a downscale */
+    const soft = document.createElement('canvas');
+    soft.width = w; soft.height = h;
+    const sc = soft.getContext('2d');
+    sc.imageSmoothingEnabled = true;
+    sc.imageSmoothingQuality = 'high';
+    sc.drawImage(src, 0, 0, src.width, src.height, 0, 0, w, h);
+
+    if (down === 1) {
+      /* nothing to harden, just the flip */
+      const out = document.createElement('canvas');
+      out.width = w; out.height = h;
+      const oc = out.getContext('2d');
+      oc.imageSmoothingEnabled = false;
+      oc.translate(w, 0); oc.scale(-1, 1);
+      oc.drawImage(src, 0, 0);
+      return out;
+    }
+
+    /* 2. harden it: cut the fringe, then ink the edge one pixel deep */
+    const img = sc.getImageData(0, 0, w, h);
+    const d = img.data;
+    const on = (x, y) => (x < 0 || y < 0 || x >= w || y >= h)
+      ? false : d[(y * w + x) * 4 + 3] > 110;
+    const solid = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] > 110) { d[i + 3] = 255; solid[y * w + x] = 1; }
+        else d[i + 3] = 0;
+      }
+    }
+    /* the outline goes on the outermost solid pixels, darkened rather
+       than replaced, so a pale coat keeps its own colour underneath */
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!solid[y * w + x]) continue;
+        if (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1)) continue;
+        const i = (y * w + x) * 4;
+        d[i] = Math.round(d[i] * 0.34);
+        d[i + 1] = Math.round(d[i + 1] * 0.34);
+        d[i + 2] = Math.round(d[i + 2] * 0.38);
+      }
+    }
     const cv = document.createElement('canvas');
     cv.width = w; cv.height = h;
     const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false;
     if (fc < 0) { c.translate(w, 0); c.scale(-1, 1); }
-    c.drawImage(src, 0, 0, src.width, src.height, 0, 0, w, h);
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    tmp.getContext('2d').putImageData(img, 0, 0);
+    c.drawImage(tmp, 0, 0);
     return cv;
   });
+};
+
+/* the old name, kept because mugshots and cork pins ask for it */
+SPR.sceneFrog = function (key, def, frame, face, down) {
+  return SPR.rigLOD(key, def, frame, face, down || 3);
 };
 
 /* a big stepped X, for crossing somebody off the line-up */

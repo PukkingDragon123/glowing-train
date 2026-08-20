@@ -1172,14 +1172,14 @@ const CINE = {
         PIX.rect(c, 84, 34, 14, 7, P.G);
         PIX.rect(c, 88, 36, 6, 3, P.h);
         /* the judge behind it, and the clerk below */
-        c.drawImage(SCENE.rig(JUDGE, 0, -1), 78, 12);
-        c.drawImage(SCENE.rig(CLERK, 0, 1), 34, 44);
+        c.drawImage(SCENE.rigPic(JUDGE, 0, -1), 78, 12);
+        c.drawImage(SCENE.rigPic(CLERK, 0, 1), 34, 44);
 
         /* the dock, stage right: him standing in it, cuffed to the rail,
            smaller than he has ever been. The rail goes on AFTER him. */
         PIX.rect(c, 148, 46, 42, 32, P.K);
         PIX.rect(c, 150, 48, 38, 28, '#241a12');
-        c.drawImage(SCENE.rig(BULL, 0, -1), 156, 38);
+        c.drawImage(SCENE.rigPic(BULL, 0, -1), 156, 38);
         PIX.rect(c, 148, 62, 42, 4, P.K);                     // the rail across him
         PIX.rect(c, 149, 63, 40, 2, '#4d301a');
         PIX.rect(c, 149, 63, 40, 1, '#6b4426');
@@ -1261,8 +1261,8 @@ const CINE = {
         PIX.rect(c, 100, 69, 3, 3, '#ff7edb');
         PIX.rect(c, 104, 68, 2, 3, '#ffd75e');
         /* the two of you, backs to us, far enough apart to be honest */
-        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 124, 30);
-        c.drawImage(SCENE.rig(ROOMS.MAY_RIG, 0, -1), 148, 30);
+        c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, -1), 124, 30);
+        c.drawImage(SCENE.rigPic(ROOMS.MAY_RIG, 0, -1), 148, 30);
         rain(c, t, W, H, amt);
         if (amt < 0.08) PIX.rect(c, 0, 0, W, H, 'rgba(255,226,170,.05)');
       };
@@ -1284,7 +1284,7 @@ const CINE = {
         PIX.rect(c, 61, 85, 38, 6, '#3a3f52');
         PIX.disc(c, 58, 88, 6, P.K); PIX.disc(c, 58, 88, 5, '#2e7d5b');
         PIX.rect(c, 96, 86, 26, 3, 'rgba(87,18,32,.6)');
-        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 104, 48);
+        c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, -1), 104, 48);
         /* the flash, once, hard */
         if (t > 0.5 && t < 0.62) {
           PIX.rect(c, 0, 0, W, H, 'rgba(255,251,232,.85)');
