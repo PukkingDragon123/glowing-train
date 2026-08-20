@@ -13,26 +13,6 @@
    marked in the save so a second run is silent.
    ============================================================ */
 
-/* THE CAPTAIN. Thirty years on the job, grey all through, and exactly one
-   detective left that he does not ask questions about. */
-const HANDLER_DEF = {
-  skin: ['s', 't', 'T'], fat: true, suit: 't', shirt: 'l', tie: null,
-  costume: 'cop', flatcap: true, cigar: true, warts: true, scar: true,
-};
-
-/* OFFICER MAYBELLE, on the front desk. The one person in the building who
-   still says good morning like she means it. */
-const MAYBELLE_DEF = {
-  skin: ['P', 'p', 'X'], fat: false, suit: 't', shirt: 'l', tie: null,
-  costume: 'cop', flatcap: true, lips: 'R', lashes: true,
-};
-
-/* whoever it is behind the bar that answers when you ask */
-const BARMAN_DEF = {
-  skin: ['N', 'n', 'n'], fat: true, suit: 'W', shirt: 'W', bowtie: 'K',
-  costume: 'croupier', visor: true,
-};
-
 const TUTOR = {
 
   /* ---------------- the opening, before the first board ---------------- */
@@ -110,6 +90,22 @@ const TUTOR = {
      canvas — no CSS box, no gradient, no border-radius. Used by
      the handler and by whoever is holding the gun.
      ============================================================ */
+  /* THE LINES, WRAPPED ONCE.
+     Typing a line on has to leave the plate exactly the size it will end
+     up, or the box grows under the reader's eye. So the wrap is computed
+     from the whole line and the unsaid half is blanked out — same line
+     count, same width, one letter arriving at a time. */
+  reveal(lines, n) {
+    if (n === null || n === undefined) return lines;
+    let left = n;
+    return lines.map(l => {
+      if (left >= l.length) { left -= l.length; return l; }
+      const cut = Math.max(0, left);
+      left = 0;
+      return l.slice(0, cut) + ' '.repeat(l.length - cut);
+    });
+  },
+
   plate(o) {
     const per = o.big ? 30 : 34;
     return SPR.speech({
@@ -120,8 +116,9 @@ const TUTOR = {
       portrait: o.art,
       name: o.name,
       nameCol: o.nameCol,
-      lines: SPR.fitLines(o.line, per),
-      foot: o.foot,
+      lines: TUTOR.reveal(SPR.fitLines(o.line, per), o.reveal),
+      foot: o.reveal !== undefined && o.reveal !== null &&
+        o.reveal < o.line.length ? null : o.foot,
       rim: o.rim,
     });
   },
@@ -135,22 +132,46 @@ const TUTOR = {
         (opts.hold ? ' pass' : '') + (opts.top ? ' top' : '');
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
-      holder.appendChild(TUTOR.plate({
-        art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
-        name: opts.name || 'THE CAPTAIN',
-        nameCol: opts.nameCol,
-        rim: opts.rim,
-        line,
-        foot: opts.hold ? null : (opts.last ? 'GET TO WORK' : 'GO ON'),
-        big: opts.big,
-        small: !!opts.hold,
-      }));
+      const build = (reveal) => {
+        holder.innerHTML = '';
+        holder.appendChild(TUTOR.plate({
+          art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
+          name: opts.name || 'THE CAPTAIN',
+          nameCol: opts.nameCol,
+          rim: opts.rim,
+          line,
+          reveal,
+          foot: opts.hold ? null : (opts.last ? 'GET TO WORK' : 'GO ON'),
+          big: opts.big,
+          small: !!opts.hold,
+        }));
+      };
+      build(0);
       root.appendChild(holder);
       requestAnimationFrame(() => holder.classList.add('in'));
       if (SFX[opts.snd || 'tick']) SFX[opts.snd || 'tick']();
 
+      /* the line arrives a couple of letters at a time, with a key under it */
+      TUTOR.typing = true;
+      let typed = 0, typing = null;
+      const finishTyping = () => {
+        if (typing) { clearInterval(typing); typing = null; }
+        TUTOR.typing = false;
+        typed = line.length;
+        build(null);
+      };
+      TUTOR.finishTyping = finishTyping;
+      typing = setInterval(() => {
+        typed += 2;
+        if (typed >= line.length) { finishTyping(); return; }
+        build(typed);
+        if (typed % 6 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
+      }, 26);
+
       let closed = false;
       const done = () => {
+        /* the first tap finishes the line, the second dismisses it */
+        if (typing) { finishTyping(); return; }
         if (closed) return;
         closed = true;
         holder.classList.add('out');
@@ -163,7 +184,7 @@ const TUTOR = {
       };
       const key = (e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') done(); };
       if (opts.hold) {
-        setTimeout(done, opts.hold);          // he is not waiting for you
+        setTimeout(() => { finishTyping(); done(); }, opts.hold);
       } else {
         root.addEventListener('pointerdown', done);
         window.addEventListener('keydown', key);

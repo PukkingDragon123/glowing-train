@@ -307,6 +307,65 @@ const CINE = {
     l.className = on ? 'on' : '';
   },
 
+  /* ============================================================
+     WHERE YOU ARE.
+
+     A location card, typed on over the room itself: no black
+     screen, no loading — the bars come in, the camera walks the
+     room, the name of the place arrives a letter at a time, and
+     the bars go out into play.
+     ============================================================ */
+  locationCard(name, sub) {
+    const root = CINE.stage();
+    root.className = 'loc-cut';
+    root.innerHTML = '';
+    const card = U.el('div', 'loc-card');
+    const line = U.el('div', 'loc-name');
+    const subl = U.el('div', 'loc-sub');
+    card.appendChild(line);
+    card.appendChild(subl);
+    root.appendChild(card);
+
+    /* the name types on, a letter at a time, with a key under each one */
+    let i = 0;
+    const step = () => {
+      i++;
+      line.innerHTML = '';
+      line.appendChild(UI.txt(name.slice(0, i), { scale: 5, color: PIX.PAL.W, outline: PIX.PAL.K }));
+      if (i % 2 === 0) SFX.tone(1500 + Math.random() * 400, 0.014, 'square', 0.03);
+      if (i < name.length) setTimeout(step, 46);
+      else if (sub) {
+        setTimeout(() => {
+          subl.appendChild(UI.txt(sub, { scale: 3, color: PIX.PAL.G }));
+          subl.classList.add('in');
+        }, 160);
+      }
+    };
+    step();
+    requestAnimationFrame(() => card.classList.add('in'));
+    return {
+      close: async () => {
+        card.classList.add('out');
+        await U.sleep(320);
+        root.innerHTML = '';
+        root.className = 'hidden';
+      },
+    };
+  },
+
+  /* the whole arrival: bars, a pan across the room, the card, and out */
+  async establish(o) {
+    o = o || {};
+    CINE.letterbox(true);
+    const card = CINE.locationCard(o.name || '', o.sub || '');
+    const pan = SCENE.pan(o.from === undefined ? 0 : o.from,
+      o.to === undefined ? 0 : o.to, o.ms || 1700);
+    await Promise.all([pan, U.sleep(o.ms || 1700)]);
+    await card.close();
+    CINE.letterbox(false);
+    SCENE.unfocus();
+  },
+
   async bossEntrance(opp) {
     CINE.letterbox(true);
     DUEL.dark = 0.55;
@@ -1150,12 +1209,14 @@ const CINE = {
       /* SHOT 1 — a courtroom, from the back of the gallery.
          Everybody in it is drawn with the walking rig, so they read as
          frogs instead of boxes with eyes. */
-      const JUDGE = { key: 'judge', skin: ['w', 'q', 'k'], coat: 'K', coatDark: 'K', coatLit: 't',
-        shirt: 'W', tie: 'K', fat: true };
-      const BULL = { key: 'bullfrog-dock', skin: ['f', 'e', 'E'], coat: 't', coatDark: 'K', coatLit: 's',
-        shirt: 'W', tie: 'd', fat: true, hat: false, gold: true, scar: true };
-      const CLERK = { key: 'clerk', skin: ['B', 'b', 'u'], coat: 'T', coatDark: 'K', coatLit: 't',
-        shirt: 'W', tie: 'K', glasses: true };
+      /* everybody in the room is a real frog def, same as the table uses */
+      const JUDGE = { key: 'judge', def: {
+        skin: ['w', 'q', 'k'], fat: true, suit: 'K', shirt: 'W', tie: 'K',
+        costume: 'tails', warts: true } };
+      const BULL = { key: 'dock', def: Object.assign({}, FROG_DEFS.owner || {}, { hat: false }) };
+      const CLERK = { key: 'clerk', def: {
+        skin: ['B', 'b', 'u'], fat: false, suit: 'T', shirt: 'W', tie: 'K',
+        costume: 'shirtsleeves', glasses: 'shades' } };
       const court = (c, t, W, H) => {
         const dawn = Math.min(1, t / 1.7);
         PIX.rect(c, 0, 0, W, H, '#14121a');
@@ -1287,8 +1348,8 @@ const CINE = {
         PIX.rect(c, 100, 69, 3, 3, '#ff7edb');
         PIX.rect(c, 104, 68, 2, 3, '#ffd75e');
         /* the two of you, backs to us, far enough apart to be honest */
-        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 126, 34);
-        c.drawImage(SCENE.rig(ROOMS.MAY_RIG, 0, -1), 148, 34);
+        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 124, 30);
+        c.drawImage(SCENE.rig(ROOMS.MAY_RIG, 0, -1), 148, 30);
         rain(c, t, W, H, amt);
         if (amt < 0.08) PIX.rect(c, 0, 0, W, H, 'rgba(255,226,170,.05)');
       };
@@ -1310,7 +1371,7 @@ const CINE = {
         PIX.rect(c, 61, 85, 38, 6, '#3a3f52');
         PIX.disc(c, 58, 88, 6, P.K); PIX.disc(c, 58, 88, 5, '#2e7d5b');
         PIX.rect(c, 96, 86, 26, 3, 'rgba(87,18,32,.6)');
-        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 104, 52);
+        c.drawImage(SCENE.rig(SCENE.meDef(), 0, -1), 104, 48);
         /* the flash, once, hard */
         if (t > 0.5 && t < 0.62) {
           PIX.rect(c, 0, 0, W, H, 'rgba(255,251,232,.85)');

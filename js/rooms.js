@@ -25,12 +25,15 @@ const ROOMS = (() => {
   const P = () => PIX.PAL;
   const px = (c, x, y, w, h, col) => ART.px(c, x, y, w, h, col);
 
-  /* the people who work here, drawn with the same rig you are */
-  const CAP_RIG = { key: 'cap', skin: ['q', 'w', 'k'], coat: 't', coatDark: 'K', coatLit: 's', shirt: 'W', tie: 'd', cap: true, hatCol: 't', fat: true, badge: true };
-  const MAY_RIG = { key: 'may', skin: ['F', 'f', 'e'], coat: 'v', coatDark: 'X', coatLit: 'V', shirt: 'W', tie: 'p', cap: true, hatCol: 'X', badge: true };
-  const UNI_RIG = { key: 'uni', skin: ['f', 'e', 'E'], coat: 'T', coatDark: 'K', coatLit: 't', shirt: 'L', tie: 'K', cap: true, hatCol: 'K', badge: true };
-  const DRUNK_RIG = { key: 'drunk', skin: ['B', 'b', 'u'], coat: 'u', coatDark: 'U', coatLit: 'b', shirt: null, hat: true, hatCol: 'U', band: 'K' };
-  const NURSE_RIG = { key: 'nurse', skin: ['F', 'f', 'e'], coat: 'W', coatDark: 'w', coatLit: 'W', shirt: 'L', tie: 'l' };
+  /* THE CAST. Every one of these is a real frog def — the same thing the
+     portraits, the mugshots and the table are built from — so the captain
+     you walk up to is the captain who talks to you. */
+  const CAP_RIG   = { key: 'cap',    def: HANDLER_DEF };
+  const MAY_RIG   = { key: 'may',    def: MAYBELLE_DEF };
+  const UNI_RIG   = { key: 'dill',   def: DILL_DEF };
+  const DRUNK_RIG = { key: 'drunk',  def: DRUNK_DEF };
+  const NURSE_RIG = { key: 'nurse',  def: NURSE_DEF };
+  const BAR_RIG   = { key: 'barman', def: BARMAN_DEF };
 
   /* ============================================================
      THE PRECINCT
@@ -68,8 +71,21 @@ const ROOMS = (() => {
       px(c, 33, 25, 4, 2, p.W); px(c, 39, 25, 4, 2, p.W);
 
       /* the noticeboard over her head (the desk itself is drawn in front) */
-      c.drawImage(ART.corkboard(56, 34, 6), 84, 22);
-      for (let i = 0; i < 3; i++) c.drawImage(ART.art('wanted', 1), 88 + i * 17, 26);
+      c.drawImage(ART.corkboard(58, 36, 6), 84, 20);
+      /* real mugshots of real frogs, pinned up small */
+      const wanted = ['owner', 'vig', 'lily'];
+      wanted.forEach((id, i) => {
+        const d = FROG_DEFS[id];
+        if (!d) return;
+        const m = SPR.sceneFrog('pin:' + id, d, 0, 1, 5);
+        const bx = 88 + i * 18;
+        px(c, bx, 24, 15, 20, '#ded2b4');
+        px(c, bx + 1, 25, 13, 13, '#141820');
+        c.drawImage(m, bx + 1, 25, 13, 13);
+        px(c, bx + 2, 39, 11, 1, '#8d8672');
+        px(c, bx + 2, 41, 8, 1, '#8d8672');
+        px(c, bx + 6, 23, 3, 2, '#b8232f');
+      });
 
       /* ============ the bullpen: the chairs live behind the desks ============ */
       for (let i = 0; i < 3; i++) {
@@ -81,8 +97,8 @@ const ROOMS = (() => {
       c.drawImage(ART.window(64, 40, false, 12), 320, 20);
 
       /* ============ the water cooler + the dead plant ============ */
-      c.drawImage(ART.art('cooler', 1), 158, FY - 26);
-      c.drawImage(ART.art('plant', 1), 404, FY - 26);
+      c.drawImage(ART.art('cooler', 2), 52, FY - 26);
+      c.drawImage(ART.art('plant', 2), 400, FY - 26);
 
       /* ============ filing wall + lockers ============ */
       c.drawImage(ART.cabinet(30, 46, 1, 7), 420, FY - 46);
@@ -152,22 +168,22 @@ const ROOMS = (() => {
 
     /* --- Maybelle, at her desk --- */
     actors.push({
-      id: 'may', x: 106, y: FY, def: MAY_RIG, face: 1,
+      id: 'may', x: 164, y: FY, key: MAY_RIG.key, def: MAY_RIG.def, face: -1,
       label: 'OFFICER MAYBELLE',
       hint: () => (G.mayTalked ? 'ALREADY SAID YOUR PIECE' : 'TALK'),
       onUse: () => STORY.talkMaybelle(),
     });
     /* --- the captain, outside his own door --- */
     actors.push({
-      id: 'cap', x: 256, y: FY, def: CAP_RIG, face: -1,
+      id: 'cap', x: 272, y: FY, key: CAP_RIG.key, def: CAP_RIG.def, face: -1,
       label: 'CAPTAIN ROOK',
       hint: () => (STORY.capHasBrief() ? 'HE HAS SOMETHING' : 'TALK'),
       onUse: () => STORY.talkCaptain(),
     });
     /* --- a uniform typing up an assault, and a drunk in the cell --- */
-    actors.push({ id: 'uni', x: 344, y: FY, def: UNI_RIG, face: -1, still: false,
+    actors.push({ id: 'uni', x: 344, y: FY, key: UNI_RIG.key, def: UNI_RIG.def, face: -1, still: false,
       label: 'PATROLMAN DILL', hint: 'TALK', onUse: () => STORY.smallTalk('dill') });
-    actors.push({ id: 'drunk', x: 566, y: FY, def: DRUNK_RIG, face: -1, still: true,
+    actors.push({ id: 'drunk', x: 566, y: FY, key: DRUNK_RIG.key, def: DRUNK_RIG.def, face: -1, still: true,
       label: 'THE DRUNK TANK', hint: 'TALK', onUse: () => STORY.smallTalk('drunk') });
 
     /* --- the board --- */
@@ -193,7 +209,7 @@ const ROOMS = (() => {
     });
     /* --- the coffee: heals a heart, once a night --- */
     spots.push({
-      id: 'coffee', x: 160, w: 16, top: FY - 28,
+      id: 'coffee', x: 62, w: 16, top: FY - 28,
       label: 'THE COOLER',
       hint: () => (G.hadCoffee ? 'EMPTY' : 'A DRINK'),
       onUse: () => STORY.drink(),
@@ -325,13 +341,15 @@ const ROOMS = (() => {
       /* rain on a big window, because of course it is still raining */
       c.drawImage(ART.window(72, 46, false, 31), 26, 18);
       /* two beds: yours, and one with the curtain pulled */
-      /* your bed, empty: you are the one walking around */
-      c.drawImage(ART.bed(78, 46, false), 106, FY - 46);
-      c.drawImage(ART.art('ivbag', 1), 100, FY - 62);
-      px(c, 103, FY - 51, 1, 22, p.S);                 // the stand
-      px(c, 99, FY - 30, 9, 2, p.K);
-      c.drawImage(ART.art('monitor', 1), 186, FY - 58);
-      px(c, 190, FY - 47, 2, 18, p.s);
+      /* your bed, empty: you are the one walking around. Nobody stands in
+         front of it — the whole point of the room is the bed you left. */
+      c.drawImage(ART.bed(78, 46, false), 118, FY - 46);
+      c.drawImage(ART.art('ivbag', 1), 112, FY - 62);
+      px(c, 115, FY - 51, 1, 47, p.S);                 // the stand, to the floor
+      px(c, 111, FY - 6, 9, 2, p.K);                   // and its feet
+      c.drawImage(ART.art('monitor', 1), 200, FY - 58);
+      px(c, 204, FY - 47, 2, 43, p.s);
+      px(c, 200, FY - 6, 10, 2, p.K);
       /* the curtain rail and a drawn curtain, stage right */
       px(c, 214, 22, 80, 2, p.K);
       for (let x = 218; x < 292; x += 4) px(c, x, 24, 3, 58, x % 8 ? '#38505c' : '#2c4250');
@@ -339,7 +357,7 @@ const ROOMS = (() => {
       /* a chart on the wall and a chair for the visitor */
       px(c, 160, 26, 18, 22, p.K); px(c, 161, 27, 16, 20, p.W);
       for (let i = 0; i < 5; i++) px(c, 163, 30 + i * 3, 12, 1, '#8d8672');
-      c.drawImage(ART.chair(14, 26, 9), 192, FY - 26);
+      c.drawImage(ART.chair(14, 26, 9), 214, FY - 26);
       c.drawImage(ART.radiator(34, 14), 60, FY - 14);
       ART.dither(c, 0, 0, W, FY, 'rgba(190,220,255,.02)', 0.05, 41);
     };
@@ -356,10 +374,10 @@ const ROOMS = (() => {
     ];
 
     const actors = [
-      { id: 'may', x: 146, y: FY, def: MAY_RIG, face: 1, still: true,
+      { id: 'may', x: 92, y: FY, key: MAY_RIG.key, def: MAY_RIG.def, face: 1, still: true,
         tag: 'MAYBELLE', tagCol: PIX.PAL.P,
         label: 'SHE STAYED', hint: 'TALK', onUse: () => STORY.wardTalk() },
-      { id: 'nurse', x: 244, y: FY, def: NURSE_RIG, face: -1,
+      { id: 'nurse', x: 244, y: FY, key: NURSE_RIG.key, def: NURSE_RIG.def, face: -1,
         label: 'THE NURSE', hint: 'TALK', onUse: () => STORY.smallTalk('nurse') },
     ];
 
@@ -383,8 +401,8 @@ const ROOMS = (() => {
   function lineup() {
     const c0 = G.case || (CASE.build(), G.case);
     const n = c0.suspects.length;
-    const SP = 46;                                  // how far apart they stand
-    const X0 = 150;                                 // where the line starts
+    const SP = 54;                                  // how far apart they stand
+    const X0 = 190;                                 // where the line starts, clear of the bar
     const W = Math.max(560, X0 + n * SP + 150);
     const FY = 106;
     const seed = U.hashSeed(G.seedStr + ':' + G.chapter + ':' + G.blind);
@@ -405,9 +423,8 @@ const ROOMS = (() => {
       px(c, 20, 29, 3, 2, '#ff6a5e'); px(c, 26, 29, 3, 2, '#ff6a5e');
       px(c, 32, 29, 3, 2, '#ff6a5e'); px(c, 38, 29, 3, 2, '#ff6a5e');
 
-      /* ---- the bar, running along under the line ---- */
-      c.drawImage(ART.barCounter(96, 26, seed % 17), 62, FY - 26);
-      /* the bottles behind it, on two shelves */
+      /* ---- the bar: the bottles and the mirror; the counter itself is
+             drawn in front of the cast so the barman is behind it ---- */
       for (let i = 0; i < 11; i++) {
         const bx = 66 + i * 8, h2 = 8 + (i % 3) * 3;
         px(c, bx, 52 - h2, 4, h2, ['#2e7d5b', '#8c2230', '#a5741f', '#3f89c4'][i % 4]);
@@ -430,7 +447,7 @@ const ROOMS = (() => {
 
       /* ---- tables, stools, a jukebox: a room somebody drinks in ---- */
       for (let i = 0; i < 3; i++) {
-        const tx = X0 + 20 + i * (SP * Math.max(1, Math.floor(n / 3)));
+        const tx = X0 + n * SP + 6 + i * 40;            // past the line, not under it
         if (tx > W - 90) break;
         px(c, tx, FY - 14, 26, 3, p.K);                       // the table top
         px(c, tx + 1, FY - 14, 24, 2, '#4d301a');
@@ -476,7 +493,8 @@ const ROOMS = (() => {
         id: 'sus' + i,
         x: X0 + i * SP,
         y: FY,
-        def: SCENE.rigFromFrog(sus.def, sus.name),
+        def: sus.def,
+        key: 'sus:' + sus.name,
         face: -1,
         still: out,
         crossed: out,
@@ -488,10 +506,7 @@ const ROOMS = (() => {
 
     /* the barman, behind his own bar, and the file on it */
     actors.push({
-      id: 'barman', x: 108, y: FY, def: {
-        key: 'barman', skin: ['w', 'q', 'q'], coat: 'w', coatDark: 'q', coatLit: 'W',
-        shirt: 'W', tie: 'K', fat: true,
-      }, face: 1,
+      id: 'barman', x: 108, y: FY, key: BAR_RIG.key, def: BAR_RIG.def, face: 1,
       label: 'THE BARMAN',
       hint: () => (G.case && G.case.quiz > 0 && (G.case.asks || []).some((a, i) => CASE.canAsk(i))
         ? G.case.quiz + ' QUESTIONS LEFT' : 'HE IS DONE TALKING'),
@@ -517,14 +532,24 @@ const ROOMS = (() => {
         onUse: () => STORY.leaveLead() },
     ];
 
-    /* the crossed-off frogs get a red X painted over them, in the room */
+    /* what the cast stands behind, and what is painted over them */
     const onPaintFront = (c) => {
+      const p = P();
+      c.drawImage(ART.barCounter(96, 26, seed % 17), 62, FY - 26);
+      /* a glass and an ashtray somebody left on it */
+      px(c, 74, FY - 30, 4, 5, '#8c2230');
+      px(c, 74, FY - 31, 4, 1, '#d13b45');
+      px(c, 128, FY - 29, 6, 3, '#3a3f52');
+      px(c, 130, FY - 31, 1, 2, '#c9c0a8');
       actors.forEach(a => {
         if (!a.crossed) return;
-        const x = a.x, y = FY - 40;
-        for (let i = 0; i < 22; i++) {
-          px(c, x - 11 + i, y + 4 + i, 2, 2, '#b8232f');
-          px(c, x + 11 - i, y + 4 + i, 2, 2, '#b8232f');
+        /* ruled out: a red cross the width of the frog it is over */
+        const h = SCENE.rigH(a), w = Math.round(h * 0.6);
+        const x = a.x, y = FY - h + 4;
+        for (let i = 0; i < w; i++) {
+          const t = i / w;
+          px(c, x - w / 2 + i, y + Math.round(t * (h - 10)), 2, 2, '#b8232f');
+          px(c, x + w / 2 - i, y + Math.round(t * (h - 10)), 2, 2, '#b8232f');
         }
       });
     };

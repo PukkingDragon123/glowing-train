@@ -28,158 +28,22 @@ const SCENE = (() => {
   const keys = {};
 
   /* ============================================================
-     THE WALK RIG.
-     One small side-on frog, built out of parts so the same code
-     draws the detective, the captain, a uniform, or a drunk at
-     the bar — and walks all of them. 4-frame cycle.
+     THE CAST.
+
+     There is no second frog rig. A person in a room is the game's
+     whole-frog sprite sampled down to room scale, so the frog you
+     walk past is the frog you sit down across from — same head,
+     same coat, same four-fingered hands.
      ============================================================ */
 
-  function rigKey(d, frame, face) {
-    return 'rig:' + (d.key || 'x') + ':' + frame + ':' + face +
-      ':' + [d.coat, d.hatCol, d.fat ? 1 : 0, d.hat ? 1 : 0, d.cap ? 1 : 0,
-             d.cigar ? 1 : 0, d.glasses ? 1 : 0, d.scar ? 1 : 0, d.gold ? 1 : 0].join('');
-  }
+  const DOWN = 3;                // portrait scale : room scale
 
-  /* d: { key, skin:[lit,mid,dark], coat, coatDark, shirt, tie, hat, hatCol,
-          fat, cap (peaked cap), skirt, badge } */
   function rig(d, frame, face) {
-    return ART.cached(rigKey(d, frame, face), () => {
-      const W = 26, T = 40;
-      const o = ART.cv(W, T), c = o.c, P = PIX.PAL;
-      const K0 = PIX.PAL.K;
-      const skin = P[d.skin[0]] || P.F, mid = P[d.skin[1]] || P.f, dk = P[d.skin[2]] || P.e;
-      const coat = P[d.coat] || P.T, coatD = P[d.coatDark] || P.K;
-      const shirt = P[d.shirt] || P.W, tie = P[d.tie] || P.d;
-      const px = ART.px;
-      /* the walk: two legs, opposite phase, and a body that rises a pixel */
-      const swing = [0, 1, 0, -1][frame];
-      const bob = [0, -1, 0, 0][frame];
-      const cx = 13;
-      const fat = d.fat ? 2 : 0;
-
-      /* --- legs, behind the coat --- */
-      const legY = 30;
-      [[-3, swing], [3, -swing]].forEach(([lx, sw], i) => {
-        const bx = cx + lx + sw;
-        px(c, bx - 2, legY, 4, 8, K0);
-        px(c, bx - 1, legY, 2, 7, i ? coatD : coat);
-        /* shoe, pointing the way we face */
-        px(c, bx - 3 + (face > 0 ? 1 : -1), legY + 7, 6, 3, K0);
-        px(c, bx - 2 + (face > 0 ? 1 : -1), legY + 8, 4, 1, P.t);
-      });
-
-      /* --- the coat: shoulders that slope, a lapel, a hem that kicks --- */
-      const bodyY = 17 + bob;
-      const halfW = 7 + fat;
-      px(c, cx - halfW, bodyY, halfW * 2 + 1, 15, K0);
-      px(c, cx - halfW + 1, bodyY + 1, halfW * 2 - 1, 13, coat);
-      /* the shoulders are the top two rows, one pixel narrower */
-      px(c, cx - halfW + 2, bodyY, halfW * 2 - 3, 1, K0);
-      px(c, cx - halfW + 1, bodyY + 1, 2, 13, P[d.coatLit] || coat);      // lit edge
-      px(c, cx + halfW - 2, bodyY + 1, 1, 13, coatD);                     // shadow edge
-      /* the seam down the front, and a button on it */
-      px(c, cx + 1, bodyY + 5, 1, 9, coatD);
-      px(c, cx + 1, bodyY + 8, 1, 1, P[d.coatLit] || coat);
-      /* the hem, kicked by the stride */
-      px(c, cx - halfW + (swing > 0 ? 1 : 0), bodyY + 13, halfW * 2 + 1, 3, K0);
-      px(c, cx - halfW + 1 + (swing > 0 ? 1 : 0), bodyY + 13, halfW * 2 - 1, 2, coatD);
-      /* THE COLLAR. A narrow V of shirt with a lapel either side of it —
-         a wide slab of white here reads as a sheet of paper taped to him. */
-      if (d.shirt !== null) {
-        px(c, cx - 2, bodyY + 2, 4, 3, shirt);
-        px(c, cx - 1, bodyY + 5, 2, 3, shirt);
-        px(c, cx, bodyY + 8, 1, 2, shirt);
-        px(c, cx, bodyY + 4, 1, 5, tie);                                  // the tie, thin
-        px(c, cx, bodyY + 3, 1, 1, P.K);                                  // its knot
-        /* lapels, folded back off the collar */
-        px(c, cx - 4, bodyY + 2, 2, 2, coatD);
-        px(c, cx - 3, bodyY + 4, 1, 2, coatD);
-        px(c, cx + 2, bodyY + 2, 2, 2, coatD);
-        px(c, cx + 2, bodyY + 4, 1, 2, coatD);
-      }
-      if (d.badge) { px(c, cx - 5, bodyY + 5, 2, 3, P.G); px(c, cx - 5, bodyY + 5, 1, 1, P.Y); }
-
-      /* --- the arm nearest us, swinging opposite the near leg --- */
-      const ax = cx + (face > 0 ? 4 : -6) + fat * (face > 0 ? 1 : -1);
-      px(c, ax, bodyY + 3 - swing, 4, 9, K0);
-      px(c, ax + 1, bodyY + 4 - swing, 2, 7, coat);
-      px(c, ax, bodyY + 12 - swing, 4, 3, K0);                            // the hand
-      px(c, ax + 1, bodyY + 12 - swing, 2, 2, mid);
-
-      /* --- the head: a frog skull in profile, eye bulb on top --- */
-      const hy = 6 + bob, hx = cx + (face > 0 ? 1 : -1);
-      /* ink pass */
-      px(c, hx - 7, hy, 14, 11, K0);
-      px(c, hx + (face > 0 ? 6 : -7), hy + 4, 4, 6, K0);                  // snout
-      /* fill */
-      px(c, hx - 6, hy + 1, 12, 9, skin);
-      px(c, hx - 6, hy + 6, 12, 4, mid);                                  // under the jaw
-      px(c, hx + (face > 0 ? 6 : -6), hy + 5, 3, 4, skin);
-      /* the eye bulb, sitting proud of the skull */
-      const ex = hx + (face > 0 ? 2 : -4);
-      px(c, ex - 1, hy - 2, 6, 5, K0);
-      px(c, ex, hy - 1, 4, 3, skin);
-      px(c, ex + (face > 0 ? 2 : 1), hy, 2, 2, K0);                       // pupil
-      px(c, ex + (face > 0 ? 2 : 1), hy, 1, 1, P.W);                      // catchlight
-      /* the mouth line, all the way back */
-      px(c, hx - 6, hy + 7, 12, 1, dk);
-      /* --- the hat --- */
-      if (d.cap) {                                                        // peaked police cap
-        const hc = P[d.hatCol] || P.T;
-        px(c, hx - 7, hy - 5, 15, 4, K0);
-        px(c, hx - 6, hy - 4, 13, 2, hc);
-        px(c, hx - 6, hy - 3, 13, 1, P.K);
-        px(c, hx + (face > 0 ? 5 : -8), hy - 2, 4, 2, K0);                // the peak
-        px(c, hx - 2, hy - 4, 4, 2, P.G);                                 // the badge on it
-      } else if (d.hat) {                                                 // fedora
-        const hc = P[d.hatCol] || P.T, band = P[d.band] || P.d;
-        px(c, hx - 6, hy - 7, 12, 6, K0);
-        px(c, hx - 5, hy - 6, 10, 4, hc);
-        px(c, hx - 5, hy - 3, 10, 1, band);
-        px(c, hx - 9, hy - 2, 19, 2, K0);                                 // the brim
-        px(c, hx - 8, hy - 2, 17, 1, hc);
-      }
-      /* --- what a witness would remember about him --- */
-      if (d.glasses) {                                                  // a bar over both bulbs
-        px(c, hx - 6, hy - 1, 13, 3, K0);
-        px(c, hx - 5, hy, 4, 1, P.L);
-        px(c, hx + 1, hy, 4, 1, P.L);
-      }
-      if (d.scar) { px(c, hx + (face > 0 ? 3 : -4), hy + 2, 1, 4, P.d); }
-      if (d.gold) { px(c, hx + (face > 0 ? 5 : -5), hy + 7, 1, 1, P.G); }
-      if (d.cigar) {                                                    // the stub, and its smoke
-        const cx2 = hx + (face > 0 ? 8 : -10);
-        px(c, cx2, hy + 6, 4, 2, P.U);
-        px(c, cx2 + (face > 0 ? 4 : -1), hy + 6, 1, 2, P.O);
-        px(c, cx2 + (face > 0 ? 4 : -1), hy + 3, 1, 1, 'rgba(200,200,210,.4)');
-        px(c, cx2 + (face > 0 ? 5 : -2), hy + 1, 1, 1, 'rgba(200,200,210,.25)');
-      }
-      return o.cv;
-    });
+    return SPR.sceneFrog(d.key || SPR.defKey(d), d.def || d, frame, face, DOWN);
   }
 
-  /* Turn a full frog def — the language the big portrait rig speaks — into
-     the small walking rig, keeping whatever a person would notice about him
-     from across a room: his colour, his build, his hat, his smoke. */
-  function rigFromFrog(def, key) {
-    const C = (typeof SPR !== 'undefined' && SPR.costumeOf) ? SPR.costumeOf(def) : null;
-    const O = C && (C.overcoat || C.jacket);
-    return {
-      key: 'f:' + (key || SPR.defKey(def)),
-      skin: def.skin || ['F', 'f', 'e'],
-      coat: (O && O.col) || def.suit || 'T',
-      coatDark: (O && O.dark) || 'K',
-      coatLit: (O && O.lit) || 't',
-      shirt: def.shirt || 'W',
-      tie: def.tie || def.bowtie || 'd',
-      fat: !!def.fat,
-      hat: !!def.hat, cap: !!def.flatcap,
-      hatCol: def.hatCol || 'T', band: def.band || 'd',
-      cigar: !!def.cigar, glasses: def.glasses === 'shades' || !!def.glasses,
-      scar: !!def.scar, gold: !!def.goldtooth,
-      badge: false,
-    };
-  }
+  /* how tall a person is in this room, for placing hotspots */
+  function rigH(d) { return rig(d, 0, 1).height; }
 
   /* ============================================================
      BUILD
@@ -508,19 +372,19 @@ const SCENE = (() => {
   }
 
   function drawActor(c, a, T) {
-    const d = a.def || { key: a.id, skin: ['F', 'f', 'e'], coat: 'T', coatDark: 'K' };
     const face = a.face === undefined ? -1 : a.face;
-    const idle = a.still ? 0 : (Math.sin(T * 1.7 + (a.x % 7)) > 0.94 ? 1 : 0);
-    const cvv = rig(d, idle, face);
-    c.drawImage(cvv, Math.round(a.x - 13), Math.round((a.y === undefined ? def.floorY : a.y) - 40));
-    ART.px(c, Math.round(a.x - 8), (a.y === undefined ? def.floorY : a.y) + 1, 16, 2, 'rgba(0,0,0,.3)');
+    /* somebody stood in a room still shifts his weight now and then */
+    const idle = a.still ? 0 : (Math.sin(T * 1.3 + (a.x % 9)) > 0.9 ? 1 : 0);
+    const cvv = rig(a, idle, face);
+    const fy = a.y === undefined ? def.floorY : a.y;
+    ART.px(c, Math.round(a.x - cvv.width / 3), fy, Math.round(cvv.width * 0.66), 2, 'rgba(0,0,0,.32)');
+    c.drawImage(cvv, Math.round(a.x - cvv.width / 2), Math.round(fy - cvv.height + 1));
   }
 
   function drawMe(c, T) {
     const cvv = rig(SCENE.meDef(), me.frame, me.face);
-    c.drawImage(cvv, Math.round(me.x - 13), Math.round(def.floorY - 40));
-    /* the shadow he stands in */
-    ART.px(c, Math.round(me.x - 8), def.floorY + 1, 16, 2, 'rgba(0,0,0,.35)');
+    ART.px(c, Math.round(me.x - cvv.width / 3), def.floorY, Math.round(cvv.width * 0.66), 2, 'rgba(0,0,0,.38)');
+    c.drawImage(cvv, Math.round(me.x - cvv.width / 2), Math.round(def.floorY - cvv.height + 1));
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
@@ -604,20 +468,50 @@ const SCENE = (() => {
   }
 
   return {
-    H, open, close, walkTo, rig, rigFromFrog,
+    H, open, close, walkTo, rig, rigH,
     get def() { return def; },
     get me() { return me; },
     at(x) { me.x = x; },
     say(o) { return plate(o); },
+    /* You are the same frog out here as you are across the table. */
     meDef() {
-      return {
-        key: 'me', skin: ['F', 'f', 'e'], coat: 'T', coatDark: 'K', coatLit: 't',
-        shirt: 'W', tie: 'd', hat: true, hatCol: 'T', band: 'K', badge: true,
-      };
+      if (!SCENE._me) SCENE._me = { key: 'me', def: DUEL.myDef() };
+      return SCENE._me;
     },
     busy(v) { if (v !== undefined) busy = v; return busy; },
-    /* let the story move the camera for a beat */
-    look(x) { camWant = U.clamp(x - viewW() / 2, 0, Math.max(0, (def ? def.w : 0) - viewW())); drag = { x0: 0, cam0: camWant, moved: 99 }; },
+    /* ============================================================
+       THE CAMERA, WHEN THE STORY WANTS IT.
+       ============================================================ */
+
+    /* park the camera somewhere and hold it there */
+    look(x) {
+      if (!def) return;
+      const vw = viewW();
+      camWant = def.w <= vw ? -(vw - def.w) / 2 : U.clamp(x - vw / 2, 0, def.w - vw);
+      drag = { x0: 0, cam0: camWant, moved: 99 };
+    },
     release() { drag = null; },
+
+    /* Ease the camera from one end of the room to the other. Nobody can
+       walk while it moves — this is a shot, not a stroll. */
+    async pan(fromX, toX, ms) {
+      if (!def) return;
+      busy = true;
+      const t0 = performance.now();
+      SCENE.look(fromX);
+      for (;;) {
+        const k = (performance.now() - t0) / (ms || 1400);
+        if (k >= 1) break;
+        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;  // ease in-out
+        SCENE.look(fromX + (toX - fromX) * e);
+        await U.sleep(24);
+      }
+      SCENE.look(toX);
+      busy = false;
+    },
+
+    /* hold on whoever is talking, then give the room back */
+    focus(x) { busy = true; SCENE.look(x); },
+    unfocus() { busy = false; drag = null; },
   };
 })();

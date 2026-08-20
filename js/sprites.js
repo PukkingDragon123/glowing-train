@@ -4168,8 +4168,21 @@ SPR.mugshot = function (key, def, k) {
    the same suit, then shoes. Nobody has drawn these frogs below
    the belt before because the table always hid it.
    ============================================================ */
-SPR.fullBody = function (key, def) {
-  return SPR.cached('full_' + key, () => {
+/* ============================================================
+   ONE WHOLE FROG.
+
+   The only full-length frog in the game. The line-up posters use
+   it at full size, the rooms use it shrunk down, and both are
+   the same sprite built out of the same head, the same costumed
+   body and the same four-fingered hands — so the frog you walk
+   past in the bullpen is the frog you sit down across from.
+
+   opts: { frame } — 0..3 of the walk cycle. Frame 0 is standing.
+   ============================================================ */
+SPR.frogWhole = function (key, def, opts) {
+  opts = opts || {};
+  const frame = opts.frame | 0;
+  return SPR.cached('whole_' + key + ':' + frame, () => {
     const P = PIX.PAL;
     const head = SPR.frogCustom('fb:' + key, def);
     const body = SPR.bodyCustom('fb:' + key, def, false);
@@ -4181,7 +4194,13 @@ SPR.fullBody = function (key, def) {
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false;
-    const bodyTop = hh - NECK;
+
+    /* THE WALK. Two legs in opposite phase, the whole frog rising a pixel
+       on the passing beats — read at a third of this size it is enough to
+       say "walking" without a second sprite sheet. */
+    const swing = [0, 5, 0, -5][frame];
+    const bob = [0, -2, 0, -1][frame];
+    const bodyTop = hh - NECK + bob;
     const cx = Math.round(W / 2);
 
     /* legs first, so the coat hem sits over them */
@@ -4191,21 +4210,54 @@ SPR.fullBody = function (key, def) {
     const hipY = bodyTop + body.height - 6;
     const spread = def.fat ? 11 : 8;
     [-1, 1].forEach(sgn => {
-      const lx = cx + sgn * spread;
-      PIX.rect(c, lx - 6, hipY, 12, LEGS, P.K);
-      PIX.rect(c, lx - 5, hipY, 10, LEGS - 2, legC);
-      PIX.rect(c, lx - 5, hipY, 2, LEGS - 2, 'rgba(255,255,255,.07)');
-      PIX.rect(c, lx + 2, hipY, 3, LEGS - 2, 'rgba(0,0,0,.28)');
+      const step = sgn * swing;
+      const lx = cx + sgn * spread + Math.round(step * 0.5);
+      const len = LEGS - Math.abs(step) * 0.3;
+      PIX.rect(c, lx - 6, hipY, 12, len, P.K);
+      PIX.rect(c, lx - 5, hipY, 10, len - 2, legC);
+      PIX.rect(c, lx - 5, hipY, 2, len - 2, 'rgba(255,255,255,.07)');
+      PIX.rect(c, lx + 2, hipY, 3, len - 2, 'rgba(0,0,0,.28)');
       /* trouser crease + cuff */
-      PIX.rect(c, lx - 5, hipY + LEGS - 8, 10, 2, 'rgba(0,0,0,.3)');
-      /* the shoe, pointed out */
-      PIX.rect(c, lx - 7 + sgn * 2, hipY + LEGS - 4, 14, 6, P.K);
-      PIX.rect(c, lx - 6 + sgn * 2, hipY + LEGS - 3, 12, 4, '#1c1a2c');
-      PIX.rect(c, lx - 6 + sgn * 2, hipY + LEGS - 3, 12, 1, 'rgba(255,255,255,.16)');
+      PIX.rect(c, lx - 5, hipY + len - 8, 10, 2, 'rgba(0,0,0,.3)');
+      /* the shoe, pointed out, lifting on the back beat */
+      const sh = hipY + len - 4 - (step > 0 ? 2 : 0);
+      PIX.rect(c, lx - 7 + sgn * 2, sh, 14, 6, P.K);
+      PIX.rect(c, lx - 6 + sgn * 2, sh + 1, 12, 4, '#1c1a2c');
+      PIX.rect(c, lx - 6 + sgn * 2, sh + 1, 12, 1, 'rgba(255,255,255,.16)');
     });
 
     c.drawImage(body, Math.round((W - body.width) / 2), bodyTop);
-    c.drawImage(head, Math.round((W - hw) / 2), 0, hw, hh);
+    c.drawImage(head, Math.round((W - hw) / 2), bob, hw, hh);
+    return cv;
+  });
+};
+
+/* the standing pose, for posters and line-ups */
+SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }); };
+
+/* ============================================================
+   THE SAME FROG, ROOM SIZE.
+
+   A room is drawn at about a third of portrait scale, so the
+   whole frog gets sampled down by an integer factor rather than
+   redrawn — the silhouette, the hat, the coat and the hands all
+   survive, and nothing can drift out of step with the big rig
+   because there is only one rig.
+   ============================================================ */
+SPR.sceneFrog = function (key, def, frame, face, down) {
+  down = down || 3;
+  const f = ((frame | 0) % 4 + 4) % 4;
+  const fc = face < 0 ? -1 : 1;
+  return SPR.cached('scn_' + key + ':' + f + ':' + fc + ':' + down, () => {
+    const src = SPR.frogWhole(key, def, { frame: f });
+    const w = Math.max(1, Math.round(src.width / down));
+    const h = Math.max(1, Math.round(src.height / down));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    if (fc < 0) { c.translate(w, 0); c.scale(-1, 1); }
+    c.drawImage(src, 0, 0, src.width, src.height, 0, 0, w, h);
     return cv;
   });
 };

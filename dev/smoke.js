@@ -64,6 +64,12 @@ fs.mkdirSync(SHOTS, { recursive: true });
     }
     return await page.locator('#tutor-root:not(.hidden)').count() === 0;
   };
+  /* a plate types itself on; a picture of half a word looks like a bug */
+  const finishType = async () => {
+    await page.evaluate(() => { if (TUTOR.typing && TUTOR.finishTyping) TUTOR.finishTyping(); });
+    await page.waitForTimeout(140);
+  };
+
   /* ---------- the drawn picker ---------- */
   const pickCard = async (n) => {
     await page.waitForSelector('.pick-card', { timeout: 8000 });
@@ -79,9 +85,12 @@ fs.mkdirSync(SHOTS, { recursive: true });
      taking a picture of the room */
   const settle = async (ms) => {
     await page.waitForFunction(
-      () => !CINE.busy && !document.querySelector('#cine-stage.anim-cut') &&
-            !document.querySelector('#cine-stage.ante-cut'),
+      () => !CINE.busy && !document.querySelector("#cine-stage.anim-cut") &&
+            !document.querySelector("#cine-stage.ante-cut") &&
+            !document.querySelector(".loc-card"),
       null, { timeout: ms || 30000 }).catch(() => {});
+    /* and let any plate finish typing so a picture never catches half a word */
+    await page.evaluate(() => { if (TUTOR.typing && TUTOR.finishTyping) TUTOR.finishTyping(); });
     await page.waitForTimeout(400);
   };
 
@@ -234,12 +243,14 @@ fs.mkdirSync(SHOTS, { recursive: true });
     /* the front desk */
     await page.evaluate(() => { STORY.talkMaybelle(); });
     await page.waitForTimeout(500);
+    await finishType();
     await shot('07-maybelle');
     await clearPlates();
 
     /* the captain, and the brief */
     await page.evaluate(() => { STORY.talkCaptain(); });
     await page.waitForTimeout(500);
+    await finishType();
     await shot('08-captain');
     await clearPlates(18);
     const briefed = await state();

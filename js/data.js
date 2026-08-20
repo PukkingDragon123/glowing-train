@@ -100,6 +100,52 @@ const TRAITS = {
 const MOOK_TRAIT_POOL = Object.keys(TRAITS);
 
 /* ------------------------------------------------------------
+   THE PEOPLE WHO ARE NOT TRYING TO SHOOT YOU.
+
+   Real frog defs, same as the marks: the rooms build them at
+   room scale and the speech plates build them as portraits, so
+   the captain you walk up to is the captain who talks to you.
+   ------------------------------------------------------------ */
+
+/* THE CAPTAIN. Thirty years on the job, grey all through, and exactly one
+   detective left that he does not ask questions about. */
+const HANDLER_DEF = {
+  skin: ['s', 't', 'T'], fat: true, suit: 't', shirt: 'l', tie: null,
+  costume: 'cop', flatcap: true, cigar: true, warts: true, scar: true,
+};
+
+/* OFFICER MAYBELLE, on the front desk. The one person in the building who
+   still says good morning like she means it. */
+const MAYBELLE_DEF = {
+  skin: ['P', 'p', 'X'], fat: false, suit: 't', shirt: 'l', tie: null,
+  costume: 'cop', flatcap: true, lips: 'R', lashes: true,
+};
+
+/* PATROLMAN DILL, who has three drunks and a bite to write up */
+const DILL_DEF = {
+  skin: ['f', 'e', 'E'], fat: false, suit: 'T', shirt: 'l', tie: null,
+  costume: 'cop', flatcap: true, spots: true,
+};
+
+/* the one in the drunk tank who saw a big frog get walked to a car */
+const DRUNK_DEF = {
+  skin: ['B', 'b', 'u'], fat: true, suit: 'u', shirt: 'w', tie: null,
+  costume: 'shirtsleeves', warts: true, sweats: true,
+};
+
+/* the ward sister, who has a file on you thicker than the hospital */
+const NURSE_DEF = {
+  skin: ['F', 'f', 'e'], fat: false, suit: 'W', shirt: 'W', tie: null,
+  costume: 'croupier', lashes: true,
+};
+
+/* whoever it is behind the bar that answers when you ask */
+const BARMAN_DEF = {
+  skin: ['N', 'n', 'n'], fat: true, suit: 'W', shirt: 'W', bowtie: 'K',
+  costume: 'croupier', visor: true,
+};
+
+/* ------------------------------------------------------------
    THE CASE — how hard the board is, and what it costs to be
    wrong about it. Nothing here is bought: the looks you get are
    the looks the job gives you, and they get fewer as you climb.

@@ -124,8 +124,35 @@ const STORY = {
 
   /* ================= movement between rooms ================= */
 
-  toPrecinct() { return UI.goto(() => { G.phase = 'precinct'; }); },
-  openBoard() { return UI.goto(() => { G.phase = 'board'; }); },
+  /* WALKING INTO A PLACE IS A SHOT. Every arrival gets bars, a camera
+     move across the room and the name of the place typed over it. */
+  ARRIVALS: {
+    precinct: { name: 'THE PRECINCT', sub: 'HOMICIDE DIVISION - AFTER HOURS', from: 560, to: 60 },
+    board:    { name: 'THE BOARD ROOM', sub: 'NOBODY SIGNED OFF ON THIS CASE', from: 220, to: 40 },
+    ward:     { name: 'THE CITY INFIRMARY', sub: 'AGAINST MEDICAL ADVICE', from: 280, to: 70 },
+    lead:     { name: null, sub: 'THE CREW DRINKS HERE', from: 0, to: 0 },
+  },
+
+  async arrive(kind, nameOverride) {
+    const a = STORY.ARRIVALS[kind];
+    if (!a || !SCENE.def) return;
+    const to = SCENE.me.x;
+    await CINE.establish({
+      name: nameOverride || a.name || '',
+      sub: a.sub,
+      from: Math.min(a.from, SCENE.def.w - 10),
+      to, ms: 1700,
+    });
+  },
+
+  async toPrecinct() {
+    await UI.goto(() => { G.phase = 'precinct'; });
+    return STORY.arrive('precinct');
+  },
+  async openBoard() {
+    await UI.goto(() => { G.phase = 'board'; });
+    return STORY.arrive('board');
+  },
   toWard() { return UI.goto(() => { G.phase = 'ward'; }); },
 
   /* the assignment you have in hand, if any */
@@ -134,9 +161,30 @@ const STORY = {
 
   /* ================= the people ================= */
 
-  async talkCaptain() {
-    if (STORY._talking) return; STORY._talking = true;
+  /* A CONVERSATION IS A SCENE. Bars close, the camera holds on whoever is
+     talking, nobody walks anywhere, and it all opens back up afterwards. */
+  async converse(who, fn) {
+    if (STORY._talking) return;
+    STORY._talking = true;
+    const inRoom = !!(typeof SCENE !== 'undefined' && SCENE.def);
+    let mark = null;
+    if (inRoom) {
+      mark = (SCENE.def.actors || []).find(a => a.id === who);
+      CINE.letterbox(true);
+      if (mark) SCENE.focus((mark.x + SCENE.me.x) / 2);
+      else SCENE.focus(SCENE.me.x);
+      await U.sleep(220);
+    }
     try {
+      await fn();
+    } finally {
+      if (inRoom) { CINE.letterbox(false); SCENE.unfocus(); }
+      STORY._talking = false;
+    }
+  },
+
+  talkCaptain() {
+    return STORY.converse('cap', async () => {
       const cap = { art: SPR.frogCustom('handler', HANDLER_DEF), name: 'CAPTAIN ROOK', nameCol: PIX.PAL.L, rim: PIX.PAL.t };
       const ch = STORY.chapter();
       if (STORY.capHasBrief()) {
@@ -157,12 +205,11 @@ const STORY = {
           'SIX YEARS. I KNOW. GO AND GET THE NEXT PIECE.',
         ]), cap);
       }
-    } finally { STORY._talking = false; }
+    });
   },
 
-  async talkMaybelle() {
-    if (STORY._talking) return; STORY._talking = true;
-    try {
+  talkMaybelle() {
+    return STORY.converse('may', async () => {
       const may = { art: SPR.frogCustom('maybelle', MAYBELLE_DEF), name: 'OFFICER MAYBELLE', nameCol: PIX.PAL.P, rim: PIX.PAL.p };
       const d = META.load();
       if (G.mayTalked) {
@@ -194,12 +241,11 @@ const STORY = {
         UI.stampSmall('MAYBELLE: +1 HEART, ALL NIGHT');
         SFX.bank();
       }
-    } finally { STORY._talking = false; }
+    });
   },
 
-  async wardTalk() {
-    if (STORY._talking) return; STORY._talking = true;
-    try {
+  wardTalk() {
+    return STORY.converse('may', async () => {
       const may = { art: SPR.frogCustom('maybelle', MAYBELLE_DEF), name: 'OFFICER MAYBELLE', nameCol: PIX.PAL.P, rim: PIX.PAL.p };
       const lines = [
         ['THEY BROUGHT YOU IN AT THREE. I WAS OFF AT ELEVEN.', 'I STAYED.'],
@@ -208,24 +254,23 @@ const STORY = {
       ][Math.min(2, (G.wardTrips || 1) - 1)];
       for (const l of lines) await TUTOR.say(l, may);
       const d = META.load(); d.trust = (d.trust || 0) + 1; META.save();
-    } finally { STORY._talking = false; }
+    });
   },
 
-  async smallTalk(who) {
-    if (STORY._talking) return; STORY._talking = true;
-    try {
+  smallTalk(who) {
+    return STORY.converse(who === 'dill' ? 'uni' : who, async () => {
       const pools = {
-        dill: { name: 'PATROLMAN DILL', rig: ROOMS.UNI_RIG, col: PIX.PAL.L, lines: [
+        dill: { name: 'PATROLMAN DILL', art: SPR.frogCustom('dill', DILL_DEF), col: PIX.PAL.L, lines: [
           'THREE DRUNKS AND A BITE. SLOW NIGHT.',
           'THEY SAY YOU WORK A CASE NOBODY SIGNED. I DID NOT HEAR THAT FROM ME.',
           'IF YOU NEED A CAR AT FOUR IN THE MORNING, I AM ON UNTIL SIX.',
         ] },
-        drunk: { name: 'THE DRUNK TANK', rig: null, col: PIX.PAL.q, lines: [
+        drunk: { name: 'THE DRUNK TANK', art: SPR.frogCustom('drunk', DRUNK_DEF), col: PIX.PAL.q, lines: [
           'I SEEN HIM. BIG FROG. GOLD IN HIS MOUTH. HE DO NOT WALK, HE GET WALKED.',
           'MARSH ROW. THAT IS ALL I SAY. MARSH ROW AND A GREEN DOOR.',
           'YOU GOT A CIGARETTE? NO? THEN I NEVER SAID NOTHING.',
         ] },
-        nurse: { name: 'THE NURSE', rig: null, col: PIX.PAL.W, lines: [
+        nurse: { name: 'THE NURSE', art: SPR.frogCustom('nurse', NURSE_DEF), col: PIX.PAL.W, lines: [
           'FOUR HOLES IN SIX YEARS. WE HAVE A FILE ON YOU THICKER THAN THE HOSPITAL.',
           'YOU CAN GO WHEN YOU CAN STAND. THAT IS THE WHOLE TEST.',
           'THE ONE IN THE NEXT BED CAME IN AFTER YOU. HE IS NOT GOING HOME.',
@@ -233,9 +278,9 @@ const STORY = {
       };
       const p = pools[who] || pools.dill;
       await TUTOR.say(U.pick(Math.random, p.lines), {
-        art: p.rig ? null : undefined, name: p.name, nameCol: p.col, rim: PIX.PAL.t,
+        art: p.art, name: p.name, nameCol: p.col, rim: PIX.PAL.t,
       });
-    } finally { STORY._talking = false; }
+    });
   },
 
   /* ================= things in the rooms ================= */
@@ -433,6 +478,7 @@ const STORY = {
     await CINE.driveTo('THE PRECINCT');
     G.phase = 'precinct';
     UI.render();
+    await STORY.arrive('precinct');
   },
 
   /* ================= going out to work the lead ================= */
@@ -450,6 +496,7 @@ const STORY = {
     await CINE.driveTo(STORY.chapter().where);
     G.phase = 'blind';
     UI.render();
+    await STORY.arrive('lead', STORY.chapter().where);
   },
 
   /* ================= what a body is worth ================= */
@@ -517,6 +564,7 @@ const STORY = {
     E.startBlind();
     G.phase = 'ward';
     UI.render();
+    await STORY.arrive('ward');
   },
 
   async leaveWard() {
@@ -525,6 +573,7 @@ const STORY = {
     await CINE.driveTo('THE PRECINCT');
     G.phase = 'precinct';
     UI.render();
+    await STORY.arrive('precinct');
   },
 
   /* ================= the end of it ================= */

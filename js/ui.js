@@ -140,11 +140,13 @@ const UI = {
     logo.appendChild(UI.txt('S&D', { scale: 3, color: PIX.PAL.g }));
     L.appendChild(logo);
 
-    /* which chapter of the case you are in, by name — no floors, no antes */
+    /* which chapter of the case you are in, by name — no floors, no antes.
+       On a narrow phone the name sets a size down so it never runs into
+       the hearts. */
     const ch = STORY.chapter();
     const chip = U.el('span', 'has-tip tb-chip');
     chip.dataset.tipText = ch.obj;
-    chip.appendChild(UI.txt(ch.title, { scale: 3, color: PIX.PAL.W }));
+    chip.appendChild(UI.txt(ch.title, { scale: window.innerWidth < 520 ? 2 : 3, color: PIX.PAL.W }));
     C.appendChild(chip);
 
     /* the board: five pieces of him, filled in as you take them */
@@ -165,13 +167,16 @@ const UI = {
     chips.appendChild(cnum);
     R.appendChild(chips);
 
+    /* the two corner buttons set a size down on a phone so the help button
+       never gets pushed off the edge; the CSS keeps them tappable */
+    const bk = window.innerWidth < 420 ? 2 : 3;
     const mute = U.el('button', 'pixbtn tb-btn');
     mute.id = 'btn-mute';
-    mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: 3, shadow: null, color: PIX.PAL.w }));
-    mute.onclick = () => { SFX.toggleMute(); UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: 3, shadow: null, color: PIX.PAL.w })); };
+    mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: bk, shadow: null, color: PIX.PAL.w }));
+    mute.onclick = () => { SFX.toggleMute(); UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: bk, shadow: null, color: PIX.PAL.w })); };
     R.appendChild(mute);
     const help = U.el('button', 'pixbtn tb-btn');
-    help.appendChild(UI.txt('?', { scale: 3, shadow: null, color: PIX.PAL.G }));
+    help.appendChild(UI.txt('?', { scale: bk, shadow: null, color: PIX.PAL.G }));
     help.onclick = () => UI.showHelp();
     R.appendChild(help);
 
@@ -198,12 +203,169 @@ const UI = {
 
   /* ================= title ================= */
 
+  /* ============================================================
+     THE ROOM THE BOARD IS IN.
+
+     The menu used to be a board floating in the dark. It is a
+     wall now: rain on the window, a desk lamp throwing a cone
+     across the cork, the edge of a desk along the bottom with a
+     cold coffee and an ashtray on it, and dust in the light.
+     ============================================================ */
+  titleRoom(host) {
+    const cv = document.createElement('canvas');
+    cv.className = 'pix title-room';
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    host.appendChild(cv);
+
+    const rng = U.mulberry32(20260820);
+    const drops = Array.from({ length: 110 }, () => ({
+      x: rng() * 74, y: rng() * 60, s: 0.6 + rng() * 1.6, l: 2 + rng() * 4,
+    }));
+    const motes = Array.from({ length: 40 }, () => ({
+      fx: rng(), fy: rng(), s: 0.1 + rng() * 0.3, ph: rng() * 9,
+    }));
+
+    /* The wall is painted once per size. Nothing in it is centred: the
+       window hangs off the right edge, the desk sits on the bottom one,
+       the lamp hangs at the left. So the room fills any frame it is given
+       instead of floating in the middle of a black one. */
+    let W = 0, H = 0, DY = 0, WX = 0, back = null;
+    const bake = () => {
+      DY = H - 32;                                   // the desk surface
+      WX = W - 84;                                   // the window frame
+      back = ART.cv(W, H);
+      const b = back.c;
+      b.drawImage(ART.wall(W, H, { tone: 'grey', railY: DY - 14, seed: 77 }), 0, 0);
+
+      /* the window, stage right, with the city out in the rain */
+      ART.px(b, WX, 12, 78, 64, '#0d1218');
+      ART.px(b, WX + 2, 14, 74, 60, '#141d28');
+      for (let bx = WX + 2; bx < WX + 74; bx += 13) {
+        const bh = 12 + ((bx * 7) % 26);
+        ART.px(b, bx, 74 - bh, 11, bh, '#0c141c');
+        for (let ly = 76 - bh; ly < 72; ly += 5) {
+          for (let lx = bx + 2; lx < bx + 9; lx += 4) {
+            if ((lx * ly) % 5 === 0) ART.px(b, lx, ly, 2, 2, (lx + ly) % 3 ? '#4a6478' : '#ffd75e');
+          }
+        }
+      }
+      ART.px(b, WX, 12, 78, 2, '#0a0d12');
+      ART.px(b, WX + 38, 12, 2, 64, '#0a0d12');
+      ART.px(b, WX, 42, 78, 2, '#0a0d12');
+      ART.px(b, WX - 2, 74, 82, 4, '#2a2f38');
+      ART.px(b, WX - 2, 74, 82, 1, '#3f4652');
+
+      /* the desk along the bottom of the frame */
+      ART.px(b, 0, DY, W, H - DY, '#241a12');
+      ART.px(b, 0, DY, W, 3, '#4d301a');
+      ART.px(b, 0, DY + 3, W, 1, '#6b4426');
+      ART.grain(b, 0, DY + 4, W, H - DY - 4, '#1d150e', '#33251a', 13);
+
+      /* near end: the case file open where you left it, a cold coffee with
+         the ring it left, and the phone off the hook */
+      ART.px(b, 8, DY + 2, 52, 16, '#12101d');
+      ART.px(b, 9, DY + 3, 50, 14, '#ded2b4');
+      ART.px(b, 11, DY + 6, 36, 1, '#8d8672');
+      ART.px(b, 11, DY + 9, 28, 1, '#8d8672');
+      ART.px(b, 11, DY + 12, 32, 1, '#8d8672');
+      ART.px(b, 9, DY + 3, 50, 2, '#b8232f');
+      ART.px(b, 44, DY, 18, 20, 'rgba(0,0,0,.25)');
+      b.drawImage(ART.art('mug', 2), 66, DY + 8);
+      ART.px(b, 64, DY + 22, 20, 2, 'rgba(110,74,48,.45)');
+      b.drawImage(ART.art('phone', 2), 90, DY + 8);
+
+      /* far end: an ashtray with one still going, the iron he never puts in
+         the drawer, and the typewriter with a sheet still in it */
+      b.drawImage(ART.art('ashtray', 2), W - 100, DY + 14);
+      ART.px(b, W - 96, DY + 12, 8, 1, '#e6dcc4');
+      ART.px(b, W - 88, DY + 12, 2, 1, '#ff8a4a');
+      b.drawImage(ART.art('gunprop', 2), W - 76, DY + 12);
+      b.drawImage(ART.art('typewriter', 2), W - 44, DY - 2);
+      ART.px(b, W - 38, DY - 8, 20, 8, '#ded2b4');
+      ART.px(b, W - 38, DY - 8, 20, 1, '#f2e9cf');
+      ART.px(b, W - 36, DY - 4, 14, 1, '#8d8672');
+
+      /* the desk falls away from the lamp: the far end sits in the dark */
+      for (let x = 0; x < W; x += 4) {
+        ART.px(b, x, DY - 12, 4, H - DY + 12, 'rgba(6,8,14,' + (0.04 + 0.42 * (x / W)).toFixed(3) + ')');
+      }
+      /* a tin lamp on a cord over the near end of the board */
+      b.drawImage(ART.hangLamp(20, 34, false), 20, 0);
+    };
+
+    let raf = null;
+    const t0 = performance.now();
+    const draw = () => {
+      raf = requestAnimationFrame(draw);
+      if (G.phase !== 'title') { cancelAnimationFrame(raf); raf = null; return; }
+      const T = (performance.now() - t0) / 1000;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      /* an integer scale, then a world big enough to cover the frame at it */
+      const K = Math.max(2, Math.min(Math.floor(vw / 240), Math.floor(vh / 150), 8));
+      const nW = Math.max(240, Math.ceil(vw / K)), nH = Math.max(150, Math.ceil(vh / K));
+      if (!back || nW !== W || nH !== H) { W = nW; H = nH; bake(); }
+      if (cv.width !== W * K) {
+        cv.width = W * K; cv.height = H * K;
+        cv.style.width = cv.width + 'px'; cv.style.height = cv.height + 'px';
+      }
+      c.setTransform(K, 0, 0, K, 0, 0);
+      c.imageSmoothingEnabled = false;
+      c.clearRect(0, 0, W, H);
+      c.drawImage(back.cv, 0, 0);
+      /* rain running down the glass */
+      for (const d of drops) {
+        const y = (d.y + T * d.s * 26) % 62;
+        for (let i = 0; i < d.l; i++) {
+          ART.px(c, WX + 2 + Math.round(d.x), 14 + Math.round(y) + i, 1, 1, 'rgba(150,195,225,.16)');
+        }
+      }
+      /* the lamp, guttering, and the cone it puts down the wall */
+      const flick = Math.sin(T * 9) > 0.93 ? 0.4 : 1;
+      ART.px(c, 28, 16, 4, 3, 'rgba(255,251,232,' + (0.85 * flick) + ')');
+      const bands = Math.max(6, Math.ceil((DY + 6 - 19) / 8));
+      for (let i = 0; i < bands; i++) {
+        const y = 19 + i * 8, hw = 5 + i * 5;
+        ART.px(c, 30 - hw, y, hw * 2, 8, 'rgba(255,235,170,' + (0.032 * flick) + ')');
+      }
+      ART.px(c, 4, DY, 58, 2, 'rgba(255,235,170,' + (0.18 * flick) + ')');
+      ART.px(c, 12, DY + 2, 44, 3, 'rgba(255,235,170,' + (0.07 * flick) + ')');
+      /* the cigarette on the ashtray, still going */
+      for (let i = 0; i < 16; i++) {
+        const sx = W - 87 + Math.sin(T * 1.1 + i * 0.45) * (0.6 + i * 0.16);
+        ART.px(c, Math.round(sx), DY + 11 - i, 1, 1,
+          'rgba(210,205,195,' + (0.13 - i * 0.007) + ')');
+      }
+      /* dust turning over in the light */
+      for (const m of motes) {
+        const y = (m.fy * H + T * m.s * 5) % H;
+        const x = m.fx * W + Math.sin(T * 0.5 + m.ph) * 3;
+        ART.px(c, Math.round(x), Math.round(y), 1, 1, 'rgba(255,240,205,.14)');
+      }
+      /* the frame goes dark at the edges */
+      for (let i = 0; i < 18; i++) {
+        const a = 0.5 * (1 - i / 18);
+        ART.px(c, 0, i, W, 1, 'rgba(0,0,0,' + (a * 0.5) + ')');
+        ART.px(c, 0, H - 1 - i, W, 1, 'rgba(0,0,0,' + (a * 0.4) + ')');
+        ART.px(c, i, 0, 1, H, 'rgba(0,0,0,' + (a * 0.6) + ')');
+        ART.px(c, W - 1 - i, 0, 1, H, 'rgba(0,0,0,' + (a * 0.6) + ')');
+      }
+    };
+    draw();
+  },
+
   buildTitle(app) {
     const s = META.stats();
     const wrap = U.el('div', 'splash board-title');
+    UI.titleRoom(wrap);
+
+    /* a phone held sideways gets one small row of mugshots, not two big ones */
+    const tight = window.innerHeight < 560;
+    const mugK = tight ? 1 : 2;
+    const tagK = tight ? 1 : 2;
 
     /* ---- the murder board: everything on it is pinned, taped or stabbed ---- */
-    const board = U.el('div', 'mboard');
+    const board = U.el('div', 'mboard' + (tight ? ' tight' : ''));
 
     /* red string first, under everything */
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -218,7 +380,7 @@ const UI = {
       huge: 'SHELL & DEBT',
       sub: 'A DETECTIVE FROG STORY',
       col: PIX.PAL.R,
-    }), U.clamp(Math.floor(window.innerWidth / 340), 2, 4)));
+    }), tight ? 2 : U.clamp(Math.floor(window.innerWidth / 340), 2, 4)));
     const knife = PIX.el('prop_knife', 3);
     knife.className = 'mb-knife';
     head.appendChild(knife);
@@ -232,9 +394,9 @@ const UI = {
     MUGS.forEach(([id, nm], i) => {
       const m = U.el('div', 'mb-pin mb-mug mb-mug' + i);
       m.appendChild(U.el('i', 'poster-pin'));
-      m.appendChild(SPR.clone(SPR.mugshot(id, FROG_DEFS[id], 1), 2));
+      m.appendChild(SPR.clone(SPR.mugshot(id, FROG_DEFS[id], 1), mugK));
       const tag = U.el('div', 'mb-name');
-      tag.appendChild(UI.txt(nm, { scale: 2, color: PIX.PAL.K, shadow: null }));
+      tag.appendChild(UI.txt(nm, { scale: tagK, color: PIX.PAL.K, shadow: null }));
       m.appendChild(tag);
       if (i === 2) {   // the Bullfrog gets the red ring
         const ring = U.el('i', 'mb-ring');
@@ -254,7 +416,7 @@ const UI = {
     /* the case number, on a manila tag you can type on */
     const tagWrap = U.el('div', 'mb-pin mb-seed');
     tagWrap.appendChild(U.el('i', 'poster-pin'));
-    tagWrap.appendChild(UI.txt('CASE NO.', { scale: 2, color: PIX.PAL.K, shadow: null }));
+    tagWrap.appendChild(UI.txt('CASE NO.', { scale: tagK, color: PIX.PAL.K, shadow: null }));
     const inp = U.el('input');
     inp.id = 'seed-input';
     inp.maxLength = 24;
@@ -291,7 +453,11 @@ const UI = {
         return CINE.lore(seen);
       }).then(() => CINE.reloadRoom())
         .then(() => CINE.driveTo())
-        .then(() => { UI.render(); return TUTOR.open(); });
+        .then(() => {
+          UI.render();
+          return STORY.arrive('precinct');
+        })
+        .then(() => TUTOR.open());
     };
     btns.appendChild(deal);
 
@@ -435,13 +601,17 @@ const UI = {
     else { SFX.backfire(); UI.shake(); }
   },
 
+  /* a phone held sideways has no height to give a toast: it types smaller */
+  toastK() { return window.innerHeight < 480 ? 2 : 3; },
+
   tagToast(t) {
     const box = document.getElementById('fx-particles');
     const el = U.el('div', 'unlock-toast pop');
-    el.appendChild(PIX.el(t.icon, 3));
+    const tk = UI.toastK();
+    el.appendChild(PIX.el(t.icon, tk));
     const col = U.el('div');
-    col.appendChild(UI.txt('TAG TAKEN', { scale: 3, color: PIX.PAL.N }));
-    col.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.W }));
+    col.appendChild(UI.txt('TAG TAKEN', { scale: tk, color: PIX.PAL.N }));
+    col.appendChild(UI.txt(t.name, { scale: tk, color: PIX.PAL.W }));
     el.appendChild(col);
     box.appendChild(el);
     SFX.jackpot();
@@ -865,10 +1035,11 @@ const UI = {
     const t = TRAITS[traitId];
     const box = document.getElementById('fx-particles');
     const el = U.el('div', 'unlock-toast pop');
-    el.appendChild(PIX.el('ic_book', 3));
+    const tk = UI.toastK();
+    el.appendChild(PIX.el('ic_book', tk));
     const col = U.el('div');
-    col.appendChild(UI.txt('NEW TELL', { scale: 3, color: PIX.PAL.N }));
-    col.appendChild(UI.txt(t.name, { scale: 3, color: PIX.PAL.W }));
+    col.appendChild(UI.txt('NEW TELL', { scale: tk, color: PIX.PAL.N }));
+    col.appendChild(UI.txt(t.name, { scale: tk, color: PIX.PAL.W }));
     el.appendChild(col);
     box.appendChild(el);
     SFX.bank();
@@ -880,8 +1051,9 @@ const UI = {
     const box = document.getElementById('fx-particles');
     const el = U.el('div', 'unlock-toast pop');
     const col = U.el('div');
-    col.appendChild(UI.txt('PINNED TO THE BOARD', { scale: 3, color: PIX.PAL.G }));
-    col.appendChild(UI.txt(card.name, { scale: 3, color: PIX.PAL.W }));
+    const tk = UI.toastK();
+    col.appendChild(UI.txt('PINNED TO THE BOARD', { scale: tk, color: PIX.PAL.G }));
+    col.appendChild(UI.txt(card.name, { scale: tk, color: PIX.PAL.W }));
     el.appendChild(col);
     box.appendChild(el);
     SFX.bank();

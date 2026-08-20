@@ -37,6 +37,12 @@ and the detective walks there**, drag to look down the room, and the things
 you can do are objects in it. Walk up to a thing and it says what it is on a
 little drawn plate over its own head; tap again and you do it.
 
+Rooms arrive like scenes in a film. The cinema bars close, the camera pans
+the length of the room while the name of the place types itself onto a card,
+and only then does it hand the controls back. When somebody talks the bars
+come back, the camera holds on the two of you, nobody walks anywhere, and the
+line types itself out under his face one key at a time.
+
 The bullpen at two in the morning has a front desk with a phone and a
 percolator, three desks with typewriters and one live lamp, a water cooler, a
 dead plant, filing cabinets, lockers, a radiator, a wall clock nobody winds,
@@ -211,36 +217,44 @@ still breathing. You get one decision:
 
 ## Everything that moves
 
-All drawn, all procedural, no sprite sheets, tap to skip the long ones:
+All drawn, all procedural, no sprite sheets, tap to skip the long ones.
+Every frog in this list is the **same model** — one head, one costumed body,
+one pair of legs, built once and integer-downsampled for rooms. The frog who
+walks the bullpen, the frog pinned to the cork, the frog across the table and
+the frog leaning into a cut-in are the same frog.
 
-1. The lore reel — the line-up, the verdict, the door, the rain, the oath
-2. The reload room — six shells thumbed into the drum, one at a time
-3. The drive across town — parallax skylines, rain, wipers, a destination
-4. The walk cycle — four frames, every frog in the game, both directions
-5. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
-6. Lamp cones, floor pools, flickering tubes and dust in the air
-7. The card-file wipe between rooms (venetian blinds, with an evidence tab)
-8. The sit-down — dark room, his eyes, the lamp stuttering on
-9. A lieutenant's entrance under cinema bars, with his name stamped on it
-10. The four-beat cock: hammer, cylinder, the held beat, the drop
-11. The steady check — the sweep, the bands, and the break
-12. Muzzle flash, cordite, the casing on the felt
-13. The slug in the air, with a shock ring and a wake
-14. The Persona cut-in — skewed banner, speed lines, red when it is lethal
-15. His grip, in four styles, arm anchored at the shoulder
-16. His reactions — the facepalm, the raised digit, the shrug
-17. Blood that lands, runs and stays — on him, and on your lens
-18. The blood-splat kill wipe, coming off like a sleeve on glass
-19. The drag loader — you, him, one swinging bulb, a smear on the boards
-20. First-person searching: your arm out, dust off the lining, his weight
-21. The mop — three passes a stain
-22. The bribe — chips arcing into a glove, one at a time
-23. The last-heart dread: a closing vignette and a heartbeat, twice a bar
-24. The ambulance — the wagon in the rain, then the corridor from a gurney
-25. The chapter card, and the take raining past the lens
-26. The courtroom, the gavel, and the first daylight in the game
-27. Two headstones and the rain stopping
-28. A burning board, and a frog-shaped hole in a chair
+1. The title room — rain on the glass, the lamp over the desk, a city awake
+2. The lore reel — the line-up, the verdict, the door, the rain, the oath
+3. The arrival — bars close, the camera pans the room, and the name of the
+   place types itself onto the card
+4. The reload room — six shells thumbed into the drum, one at a time
+5. The drive across town — parallax skylines, rain, wipers, a destination
+6. The card-file wipe between rooms (venetian blinds, with an evidence tab)
+7. The walk cycle — four frames, every frog in the game, both directions
+8. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
+9. Lamp cones, floor pools, flickering tubes and dust in the air
+10. Dialogue under cinema bars: the camera holds, the line types, a key ticks
+11. The sit-down — dark room, his eyes, the lamp stuttering on
+12. A lieutenant's entrance under cinema bars, with his name stamped on it
+13. The four-beat cock: hammer, cylinder, the held beat, the drop
+14. The steady check — the sweep, the bands, and the break
+15. Muzzle flash, cordite, the casing on the felt
+16. The slug in the air, with a shock ring and a wake
+17. The Persona cut-in — skewed banner, speed lines, red when it is lethal
+18. His grip, in four styles, arm anchored at the shoulder
+19. His reactions — the facepalm, the raised digit, the shrug
+20. Blood that lands, runs and stays — on him, and on your lens
+21. The blood-splat kill wipe, coming off like a sleeve on glass
+22. The drag loader — you, him, one swinging bulb, a smear on the boards
+23. First-person searching: your arm out, dust off the lining, his weight
+24. The mop — three passes a stain
+25. The bribe — chips arcing into a glove, one at a time
+26. The last-heart dread: a closing vignette and a heartbeat, twice a bar
+27. The ambulance — the wagon in the rain, then the corridor from a gurney
+28. The chapter card, and the take raining past the lens
+29. The courtroom, the gavel, and the first daylight in the game
+30. Two headstones and the rain stopping
+31. A burning board, and a frog-shaped hole in a chair
 
 ## Keys
 
@@ -263,7 +277,7 @@ js/rooms.js       the set: precinct, board room, ward, and the lead
 js/story.js       THE CASE: chapters, the board, dialogue, the two endings
 js/data.js        the crew, the guns, the belt, the questions, the tuning
 js/meta.js        what survives a case: stats, learned tells, her trust
-js/sprites.js     the frog rig, the iron rig, mugshots, splats, plates
+js/sprites.js     THE ONE FROG MODEL, the iron rig, mugshots, splats, plates
 js/engine.js      pure rules: the duel, his brain, the loot, the heat
 js/case.js        the identification game: suspects, evidence, questions
 js/duel.js        the drawn table: expressions, grips, the steady check
@@ -271,7 +285,7 @@ js/cine.js        every cutscene, and the film rig they all run on
 js/cops.js        the uniforms: the walk-in, the bribe, the bust
 js/loot.js        out back: first-person searching, the meters, the mop
 js/tutor.js       the drawn speech plate, and what the mark says
-js/ui.js          the story HUD, the murder board, the duel frame, help
+js/ui.js          the story HUD, the live title room, the duel frame, help
 js/btn.js         the arcade buttons the few remaining screens use
 js/fx.js          smoke, gore, chip arcs, slow-mo, ambient dust
 js/main.js        boot (+ ?debug harness)
@@ -298,10 +312,10 @@ node dev/smoke.js    # drives the whole story in headless Chromium
 Current curve, for a bot with average nerves that never reads a face and
 names a suspect at random out of whoever is still standing:
 
-- **40%** fill the board
-- **34%** reach the Bullfrog at all
-- **16%** could still take the good ending when they get there
-- **4.2** trips to the ward per case
+- **43%** fill the board
+- **35%** reach the Bullfrog at all
+- **17%** could still take the good ending when they get there
+- **4.1** trips to the ward per case
 
 A player who works the file, asks the right questions, breaks the shot clean
 and mops the floor does far better than that on every line. That is the point.

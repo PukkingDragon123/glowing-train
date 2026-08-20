@@ -902,7 +902,7 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
 /* stack them: the newest sits lowest and older ones step up. --u can also
    be set from script; these defaults mean nothing overlaps even when it
    isn't (tellToast + unlockToast both fire live, 700ms apart). */
-.unlock-toast { bottom: calc(18px + var(--sa-b) + var(--u, 0) * 78px); }
+.unlock-toast { bottom: calc(18px + var(--sa-b) + var(--u, 0) * 86px); }
 .unlock-toast:nth-last-of-type(2) { --u: 1; }
 .unlock-toast:nth-last-of-type(3) { --u: 2; }
 .unlock-toast:nth-last-of-type(n + 4) { --u: 3; }
@@ -1360,11 +1360,28 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
   .unlock-toast { left: calc(10px + var(--sa-l)); right: calc(10px + var(--sa-r)); max-width: none; }
 }
 
+/* ---- short frames (a phone held sideways): the full-width toast above
+        is a portrait idea. Sideways there is width to spare and no height
+        at all, so the banner goes back to a corner card. ---- */
+@media (max-height: 480px) {
+  .unlock-toast {
+    left: auto; right: calc(10px + var(--sa-r));
+    max-width: min(56vw, 320px); padding: 6px 10px; gap: 8px;
+    bottom: calc(8px + var(--sa-b) + var(--u, 0) * 82px);
+  }
+  .cop-callout { width: min(74%, 380px); }
+}
+
 /* ---- 420 and under: the wordmark has to go or the top-right
         controls get pushed off the edge ---- */
 @media (max-width: 420px) {
   #topbar > .tb-side:first-child { display: none; }
-  #topbar { justify-content: space-between; }
+  #topbar {
+    justify-content: space-between; gap: 4px;
+    padding: calc(6px + var(--sa-t)) calc(6px + var(--sa-r)) 6px calc(6px + var(--sa-l));
+  }
+  #topbar .tb-side { gap: var(--gap-sm); }
+  #topbar .tb-btn { padding: 3px 6px; min-width: 32px; min-height: 30px; justify-content: center; }
 }
 
 /* ---- very narrow (360 and under): shave the rack, keep 44px
@@ -2206,7 +2223,7 @@ body.heard #siren-wash { opacity: 1; }
 .mb-title { left: 50%; top: 7%; transform: translateX(-50%) rotate(-1deg); }
 .mb-title canvas { box-shadow: 0 6px 0 rgba(0,0,0,.4); }
 .mb-knife {
-  position: absolute; right: -20px; top: -22px;
+  position: absolute; right: -30px; top: -34px;
   filter: drop-shadow(3px 4px 0 rgba(0,0,0,.5));
 }
 .mb-mug { background: transparent; }
@@ -2214,7 +2231,7 @@ body.heard #siren-wash { opacity: 1; }
 .mb-mug0 { left: 6%; top: 16%; transform: rotate(-3deg); }
 .mb-mug1 { left: 22%; top: 52%; transform: rotate(2deg); }
 .mb-mug2 { left: 44%; top: 44%; transform: rotate(-1.4deg); }
-.mb-mug3 { right: 20%; top: 56%; transform: rotate(3deg); }
+.mb-mug3 { right: 21%; top: 43%; transform: rotate(3deg); }
 .mb-mug4 { right: 5%; top: 18%; transform: rotate(-2deg); }
 .mb-name { background: #ded2b4; padding: 1px 5px; border: 2px solid #12101d; }
 .mb-ring {
@@ -2239,6 +2256,23 @@ body.heard #siren-wash { opacity: 1; }
   .mb-mug3 { right: 12%; }
   .station-folk { gap: 30px; margin-top: -64px; }
 }
+
+/* A short frame (phone held sideways) cannot take two rows of mugshots
+   under a masthead. The family lines up instead, small, along the bottom
+   of the cork, and the case tag goes with them. */
+.mboard.tight { height: min(70vh, 430px); }
+.mboard.tight .mb-title { top: 3%; }
+.mboard.tight .mb-mug { gap: 2px; }
+.mboard.tight .mb-mug0 { left: 2%;  top: 50%; }
+.mboard.tight .mb-mug1 { left: 18%; top: 55%; }
+.mboard.tight .mb-mug2 { left: 34%; top: 49%; }
+.mboard.tight .mb-mug3 { left: 50%; right: auto; top: 55%; }
+.mboard.tight .mb-mug4 { left: 66%; right: auto; top: 50%; }
+.mboard.tight .mb-knife { right: -18px; top: -18px; }
+.mboard.tight .mb-seed { right: 1%; bottom: 3%; padding: 4px 6px 6px; }
+.mboard.tight .mb-seed input { width: 104px; font-size: 11px; padding: 2px 4px; }
+.mboard.tight .mb-record { display: none; }
+.mboard.tight .mb-hole { display: none; }
 
 /* ============================================================
    27. THE LINE-UP
@@ -2520,3 +2554,36 @@ body.in-scene #app { overflow: hidden; }
 /* the lieutenant's card has no button on it — this is the line that tells
    you so, breathing at the bottom of it */
 .boss-foot { margin-top: 6px; display: flex; animation: nudge 1.3s steps(2) infinite; }
+
+/* ============================================================
+   32. WHERE YOU ARE
+   The location card that types itself on over the room while the
+   camera walks it. Sits inside the letterbox, never over it.
+   ============================================================ */
+
+#cine-stage.loc-cut { display: block; background: none; }
+.loc-card {
+  position: absolute; left: 0; right: 0; bottom: 15%;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  text-align: center; padding: 0 16px;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .22s steps(3), transform .22s steps(3);
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,.7));
+}
+.loc-card.in { opacity: 1; transform: none; }
+.loc-card.out { opacity: 0; transform: translateY(-4px); }
+.loc-name { display: flex; min-height: 1em; }
+.loc-sub { display: flex; opacity: 0; transition: opacity .2s steps(3); }
+.loc-sub.in { opacity: 1; }
+
+/* the room the murder board hangs in: a painted canvas behind the pins */
+.board-title { position: relative; }
+.title-room {
+  position: fixed; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  image-rendering: pixelated;
+  z-index: 0; pointer-events: none;
+}
+/* the room is sized in whole pixels by hand: nothing may rescale it */
+.splash canvas.title-room { max-width: none; }
+.board-title > *:not(.title-room) { position: relative; z-index: 1; }
