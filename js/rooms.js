@@ -118,6 +118,24 @@ const ROOMS = (() => {
       px(c, 276, 58, 12, 2, '#6d6656');
       px(c, 294, 72, 3, 5, p.G);                         // the handle
 
+      /* ============ the stairs down to the line-up room ============ */
+      px(c, 306, 30, 40, 76, p.K);
+      px(c, 309, 33, 34, 73, '#101a1e');
+      /* the steps, going away from you into the dark */
+      for (let i = 0; i < 7; i++) {
+        const sy = 44 + i * 8, iw = 30 - i * 3;
+        px(c, 311 + Math.round(i * 1.5), sy, iw, 3, '#2a353c');
+        px(c, 311 + Math.round(i * 1.5), sy, iw, 1, '#3e4c55');
+      }
+      px(c, 309, 33, 3, 73, '#1a262c');                  // the rail
+      px(c, 340, 33, 3, 73, '#1a262c');
+      px(c, 308, 22, 36, 8, p.K);
+      px(c, 309, 23, 34, 6, '#1a2a22');
+      {
+        const t = PIXFONT.render('LINE-UP', { scale: 1, color: '#4fae6d', shadow: null });
+        c.drawImage(t, 326 - Math.round(t.width / 2), 24);
+      }
+
       /* ============ the holding cell, stage right ============ */
       c.drawImage(ART.cell(58, 62, 5), 544, FY - 62);
 
@@ -200,12 +218,24 @@ const ROOMS = (() => {
       hint: () => (STORY.lead() ? 'THE LEAD IS ON IT' : 'NOTHING NEW'),
       onUse: () => STORY.openDesk(),
     });
-    /* --- the street door: go work the lead --- */
+    /* --- the street door: get the car, which means the phone --- */
     spots.push({
       id: 'door', x: 30, w: 46, top: 30,
       label: 'THE STREET',
-      hint: () => (STORY.lead() ? 'GO' : 'NO ADDRESS YET'),
+      hint: () => (STORY.lead() ? 'TAKE THE CAR OUT' : 'NO CASE YET'),
       onUse: () => STORY.goOut(),
+    });
+    /* --- the stairs down to the line-up room --- */
+    spots.push({
+      id: 'stairs', x: 326, w: 40, top: 30,
+      label: 'DOWN TO THE LINE-UP',
+      hint: () => {
+        if (!G.case) return 'NOBODY IN IT YET';
+        if (G.case.known) return 'NO LINE-UP FOR HIM. GO STRAIGHT THROUGH.';
+        const n = CASE.left();
+        return n > 1 ? n + ' OF THEM STILL FIT' : 'ONE FACE LEFT. GO AND SAY IT.';
+      },
+      onUse: () => STORY.toLineup(),
     });
     /* --- the coffee: heals a heart, once a night --- */
     spots.push({
@@ -390,103 +420,88 @@ const ROOMS = (() => {
 
 
   /* ============================================================
-     THE LEAD — the room the crew drinks in.
+     THE LINE-UP ROOM — downstairs at the station, and last.
 
-     This is where identification happens, and it happens by
-     walking the line: up to a frog, look at him, cross him off.
-     The barman answers questions. The file is on the bar. The
-     door at the end is how you take somebody into the back.
+     You do not name anybody in the field any more. You bring back
+     what you dug out of the city, they stand them against the
+     height chart under a light that does nobody any favours, and
+     you say one name. What you found is on the table behind you;
+     anybody it rules out is crossed off where he stands.
      ============================================================ */
 
   function lineup() {
     const c0 = G.case || (CASE.build(), G.case);
     const n = c0.suspects.length;
-    const SP = 54;                                  // how far apart they stand
-    const X0 = 190;                                 // where the line starts, clear of the bar
-    const W = Math.max(560, X0 + n * SP + 150);
+    const SP = 56;                                  // how far apart they stand
+    const X0 = 150;                                 // where the line starts
+    const W = Math.max(520, X0 + n * SP + 130);
     const FY = 106;
-    const seed = U.hashSeed(G.seedStr + ':' + G.chapter + ':' + G.blind);
+    const seed = U.hashSeed(G.seedStr + ':lineup:' + G.chapter);
+    const stand = CASE.standing();
 
     const paint = (c) => {
       const p = P();
-      c.drawImage(ART.wall(W, FY + 4, { tone: 'brick', railY: 70, seed: seed % 97 }), 0, 0);
-      c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 53 }), 0, FY - 2);
-      px(c, 0, FY - 3, W, 2, '#0d0b09');
+      c.drawImage(ART.wall(W, FY + 4, { tone: 'tile', railY: 76, seed: seed % 61 }), 0, 0);
+      c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'lino', seed: seed % 43 }), 0, FY - 2);
+      px(c, 0, FY - 3, W, 2, '#0e1114');
       px(c, 0, FY - 1, W, 1, 'rgba(255,255,255,.05)');
 
-      /* ---- stage left: the way in, and the way out with a body ---- */
+      /* the way back up to the bullpen */
       px(c, 10, 34, 44, 72, p.K);
-      px(c, 13, 37, 38, 69, '#1f1710');
-      ART.grain(c, 15, 39, 34, 64, '#181109', '#2e2216', seed % 31);
+      px(c, 13, 37, 38, 69, '#1d2429');
+      ART.grain(c, 15, 39, 34, 64, '#161c20', '#28323a', seed % 31);
       px(c, 44, 70, 3, 5, p.h);
-      px(c, 16, 26, 34, 8, p.K); px(c, 17, 27, 32, 6, '#3a1216');
-      px(c, 20, 29, 3, 2, '#ff6a5e'); px(c, 26, 29, 3, 2, '#ff6a5e');
-      px(c, 32, 29, 3, 2, '#ff6a5e'); px(c, 38, 29, 3, 2, '#ff6a5e');
+      px(c, 14, 26, 38, 7, p.K);
+      px(c, 15, 27, 36, 5, '#1a2a22');
+      const upSign = PIXFONT.render('UP', { scale: 1, color: '#4fae6d', shadow: null });
+      c.drawImage(upSign, 26, 28);
 
-      /* ---- the bar: the bottles and the mirror; the counter itself is
-             drawn in front of the cast so the barman is behind it ---- */
-      for (let i = 0; i < 11; i++) {
-        const bx = 66 + i * 8, h2 = 8 + (i % 3) * 3;
-        px(c, bx, 52 - h2, 4, h2, ['#2e7d5b', '#8c2230', '#a5741f', '#3f89c4'][i % 4]);
-        px(c, bx, 52 - h2, 1, h2, 'rgba(255,255,255,.2)');
-        px(c, bx + 1, 54 - h2, 2, 2, '#12101d');
+      /* THE HEIGHT CHART, lit hard, painted straight onto the tile */
+      const cw = n * SP + 50;
+      px(c, X0 - 28, 26, cw, 80, '#2c2f26');
+      ART.dither(c, X0 - 28, 26, cw, 80, 'rgba(0,0,0,.22)', 0.1, 7);
+      for (let y = 30; y < FY - 4; y += 8) {
+        px(c, X0 - 28, y, cw, 1, 'rgba(240,235,220,.16)');
+        px(c, X0 - 28, y, 6, 1, 'rgba(240,235,220,.45)');
+        px(c, X0 - 28 + cw - 6, y, 6, 1, 'rgba(240,235,220,.3)');
       }
-      px(c, 62, 52, 96, 3, p.K); px(c, 63, 52, 94, 1, '#6b4426');
-      px(c, 62, 38, 96, 3, p.K); px(c, 63, 38, 94, 1, '#6b4426');
-      /* the mirror strip behind the bottles, tarnished */
-      px(c, 64, 40, 92, 11, '#1b2028');
-      ART.dither(c, 64, 40, 92, 11, 'rgba(200,220,235,.06)', 0.2, 5);
-
-      /* ---- the height chart the line stands against ---- */
-      px(c, X0 - 24, 30, n * SP + 40, 76, '#2a2b22');
-      ART.dither(c, X0 - 24, 30, n * SP + 40, 76, 'rgba(0,0,0,.2)', 0.1, 7);
-      for (let y = 34; y < FY - 4; y += 8) {
-        px(c, X0 - 24, y, n * SP + 40, 1, 'rgba(240,235,220,.16)');
-        px(c, X0 - 24, y, 5, 1, 'rgba(240,235,220,.4)');
+      /* a number stencilled on the chart over each of them, where a frog
+         cannot stand on it */
+      for (let i = 0; i < n; i++) {
+        const t = PIXFONT.render(String(i + 1), { scale: 3, color: 'rgba(240,235,220,.5)', shadow: null });
+        c.drawImage(t, X0 + i * SP - Math.round(t.width / 2), 30);
       }
 
-      /* ---- tables, stools, a jukebox: a room somebody drinks in ---- */
-      for (let i = 0; i < 3; i++) {
-        const tx = X0 + n * SP + 6 + i * 40;            // past the line, not under it
-        if (tx > W - 90) break;
-        px(c, tx, FY - 14, 26, 3, p.K);                       // the table top
-        px(c, tx + 1, FY - 14, 24, 2, '#4d301a');
-        px(c, tx + 11, FY - 11, 4, 11, p.K);                  // the pedestal
-        px(c, tx + 8, FY - 1, 10, 2, p.K);
-        px(c, tx + 4, FY - 17, 3, 4, '#8c2230');              // a glass on it
-        px(c, tx + 18, FY - 16, 4, 3, '#3a3f52');             // and an ashtray
+      /* the glass you are standing behind */
+      px(c, X0 - 46, 30, 14, 70, p.K);
+      px(c, X0 - 44, 32, 10, 66, 'rgba(150,200,220,.10)');
+      for (let y = 34; y < 96; y += 6) px(c, X0 - 44, y, 10, 1, 'rgba(220,240,255,.07)');
+
+      /* the table with what you brought back on it */
+      ART.box(c, 62, FY - 22, 74, 22, { fill: '#4a4038', top: '#5e5246', bot: '#241d18', ink: p.K });
+      px(c, 104, FY - 27, 20, 5, p.K);
+      px(c, 105, FY - 26, 18, 3, '#8d9298');
+      const got = (typeof CITY !== 'undefined') ? CITY.found().length : 0;
+      for (let i = 0; i < Math.min(5, got); i++) {
+        px(c, 70 + i * 2, FY - 26 - i * 3, 24, 3, p.K);
+        px(c, 71 + i * 2, FY - 26 - i * 3, 22, 2, '#e6dcc4');
       }
-      /* the jukebox, lit, at the end of the room */
-      const jx = W - 74;
-      px(c, jx, FY - 46, 30, 46, p.K);
-      px(c, jx + 2, FY - 44, 26, 42, '#3a1c22');
-      px(c, jx + 4, FY - 42, 22, 14, '#12101d');
-      for (let i = 0; i < 5; i++) px(c, jx + 6 + i * 4, FY - 40, 2, 10, ['#ff6a5e', '#ffd75e', '#6ff7d8', '#ff7edb', '#7fd7ff'][i]);
-      px(c, jx + 4, FY - 26, 22, 3, '#a5741f');
-      px(c, jx + 6, FY - 20, 18, 12, '#241a10');
-      px(c, jx, FY - 48, 30, 3, '#6e4c12');
+      if (!got) {
+        px(c, 72, FY - 27, 24, 5, p.K);
+        px(c, 73, FY - 26, 22, 3, '#6d6656');
+      }
 
-      /* ---- the back door: where the sit-down happens ---- */
-      const dx = W - 36;
-      px(c, dx, 40, 30, 66, p.K);
-      px(c, dx + 2, 42, 26, 64, '#20303a');
-      ART.dither(c, dx + 3, 43, 24, 62, 'rgba(0,0,0,.25)', 0.14, 11);
-      px(c, dx + 6, 50, 18, 20, p.K);
-      px(c, dx + 8, 52, 14, 16, '#0d1418');
-      px(c, dx + 24, 74, 3, 5, p.S);
-      /* the lamp over it, and the sign nobody reads */
-      px(c, dx + 4, 32, 22, 7, p.K);
-      px(c, dx + 5, 33, 20, 5, '#1a2620');
-      px(c, dx + 8, 35, 3, 2, '#4fae6d'); px(c, dx + 14, 35, 3, 2, '#4fae6d');
-
-      /* ---- smoke pooling under the ceiling, and grime at the floor ---- */
-      ART.dither(c, 0, 24, W, 16, 'rgba(200,200,210,.05)', 0.16, 13);
-      ART.dither(c, 0, FY - 16, W, 16, 'rgba(0,0,0,.24)', 0.12, 17);
+      /* the strip light over each spot, and the grime at the bottom */
+      for (let i = 0; i < n; i++) {
+        const lx = X0 + i * SP;
+        px(c, lx - 9, 8, 18, 5, p.K);
+        px(c, lx - 8, 9, 16, 3, '#fff6d8');
+      }
+      ART.dither(c, 0, FY - 22, W, 22, 'rgba(0,0,0,.22)', 0.1, 29);
     };
 
-    /* ---- the line itself: one scene frog per suspect ---- */
+    /* the line: anybody the evidence has ruled out stands crossed off */
     const actors = [];
-    const stand = c0.known ? [true] : CASE.standing();
     c0.suspects.forEach((sus, i) => {
       const out = !stand[i];
       actors.push({
@@ -498,52 +513,33 @@ const ROOMS = (() => {
         face: -1,
         still: out,
         crossed: out,
-        label: () => (out ? sus.name + ' - RULED OUT' : 'N.' + (i + 1) + '  ' + sus.name),
-        hint: () => (out ? 'HE IS NOT YOUR FROG' : 'LOOK AT HIM'),
-        onUse: () => STORY.lookAt(i),
+        label: () => 'N.' + (i + 1) + '  ' + sus.name,
+        hint: () => (out ? 'WHAT YOU FOUND SAYS NO' : 'SAY THE NAME'),
+        onUse: () => STORY.nameHim(i),
       });
     });
-
-    /* the barman, behind his own bar, and the file on it */
+    /* the captain, on your side of the glass, watching you do it */
     actors.push({
-      id: 'barman', x: 108, y: FY, key: BAR_RIG.key, def: BAR_RIG.def, face: 1,
-      label: 'THE BARMAN',
-      hint: () => (G.case && G.case.quiz > 0 && (G.case.asks || []).some((a, i) => CASE.canAsk(i))
-        ? G.case.quiz + ' QUESTIONS LEFT' : 'HE IS DONE TALKING'),
-      onUse: () => STORY.askRoom(),
+      id: 'cap', x: X0 - 74, y: FY, key: CAP_RIG.key, def: CAP_RIG.def, face: 1, still: true,
+      label: 'CAPTAIN ROOK',
+      hint: () => (CASE.left() > 1 ? CASE.left() + ' OF THEM STILL FIT' : 'ONE LEFT. SAY IT.'),
+      onUse: () => STORY.lineupTalk(),
     });
 
     const spots = [
-      { id: 'file', x: 76, w: 26, top: FY - 34,
-        label: 'THE CASE FILE',
-        hint: () => (G.case && G.case.looks > 0 ? G.case.looks + ' LOOKS LEFT' : 'NOTHING LEFT TO READ'),
-        onUse: () => STORY.readEvidence() },
-      { id: 'juke', x: W - 60, w: 30, top: FY - 48,
-        label: 'THE JUKEBOX',
-        hint: 'PUT SOMETHING ON',
-        onUse: () => STORY.juke() },
-      { id: 'back', x: W - 20, w: 30, top: 40,
-        label: () => (G.case && G.case.done ? 'TAKE HIM IN THE BACK' : 'THE BACK ROOM'),
-        hint: () => (G.case && G.case.done ? 'SIT DOWN WITH HIM' : 'GO IN WITHOUT NAMING ANYBODY'),
-        onUse: () => STORY.sitDown() },
+      { id: 'file', x: 99, w: 74, top: FY - 36,
+        label: 'WHAT YOU BROUGHT BACK',
+        hint: () => ((typeof CITY !== 'undefined' ? CITY.found().length : 0) + ' PIECES ON THE TABLE'),
+        onUse: () => STORY.readFindings() },
       { id: 'out', x: 32, w: 44, top: 34,
-        label: 'THE STREET',
-        hint: 'WALK AWAY FROM THIS ONE',
-        onUse: () => STORY.leaveLead() },
+        label: 'BACK UP TO THE BULLPEN',
+        hint: 'LEAVE THEM STANDING',
+        onUse: () => STORY.leaveLineup() },
     ];
 
-    /* what the cast stands behind, and what is painted over them */
     const onPaintFront = (c) => {
-      const p = P();
-      c.drawImage(ART.barCounter(96, 26, seed % 17), 62, FY - 26);
-      /* a glass and an ashtray somebody left on it */
-      px(c, 74, FY - 30, 4, 5, '#8c2230');
-      px(c, 74, FY - 31, 4, 1, '#d13b45');
-      px(c, 128, FY - 29, 6, 3, '#3a3f52');
-      px(c, 130, FY - 31, 1, 2, '#c9c0a8');
       actors.forEach(a => {
         if (!a.crossed) return;
-        /* ruled out: a red cross the width of the frog it is over */
         const h = SCENE.rigH(a), w = Math.round(h * 0.6);
         const x = a.x, y = FY - h + 4;
         for (let i = 0; i < w; i++) {
@@ -557,8 +553,8 @@ const ROOMS = (() => {
     return {
       id: 'lineup', w: W, floorY: FY, paint, onPaintFront, actors, spots,
       enterX: 44, enterFace: 1,
-      lights: [{ x: 110, y: 20, r: 40 }, { x: X0 + (n * SP) / 2, y: 14, r: 60, a: 0.07 },
-               { x: W - 50, y: 20, r: 36, flicker: true }],
+      lights: [{ x: X0 + (n * SP) / 2, y: 10, r: 70, a: 0.1 },
+               { x: 100, y: 20, r: 34, flicker: true }],
     };
   }
 

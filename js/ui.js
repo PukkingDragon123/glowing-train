@@ -77,6 +77,7 @@ const UI = {
       case 'board':      UI.buildRoom(app, ROOMS.boardRoom()); break;
       case 'ward':       UI.buildRoom(app, ROOMS.ward()); break;
       case 'blind':      UI.buildRoom(app, ROOMS.lineup()); break;
+      case 'place':      UI.buildRoom(app, PLACES.build(G.place) || ROOMS.precinct()); break;
       case 'duel':
       case 'loot':       UI.buildDuel(app); DUEL.enter(); break;
       case 'ending':     UI.buildEnding(app); break;
@@ -86,7 +87,10 @@ const UI = {
     if (typeof TUTOR !== 'undefined' && TUTOR.armed()) setTimeout(() => TUTOR.check(), 260);
   },
 
-  isScene(ph) { return ph === 'precinct' || ph === 'board' || ph === 'ward' || ph === 'blind'; },
+  isScene(ph) {
+    return ph === 'precinct' || ph === 'board' || ph === 'ward' ||
+      ph === 'blind' || ph === 'place';
+  },
 
   /* a room you walk around in: the story HUD, then the scene */
   buildRoom(app, room) {
@@ -140,6 +144,20 @@ const UI = {
     logo.appendChild(UI.txt('S&D', { scale: 3, color: PIX.PAL.g }));
     L.appendChild(logo);
 
+    /* THE NIGHT. The hour, and what the sky is doing — both of them are
+       real: the clock is the budget and the weather is a modifier. */
+    if (typeof CITY !== 'undefined' && G.phase !== 'title') {
+      const sky = CITY.sky();
+      const nite = U.el('span', 'tb-chip has-tip tb-clock');
+      nite.id = 'tb-clock';
+      nite.dataset.tipText = CITY.watch().word + ' - ' + sky.word + ' - ' +
+        Math.max(0, Math.round(CITY.minutesLeft() / 60)) + ' HOURS OF SHIFT LEFT';
+      nite.appendChild(UI.txt(CITY.hhmm(), {
+        scale: 2, color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.q }));
+      nite.appendChild(UI.txt(sky.word, { scale: 1, color: PIX.PAL.u }));
+      L.appendChild(nite);
+    }
+
     /* which chapter of the case you are in, by name — no floors, no antes.
        On a narrow phone the name sets a size down so it never runs into
        the hearts. */
@@ -175,12 +193,33 @@ const UI = {
     mute.appendChild(UI.txt(SFX.muted ? 'X' : ')))', { scale: bk, shadow: null, color: PIX.PAL.w }));
     mute.onclick = () => { SFX.toggleMute(); UI.put(mute, UI.txt(SFX.muted ? 'X' : ')))', { scale: bk, shadow: null, color: PIX.PAL.w })); };
     R.appendChild(mute);
+    /* the phone lives in your coat; the topbar just reminds you it is there */
+    if (typeof PHONE !== 'undefined' && UI.isScene(G.phase)) {
+      const ph = U.el('button', 'pixbtn tb-btn tb-phone has-tip');
+      ph.dataset.tipText = 'THE FROGGOPHONE - map, case file  (P)';
+      ph.appendChild(UI.txt('PH', { scale: bk, shadow: null, color: PIX.PAL.G }));
+      ph.onclick = () => PHONE.toggle('map');
+      R.appendChild(ph);
+    }
     const help = U.el('button', 'pixbtn tb-btn');
     help.appendChild(UI.txt('?', { scale: bk, shadow: null, color: PIX.PAL.G }));
     help.onclick = () => UI.showHelp();
     R.appendChild(help);
 
     bar.appendChild(L); bar.appendChild(C); bar.appendChild(R);
+  },
+
+  /* the clock moved: repaint the corner without rebuilding the room */
+  syncStory() {
+    const n = document.getElementById('tb-clock');
+    if (!n || typeof CITY === 'undefined') return;
+    const sky = CITY.sky();
+    n.innerHTML = '';
+    n.dataset.tipText = CITY.watch().word + ' - ' + sky.word + ' - ' +
+      Math.max(0, Math.round(CITY.minutesLeft() / 60)) + ' HOURS OF SHIFT LEFT';
+    n.appendChild(UI.txt(CITY.hhmm(), {
+      scale: 2, color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.q }));
+    n.appendChild(UI.txt(sky.word, { scale: 1, color: PIX.PAL.u }));
   },
 
   syncChips() {
@@ -451,8 +490,7 @@ const UI = {
       UI.goto(() => E.newRun(inp.value)).then(() => {
         META.bump('loreSeen'); META.save();
         return CINE.lore(seen);
-      }).then(() => CINE.reloadRoom())
-        .then(() => CINE.driveTo())
+      }).then(() => CINE.driveTo())
         .then(() => {
           UI.render();
           return STORY.arrive('precinct');
@@ -1390,6 +1428,13 @@ const UI = {
       const k = e.key.toLowerCase();
       if (k === 'm') { document.getElementById('btn-mute') ? document.getElementById('btn-mute').click() : SFX.toggleMute(); return; }
       if (k === 'h' || e.key === '?') { UI.modalOpen() ? UI.closeModal() : UI.showHelp(); return; }
+      /* the phone, out of your coat, anywhere you can walk */
+      if (k === 'p' && typeof PHONE !== 'undefined' && UI.isScene(G.phase)) {
+        PHONE.toggle('map'); return;
+      }
+      if (e.key === 'Escape' && typeof PHONE !== 'undefined' && PHONE.isOpen()) {
+        PHONE.close(); return;
+      }
       if (e.key === 'Escape') { UI.closeModal(); return; }
       if (e.key === 'Tab' && (G.phase === 'duel' || G.phase === 'blind' || G.phase === 'loot')) {
         e.preventDefault();

@@ -79,6 +79,38 @@ const CHAPTERS = [
     obj: 'END IT' },
 ];
 
+/* who answers questions in each place, and what the regulars say */
+const PLACE_WITNESS = {
+  laundry: typeof LAUNDER_DEF !== 'undefined' ? LAUNDER_DEF : null,
+  docks: typeof WATCH_DEF !== 'undefined' ? WATCH_DEF : null,
+  pawn: typeof PAWN_DEF !== 'undefined' ? PAWN_DEF : null,
+  diner: typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null,
+  bar: typeof BARMAN_DEF !== 'undefined' ? BARMAN_DEF : null,
+};
+
+const PLACE_CHAT = {
+  laundry: [
+    'THE MACHINES RUN ALL NIGHT. NOBODY HEARS ANYTHING OVER THEM.',
+    'THEY TOOK HIM OUT THAT DOOR AT FOUR. NOBODY SIGNED FOR HIM EITHER.',
+  ],
+  docks: [
+    'THE CRANE GOES ON AT MIDNIGHT AND NOBODY ASKS WHO BOOKED IT.',
+    'YOU CAN PUT ANYTHING IN THIS WATER. IT ALL COMES BACK AT THE BEND.',
+  ],
+  pawn: [
+    'EVERYTHING IN HERE BELONGED TO SOMEBODY WHO NEEDED IT MORE.',
+    'I DO NOT ASK. THAT IS THE WHOLE BUSINESS.',
+  ],
+  diner: [
+    'COFFEE IS FRESH AT TWO AND AT FIVE. IN BETWEEN IT IS A THREAT.',
+    'HALF THIS ROOM IS RUNNING FROM THE OTHER HALF.',
+  ],
+  bar: [
+    'HE DRINKS HERE. HE DOES NOT TALK HERE.',
+    'PUT SOMETHING ON THE JUKEBOX AND THE ROOM FORGETS YOU.',
+  ],
+};
+
 const STORY = {
 
   /* ================= state ================= */
@@ -131,6 +163,7 @@ const STORY = {
     board:    { name: 'THE BOARD ROOM', sub: 'NOBODY SIGNED OFF ON THIS CASE', from: 220, to: 40 },
     ward:     { name: 'THE CITY INFIRMARY', sub: 'AGAINST MEDICAL ADVICE', from: 280, to: 70 },
     lead:     { name: null, sub: 'THE CREW DRINKS HERE', from: 0, to: 0 },
+    lineup:   { name: 'THE LINE-UP ROOM', sub: 'SAY ONE NAME AND MEAN IT', from: 300, to: 60 },
   },
 
   async arrive(kind, nameOverride) {
@@ -483,25 +516,333 @@ const STORY = {
 
   /* ================= going out to work the lead ================= */
 
+  /* The street door does not go anywhere by itself any more: it gets the
+     car, and the car is the phone. */
   async goOut() {
     if (!STORY.lead()) {
       await TUTOR.say('YOU HAVE NOWHERE TO BE. SEE THE CAPTAIN FIRST.',
         { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
       return;
     }
-    /* whoever was at the last table is finished with; make sure there is
-       somebody at this one */
+    /* whoever was at the last table is finished with; roll tonight's frog,
+       his decoys, and bury the clues across the city */
     if (!G.duel || G.duel.over) { STORY.clearTable(); G.case = null; E.startBlind(); }
+    if (!G.case) CASE.build();
+    PHONE.open('map');
+  },
+
+  /* ============================================================
+     THE CITY.
+
+     Driving, searching, asking. Everything out here costs the
+     clock, and the clock is the night.
+     ============================================================ */
+
+  async travel(id) {
+    const p = CITY.PLACES[id];
+    if (!p || CITY.at(id) || CINE.busy) return;
+    if (!G.case && id !== 'precinct') CASE.build();
     SCENE.close();
-    await CINE.driveTo(STORY.chapter().where);
-    G.phase = 'blind';
+    CITY.spend('travel');
+    G.weather = CITY.rollWeather();
+    await CINE.driveTo(p.name);
+    if (id === 'precinct') {
+      G.place = 'precinct';
+      G.phase = 'precinct';
+      UI.render();
+      await STORY.arrive('precinct');
+    } else {
+      CITY.visit(id);
+      G.phase = 'place';
+      UI.render();
+      await STORY.arrivePlace(id);
+    }
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* the establishing shot for a place: name, hour and sky */
+  async arrivePlace(id) {
+    const p = CITY.PLACES[id];
+    if (!p || !SCENE.def) return;
+    await CINE.establish({
+      name: p.name,
+      sub: p.sub + '  -  ' + CITY.hhmm() + '  -  ' + CITY.sky().word,
+      from: Math.min(SCENE.def.w - 10, SCENE.me.x + 150),
+      to: SCENE.me.x, ms: 1700,
+    });
+  },
+
+  /* ---------- putting your hand in something ---------- */
+  async search(place, prop) {
+    if (CINE.busy) return;
+    /* the two props that are jobs, not searches */
+    if (prop === 'pour') return STORY.pourJob();
+    if (prop === 'donuts') return STORY.donutJob();
+    if (prop === 'juke') return STORY.juke();
+
+    if (CITY.searched(place, prop)) {
+      await TUTOR.say('YOU HAVE BEEN THROUGH THIS ONCE ALREADY.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 1600, top: true });
+      return;
+    }
+    const clue = CITY.plantedAt(place, prop);
+    CITY.markSearched(place, prop);
+    CITY.spend('search');
+    SCENE.focus(SCENE.me.x);
+    try {
+      if (clue) {
+        clue.seen = true;
+        clue.foundAt = place + ':' + prop;
+        STORY.note('FOUND AT ' + CITY.PLACES[place].short + ': ' + clue.text);
+        SFX.jackpot();
+        await CINE.clueCard(clue, CASE.left());
+        if (CASE.left() === 1) {
+          await TUTOR.say('ONE FACE LEFT. TAKE IT TO THE STATION AND SAY THE NAME.',
+            { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+        }
+      } else {
+        await STORY.nothingIn(place, prop);
+      }
+    } finally { SCENE.unfocus(); }
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* what a dry prop gives you: junk, a few notes, or the wrong attention */
+  async nothingIn(place, prop) {
+    const r = (G.rng || Math.random)();
+    if (r < 0.18) {
+      const cash = 8 + Math.floor((G.rng || Math.random)() * 14);
+      G.chips += cash;
+      SFX.chip && SFX.chip();
+      await TUTOR.say('LOOSE NOTES. ' + cash + ' OF THEM. NOBODY IS COMING BACK FOR IT.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+    } else if (r < 0.3) {
+      G.heat = Math.min(6, (G.heat || 0) + 1);
+      await TUTOR.say('SOMEBODY WATCHED YOU DO THAT. THE STREET WILL KNOW BY MORNING.',
+        { name: 'YOU', nameCol: PIX.PAL.R, rim: PIX.PAL.r });
+    } else {
+      await TUTOR.say(U.pick(G.rng || Math.random, CITY.NOTHING),
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2200, top: true });
+    }
+  },
+
+  /* ---------- a witness ---------- */
+  async askWitness(place, who) {
+    if (CINE.busy) return;
+    const c = G.case;
+    if (!c) return;
+    const open = (c.asks || []).map((a, i) => i).filter(i => CASE.canAsk(i));
+    if (!open.length || CASE.left() <= 1) {
+      await TUTOR.say('HE HAS TOLD YOU EVERYTHING HE IS GOING TO.',
+        { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, hold: 1900, top: true });
+      return;
+    }
+    /* fog and hard rain cost him a detail: one fewer question on offer */
+    const sky = CITY.sky();
+    const show = open.slice(0, sky.wit < 0 ? Math.max(1, open.length - 1) : open.length);
+    const pickIdx = await CINE.pick({
+      head: 'WHAT DO YOU ASK HIM',
+      sub: sky.wit < 0 ? 'HE SAW LESS THAN HE THINKS - ' + sky.word : 'HE WAS HERE ALL NIGHT',
+      items: show.map(i => ({ label: c.asks[i].ask })),
+    });
+    if (pickIdx < 0) return;
+    const i = show[pickIdx];
+    const a = CASE.ask(i);
+    CITY.spend('ask');
+    if (!a) return;
+    await STORY.converse(who, async () => {
+      await TUTOR.say(a.reply, {
+        name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n,
+        art: SPR.frogCustom('wit:' + place, PLACE_WITNESS[place] || BARMAN_DEF),
+      });
+      const n = CASE.left();
+      await TUTOR.say(n > 1 ? n + ' OF THEM STILL FIT THAT.' : 'THAT IS ONE FACE. ONLY ONE.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+    });
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  async placeTalk(place, who) {
+    const lines = PLACE_CHAT[place] || ['NOBODY HERE WANTS TO TALK TO A COP.'];
+    CITY.spend('talk');
+    await TUTOR.say(U.pick(G.rng || Math.random, lines),
+      { name: 'A REGULAR', nameCol: PIX.PAL.d, rim: PIX.PAL.D });
+  },
+
+  /* ---------- the night runs out ---------- */
+  async dawn() {
+    if (G.dawnDone) return;
+    G.dawnDone = true;
+    await CINE.dawnCard();
+    STORY.note('THE SHIFT ENDED WITH THE CASE OPEN.');
+    SCENE.close();
+    G.place = 'precinct';
+    G.phase = 'precinct';
+    G.clock = CITY.START;                 // the next night starts fresh
+    G.dawnDone = false;
+    G.weather = CITY.rollWeather();
     UI.render();
-    await STORY.arrive('lead', STORY.chapter().where);
+    await STORY.arrive('precinct');
+    await TUTOR.say('YOU LOST THE NIGHT. THE CASE IS STILL OPEN AND SO IS THE DOOR.',
+      { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+  },
+
+  /* ============================================================
+     THE SIDE JOBS.
+
+     Nobody in this city gets paid enough. The taps and the fryer
+     both pay in money and in somebody deciding they like you,
+     which is worth more than the money.
+     ============================================================ */
+
+  async pourJob() {
+    if (G.jobsDone && G.jobsDone.pour) {
+      await TUTOR.say('YOU HAVE DONE YOUR SHIFT. GO AND BE A DETECTIVE.',
+        { name: 'THE BARMAN', nameCol: PIX.PAL.N, rim: PIX.PAL.n, hold: 2000, top: true });
+      return;
+    }
+    const r = await JOBS.pour();
+    (G.jobsDone = G.jobsDone || {}).pour = 1;
+    CITY.spend('job');
+    STORY.note('WORKED THE TAPS FOR ' + r.pay + '.');
+    await TUTOR.say(r.hits === 3 ? 'THREE CLEAN ONES. ' + r.pay + ' AND I OWE YOU AN ANSWER.'
+      : r.hits ? 'CLOSE ENOUGH. ' + r.pay + ' AND WIPE THE BAR.'
+        : 'YOU WORE MOST OF THAT. NOTHING FOR YOU.',
+      { name: 'THE BARMAN', nameCol: PIX.PAL.N, rim: PIX.PAL.n,
+        art: SPR.frogCustom('wit:bar', BARMAN_DEF) });
+    /* a good shift buys another question out of him */
+    if (r.hits === 3 && G.case) {
+      G.case.quiz = (G.case.quiz || 0) + 1;
+      await TUTOR.say('ASK ME ONE MORE THING. GO ON.',
+        { name: 'THE BARMAN', nameCol: PIX.PAL.N, rim: PIX.PAL.n });
+    }
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  async donutJob() {
+    if (G.jobsDone && G.jobsDone.donuts) {
+      await TUTOR.say('THE TRAY IS FULL. TAKE ONE AND SIT DOWN.',
+        { name: 'THE COOK', nameCol: PIX.PAL.N, rim: PIX.PAL.n, hold: 2000, top: true });
+      return;
+    }
+    const r = await JOBS.donuts();
+    (G.jobsDone = G.jobsDone || {}).donuts = 1;
+    CITY.spend('job');
+    STORY.note('MADE A TRAY OF DONUTS FOR ' + r.pay + '.');
+    /* eating on the job is the only medicine in this game */
+    if (r.hits > 0 && G.hearts < 6) { G.hearts = Math.min(6, G.hearts + 1); SFX.heal && SFX.heal(); }
+    await TUTOR.say(r.hits === 3 ? 'ALL THREE. ' + r.pay + ', AND EAT ONE BEFORE YOU FALL OVER.'
+      : r.hits ? 'TWO GOOD ONES. ' + r.pay + '. EAT.'
+        : 'YOU BURNED THE LOT. GET OUT OF MY KITCHEN.',
+      { name: 'THE COOK', nameCol: PIX.PAL.N, rim: PIX.PAL.n,
+        art: SPR.frogCustom('wit:cook', COOK_DEF) });
+    /* and the cook tells you where there is still something to find */
+    if (r.hits >= 2 && G.case) {
+      const left = (G.case.clues || []).filter(cl => !cl.seen && cl.at);
+      if (left.length) {
+        const where = CITY.PLACES[left[0].at];
+        G.tips = G.tips || {};
+        G.tips[left[0].at] = 'THE COOK SAYS LOOK HERE';
+        await TUTOR.say('MY BROTHER DRIVES A VAN. HE SAYS THERE IS SOMETHING AT ' +
+          where.short + '.', { name: 'THE COOK', nameCol: PIX.PAL.N, rim: PIX.PAL.n });
+      }
+    }
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* ============================================================
+     THE LINE-UP, AT THE STATION, LAST.
+
+     You do not name anybody in the field any more. You bring what
+     you found back here, they stand them up behind the glass, and
+     you say one name out loud.
+     ============================================================ */
+
+  async toLineup() {
+    if (!G.case) { CASE.build(); }
+    const c = G.case;
+    if (!c) return;
+    /* A BOSS IS NOT A MYSTERY. You have had his face on your own wall for
+       six years — there is nobody to stand up next to him. They take you
+       straight through to the back room instead. */
+    if (c.known) {
+      await TUTOR.say('NO LINE-UP FOR THIS ONE. YOU KNOW EXACTLY WHO HE IS.',
+        { name: 'CAPTAIN ROOK', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+      return STORY.sitDown();
+    }
+    if (c.done) return STORY.sitDown();
+    if (!CITY.found().length && !(c.asks || []).some(a => a.asked)) {
+      await TUTOR.say('YOU HAVE NOTHING ON ANY OF THEM. GO AND FIND SOMETHING.',
+        { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+      return;
+    }
+    CITY.spend('lineup');
+    await UI.goto(() => { G.phase = 'blind'; });
+    /* UI.goto is a no-op while a cinematic still owns the screen: if the
+       wipe never ran, take the stairs without it rather than standing in
+       the bullpen with nothing happening */
+    if (G.phase !== 'blind') { G.phase = 'blind'; UI.render(); }
+    await STORY.arrive('lineup');
+  },
+
+  /* say a name */
+  async nameHim(i) {
+    const c = G.case;
+    if (!c || c.done) return;
+    const s = c.suspects[i];
+    const go = await CINE.pick({
+      head: 'NUMBER ' + (i + 1) + '. ' + s.name,
+      sub: CASE.standing()[i] ? 'EVERYTHING YOU FOUND STILL FITS HIM'
+        : 'WHAT YOU FOUND SAYS THIS IS NOT HIM',
+      items: [{ label: 'THAT IS HIM' }, { label: 'NOT YET' }],
+    });
+    if (go !== 0) return;
+    const right = CASE.accuse(i);
+    if (right) {
+      STORY.note('NAMED ' + s.name + '. IT WAS HIM.');
+      SFX.jackpot();
+      await CINE.namedCard(s, true);
+      await STORY.sitDown();
+    } else {
+      STORY.note('NAMED ' + s.name + '. IT WAS NOT HIM.');
+      SFX.backfire && SFX.backfire();
+      await CINE.namedCard(s, false);
+      await TUTOR.say('HE WALKS OUT PAST YOU. THE ONE YOU WANT KNOWS YOUR FACE NOW.',
+        { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+      await STORY.sitDown();
+    }
   },
 
   /* ================= what a body is worth ================= */
 
   /* called from the loot when his papers are in your hand */
+  async lineupTalk() {
+    const n = CASE.left();
+    await TUTOR.say(n > 1
+      ? n + ' OF THEM STILL FIT WHAT YOU BROUGHT ME. GO AND FIND SOMETHING ELSE OR GUESS.'
+      : 'ONE. SAY IT AND I WILL HAVE HIM PUT IN THE BACK ROOM.',
+      { name: 'CAPTAIN ROOK', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+  },
+
+  async readFindings() {
+    const got = CITY.found();
+    if (!got.length) {
+      await TUTOR.say('AN EMPTY TABLE. YOU HAVE NOT BROUGHT ME ANYTHING.',
+        { name: 'THE TABLE', nameCol: PIX.PAL.q, rim: PIX.PAL.d, hold: 2200, top: true });
+      return;
+    }
+    for (const cl of got) {
+      await TUTOR.say(cl.text + '  (RULES OUT ' + cl.cut + ')',
+        { name: 'WHAT YOU FOUND', nameCol: PIX.PAL.G, rim: PIX.PAL.g });
+    }
+  },
+
+  async leaveLineup() {
+    SCENE.close();
+    await UI.goto(() => { G.phase = 'precinct'; });
+    await STORY.arrive('precinct');
+  },
+
   onDossier() {
     const c = STORY.takeCard();
     if (c) {

@@ -12,7 +12,8 @@
 const fs = require('fs');
 const path = require('path');
 const jsdir = path.join(__dirname, '..', 'js') + path.sep;
-const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'case.js', 'story.js', 'engine.js']
+const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'city.js',
+  'case.js', 'story.js', 'engine.js']
   .map(f => fs.readFileSync(jsdir + f, 'utf8')).join('\n;\n');
 
 /* The story layer talks to the screen when a human is watching. Headless,
@@ -22,10 +23,17 @@ const STUBS = `
   const UI = { render(){}, stampSmall(){}, stampBig(){}, syncChips(){}, chipTick(){},
     shake(){}, syncDuel(){}, wrap(){}, txt(){}, goto(fn){ if (fn) fn(); return Promise.resolve(); } };
   const TUTOR = { say: async () => {}, skipAll(){}, armed(){ return false; }, check(){} };
-  const SCENE = { close(){}, open(){}, walkTo(){} };
+  const SCENE = { close(){}, open(){}, walkTo(){}, focus(){}, unfocus(){},
+    me: { x: 40 }, def: null };
+  const PHONE = { open(){}, close(){}, toggle(){}, isOpen(){ return false; } };
+  const JOBS = { pour: async () => ({ hits: 0, perfect: 0, pay: 0, rounds: 3 }),
+    donuts: async () => ({ hits: 0, perfect: 0, pay: 0, rounds: 3 }) };
+  const PLACES = { build(){ return null; }, has(){ return false; } };
   const CINE = { driveTo: async () => {}, ambulance: async () => {}, dragLoad: async () => {},
     chapterCard: async () => {}, ending: async () => {}, titleBeat: async () => {},
-    choice: async () => 'bullet', pick: async () => -1, anteClear: async () => {} };
+    choice: async () => 'bullet', pick: async () => -1, anteClear: async () => {},
+    clueCard: async () => {}, namedCard: async () => {}, dawnCard: async () => {},
+    establish: async () => {}, letterbox(){}, busy: false };
 `;
 
 function driver() {
@@ -201,7 +209,7 @@ function driver() {
       if (G.phase === 'blind') {
         /* the bot works the room: it turns every free clue and asks every
            free question, then names whoever is still standing */
-        workTheRoom();
+        workTheCity();
         E.sitDown();
         continue;
       }
@@ -229,29 +237,56 @@ function driver() {
     return {
       chapter: G.chapter, cards: (G.intelCards || []).length, wardTrips, finale,
       boardFull: STORY.canFinish(), badge: !G.badgePulled,
+      searches: G.simSearches || 0, nightsOut: G.simNightsOut || 0,
+      named: G.run.called, misnamed: G.run.misnamed,
     };
   }
 
-  /* the identification game, played by a bot with no eyes: it uses the free
-     looks and questions, then names one of whoever is left */
-  function workTheRoom() {
+  /* THE INVESTIGATION, played by a bot with no eyes and no hunches.
+
+     It drives to a stop, puts its hand in something at random, pays the
+     clock for it, and keeps going until the night is gone or one face is
+     left standing. Then it goes back to the station and says a name. A
+     real player knows things this bot cannot — which is the point: these
+     numbers are the floor, not the ceiling. */
+  function workTheCity() {
     if (!G.case) CASE.build();
     const c = G.case;
     if (c.known || c.done) return;
-    let guard = 0;
-    while (c.looks > 0 && guard++ < 20) {
-      const i = c.clues.findIndex(cl => !cl.seen);
-      if (i < 0) break;
-      CASE.flip(i);
+    CITY.reset();                          // a fresh night per lead
+    G.place = 'precinct';
+    let guard = 0, searches = 0;
+    while (!CITY.nightOver() && CASE.left() > 1 && guard++ < 80) {
+      /* somewhere with anything left to turn over */
+      const open = CITY.ORDER.filter(id => CITY.unsearchedAt(id).length);
+      if (!open.length) break;
+      /* a bot with a tip follows it; otherwise it picks a stop at random */
+      const tipped = open.filter(id => G.tips && G.tips[id]);
+      const to = (tipped.length && Math.random() < 0.6 ? tipped : open)[
+        Math.floor(Math.random() * (tipped.length && Math.random() < 0.6 ? tipped.length : open.length))
+      ] || open[0];
+      if (!CITY.at(to)) { CITY.spend('travel'); CITY.visit(to); G.weather = CITY.rollWeather(); }
+      /* search two or three things while it is here, then move on */
+      let here = 0;
+      while (here++ < 3 && !CITY.nightOver() && CASE.left() > 1) {
+        const props = CITY.unsearchedAt(to);
+        if (!props.length) break;
+        const prop = props[Math.floor(Math.random() * props.length)];
+        CITY.markSearched(to, prop);
+        CITY.spend('search');
+        searches++;
+        const clue = CITY.plantedAt(to, prop);
+        if (clue) clue.seen = true;
+      }
+      /* and asks the witness something on the way out */
+      if (Math.random() < 0.4) {
+        const i = (c.asks || []).findIndex((a, k) => CASE.canAsk(k));
+        if (i >= 0) { CASE.ask(i); CITY.spend('ask'); }
+      }
     }
-    guard = 0;
-    while (c.quiz > 0 && guard++ < 20) {
-      const i = (c.asks || []).findIndex((a, k) => CASE.canAsk(k));
-      if (i < 0) break;
-      CASE.ask(i);
-    }
-    /* one more look off the books, if it is affordable and the field is wide */
-    if (CASE.canGrease() && CASE.left() > 2 && G.chips >= CASE.greaseCost() * 2) CASE.grease();
+    CITY.spend('lineup');
+    G.simSearches = (G.simSearches || 0) + searches;
+    G.simNightsOut = (G.simNightsOut || 0) + (CITY.nightOver() ? 1 : 0);
     const stand = CASE.standing();
     const live = stand.map((ok, i) => ok ? i : -1).filter(i => i >= 0);
     if (!live.length) return;
@@ -261,12 +296,15 @@ function driver() {
   const N = 500;
   let crashes = 0, finales = 0, boards = 0, badges = 0, goodEndings = 0;
   let chapters = 0, cards = 0, wards = 0, duelsWon = 0, shots = 0, gunSum = 0;
+  let searches = 0, nightsOut = 0, named = 0, misnamed = 0;
   const collapse = {};
 
   for (let run = 0; run < N; run++) {
     try {
       const r = playRun('SIM-' + run, 9);
       chapters += r.chapter; cards += r.cards; wards += r.wardTrips;
+      searches += r.searches; nightsOut += r.nightsOut;
+      named += r.named; misnamed += r.misnamed;
       if (r.finale) finales++;
       if (r.boardFull) boards++;
       if (r.badge) badges++;
@@ -292,6 +330,9 @@ function driver() {
   console.log('avg duels won:', (duelsWon / N).toFixed(1),
     '· avg shots:', (shots / N).toFixed(1),
     '· avg gun idx:', (gunSum / N).toFixed(2));
+  console.log('the investigation: avg', (searches / N).toFixed(1), 'props searched per case ·',
+    (named / N).toFixed(2), 'named right ·', (misnamed / N).toFixed(2), 'named wrong ·',
+    (nightsOut / N).toFixed(2), 'nights ran out');
   console.log('how runs ended:', JSON.stringify(collapse));
   console.log('crashes:', crashes);
 
@@ -306,7 +347,7 @@ function driver() {
         if (G.phase === 'ward') { if (++trips > 4) break; resumeCase(); continue; }
         if (G.phase === 'precinct' || G.phase === 'board' || G.phase === 'ending') { resumeCase(); continue; }
         if (G.phase === 'blind') {
-          if (Math.random() < 0.5) workTheRoom();
+          if (Math.random() < 0.5) workTheCity();
           E.sitDown();
           continue;
         }

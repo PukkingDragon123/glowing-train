@@ -3,7 +3,7 @@
    Headless browser smoke test for SHELL & DEBT.
 
    Drives the whole case the way a player does: out of the murder
-   board, through the reload and the drive, around the bullpen on
+   board, through the drive across town, around the bullpen on
    foot, up to the captain, out to the lead, along the line-up,
    through the back door, across the table, out back with the
    body, and home again — then the ward, and both endings.
@@ -205,13 +205,11 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.evaluate(() => { const i = document.getElementById('seed-input'); if (i) i.value = 'SMOKE'; });
     await click('#btn-deal');
 
-    /* the lore reel, then the reload room, then the drive */
+    /* the lore reel, then the drive across town */
     await page.waitForTimeout(1400);
     await shot('02-lore');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(900);
-    if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('03-reload');
-    await page.waitForTimeout(2600);
+    await page.waitForTimeout(1200);
     if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('04-drive');
 
     /* ================= 2. the bullpen ================= */
@@ -281,49 +279,112 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForFunction(() => G2().phase === 'precinct', null, { timeout: 20000 });
     await page.waitForTimeout(600);
 
-    /* ================= 4. out to the lead ================= */
+    /* ================= 4. out into the city ================= */
+    /* the phone comes out of the coat: the map is the only way to the car */
     await page.evaluate(() => { STORY.goOut(); });
+    await page.waitForSelector('#phone-root.phone-on', { timeout: 20000 });
+    await page.waitForTimeout(400);
+    await shot('10-phone-map');
+    /* the case file app, and then away */
+    await page.evaluate(() => { PHONE.open('case'); });
+    await page.waitForTimeout(400);
+    await shot('11-phone-case');
+    await page.evaluate(() => { PHONE.close(); });
+    await page.waitForTimeout(300);
+
+    /* dig up every clue the case planted, wherever it planted them */
+    const plan = await page.evaluate(() => {
+      if (!G2().case) CASE.build();
+      return G2().case.clues.filter(c => !c.seen).map(c => ({ at: c.at, prop: c.prop }));
+    });
+    console.log('  the case is buried in: ' + plan.map(x => x.at + '/' + x.prop).join(', '));
+    let dug = 0;
+    for (const step of plan) {
+      await page.evaluate((x) => { STORY.travel(x); }, step.at);
+      await page.waitForFunction((x) => G2().phase === 'place' && G2().place === x && !CINE.busy,
+        step.at, { timeout: 40000 });
+      await settle();
+      await clearPlates(6);
+      if (!dug) { await shot('12-' + step.at); }
+      /* walk over to it, then put your hand in it */
+      await page.evaluate((pr) => {
+        const sp = SCENE.def.spots.find(s2 => s2.id === pr);
+        if (sp) SCENE.walkTo(sp.x - 14);
+      }, step.prop);
+      await page.waitForTimeout(900);
+      await page.evaluate((pr) => { STORY.search(G2().place, pr); }, step.prop);
+      await page.waitForTimeout(900);
+      if (await page.locator('.clue-card').count() && dug === 0) await shot('13-clue');
+      await page.mouse.click(700, 120);
+      await page.waitForTimeout(700);
+      await clearPlates(8);
+      dug++;
+    }
+    const left = await page.evaluate(() => CASE.left());
+    console.log('  clues dug: ' + dug + ', faces still fitting: ' + left);
+    if (dug && left >= (await page.evaluate(() => G2().case.suspects.length))) {
+      errors.push('[flow] found every clue and it ruled nobody out');
+    }
+
+    /* a witness, and the sky he saw it through */
+    await page.evaluate(() => { STORY.askWitness(G2().place, 'wit'); });
+    await page.waitForTimeout(700);
+    if (await pickerUp()) { await shot('14-witness'); await pickCard(0); await clearPlates(10); }
+
+    /* a shift on the taps, because the rent is due */
+    await page.evaluate(() => { STORY.travel('bar'); });
+    await page.waitForFunction(() => G2().place === 'bar' && !CINE.busy, null, { timeout: 40000 });
+    await settle();
+    await clearPlates(6);
+    await page.evaluate(() => { STORY.pourJob(); });
+    await page.waitForTimeout(900);
+    if (await page.locator('.job-card').count()) {
+      await shot('15-taps');
+      for (let i = 0; i < 3; i++) { await page.mouse.click(700, 400); await page.waitForTimeout(700); }
+      await page.waitForTimeout(600);
+      await clearPlates(10);
+    } else errors.push('[flow] the taps job never opened');
+
+    /* ================= 5. back to the station, and the line-up ================= */
+    await page.evaluate(() => { STORY.travel('precinct'); });
+    await page.waitForFunction(() => G2().phase === 'precinct' && !CINE.busy, null, { timeout: 40000 });
+    await clearPlates(6);
+    await page.evaluate(() => { STORY.toLineup(); });
     await page.waitForFunction(() => G2().phase === 'blind' && !!document.querySelector('.scene-cv'),
       null, { timeout: 40000 });
     await settle();
-    await shot('10-lead');
+    await clearPlates(6);
+    await shot('16-lineup');
+    /* say the name of whoever the evidence still allows */
+    const nameIdx = await page.evaluate(() => {
+      const st = CASE.standing();
+      const real = G2().case.suspects.findIndex(s2 => s2.real);
+      return st[real] ? real : st.findIndex(Boolean);
+    });
+    await page.evaluate((i) => { STORY.nameHim(i); }, nameIdx);
+    await page.waitForTimeout(700);
+    if (await pickerUp()) { await shot('17-name'); await pickCard(0); }
+    await page.waitForTimeout(1500);
+    await shot('18-named');
+    await page.mouse.click(700, 120);
+    await page.waitForTimeout(900);
+    await clearPlates(8);
 
-    /* the file on the bar */
-    await page.evaluate(() => { STORY.readEvidence(); });
-    if (await pickerUp()) { await shot('11-evidence'); await pickCard(0); await clearPlates(); }
-    /* a question for the barman */
-    await page.evaluate(() => { STORY.askRoom(); });
-    if (await pickerUp()) { await shot('12-ask'); await pickCard(0); await clearPlates(); }
-    await page.waitForTimeout(400);
-    await shot('13-line-thinned');
-
-    /* walk the line and name the one the file points at */
-    const realIdx = await page.evaluate(() => G2().case.suspects.findIndex(s => s.real));
-    await walkTo(await page.evaluate((i) => {
-      const a = SCENE.def.actors.find(x => x.id === 'sus' + i);
-      return a ? a.x - 16 : 200;
-    }, realIdx));
-    await page.evaluate((i) => { STORY.lookAt(i); }, realIdx);
-    if (await pickerUp()) { await shot('14-look'); await pickCard(0); }
-    await clearPlates();
-    await page.waitForTimeout(500);
-    await shot('15-named');
-
-    /* ================= 5. the table ================= */
-    await page.evaluate(() => { STORY.sitDown(); });
+    /* ================= 6. the table ================= */
+    if ((await state()).phase !== 'duel') await page.evaluate(() => { STORY.sitDown(); });
     if (await pickerUp()) await pickCard(0);
     await page.waitForFunction(() => G2().phase === 'duel', null, { timeout: 25000 });
     await page.waitForTimeout(1800);
-    await shot('16-sitdown');
+    await shot('19-sitdown');
     await page.waitForFunction(() => !DUEL.busy || G2().duel.over, null, { timeout: 30000 });
-    await shot('17-duel');
-    await winDuel('18-steady');
+    await shot('20-duel');
+    await winDuel('21-steady');
 
     /* ================= 6. out back ================= */
-    await doLoot('19-loot');
+    await doLoot('22-loot');
     const home = await state();
     console.log('after the first lead:', JSON.stringify(home));
-    await shot('20-home');
+    await shot('23-home');
     if (home.phase !== 'precinct' && home.phase !== 'blind') {
       errors.push('[flow] the body did not lead home, got ' + home.phase);
     }
@@ -331,11 +392,11 @@ fs.mkdirSync(SHOTS, { recursive: true });
     /* ================= 7. the ward ================= */
     await page.evaluate(() => { STORY.rushToWard(); });
     await page.waitForTimeout(1800);
-    await shot('21-ambulance');
+    await shot('24-ambulance');
     await page.waitForFunction(() => G2().phase === 'ward' && !!document.querySelector('.scene-cv'),
       null, { timeout: 30000 });
     await settle();
-    await shot('22-ward');
+    await shot('25-ward');
     await page.evaluate(() => { STORY.wardTalk(); });
     await page.waitForTimeout(400);
     await clearPlates();
@@ -359,19 +420,59 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await page.evaluate(() => { G2().briefed = G2().chapter; });
       const ph = (await state()).phase;
       if (ph === 'precinct') {
-        await page.evaluate(() => { STORY.goOut(); });
-        await page.waitForFunction(() => G2().phase === 'blind', null, { timeout: 40000 });
+        /* the city part is proved above; from here the shortcut is to take
+           the night's findings as read and go straight to the line-up */
+        /* let anything still running finish FIRST: a cinematic in flight can
+           deal a fresh case, which would throw away the findings below */
         await settle();
+        await clearPlates(6);
+        await page.evaluate(() => {
+          if (!G2().case) CASE.build();
+          (G2().case.clues || []).forEach(cl => { cl.seen = true; });
+        });
+        await page.evaluate(() => { STORY.toLineup(); });
+        /* Either the stairs open the line-up or, for a frog you already
+           know, the captain waves you straight through with a line first.
+           Both paths can park a plate in the way, so tap through while
+           watching for the phase to move. */
+        for (let t = 0; t < 24; t++) {
+          const ph2 = (await state()).phase;
+          if (ph2 === 'blind' || ph2 === 'duel') break;
+          await clearPlates(3);
+          await page.waitForTimeout(300);
+        }
+        const ph3 = (await state()).phase;
+        if (ph3 !== 'blind' && ph3 !== 'duel') {
+          errors.push('[flow] the stairs went nowhere, still in ' + ph3);
+          break;
+        }
+        await clearPlates(4);
+        if ((await state()).phase === 'blind') { await settle(); await clearPlates(4); }
+        const i2 = await page.evaluate(() => {
+          if (G2().phase !== 'blind') return -1;
+          const st = CASE.standing();
+          const real = G2().case.suspects.findIndex(s2 => s2.real);
+          return st[real] ? real : Math.max(0, st.findIndex(Boolean));
+        });
+        if (i2 >= 0) {
+          await page.evaluate((i) => { STORY.nameHim(i); }, i2);
+          await page.waitForTimeout(600);
+          if (await pickerUp()) await pickCard(0);
+          await page.waitForTimeout(1400);
+          await page.mouse.click(700, 120);
+          await page.waitForTimeout(700);
+          await clearPlates(8);
+        }
       }
       const isBoss = await page.evaluate(() => G2().blind === 2);
-      if (isBoss) await shot('23-lieutenant');
-      await page.evaluate(() => { STORY.sitDown(); });
+      if (isBoss) await shot('26-lieutenant');
+      if ((await state()).phase !== 'duel') await page.evaluate(() => { STORY.sitDown(); });
       if (await pickerUp()) await pickCard(0);
       await page.waitForFunction(() => G2().phase === 'duel', null, { timeout: 25000 });
       await page.waitForTimeout(1500);
-      if (isBoss) await shot('24-boss-duel');
+      if (isBoss) await shot('27-boss-duel');
       await winDuel();
-      await doLoot(isBoss ? '25-boss-loot' : null);
+      await doLoot(isBoss ? '28-boss-loot' : null);
       pinned = (await state()).cards;
       console.log('  lead ' + (lead + 1) + (isBoss ? ' (the lieutenant)' : '') +
         ' done, pieces pinned: ' + pinned);
@@ -383,10 +484,10 @@ fs.mkdirSync(SHOTS, { recursive: true });
     /* ================= 9. mobile ================= */
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(700);
-    await shot('26-mobile-precinct');
+    await shot('29-mobile-precinct');
     await page.setViewportSize({ width: 844, height: 390 });
     await page.waitForTimeout(700);
-    await shot('27-mobile-landscape');
+    await shot('30-mobile-landscape');
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForTimeout(500);
 
@@ -399,26 +500,26 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.evaluate(() => { STORY.endgame(); });
     await page.waitForSelector('.pick-card', { timeout: 10000 });
     await page.waitForTimeout(500);
-    await shot('28-choice');
+    await shot('31-choice');
     await pickCard(0);                              // the badge
     await page.waitForTimeout(2400);
-    await shot('29-court');
+    await shot('32-court');
     await page.waitForTimeout(2600);
-    await shot('30-graves');
+    await shot('33-graves');
     await page.waitForTimeout(3000);
     await page.mouse.click(720, 500);
     await page.waitForFunction(() => G2().phase === 'ending', null, { timeout: 30000 });
     await page.waitForTimeout(600);
-    await shot('31-ending');
+    await shot('34-ending');
     const end = await page.evaluate(() => G2().ending);
     if (end !== 'good') errors.push('[flow] the badge did not produce the good ending, got ' + end);
 
     /* and the other one */
     await page.evaluate(() => { G2().ending = null; CINE.ending('bad'); });
     await page.waitForTimeout(1100);
-    await shot('32-bad-room');
+    await shot('35-bad-room');
     await page.waitForTimeout(2400);
-    await shot('33-bad-chair');
+    await shot('36-bad-chair');
     await page.waitForTimeout(2600);
     await page.mouse.click(720, 500);
     await page.waitForTimeout(600);

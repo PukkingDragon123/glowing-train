@@ -2453,10 +2453,14 @@ body.in-scene #app { overflow: hidden; }
   pointer-events: none;
   display: none;
   filter: drop-shadow(0 3px 0 rgba(0,0,0,.6));
-  animation: plate-pop .12s steps(2);
+  animation: plate-pop .16s cubic-bezier(.2, 1.7, .4, 1);
 }
 .scene-plate canvas { display: block; image-rendering: pixelated; }
-@keyframes plate-pop { from { transform: translateX(-50%) translateY(3px); } }
+/* the plate snaps up past its mark and settles — steps() made it teleport */
+@keyframes plate-pop {
+  from { transform: translateX(-50%) translateY(6px) scale(.88); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+}
 
 /* ============================================================
    30. THE STORY HUD
@@ -2587,3 +2591,148 @@ body.in-scene #app { overflow: hidden; }
 /* the room is sized in whole pixels by hand: nothing may rescale it */
 .splash canvas.title-room { max-width: none; }
 .board-title > *:not(.title-room) { position: relative; z-index: 1; }
+
+/* ============================================================
+   31. THE FROGGOPHONE
+   A brick with a green screen. It is the map, the case file and
+   the only menu in the game. Sits above the rooms and the plates,
+   under the cinematics.
+   ============================================================ */
+
+#phone-root {
+  position: fixed; inset: 0; z-index: 152;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(6, 8, 12, .72);
+  pointer-events: auto;
+  padding: 10px;
+}
+#phone-root.hidden { display: none; }
+
+.ph-body {
+  position: relative;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  background: linear-gradient(180deg, #2a3038, #171c22);
+  border: var(--bd-thick) solid #0a0d11;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.06), 0 10px 0 rgba(0,0,0,.5);
+  padding: 12px 12px 10px;
+  max-width: min(96vw, 620px); max-height: 94vh;
+  overflow: auto; scrollbar-width: none;
+  transform: translateY(18px) scale(.94); opacity: 0;
+  transition: transform .18s cubic-bezier(.2,1.7,.4,1), opacity .18s;
+}
+.ph-body::-webkit-scrollbar { display: none; }
+.ph-body.in { transform: none; opacity: 1; }
+.ph-body.out { transform: translateY(12px) scale(.96); opacity: 0; }
+.ph-aerial {
+  position: absolute; right: 16px; top: -18px;
+  width: 5px; height: 20px; background: #0a0d11;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+}
+
+.ph-screen {
+  background: #0b1a14;
+  border: 3px solid #0a0d11;
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.10), inset 0 0 24px rgba(0,0,0,.6);
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ph-status {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-bottom: 2px solid rgba(111,247,216,.18); padding-bottom: 5px;
+}
+.ph-status canvas, .ph-tabs canvas, .ph-app canvas, .ph-foot canvas { image-rendering: pixelated; }
+.ph-mid { display: flex; flex-direction: column; gap: 1px; align-items: center; }
+
+.ph-tabs { display: flex; gap: 6px; }
+.ph-tab {
+  flex: 1; background: #10241c; border: 2px solid #1d4c3a; border-radius: 0;
+  padding: 5px 6px; cursor: pointer;
+}
+.ph-tab.on { background: #6ff7d8; border-color: #8ff7c8; }
+.ph-tab:active { transform: translateY(1px); }
+
+.ph-app { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.ph-foot { display: flex; flex-direction: column; gap: 2px; align-items: center; text-align: center; }
+
+/* the map, and the pins standing on it */
+.map-holder { position: relative; }
+.map-holder canvas { display: block; }
+.map-pin {
+  position: absolute; transform: translate(-50%, -100%);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: none; border: 0; padding: 0; cursor: pointer;
+}
+.pin-dot {
+  width: 9px; height: 9px; background: #ff6a5e;
+  box-shadow: 0 0 0 2px #12101d, 0 3px 0 rgba(0,0,0,.5);
+}
+.map-pin.hot .pin-dot { background: #ffd75e; animation: pin-throb .9s infinite steps(2); }
+.map-pin.here .pin-dot { background: #6ff7d8; }
+@keyframes pin-throb { 50% { box-shadow: 0 0 0 2px #12101d, 0 0 10px #ffd75e; } }
+.pin-tag {
+  background: rgba(10,16,14,.88); padding: 1px 3px;
+  border: 1px solid rgba(111,247,216,.35);
+}
+.pin-you { background: #0b1a14; padding: 0 2px; border: 1px solid #6ff7d8; }
+.map-pin:hover .pin-tag { border-color: #6ff7d8; }
+.map-pin:active { transform: translate(-50%, -100%) translateY(1px); }
+
+/* the case file list */
+.ph-clues { display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
+.ph-clue {
+  border-left: 3px solid #1d4c3a; padding: 2px 0 2px 6px;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.ph-clue.got { border-left-color: #6ff7d8; }
+.ph-faces { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.ph-face { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ph-face canvas { border: 2px solid #1d4c3a; }
+.ph-face.out { opacity: .34; }
+.ph-face.out canvas { filter: grayscale(1); }
+.ph-row { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+
+.ph-keys { display: flex; justify-content: center; }
+.ph-shut { min-width: 140px; }
+
+/* ============================================================
+   32. THE THING IN YOUR HAND — the clue card
+   ============================================================ */
+
+.clue-card {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  transform: translateY(14px) scale(.9); opacity: 0;
+  transition: transform .22s cubic-bezier(.2,1.6,.4,1), opacity .22s;
+}
+.clue-card.in { transform: none; opacity: 1; }
+.clue-card canvas { image-rendering: pixelated; filter: drop-shadow(0 6px 0 rgba(0,0,0,.5)); }
+.clue-head { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+
+/* ============================================================
+   33. THE SIDE JOBS — the taps and the fryer
+   ============================================================ */
+
+#cine-pick.job-on { display: flex; align-items: center; justify-content: center; }
+.job-card {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: linear-gradient(180deg, #22282e, #14181c);
+  border: var(--bd-thick) solid #0a0d11;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.05), 0 10px 0 rgba(0,0,0,.5);
+  padding: 14px 16px;
+  transform: translateY(16px) scale(.94); opacity: 0;
+  transition: transform .2s cubic-bezier(.2,1.6,.4,1), opacity .2s;
+}
+.job-card.in { transform: none; opacity: 1; }
+.job-card.out { transform: translateY(10px) scale(.97); opacity: 0; }
+.job-head, .job-foot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.job-cv { image-rendering: pixelated; border: 3px solid #0a0d11; }
+.job-tally { display: flex; gap: 5px; }
+.job-pip {
+  width: 10px; height: 10px; background: #22282e;
+  box-shadow: inset 0 0 0 2px #0a0d11;
+}
+.job-pip.hit { background: #6ff7d8; }
+.job-pip.miss { background: #ff6a5e; }
+
+/* the clock in the corner of the topbar */
+.tb-clock { flex-direction: column; align-items: flex-start; gap: 0; }
+.tb-clock canvas { image-rendering: pixelated; }

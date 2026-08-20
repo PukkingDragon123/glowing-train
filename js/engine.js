@@ -33,6 +33,10 @@ const E = {
     META.bump('runs');
     /* A badge, a gun, a belt and a board with five holes in it. */
     STORY.reset();
+    /* the night, the sky, and a city with nothing turned over in it yet */
+    if (typeof CITY !== 'undefined') CITY.reset();
+    G.place = 'precinct';
+    G.visited = { precinct: 1 };
     E.startBlind();
     /* the case starts in the bullpen */
     G.phase = 'precinct';

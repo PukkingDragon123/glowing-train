@@ -67,6 +67,59 @@ const U = {
   /* ---------- misc ---------- */
 
   clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); },
+  lerp(a, b, t) { return a + (b - a) * t; },
+  /* frame-rate independent approach: t is "how much of the gap per second" */
+  approach(cur, want, rate, dt) { return cur + (want - cur) * Math.min(1, rate * dt); },
+
+  /* ============================================================
+     EASING.
+
+     Nothing in this game should arrive at a linear rate. These are
+     the curves everything that moves borrows: a walk that leans in
+     and settles, a card that overshoots and comes back, a lamp that
+     drops and bounces.
+     ============================================================ */
+  ease: {
+    linear: (t) => t,
+    inQuad: (t) => t * t,
+    outQuad: (t) => t * (2 - t),
+    inOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+    outCubic: (t) => 1 - Math.pow(1 - t, 3),
+    inOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+    /* overshoots the mark and comes back — the "snap" of a UI card */
+    outBack: (t, s) => {
+      const c = (s === undefined ? 1.70158 : s) + 1;
+      return 1 + c * Math.pow(t - 1, 3) + (c - 1) * Math.pow(t - 1, 2);
+    },
+    /* rings out — for anything that lands hard */
+    outElastic: (t) => {
+      if (t === 0 || t === 1) return t;
+      const p = 0.36;
+      return Math.pow(2, -10 * t) * Math.sin((t - p / 4) * (2 * Math.PI) / p) + 1;
+    },
+    outBounce: (t) => {
+      const n = 7.5625, d = 2.75;
+      if (t < 1 / d) return n * t * t;
+      if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+      if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+      return n * (t -= 2.625 / d) * t + 0.984375;
+    },
+  },
+
+  /* a one-shot tween on a requestAnimationFrame clock. fn(v, t) is called
+     every frame with the eased value; resolves when it is done. */
+  tween(ms, fn, easeName) {
+    const e = U.ease[easeName || 'outCubic'] || U.ease.outCubic;
+    return new Promise(res => {
+      const t0 = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - t0) / ms);
+        fn(e(t), t);
+        if (t < 1) requestAnimationFrame(step); else res();
+      };
+      requestAnimationFrame(step);
+    });
+  },
 
   fmt(n) { // 12840 -> "12,840"
     return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');

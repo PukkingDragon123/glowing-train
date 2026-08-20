@@ -12,6 +12,13 @@ in it, and nobody's name on the case but yours. Fill the board and the man
 goes down in a courtroom. Turn up at his door without it and the only thing
 you can do to him is the thing he did to you.
 
+Every night of it is the same shape: **the captain gives you a lead, the city
+hides the evidence, and the clock runs out at six.** Drive out to five places,
+put your hand in the drains and the fire barrels and the pawnbroker's case,
+work out which of the frogs standing in the line-up downstairs is the one who
+did it, say his name, and then sit down across a table from him with one
+revolver between you.
+
 That is the whole game, and it is the two endings.
 
 ![The murder board](docs/screen-title.png)
@@ -55,7 +62,9 @@ the lamps put light on the floor, and the ceiling has joists in the dark.
 - **Patrolman Dill** has nothing to report. The **drunk tank** has a lot.
 - **Your desk** holds the lead. **The lockers** hold your iron and your belt.
   **The cooler** is worth one heart a night.
-- **The street door** takes you out to work it.
+- **The street door** gets the car, which means **the phone** (`P`).
+- **The stairs** go down to the line-up room, when you have something on
+  somebody.
 
 ### The board
 
@@ -83,38 +92,95 @@ money in your coat, then a file pulled before the shift change (**+1 look at
 the evidence, all night**), and one night, *"whatever happens up there — come
 home after"* — **+1 heart, all night**. It carries between cases.
 
-## The line
+## The city
 
-![The line-up](docs/screen-lineup.png)
+![FroggoMap](docs/screen-map.png)
 
-Out at the lead you walk into the room they drink in. The crew is standing
-against the height chart, the barman is behind his own bar, the file is on
-it, and the back door is where the sit-down happens.
+The case is not in one room any more. **It is buried in five places across
+town**, and the only way to it is the brick in your coat.
 
-You have to work out which one of them you came for:
+**The FroggoPhone** (tap `PH`, or `P`) is the only menu in the game:
 
-- **The file on the bar** — turn a page and it rules frogs out. A scale off a
-  glass, a matchbook scratched by a ring, a cigar burned down in an ashtray.
-  Everything in it is true.
-- **The barman** — *was he wearing a hat? both eyes? any gold in his mouth?*
-  He answers honestly and every face that doesn't match goes out of it.
-- **Walk up and look at one.** You get his colour, his build, his hat, his
-  smoke, his rings, whether his face is marked — the things a witness would
-  actually remember. Then you can name him.
+- **FROGGOMAP** — the city drawn from above, the canal cutting through it,
+  five stops and the station. Tap one and you drive there.
+- **CASE FILE** — what you have turned over, what each piece rules out, and
+  which faces still fit.
 
-![Looking at one of them](docs/screen-look.png)
+![The case file](docs/screen-casefile.png)
 
-It starts fair — three in the room, four looks, four questions — and by the
-top it is nine strangers, two questions, decoys built to answer most things
-the same way he would, and no single question allowed to finish the job.
-When the file runs dry, somebody downtown will pull one more page for money,
-and the price climbs.
+The five stops, and what they are:
+
+| Where | What is in it |
+|---|---|
+| **THE CANAL LAUNDRY** | the crime scene: three drums, a chalk outline, a floor drain, the tape still up |
+| **PIER NINETEEN** | crates nobody signed for, a fire barrel, black water, a shed with a new lock |
+| **MARSH ROW PAWN** | everything taken off a body, behind glass, and a ledger of who brought it in |
+| **THE FLY TRAP** | coffee, donuts, the night shift, and a cook who watches the street |
+| **THE GREEN LAMP** | where the crew drinks, with a barman who answers if you work a shift |
+
+![The canal laundry](docs/screen-scene.png)
+
+![Pier Nineteen in the rain](docs/screen-pier.png)
+
+### The night is the clock
+
+Every place you drive to costs **35 minutes**, every prop you put your hand
+in costs **18**, a question costs **12**. The shift ends at **06:00** —
+turning over everything in the city would take about **600 minutes and you
+have 560**, so *where you look* is the whole game. Run the night out and the
+captain pulls you off the street; you keep what you found.
+
+The sky is not decoration either. It rolls every time you drive: **rain**,
+**hard rain**, **storm**, **fog**, **clear and cold**. Fog and heavy rain
+cost a witness a detail; clear weather means the street can see you working.
+
+### Clues are things, not hunches
+
+![What was in the drain](docs/screen-clue.png)
+
+Every clue in the case is planted in exactly one prop in one place. Put your
+hand in the right drain and you come out with **a gold tooth cap**, **a
+cracked lens**, **a bloody dressing**, **cigar ash still soft**, **a coat let
+out twice at the seams** — and every one of them crosses faces off. Put your
+hand in the wrong one and you get lint, a bus ticket from March, sometimes a
+few loose notes, and sometimes somebody watching you do it.
+
+Witnesses fill the gaps: the launderer, the watchman, the broker, the
+waitress, the barman. *Was he wearing a hat? Both eyes? Any gold in his
+mouth?* They answer honestly — and the weather decides how much they saw.
+
+### Side work
+
+![Working the taps](docs/screen-taps.png)
+
+Nobody on this salary can afford petrol. **Work the taps** at the Green Lamp
+(three pints, stop each pour on the line) and the barman owes you an answer.
+**Make a batch** at the Fly Trap (three donuts, stop the needle in the heat)
+and you eat one — *the only medicine in this game* — and the cook tells you
+which end of the city still has something in it.
+
+## The line-up
+
+![The line-up room](docs/screen-lineup.png)
+
+You do not name anybody in the field. You take what you dug up back to the
+station, go **down the stairs off the bullpen**, and they stand them against
+the height chart under a light that does nobody any favours. What you found
+is on the table behind you. Anybody your evidence rules out is **crossed off
+where he stands**.
+
+![Saying the name](docs/screen-named.png)
+
+Then you say one name out loud.
 
 | Naming him | What happens |
 |---|---|
-| **right** | he comes quietly, and the bounty pays **30% more** |
-| **wrong** | −6 chips, he sits down with **an extra heart**, and **he shoots first** |
-| **not at all** | go through the back door and take whoever follows you |
+| **right** | they put him in the back room, and the bounty pays **30% more** |
+| **wrong** | he walks out past you, −6 chips, he sits down with **an extra heart**, and **he shoots first** |
+
+A frog you already know — a lieutenant, the Bullfrog himself — needs no
+line-up. You have had his face on your own wall for six years. They wave you
+straight through.
 
 ## The table
 
@@ -226,42 +292,53 @@ the frog leaning into a cut-in are the same frog.
 1. The title room — rain on the glass, the lamp over the desk, a city awake
 2. The lore reel — the line-up, the verdict, the door, the rain, the oath
 3. The arrival — bars close, the camera pans the room, and the name of the
-   place types itself onto the card
-4. The reload room — six shells thumbed into the drum, one at a time
-5. The drive across town — parallax skylines, rain, wipers, a destination
-6. The card-file wipe between rooms (venetian blinds, with an evidence tab)
-7. The walk cycle — four frames, every frog in the game, both directions
-8. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
-9. Lamp cones, floor pools, flickering tubes and dust in the air
-10. Dialogue under cinema bars: the camera holds, the line types, a key ticks
-11. The sit-down — dark room, his eyes, the lamp stuttering on
-12. A lieutenant's entrance under cinema bars, with his name stamped on it
-13. The four-beat cock: hammer, cylinder, the held beat, the drop
-14. The steady check — the sweep, the bands, and the break
-15. Muzzle flash, cordite, the casing on the felt
-16. The slug in the air, with a shock ring and a wake
-17. The Persona cut-in — skewed banner, speed lines, red when it is lethal
-18. His grip, in four styles, arm anchored at the shoulder
-19. His reactions — the facepalm, the raised digit, the shrug
-20. Blood that lands, runs and stays — on him, and on your lens
-21. The blood-splat kill wipe, coming off like a sleeve on glass
-22. The drag loader — you, him, one swinging bulb, a smear on the boards
-23. First-person searching: your arm out, dust off the lining, his weight
-24. The mop — three passes a stain
-25. The bribe — chips arcing into a glove, one at a time
-26. The last-heart dread: a closing vignette and a heartbeat, twice a bar
-27. The ambulance — the wagon in the rain, then the corridor from a gurney
-28. The chapter card, and the take raining past the lens
-29. The courtroom, the gavel, and the first daylight in the game
-30. Two headstones and the rain stopping
-31. A burning board, and a frog-shaped hole in a chair
+   place types itself onto the card with the hour and the weather under it
+4. The drive across town — parallax skylines, rain, wipers, a destination
+5. The walk — he leans into it, coasts, brakes into the mark and lands on it
+   with a squash, a heel knock and a puff of dust
+6. The walk cycle — four frames off the ground covered, not off the clock
+7. The card-file wipe between rooms (venetian blinds, with an evidence tab)
+8. Rain falling through an outdoor room, splashing on the boards, and the
+   lightning off the bay
+9. Fog in soft banks, and the city smeared down into the canal
+10. The evidence card — what you pulled out of the drain, held up to the light
+11. Saying the name: his mugshot, and the stamp that lands on it
+12. The taps — a glass filling, a head on it, and the line you are aiming for
+13. The fryer — oil moving, a needle sweeping, three donuts glazed
+14. The FroggoMap — a city from above with the rain falling on all of it
+15. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
+16. Lamp cones, floor pools, flickering tubes and dust in the air
+17. Dialogue under cinema bars: the camera holds, the line types, a key ticks
+18. The sit-down — dark room, his eyes, the lamp stuttering on
+19. A lieutenant's entrance under cinema bars, with his name stamped on it
+20. The four-beat cock: hammer, cylinder, the held beat, the drop
+21. The steady check — the sweep, the bands, and the break
+22. Muzzle flash, cordite, the casing on the felt
+23. The slug in the air, with a shock ring and a wake
+24. The Persona cut-in — skewed banner, speed lines, red when it is lethal
+25. His grip, in four styles, arm anchored at the shoulder
+26. His reactions — the facepalm, the raised digit, the shrug
+27. Blood that lands, runs and stays — on him, and on your lens
+28. The blood-splat kill wipe, coming off like a sleeve on glass
+29. The drag loader — you, him, one swinging bulb, a smear on the boards
+30. First-person searching: your arm out, dust off the lining, his weight
+31. The mop — three passes a stain
+32. The bribe — chips arcing into a glove, one at a time
+33. The last-heart dread: a closing vignette and a heartbeat, twice a bar
+34. The ambulance — the wagon in the rain, then the corridor from a gurney
+35. The chapter card, and the take raining past the lens
+36. The dawn card — the sky coming up grey and the shift ending on you
+37. The courtroom, the gavel, and the first daylight in the game
+38. Two headstones and the rain stopping
+39. A burning board, and a frog-shaped hole in a chair
 
 ## Keys
 
 Tapping is the whole control scheme, but: `A`/`D` or the arrows walk, `E` or
-`SPACE` uses what you are standing next to, `ENTER` sits down or walks out,
-`6–8` are the belt, `Q`/`E` are the gun tricks at the table, `R` bribes,
-`TAB` opens the case, `M` mutes, `H` is the house rules.
+`SPACE` uses what you are standing next to, **`P` takes the phone out of your
+coat**, `ENTER` sits down or walks out, `6–8` are the belt, `Q`/`E` are the
+gun tricks at the table, `R` bribes, `TAB` opens the case, `M` mutes, `H` is
+the house rules.
 
 ## Project layout
 
@@ -273,7 +350,11 @@ js/pixfont.js     the hand-drawn 5×7 typeface every letter is set in
 js/pix.js         pixel engine: the palette, a sprite compiler, draw helpers
 js/art.js         THE PROP SHOP: painted pixel maps + the shading kit
 js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
-js/rooms.js       the set: precinct, board room, ward, and the lead
+js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
+js/places.js      the five stops, painted: laundry, pier, pawn, diner, bar
+js/phone.js       the FroggoPhone: the map, the case file, the only menu
+js/jobs.js        the side work: the taps and the fryer
+js/rooms.js       the station: bullpen, board room, ward, line-up room
 js/story.js       THE CASE: chapters, the board, dialogue, the two endings
 js/data.js        the crew, the guns, the belt, the questions, the tuning
 js/meta.js        what survives a case: stats, learned tells, her trust
@@ -301,6 +382,8 @@ dev/smoke.js      full browser smoke test (node dev/smoke.js)
 - Bounties, heat, bribes — `BLIND_PURSE` / `HEAT_COST` / `LOOT_TUNING`
 - The chapters and the five pieces — `CHAPTERS` / `INTEL_CARDS` in `js/story.js`
 - What a room is furnished with — the scene definitions in `js/rooms.js`
+- The night, the sky and what a search costs — `COST` / `WEATHER` in `js/city.js`
+- Which props exist to be searched — `CITY.PROPS` in `js/city.js`
 
 ### Dev checks
 
@@ -309,16 +392,21 @@ node dev/sim.js      # 500 bot cases + 200 fuzz cases against the real engine
 node dev/smoke.js    # drives the whole story in headless Chromium
 ```
 
-Current curve, for a bot with average nerves that never reads a face and
-names a suspect at random out of whoever is still standing:
+Current curve, for a bot with **no eyes and no hunches**: it drives to a
+random stop, puts its hand in things at random, pays the clock for all of it,
+and names whoever is left standing.
 
 - **43%** fill the board
-- **35%** reach the Bullfrog at all
+- **39%** reach the Bullfrog at all
 - **17%** could still take the good ending when they get there
-- **4.1** trips to the ward per case
+- **4.1** trips to the ward per run
+- **~10** props searched per case, and **3 nights in 16 run out** before it
+  has enough to say a name
 
-A player who works the file, asks the right questions, breaks the shot clean
-and mops the floor does far better than that on every line. That is the point.
+A player who follows the captain's tip, reads what the evidence actually
+rules out, asks the witness the one question that splits the field, breaks
+the shot clean and mops the floor does far better than that on every line.
+That is the point.
 
 ---
 

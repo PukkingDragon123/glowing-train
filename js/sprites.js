@@ -2445,6 +2445,11 @@ SPR.buildBody = function (d, o) {
      hang closer to the body — the bowed-out elbow of the standing pose
      reads as a robot arm once the hands are gone. */
   const seated = !!o.seated;
+  /* TUCKED: standing at full length, but with the arms in against the ribs
+     the way the seated pose has them. The bowed-out elbow of the old
+     standing pose reads as a gorilla once you can see the whole frog. */
+  const tuck = !!o.tuck;
+  const armIn = seated || tuck;
   const P = PIX.PAL;
   const C = SPR.costumeOf(d);
   const W = 116, H = 60, cx = 58;
@@ -2489,8 +2494,8 @@ SPR.buildBody = function (d, o) {
     if (y < 2) hw = 15;                       // neck root
     else if (y < 3) hw = 25;                  // trapezius, one hard step
     else if (y < 4) hw = 34;
-    else if (y < 15) hw = 41;                 // THE shoulder line — the widest point
-    else if (y < 21) hw = 40 - (y - 15) * 2;  // hard taper under the pad
+    else if (y < 15) hw = tuck ? 34 : 41;     // THE shoulder line — the widest point
+    else if (y < 21) hw = (tuck ? 34 : 40) - (y - 15) * 2;  // hard taper under the pad
     else if (y < 36) hw = 30;                 // ribs — narrow, so the arms hang clear
     else if (y < 48) hw = 31;                 // waist
     else hw = 33;                             // seat spreading on the chair
@@ -3016,7 +3021,7 @@ SPR.buildBody = function (d, o) {
   baseHw = Math.min(baseHw, 52);
   /* seated, the arms come in against the ribs — out at the standing width
      they poke past the coat's shoulder and the silhouette turns into steps */
-  if (seated) baseHw -= 7;
+  if (armIn) baseHw -= 7;
   const rolled = !!(sh && sh.rolled);
   const sleeveC = gown ? L(acc.gloves || gown.col, P.W) : base;
   /* must agree with SPR.cuffColor — duel.js paints the felt-hand cuff from it */
@@ -3034,8 +3039,8 @@ SPR.buildBody = function (d, o) {
     /* Seated the arm hangs: shoulder, elbow and wrist stack up almost in a
        line. Bowed out the way the standing pose does it, the two-pixel
        stair steps turn the whole limb into a right angle. */
-    const elX  = cx + sgn * (baseHw - (seated ? 8 : 1));   // elbow, out past the ribs
-    const haX  = cx + sgn * (baseHw - (seated ? 13 : 9));  // wrist in toward the felt
+    const elX  = cx + sgn * (baseHw - (armIn ? 8 : 1));   // elbow, out past the ribs
+    const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9));  // wrist in toward the felt
     /* seated, the sleeve head starts BELOW the coat's shoulder line, so the
        arm grows out of the jacket instead of notching a step into it */
     const y0 = seated ? 13 : 8, yEl = 30, y2 = seated ? H : 57;
@@ -3164,7 +3169,7 @@ SPR.buildBody = function (d, o) {
   ctx.restore();
 
   /* where the sleeves end, so the scene can put the hands exactly there */
-  cv.wrist = { dx: baseHw - 9, dy: 56, cx: cx, h: H };
+  cv.wrist = { dx: baseHw - (armIn ? 13 : 9), dy: 56, cx: cx, h: H };
 
   /* epaulets ride ON TOP of the shoulder, not under it */
   [-1, 1].forEach(sgn => {
@@ -3221,6 +3226,11 @@ SPR.frogCustom = function (key, def, expr) {
 SPR.bodyCustom = function (key, def, seated) {
   return SPR.cached('body_' + key + (seated ? '_sit' : ''),
     () => SPR.buildBody(def, { seated: seated }));
+};
+
+/* the same bust with its arms in, for a frog you can see the legs of */
+SPR.bodyStanding = function (key, def) {
+  return SPR.cached('body_' + key + '_stand', () => SPR.buildBody(def, { tuck: true }));
 };
 
 SPR.frogEl = function (id, scale, cls, expr) {
@@ -4185,11 +4195,18 @@ SPR.frogWhole = function (key, def, opts) {
   return SPR.cached('whole_' + key + ':' + frame, () => {
     const P = PIX.PAL;
     const head = SPR.frogCustom('fb:' + key, def);
-    const body = SPR.bodyCustom('fb:' + key, def, false);
-    const hs = 1.35, NECK = 8, LEGS = 26;
+    const body = SPR.bodyStanding('fb:' + key, def);
+    /* PROPORTION. The portrait head and the duel bust were both drawn for a
+       frog sitting at a table, where you never see him below the chest. Used
+       whole they made a barrel: a huge head on a slab of shoulders with
+       stumps under it. So the head comes down, the bust comes in, and the
+       legs take the height back — roughly a third head, a third body, a
+       third leg, and taller than he is wide. */
+    const hs = 1.12, BS = 0.86, NECK = 8, LEGS = 38;
     const hw = Math.round(head.width * hs), hh = Math.round(head.height * hs);
-    const W = Math.max(body.width, hw) + 2;
-    const H = hh + body.height - NECK + LEGS;
+    const bw = Math.round(body.width * BS), bh = Math.round(body.height * BS);
+    const W = Math.max(bw, hw) + 2;
+    const H = hh + bh - NECK + LEGS;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
@@ -4207,26 +4224,57 @@ SPR.frogWhole = function (key, def, opts) {
     const C = SPR.costumeOf(def);
     const O = C.overcoat || C.jacket || null;
     const legC = P[(O && O.dark) || 'k'] || P.k;
-    const hipY = bodyTop + body.height - 6;
-    const spread = def.fat ? 11 : 8;
+    const hipY = bodyTop + bh - 6;
+    const spread = def.fat ? 10 : 8;      // hips, not a pair of stilts
     [-1, 1].forEach(sgn => {
       const step = sgn * swing;
       const lx = cx + sgn * spread + Math.round(step * 0.5);
       const len = LEGS - Math.abs(step) * 0.3;
-      PIX.rect(c, lx - 6, hipY, 12, len, P.K);
-      PIX.rect(c, lx - 5, hipY, 10, len - 2, legC);
-      PIX.rect(c, lx - 5, hipY, 2, len - 2, 'rgba(255,255,255,.07)');
-      PIX.rect(c, lx + 2, hipY, 3, len - 2, 'rgba(0,0,0,.28)');
+      PIX.rect(c, lx - 7, hipY, 14, len, P.K);
+      PIX.rect(c, lx - 6, hipY, 12, len - 2, legC);
+      PIX.rect(c, lx - 6, hipY, 2, len - 2, 'rgba(255,255,255,.07)');
+      PIX.rect(c, lx + 2, hipY, 4, len - 2, 'rgba(0,0,0,.28)');
       /* trouser crease + cuff */
-      PIX.rect(c, lx - 5, hipY + len - 8, 10, 2, 'rgba(0,0,0,.3)');
+      PIX.rect(c, lx - 6, hipY + len - 9, 12, 2, 'rgba(0,0,0,.3)');
+      PIX.rect(c, lx - 1, hipY + 4, 1, len - 14, 'rgba(255,255,255,.05)');
       /* the shoe, pointed out, lifting on the back beat */
       const sh = hipY + len - 4 - (step > 0 ? 2 : 0);
-      PIX.rect(c, lx - 7 + sgn * 2, sh, 14, 6, P.K);
-      PIX.rect(c, lx - 6 + sgn * 2, sh + 1, 12, 4, '#1c1a2c');
-      PIX.rect(c, lx - 6 + sgn * 2, sh + 1, 12, 1, 'rgba(255,255,255,.16)');
+      PIX.rect(c, lx - 8 + sgn * 2, sh, 16, 6, P.K);
+      PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 4, '#1c1a2c');
+      PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 1, 'rgba(255,255,255,.16)');
     });
 
-    c.drawImage(body, Math.round((W - body.width) / 2), bodyTop);
+    /* THE COAT CARRIES ON PAST THE HIP. Without this the bust stops dead at
+       the waist and the trousers start, and he reads as two frogs stacked
+       up. The hem kicks with the stride. */
+    const coatC = P[(O && O.col) || 'T'] || P.T;
+    const coatD = P[(O && O.dark) || 'k'] || P.k;
+    const skirtY = bodyTop + bh - 4;
+    const skW = Math.round(bw * 0.27);
+    const kick = Math.round(swing * 0.35);
+    PIX.rect(c, cx - skW - 1 + kick, skirtY, skW * 2 + 2, 14, P.K);
+    PIX.rect(c, cx - skW + kick, skirtY, skW * 2, 12, coatC);
+    PIX.rect(c, cx - skW + kick, skirtY + 8, skW * 2, 4, coatD);
+    PIX.rect(c, cx - skW + kick, skirtY, 2, 12, 'rgba(255,255,255,.07)');
+    PIX.rect(c, cx + skW - 3 + kick, skirtY, 3, 12, 'rgba(0,0,0,.26)');
+    PIX.rect(c, cx + kick, skirtY + 5, 1, 9, 'rgba(0,0,0,.34)');   // the vent
+
+    c.drawImage(body, Math.round((W - bw) / 2), bodyTop, bw, bh);
+
+    /* HANDS. The bust stops at a shirt cuff because the duel paints the
+       hands onto the felt itself. Standing up he needs his own, hung on the
+       wrist the body reports, swinging against the leg on the same beat. */
+    const wr = body.wrist;
+    if (wr) {
+      const bx = Math.round((W - bw) / 2);
+      const sw = Math.round(swing * 0.3);
+      [-1, 1].forEach(sgn => {
+        const hx = bx + Math.round((wr.cx + sgn * wr.dx) * BS);
+        const hy = bodyTop + Math.round(wr.dy * BS) - sgn * sw;
+        SPR.frogHand(c, hx, hy, def, sgn, { noCuff: true, grip: true });
+      });
+    }
+
     c.drawImage(head, Math.round((W - hw) / 2), bob, hw, hh);
     return cv;
   });

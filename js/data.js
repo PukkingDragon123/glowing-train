@@ -146,6 +146,32 @@ const BARMAN_DEF = {
 };
 
 /* ------------------------------------------------------------
+   THE CITY'S OWN PEOPLE. Whoever is behind the counter when you
+   walk in at three in the morning.
+   ------------------------------------------------------------ */
+
+const LAUNDER_DEF = {
+  skin: ['G', 'g', 'h'], fat: false, suit: 'w', shirt: 'W', tie: null,
+  costume: 'croupier', apron: true,
+};
+const WATCH_DEF = {
+  skin: ['e', 'e', 'K'], fat: true, suit: 'S', shirt: 'd', tie: null,
+  costume: 'heavy', cap: true, hatCol: 'S',
+};
+const PAWN_DEF = {
+  skin: ['Y', 'L', 'l'], fat: false, suit: 'V', shirt: 'W', tie: 'd',
+  costume: 'don', glasses: true, gold: true,
+};
+const WAITRESS_DEF = {
+  skin: ['P', 'p', 'p'], fat: false, suit: 'W', shirt: 'W', tie: null,
+  costume: 'croupier', lashes: true, apron: true,
+};
+const COOK_DEF = {
+  skin: ['N', 'n', 'n'], fat: true, suit: 'W', shirt: 'W', tie: null,
+  costume: 'croupier', apron: true, warts: true,
+};
+
+/* ------------------------------------------------------------
    THE CASE — how hard the board is, and what it costs to be
    wrong about it. Nothing here is bought: the looks you get are
    the looks the job gives you, and they get fewer as you climb.
@@ -465,6 +491,7 @@ const BINDS = [
   ['E', 'double tap (TOMMY GUN)'],
   ['R', 'bribe the badges (looting)'],
   ['ENTER', 'walk out / next blind'],
+  ['P', 'the phone: map and case file'],
   ['M', 'mute'],
   ['H', 'how this works'],
 ];

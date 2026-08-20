@@ -23,9 +23,35 @@ const SCENE = (() => {
   let cv, ctx, K = 4;            // display canvas + integer scale
   let raf = null, t0 = 0, last = 0;
   let cam = 0, camWant = 0, drag = null;
-  let me = { x: 60, vx: 0, frame: 0, face: 1, walk: 0, target: null, act: null };
+  let me = { x: 60, v: 0, frame: 0, face: 1, walk: 0, land: 0, target: null, act: null };
   let hover = null, near = null, busy = false;
   const keys = {};
+  const puffs = [];                 // dust off his heels
+  /* the rain field: one set of drops, reused by every outdoor room */
+  const rain = (() => {
+    const r = U.mulberry32(90210), out = [];
+    for (let i = 0; i < 200; i++) {
+      out.push({ x: r(), y: r(), s: r(), len: 3 + Math.floor(r() * 4) });
+    }
+    return out;
+  })();
+
+  /* he came down on it: squash him, knock the heel, kick the dust */
+  function land(force) {
+    me.land = Math.max(me.land, force);
+    kickDust(force);
+    if (force > 0.6) SFX.tone(70, 0.05, 'square', 0.05);
+  }
+  function kickDust(force) {
+    const n = force > 0.6 ? 5 : 2;
+    for (let i = 0; i < n; i++) {
+      puffs.push({
+        x: me.x - me.face * (2 + Math.random() * 4), y: 0,
+        vx: -me.face * (4 + Math.random() * 12), vy: -(6 + Math.random() * 14),
+        t: 0, life: 0.3 + Math.random() * 0.4,
+      });
+    }
+  }
 
   /* ============================================================
      THE CAST.
@@ -69,6 +95,11 @@ const SCENE = (() => {
     cv.height = worldH * K;
     cv.style.width = cv.width + 'px';
     cv.style.height = cv.height + 'px';
+    /* SETTING canvas.width WIPES THE CONTEXT — including the one flag that
+       matters here. Without this the whole room is drawn through a bilinear
+       filter at K times its size, which is exactly what "the scene is
+       blurry" looks like. */
+    ctx.imageSmoothingEnabled = false;
     oy = worldH - H;                 // the room stands on the bottom edge
   }
 
@@ -240,8 +271,13 @@ const SCENE = (() => {
      STEP + DRAW
      ============================================================ */
 
-  const SPEED = 46;              // world px per second
+  const SPEED = 54;              // top speed, world px per second
+  const ACCEL = 300;             // and how hard he gets to it
 
+  /* WEIGHT. He used to travel at a flat 46px/s and stop dead on the mark,
+     which is what makes a walk cycle look like a slide. Now he leans into
+     it, coasts, brakes into the mark and lands on it — and the landing is
+     a squash, a puff of dust and a heel knock. */
   function step(dt) {
     /* keyboard walk overrides a tapped target */
     let kx = 0;
@@ -249,28 +285,47 @@ const SCENE = (() => {
     if (keys['d'] || keys['arrowright']) kx += 1;
     if (kx) { me.target = null; me.act = null; }
     let moving = false;
-    if (kx) {
-      me.x = U.clamp(me.x + kx * SPEED * dt, 12, def.w - 12);
-      me.face = kx > 0 ? 1 : -1;
-      moving = true;
-    } else if (me.target !== null) {
+    let want = 0;                                  // -1, 0, +1
+    if (kx) want = kx;
+    else if (me.target !== null) {
       const d = me.target - me.x;
-      if (Math.abs(d) < 2) {
-        me.x = me.target; me.target = null;
+      /* how much room braking needs at this speed; inside it, brake */
+      const brake = (me.v * me.v) / (2 * ACCEL) + 1.5;
+      want = Math.abs(d) <= brake ? 0 : Math.sign(d);
+      if (Math.abs(d) < 1.4 && Math.abs(me.v) < 8) {
+        me.x = me.target; me.target = null; me.v = 0;
+        land(0.7);
         if (me.act) { const a = me.act; me.act = null; use(a); }
-      } else {
-        me.x += Math.sign(d) * Math.min(Math.abs(d), SPEED * dt);
-        me.face = d > 0 ? 1 : -1;
-        moving = true;
       }
     }
-    /* the walk cycle, and a footstep every other frame */
+    if (want || Math.abs(me.v) > 0.5) {
+      const target = want * SPEED;
+      const rate = want ? ACCEL : ACCEL * 1.6;     // brakes bite harder
+      me.v += U.clamp(target - me.v, -rate * dt, rate * dt);
+      const nx = U.clamp(me.x + me.v * dt, 12, def.w - 12);
+      if (nx === me.x && Math.abs(me.v) > 24) land(0.5);   // walked into a wall
+      me.x = nx;
+      if (Math.abs(me.v) > 4) me.face = me.v > 0 ? 1 : -1;
+      moving = Math.abs(me.v) > 8;
+    } else me.v = 0;
+    /* the squash from the last landing, and the dust it kicked */
+    if (me.land > 0) me.land = Math.max(0, me.land - dt * 4.5);
+    for (let i = puffs.length - 1; i >= 0; i--) {
+      const p2 = puffs[i];
+      p2.t += dt; p2.x += p2.vx * dt; p2.y += p2.vy * dt; p2.vy += 26 * dt;
+      if (p2.t > p2.life) puffs.splice(i, 1);
+    }
+    /* the walk cycle runs off ground covered, not off the clock, so the feet
+       never skate: slow steps at the start of a stride, quick in the middle */
     if (moving) {
       const was = Math.floor(me.walk);
-      me.walk = (me.walk + dt * 7.5) % 4;
-      if (Math.floor(me.walk) !== was && Math.floor(me.walk) % 2 === 0) SFX.tone(90 + Math.random() * 30, 0.03, 'square', 0.035);
-    } else me.walk = 0;
-    me.frame = Math.floor(me.walk);
+      me.walk = (me.walk + Math.abs(me.v) * dt * 0.135) % 4;
+      if (Math.floor(me.walk) !== was && Math.floor(me.walk) % 2 === 0) {
+        SFX.tone(88 + Math.random() * 30, 0.03, 'square', 0.038);
+        kickDust(0.4);
+      }
+    } else me.walk = U.approach(me.walk, 0, 9, dt);
+    me.frame = Math.floor(me.walk) % 4;
 
     /* what is within arm's reach */
     let best = null, bd = 26;
@@ -286,10 +341,11 @@ const SCENE = (() => {
     if (def.w <= vw) {
       camWant = -(vw - def.w) / 2;
     } else {
-      if (!drag) camWant = me.x - vw / 2;
+      /* lead the walk a little: the camera looks where he is going */
+      if (!drag) camWant = me.x + me.v * 0.34 - vw / 2;
       camWant = U.clamp(camWant, 0, def.w - vw);
     }
-    cam += (camWant - cam) * Math.min(1, dt * 6);
+    cam = U.approach(cam, camWant, 5, dt);
     if (Math.abs(cam - camWant) < 0.4) cam = camWant;
 
     if (def.onTick) def.onTick(dt, me);
@@ -299,6 +355,7 @@ const SCENE = (() => {
     const T = (now - t0) / 1000;
     const c = ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
+    c.imageSmoothingEnabled = false;
     c.clearRect(0, 0, cv.width, cv.height);
     c.save();
     c.scale(K, K);
@@ -354,6 +411,50 @@ const SCENE = (() => {
     /* dust in the air, cheap and constant */
     motes(c, T);
     if (def.onPaintFore) def.onPaintFore(c, T, cam, viewW());
+
+    /* ============================================================
+       THE NIGHT ITSELF.
+
+       Every room belongs to the same night: the hour tints it, and
+       if you are outdoors the weather falls through it. Without this
+       the city is five unrelated rooms with a clock in the corner.
+       ============================================================ */
+    if (typeof CITY !== 'undefined' && G.phase !== 'title') {
+      const w = viewW();
+      const hour = CITY.watch(), sky = CITY.sky();
+      if (hour.tint) ART.px(c, cam, -oy, w, H + oy, hour.tint);
+      if (def.outdoor) {
+        /* RAIN. Real drops with their own x, or a linear sequence folds
+           them into a handful of columns and it reads as prison bars. */
+        if (sky.drops > 0.1 && rain.length) {
+          const span = H + oy + 24;
+          const lim = Math.min(rain.length, Math.round(w * sky.drops * 0.5));
+          for (let i = 0; i < lim; i++) {
+            const d = rain[i];
+            const x = cam + ((d.x * (w + 30) + T * 12 * sky.drops) % (w + 30)) - 15;
+            const y = ((d.y * span + T * (150 + d.s * 210) * sky.drops) % span) - oy - 12;
+            ART.px(c, Math.round(x), Math.round(y), 1, d.len, 'rgba(170,205,235,.22)');
+          }
+          /* and what it does when it lands */
+          for (let i = 0; i < Math.round(w / 22); i++) {
+            const d = rain[(i * 7) % rain.length];
+            if ((Math.round(T * 5) + i) % 4) continue;
+            ART.px(c, cam + Math.round(d.x * w), def.floorY - 1, 3, 1, 'rgba(190,220,240,.18)');
+          }
+        }
+        if (sky.haze) {
+          for (let i = 0; i < H; i += 3) {
+            ART.px(c, cam, -oy + i, w, 1, 'rgba(200,212,220,.035)');
+          }
+        }
+        /* the storm, once in a while, from off over the bay */
+        if (sky.flash) {
+          const f = Math.sin(T * 0.7) > 0.995 ? 1 : (Math.sin(T * 0.7 + 0.06) > 0.995 ? 0.5 : 0);
+          if (f) ART.px(c, cam, -oy, w, H + oy, 'rgba(200,220,255,' + (0.22 * f) + ')');
+        }
+      }
+    }
+
     /* the edges of the frame, so a room has corners */
     const vw = viewW();
     for (let i = 0; i < 16; i++) {
@@ -383,8 +484,21 @@ const SCENE = (() => {
 
   function drawMe(c, T) {
     const cvv = rig(SCENE.meDef(), me.frame, me.face);
-    ART.px(c, Math.round(me.x - cvv.width / 3), def.floorY, Math.round(cvv.width * 0.66), 2, 'rgba(0,0,0,.38)');
-    c.drawImage(cvv, Math.round(me.x - cvv.width / 2), Math.round(def.floorY - cvv.height + 1));
+    const fy = def.floorY;
+    /* the dust goes down first, so his shoes stand in it */
+    for (const p2 of puffs) {
+      const a = 0.3 * (1 - p2.t / p2.life);
+      ART.px(c, Math.round(p2.x), Math.round(fy - 1 + p2.y), 1, 1, 'rgba(214,206,186,' + a.toFixed(3) + ')');
+    }
+    /* squash on landing, and a whisker of stretch at speed: both pinned to
+       the floor so his feet never leave it */
+    const sq = me.land * 0.16;
+    const st = Math.min(0.05, Math.abs(me.v) / SPEED * 0.05);
+    const w = Math.max(1, Math.round(cvv.width * (1 + sq - st * 0.5)));
+    const h = Math.max(1, Math.round(cvv.height * (1 - sq + st)));
+    const shW = Math.round(cvv.width * (0.66 + sq));
+    ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
+    c.drawImage(cvv, Math.round(me.x - w / 2), Math.round(fy - h + 1), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a

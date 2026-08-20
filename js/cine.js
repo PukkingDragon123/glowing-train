@@ -400,93 +400,6 @@ const CINE = {
     CINE.letterbox(false);
   },
 
-  /* ============================================================
-     LOADING UP.
-     The camera pulls back from the board to the desk: the drum is
-     open, six shells go in one at a time, it snaps shut, it spins.
-     Any tap skips it.
-     ============================================================ */
-  async reloadRoom() {
-    const root = CINE.stage();
-    root.className = 'anim-cut';
-    root.innerHTML = '';
-    CINE.letterbox(true);
-    const cv = document.createElement('canvas');
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 190, window.innerHeight / 130)), 2, 7);
-    cv.width = 180 * K; cv.height = 108 * K;
-    cv.className = 'pix anim-frame';
-    root.appendChild(cv);
-    const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.scale(K, K);
-
-    let skip = false;
-    const bail = () => { skip = true; };
-    window.addEventListener('pointerdown', bail);
-    window.addEventListener('keydown', bail);
-
-    const P = PIX.PAL;
-    const draw = (t) => {
-      c.clearRect(0, 0, 180, 108);
-      PIX.rect(c, 0, 0, 180, 108, '#0b0e13');
-      /* the lamp cone */
-      c.globalAlpha = 0.15; c.fillStyle = '#ffd75e';
-      c.beginPath(); c.moveTo(92, 0); c.lineTo(30, 92); c.lineTo(156, 92); c.closePath(); c.fill();
-      c.globalAlpha = 1;
-      PIX.rect(c, 0, 88, 180, 20, '#1d160e');            // the desk
-      PIX.rect(c, 0, 88, 180, 3, '#2c2114');
-      /* the drum, open, huge in frame */
-      const cx = 92, cy = 56;
-      PIX.disc(c, cx, cy, 26, P.K);
-      PIX.disc(c, cx, cy, 24, P.t);
-      PIX.disc(c, cx, cy, 22, P.s);
-      const shells = Math.min(6, Math.floor(t / 0.36));
-      for (let i = 0; i < 6; i++) {
-        const a = i / 6 * Math.PI * 2 - Math.PI / 2 + (t > 2.6 ? t * 9 : 0);
-        const sx = Math.round(cx + Math.cos(a) * 13), sy = Math.round(cy + Math.sin(a) * 13);
-        PIX.disc(c, sx, sy, 6, P.K);
-        PIX.disc(c, sx, sy, 5, i < shells ? P.g : '#0d1015');
-        if (i < shells) PIX.disc(c, sx, sy, 2, P.G);
-      }
-      PIX.disc(c, cx, cy, 4, P.K);
-      /* your hands, blocks at the frame edge */
-      PIX.rect(c, 40, 74, 26, 20, P.K);
-      PIX.rect(c, 42, 76, 22, 18, '#2e7d5b');
-      PIX.rect(c, 116, 70, 24, 24, P.K);
-      PIX.rect(c, 118, 72, 20, 22, '#2e7d5b');
-      /* one shell held up, on its way in */
-      if (shells < 6) {
-        const hy = 40 - (t % 0.36) * 40;
-        PIX.rect(c, 124, Math.round(hy), 6, 10, P.K);
-        PIX.rect(c, 125, Math.round(hy) + 1, 4, 8, P.g);
-      }
-      if (t > 2.6) {
-        const lab = PIXFONT.render('LOADED.', { scale: 1, color: P.W, shadow: null });
-        c.drawImage(lab, Math.round(92 - lab.width / 2), 96);
-      }
-    };
-
-    try {
-      const t0 = performance.now();
-      let last = -1;
-      while (!skip) {
-        const t = (performance.now() - t0) / 1000;
-        if (t > 3.4) break;
-        draw(t);
-        const beat = Math.floor(t / 0.36);
-        if (beat !== last && beat < 6) { SFX.click(); last = beat; }
-        if (beat === 6 && last === 5) { SFX.chak(); last = 7; }
-        if (t > 2.6 && last === 7) { SFX.spin(); last = 8; }
-        await U.sleep(33);
-      }
-    } finally {
-      window.removeEventListener('pointerdown', bail);
-      window.removeEventListener('keydown', bail);
-      root.innerHTML = '';
-      root.className = 'hidden';
-      CINE.letterbox(false);
-    }
-  },
 
   /* ============================================================
      THE DRIVE. Rain, wipers, two depths of skyline going by, and
@@ -1461,6 +1374,144 @@ const CINE = {
       const done = () => { window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); res(); };
       window.addEventListener('pointerdown', done); window.addEventListener('keydown', done);
       setTimeout(done, 2600);
+    });
+    root.innerHTML = ''; root.className = 'hidden';
+  },
+
+  /* ============================================================
+     THE THING IN YOUR HAND.
+
+     You put your hand in a drain and came out with something. The
+     bars close, the room goes away, and what you found is held up
+     to the light with what it means written under it.
+     ============================================================ */
+  async clueCard(clue, left) {
+    const root = CINE.stage();
+    CINE.letterbox(true);
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const wrap = U.el('div', 'clue-card');
+
+    /* the evidence bag: a manila envelope with a window in it */
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 120, window.innerHeight / 90)), 2, 6);
+    const o = ART.cv(96, 62), c = o.c, P = PIX.PAL;
+    ART.box(c, 0, 0, 96, 62, { fill: '#ded2b4', top: '#f0e6c8', bot: '#a99a78', ink: P.K });
+    ART.grain(c, 3, 3, 90, 56, '#d2c5a4', '#e8dcbc', 19);
+    ART.px(c, 6, 6, 84, 18, '#12101d');
+    ART.px(c, 7, 7, 82, 16, 'rgba(150,200,220,.18)');       // the window
+    ART.px(c, 6, 30, 60, 2, '#8d8672');
+    ART.px(c, 6, 36, 74, 2, '#8d8672');
+    ART.px(c, 6, 42, 48, 2, '#8d8672');
+    /* the evidence stamp, sized to the word rather than the other way round */
+    const st = PIXFONT.render('EVIDENCE', { scale: 1, color: '#ffe7e0', shadow: null });
+    const sw = st.width + 6;
+    ART.px(c, 90 - sw, 44, sw, 12, '#b8232f');
+    ART.px(c, 91 - sw, 45, sw - 2, 10, '#8c1a24');
+    c.drawImage(st, 93 - sw, 48);
+    /* whatever it was, sitting in the window */
+    const ic = clue.icon && PIX.get ? null : null;
+    ART.px(c, 40, 10, 16, 10, '#3a3f52');
+    ART.px(c, 42, 12, 12, 6, '#6f7a94');
+    wrap.appendChild(SPR.clone(o.cv, K));
+
+    const head = U.el('div', 'clue-head');
+    head.appendChild(UI.wrap('YOU FOUND SOMETHING', 22, { scale: 3, color: PIX.PAL.q }));
+    head.appendChild(UI.wrap(clue.text, 26, { scale: 4, color: PIX.PAL.W, outline: PIX.PAL.K }));
+    head.appendChild(UI.wrap(left > 1 ? left + ' FACES STILL FIT' : 'THAT IS ONE FACE LEFT',
+      26, { scale: 3, color: left > 1 ? PIX.PAL.G : PIX.PAL.Y }));
+    wrap.appendChild(head);
+    root.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    SFX.bank();
+    await new Promise(res => {
+      const done = () => {
+        window.removeEventListener('pointerdown', done);
+        window.removeEventListener('keydown', done);
+        res();
+      };
+      setTimeout(() => {
+        window.addEventListener('pointerdown', done);
+        window.addEventListener('keydown', done);
+      }, 350);
+      setTimeout(done, 4200);
+    });
+    root.innerHTML = ''; root.className = 'hidden';
+    CINE.letterbox(false);
+  },
+
+  /* you said a name out loud */
+  async namedCard(sus, right) {
+    const root = CINE.stage();
+    CINE.letterbox(true);
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const wrap = U.el('div', 'tb-card');
+    const K = U.clamp(Math.floor(window.innerHeight / 190), 2, 5);
+    /* mugshot's third argument is a SCALE, not a face: passing a word for it
+       builds a zero-size canvas and the whole card throws on draw */
+    wrap.appendChild(SPR.clone(SPR.mugshot('named:' + sus.name, sus.def, 1), K));
+    wrap.appendChild(UI.wrap(sus.name, 20, { scale: 5, color: PIX.PAL.W, outline: PIX.PAL.K }));
+    wrap.appendChild(UI.wrap(right ? 'THAT IS HIM' : 'WRONG FROG',
+      20, { scale: 7, color: right ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K }));
+    wrap.appendChild(UI.wrap(right ? 'THEY ARE PUTTING HIM IN THE BACK ROOM'
+      : 'HE WALKS. AND HE TELLS THE ONE YOU WANT.',
+      34, { scale: 3, color: PIX.PAL.q }));
+    root.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    right ? SFX.jackpot() : (SFX.backfire && SFX.backfire());
+    await new Promise(res => {
+      const done = () => {
+        window.removeEventListener('pointerdown', done);
+        window.removeEventListener('keydown', done);
+        res();
+      };
+      setTimeout(() => {
+        window.addEventListener('pointerdown', done);
+        window.addEventListener('keydown', done);
+      }, 400);
+      setTimeout(done, 4000);
+    });
+    root.innerHTML = ''; root.className = 'hidden';
+    CINE.letterbox(false);
+  },
+
+  /* the night ran out on you */
+  async dawnCard() {
+    const root = CINE.stage();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 190, window.innerHeight / 120)), 2, 7);
+    const cv = document.createElement('canvas');
+    cv.width = 180 * K; cv.height = 108 * K;
+    cv.className = 'pix anim-frame';
+    root.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    /* the sky coming up grey over the rooftops */
+    const t0 = performance.now();
+    await new Promise(res => {
+      const draw = () => {
+        const t = Math.min(1, (performance.now() - t0) / 2600);
+        const up = U.ease.inOutQuad(t);
+        c.fillStyle = '#0a0e14'; c.fillRect(0, 0, 180, 108);
+        for (let y = 0; y < 70; y++) {
+          const a = Math.max(0, up - y / 90);
+          ART.px(c, 0, 70 - y, 180, 1, 'rgba(150,160,180,' + (a * 0.5).toFixed(3) + ')');
+        }
+        for (let i = 0; i < 180; i += 6) {
+          const h = 16 + ((i * 17) % 30);
+          ART.px(c, i, 70 - h, 6, h, '#0c1017');
+          if ((i % 18) === 0) ART.px(c, i + 2, 70 - h + 4, 2, 2, 'rgba(255,220,140,' + (0.5 - up * 0.5) + ')');
+        }
+        ART.px(c, 0, 70, 180, 38, '#090c11');
+        const w1 = PIXFONT.render('06:00', { scale: 3, color: '#eae4d0', shadow: '#12101d' });
+        const w2 = PIXFONT.render('THE SHIFT IS OVER', { scale: 2, color: '#8fb3a0', shadow: '#12101d' });
+        c.drawImage(w1, Math.round(90 - w1.width / 2), 80);
+        c.drawImage(w2, Math.round(90 - w2.width / 2), 94);
+        if (t < 1) requestAnimationFrame(draw); else setTimeout(res, 900);
+      };
+      draw();
     });
     root.innerHTML = ''; root.className = 'hidden';
   },

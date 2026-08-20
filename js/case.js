@@ -171,6 +171,62 @@ const CLUE_TESTS = [
            n: 'THE PRINT OFF THE GLASS IS SMOOTH' } },
 ];
 
+/* ------------------------------------------------------------
+   THE SAME FACTS, AS THINGS YOU CAN HOLD.
+
+   The clue lines above were written for a file you read at a bar:
+   somebody remembers a hat. Clues are dug out of the city now —
+   out of a drain, a fire barrel, a pawnbroker's case — so they
+   have to read like an object in an evidence bag instead of like
+   hearsay. Same tests, same logic, different voice.
+   ------------------------------------------------------------ */
+
+const FOUND_TEXT = {
+  hat: {
+    tophat:  'A TALL SILK HAT, KICKED UNDER A BENCH',
+    fedora:  'A FEDORA WITH A SWEAT LINE IN THE BAND',
+    bowler:  'A ROUND HAT, TRODDEN FLAT',
+    flatcap: 'A FLAT CAP, WRUNG OUT AND STILL WET',
+    bare:    'NO HATBAND MARK ON HIM ANYWHERE',
+  },
+  build: {
+    fat: 'A COAT LET OUT TWICE AT THE SEAMS',
+    thin: 'A COAT TAKEN IN AT THE SEAMS',
+  },
+  goldtooth: {
+    y: 'A GOLD TOOTH CAP, SPAT OUT AND KEPT',
+    n: 'A DENTAL CARD WITH NO GOLD ON IT',
+  },
+  cigar: {
+    y: 'CIGAR ASH, STILL SOFT',
+    n: 'NOT ONE BURN AND NOT ONE MATCH',
+  },
+  rings: {
+    y: 'A RING SCRATCH DRAGGED ACROSS BRASS',
+    n: 'NO RING MARKS ON ANY OF IT',
+  },
+  glasses: {
+    y: 'ONE CRACKED LENS, GROUND THICK',
+    n: 'A READING CARD HE PASSED CLEAN',
+  },
+  scar: {
+    y: 'A BLOODY DRESSING IN THE BIN',
+    n: 'A PHOTOGRAPH OF AN UNMARKED FACE',
+  },
+  patch: {
+    y: 'AN EYE PATCH WITH THE STRAP SNAPPED',
+    n: 'TWO GOOD EYES IN THE PHOTOGRAPH',
+  },
+  chain: {
+    y: 'A LINK OF HEAVY GOLD CHAIN',
+    n: 'NOTHING GOLD IN ANY OF IT',
+  },
+  warts: {
+    y: 'A PRINT OFF THE GLASS, PITTED ALL OVER',
+    n: 'A PRINT OFF THE GLASS, SMOOTH AS A BOTTLE',
+  },
+};
+
 function SKIN_WORD(letter) {
   return ({
     F: 'FELT GREEN', f: 'FELT GREEN', e: 'DARK GREEN', E: 'DARK GREEN',
@@ -257,7 +313,8 @@ const CASE = {
       const keeps = suspects.map(s => t.of(s) === mine);
       const cut = keeps.filter(k => !k).length;
       if (!cut) return;
-      const text = t.text ? t.text(mine) : (t.say && t.say[mine]);
+      const text = (FOUND_TEXT[t.id] && FOUND_TEXT[t.id][mine]) ||
+        (t.text ? t.text(mine) : (t.say && t.say[mine]));
       if (!text) return;
       clues.push({ id: t.id, icon: t.icon, text, keeps, cut, seen: false });
     });
@@ -309,7 +366,47 @@ const CASE = {
       deck2.find(c => !c.seen).seen = true;
       G.intel--;
     }
+    CASE.plant();
     return G.case;
+  },
+
+  /* ------------------------------------------------------------
+     PLANTING.
+
+     A clue is not a card you turn over at a table any more: it is
+     a thing in a place. Every unseen clue gets buried in one prop
+     in one of the five stops, spread so that no single trip solves
+     the case and no stop is a dead end. The order the props come
+     back in is seeded, so the same case is the same hunt.
+     ------------------------------------------------------------ */
+  plant() {
+    const c = G.case;
+    if (!c || typeof CITY === 'undefined') return;
+    const rng = G.rng || Math.random;
+    /* every searchable prop in the city, place by place. This comes off
+       CITY.PROPS rather than off the rooms: planting a case must not have
+       to paint five canvases, and the balance harness has no canvas at all. */
+    const slots = CITY.ORDER.map(id => ({
+      place: id, props: U.shuffle(rng, CITY.propsAt(id)),
+    }));
+    /* deal round the city so the clues are never all in one room */
+    let ring = 0;
+    c.clues.filter(cl => !cl.seen).forEach(cl => {
+      for (let tries = 0; tries < slots.length; tries++) {
+        const s2 = slots[(ring + tries) % slots.length];
+        if (s2.props.length) {
+          cl.at = s2.place;
+          cl.prop = s2.props.pop();
+          ring = (ring + tries + 1) % slots.length;
+          return;
+        }
+      }
+    });
+    /* one of them is on the record: the captain hands you the first stop */
+    const first = c.clues.find(cl => !cl.seen && cl.at);
+    G.tips = {};
+    if (first) G.tips[first.at] = 'THE CAPTAIN SAYS START HERE';
+    return c.clues;
   },
 
   /* which suspects the clues you HAVE TURNED OVER still allow */
