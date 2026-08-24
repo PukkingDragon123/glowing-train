@@ -21,6 +21,9 @@ const fs = require('fs');
 const GAME = 'file://' + path.join(__dirname, '..', 'index.html') + '?debug';
 const SHOTS = path.join(__dirname, 'shots');
 const EXE = process.argv[2] || process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium';
+/* a stale shot from an older run is worse than a missing one: docs/ picks
+   it up and the README ends up illustrated with last week's build */
+fs.rmSync(SHOTS, { recursive: true, force: true });
 fs.mkdirSync(SHOTS, { recursive: true });
 
 (async () => {
@@ -347,7 +350,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
       return G2().case.clues.filter(c => !c.seen).map(c => ({ at: c.at, prop: c.prop }));
     });
     console.log('  the case is buried in: ' + plan.map(x => x.at + '/' + x.prop).join(', '));
-    let dug = 0, errandRun = 0;
+    let dug = 0, errandRun = 0, lockShot = 0, pickShot = 0;
     for (const step of plan) {
       await page.evaluate((x) => { STORY.travel(x); }, step.at);
       await page.waitForFunction((x) => G2().phase === 'place' && G2().place === x && !CINE.busy,
@@ -417,14 +420,137 @@ fs.mkdirSync(SHOTS, { recursive: true });
         if (sp) SCENE.walkTo(sp.x - 14);
       }, step.prop);
       await page.waitForTimeout(900);
+      /* an errand at this stop may already have paid this very clue out, so
+         only demand the pick-up when there is still something buried here */
+      const buried = await page.evaluate((pr) =>
+        !!CITY.plantedAt(G2().place, pr), step.prop);
       await page.evaluate((pr) => { STORY.search(G2().place, pr); }, step.prop);
-      await page.waitForTimeout(900);
-      if (await page.locator('.clue-card').count() && dug === 0) await shot('13-clue');
+      await page.waitForTimeout(700);
+      /* SOME PROPS FIGHT BACK. The shed on the pier has a new lock on it and
+         searching it opens the pick meter first. */
+      if (await page.locator('.job-card').count()) {
+        if (!lockShot) { lockShot = 1; await shot('12d-lock'); }
+        for (let t = 0; t < 3; t++) { await page.mouse.click(640, 400); await page.waitForTimeout(760); }
+        await page.waitForTimeout(700);
+        await clearPlates(6);
+        await page.evaluate((pr) => { STORY.search(G2().place, pr); }, step.prop);
+        await page.waitForTimeout(900);
+      }
+      if (buried) {
+        /* the pick-up plays as an animation, so wait for it rather than
+           sampling one frame and hoping */
+        await page.waitForSelector('.pick-card', { timeout: 6000 }).catch(() => {});
+        await page.waitForTimeout(900);
+        if (await page.locator('.pick-card').count()) {
+          if (!pickShot) { pickShot = 1; await shot('13-clue'); }
+        } else errors.push('[pick-up] finding something showed no pick-up');
+      }
       await page.mouse.click(700, 120);
       await page.waitForTimeout(700);
       await clearPlates(8);
       dug++;
     }
+    /* ---------- the belt: the glass, the iron, and what they do ---------- */
+    {
+      const before = await page.evaluate(() => CITY.minutesLeft());
+      await page.evaluate(() => TOOLS.set('glass'));
+      await page.waitForTimeout(200);
+      await shot('12e-belt');
+      const prop = await page.evaluate(() => {
+        const open = CITY.unsearchedAt(G2().place);
+        const sp = (SCENE.def.spots || []).find(s2 => open.indexOf(s2.id) >= 0);
+        if (!sp) return null;
+        STORY.lookClose(sp, sp.x, 70);
+        return sp.id;
+      });
+      if (prop) {
+        await page.waitForSelector('.glass-card', { timeout: 8000 })
+          .catch(() => errors.push('[glass] the eyeglass never opened'));
+        await page.waitForTimeout(400);
+        await shot('12f-glass');
+        await page.mouse.click(640, 740);
+        await page.waitForTimeout(500);
+        const after = await page.evaluate(() => CITY.minutesLeft());
+        if (after >= before) errors.push('[glass] looking cost nothing');
+      }
+      /* an easter egg, through the same glass */
+      const egg = await page.evaluate(() => {
+        const e = (SCENE.def.spots || []).find(s2 => s2.egg);
+        if (!e) return null;
+        e.onUse();
+        return e.id;
+      });
+      if (egg) {
+        await page.waitForSelector('.glass-card', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(400);
+        await shot('12g-egg');
+        await page.mouse.click(640, 740);
+        await page.waitForTimeout(500);
+      } else errors.push('[eggs] nothing hidden in this room');
+
+      /* the iron, on a rat */
+      await page.evaluate(() => TOOLS.set('iron'));
+      await page.waitForTimeout(200);
+      const shotRat = await page.evaluate(async () => {
+        const before2 = G2().ratsShot || 0;
+        let r = SCENE.rats().find(x => !x.dead);
+        if (!r) { SCENE.debugRats && SCENE.debugRats(1); r = SCENE.rats().find(x => !x.dead); }
+        if (!r) return 'no rats';
+        STORY.shootRat(r, r.x, r.y);
+        return (G2().ratsShot || 0) > before2 ? 'shot' : 'missed';
+      });
+      console.log('  the iron: ' + shotRat);
+      await page.waitForTimeout(400);
+      await clearPlates(4);
+      await page.evaluate(() => TOOLS.set('hand'));
+      await page.waitForTimeout(200);
+    }
+
+    /* ---------- another floor of the same building ---------- */
+    {
+      const st = await page.evaluate(() => {
+        const sp = (SCENE.def.spots || []).find(s2 => s2.id === 'stairs');
+        if (!sp) return null;
+        sp.onUse();
+        return sp.label;
+      });
+      if (st) {
+        await page.waitForFunction(() => !CINE.busy && !SCENE.busy(), null, { timeout: 30000 })
+          .catch(() => {});
+        await page.waitForTimeout(600);
+        await clearPlates(4);
+        await shot('12h-floor');
+        const fl = await page.evaluate(() => ({ floor: G2().floor,
+          spots: (SCENE.def.spots || []).map(x => x.id) }));
+        console.log('  another floor: ' + fl.floor + ' [' + fl.spots.join(' ') + ']');
+        if (!fl.floor) errors.push('[floors] the stairs went nowhere');
+        /* and back down */
+        await page.evaluate(() => {
+          const sp = (SCENE.def.spots || []).find(s2 => s2.id === 'stairs');
+          if (sp) sp.onUse();
+        });
+        await page.waitForFunction(() => !CINE.busy && !SCENE.busy(), null, { timeout: 30000 })
+          .catch(() => {});
+        await page.waitForTimeout(500);
+        await clearPlates(4);
+      }
+    }
+
+    /* ---------- and the one nice thing in the game ---------- */
+    {
+      const pet = await page.evaluate(async () => {
+        const a = SCENE.pets()[0];
+        if (!a) return null;
+        STORY.petIt(a);
+        return a.kind;
+      });
+      if (pet) {
+        await page.waitForTimeout(700);
+        await shot('12i-pet');
+        await clearPlates(4);
+      } else errors.push('[pets] no animal in this room');
+    }
+
     /* the phone, with the night's work on it */
     await page.evaluate(() => { PHONE.open('job'); });
     await page.waitForTimeout(500);

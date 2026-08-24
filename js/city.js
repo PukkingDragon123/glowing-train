@@ -68,9 +68,13 @@ const CITY = (() => {
      can play a night) without painting a single canvas.
      --------------------------------------------------------- */
   const PROPS = {
-    laundry: ['drain', 'machine', 'cart', 'outline', 'till'],
+    /* THE LAST TWO IN EACH OF THESE ARE DOWNSTAIRS OR UPSTAIRS. A building
+       is not one room: the laundry has a cellar the canal comes into and
+       the broker sleeps over his own shop, and the case can be buried on
+       either floor. */
+    laundry: ['drain', 'machine', 'cart', 'outline', 'till', 'sump', 'boiler'],
     docks:   ['crates', 'barrel', 'water', 'shed', 'rope'],
-    pawn:    ['case', 'ledger', 'safe', 'shelf'],
+    pawn:    ['case', 'ledger', 'safe', 'shelf', 'cot', 'strongbox'],
     diner:   ['urn', 'booth', 'bin', 'hatch'],
     bar:     ['stool', 'till', 'coats'],
   };
@@ -90,6 +94,11 @@ const CITY = (() => {
      where you look is the game. */
   const COST = {
     travel: 35, search: 18, ask: 12, talk: 6, job: 45, lineup: 20,
+    /* THE GLASS is the cheap move: three minutes to find out whether a
+       prop is worth the eighteen that turning it over costs. The city has
+       twenty-five things in it and the night has 560 minutes: without a way
+       to triage that, a night is nothing but blank drawers. */
+    look: 3,
   };
 
   function reset() {
@@ -128,8 +137,11 @@ const CITY = (() => {
   }
 
   function spend(kind, mult) {
-    const c = (COST[kind] || 5) * (mult === undefined ? 1 : mult);
-    G.clock = (G.clock === undefined ? START : G.clock) + c;
+    /* ROUNDED, ALWAYS. A half-cost action (a favour, a flight of stairs) used
+       to leave a fraction of a minute on the clock, and the corner of the
+       screen read 23:41.5 for the rest of the night. */
+    const c = Math.round((COST[kind] || 5) * (mult === undefined ? 1 : mult));
+    G.clock = Math.round((G.clock === undefined ? START : G.clock)) + c;
     if (UI && UI.syncStory) UI.syncStory();
     return c;
   }
@@ -218,7 +230,7 @@ const CITY = (() => {
 
   /* the junk you turn up when there was nothing to turn up */
   const NOTHING = [
-    'LINT. A BUTTON. SOMEBODY ELSE&#39;S BAD NIGHT.',
+    "LINT. A BUTTON. SOMEBODY ELSE'S BAD NIGHT.",
     'NOTHING. WHOEVER CAME THROUGH HERE WAS CAREFUL.',
     'WET PAPER. THE INK IS GONE.',
     'A DEAD ROACH AND A BUS TICKET FROM MARCH.',

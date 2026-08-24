@@ -1385,44 +1385,106 @@ const CINE = {
      bars close, the room goes away, and what you found is held up
      to the light with what it means written under it.
      ============================================================ */
-  async clueCard(clue, left) {
-    const root = CINE.stage();
+  /* ============================================================
+     THE PICK-UP.
+
+     Finding something used to be a card with a grey rectangle on
+     it. This is your own hand coming up out of the drain with the
+     thing in it: first person, the room gone dark around the hole,
+     the object turning over in your glove, and then the bag.
+     ============================================================ */
+  async pickUp(clue, left, where) {
+    /* THE PICK LAYER, not the cutscene stage: an establishing shot that
+       finishes half a second later used to wipe this straight off. */
+    const root = CINE.pickRoot();
     CINE.letterbox(true);
     root.className = 'anim-cut';
     root.innerHTML = '';
-    const wrap = U.el('div', 'clue-card');
+    const P = PIX.PAL;
+    const W = 168, H = 116;
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.92 / W,
+      window.innerHeight * 0.66 / H)), 2, 7);
+    const wrap = U.el('div', 'pick-card');
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix pick-cv';
+    wrap.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
 
-    /* the evidence bag: a manila envelope with a window in it */
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 120, window.innerHeight / 90)), 2, 6);
-    const o = ART.cv(96, 62), c = o.c, P = PIX.PAL;
-    ART.box(c, 0, 0, 96, 62, { fill: '#ded2b4', top: '#f0e6c8', bot: '#a99a78', ink: P.K });
-    ART.grain(c, 3, 3, 90, 56, '#d2c5a4', '#e8dcbc', 19);
-    ART.px(c, 6, 6, 84, 18, '#12101d');
-    ART.px(c, 7, 7, 82, 16, 'rgba(150,200,220,.18)');       // the window
-    ART.px(c, 6, 30, 60, 2, '#8d8672');
-    ART.px(c, 6, 36, 74, 2, '#8d8672');
-    ART.px(c, 6, 42, 48, 2, '#8d8672');
-    /* the evidence stamp, sized to the word rather than the other way round */
-    const st = PIXFONT.render('EVIDENCE', { scale: 1, color: '#ffe7e0', shadow: null });
-    const sw = st.width + 6;
-    ART.px(c, 90 - sw, 44, sw, 12, '#b8232f');
-    ART.px(c, 91 - sw, 45, sw - 2, 10, '#8c1a24');
-    c.drawImage(st, 93 - sw, 48);
-    /* whatever it was, sitting in the window */
-    const ic = clue.icon && PIX.get ? null : null;
-    ART.px(c, 40, 10, 16, 10, '#3a3f52');
-    ART.px(c, 42, 12, 12, 6, '#6f7a94');
-    wrap.appendChild(SPR.clone(o.cv, K));
-
-    const head = U.el('div', 'clue-head');
-    head.appendChild(UI.wrap('YOU FOUND SOMETHING', 22, { scale: 3, color: PIX.PAL.q }));
-    head.appendChild(UI.wrap(clue.text, 26, { scale: 4, color: PIX.PAL.W, outline: PIX.PAL.K }));
+    const head = U.el('div', 'pick-head');
+    if (where) head.appendChild(UI.wrap(where, 30, { scale: 2, color: PIX.PAL.N }));
+    head.appendChild(UI.wrap(clue.text, 30, { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
     head.appendChild(UI.wrap(left > 1 ? left + ' FACES STILL FIT' : 'THAT IS ONE FACE LEFT',
-      26, { scale: 3, color: left > 1 ? PIX.PAL.G : PIX.PAL.Y }));
+      28, { scale: 2, color: left > 1 ? PIX.PAL.G : PIX.PAL.Y }));
     wrap.appendChild(head);
     root.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('in'));
+
+    const item = ART.art(clue.icon || 'ev_note', 1);
+    const me = DUEL.myDef ? DUEL.myDef() : null;
+    /* his own suit, lifted out of the dark so the arm reads as an arm */
+    const suit = '#3a4256', suitD = '#20252f', suitL = '#525d75';
+    const t0 = performance.now();
+    let stop = false;
+
+    const draw = (now) => {
+      const T = (now - t0) / 1000;
+      const rise = U.clamp(T / 0.7, 0, 1);
+      const ease = 1 - Math.pow(1 - rise, 3);
+      c.clearRect(0, 0, W, H);
+
+      /* THE INSIDE OF WHEREVER YOU PUT YOUR HAND. Dark, close, and wet. */
+      ART.px(c, 0, 0, W, H, '#0a0c10');
+      ART.grain(c, 0, 0, W, H, '#0c0f13', '#12171d', 23);
+      /* a hard light from up and left. In four wide steps, not forty thin
+         ones: at this magnification a per-row ramp is a set of scanlines. */
+      for (let i = 0; i < 4; i++) {
+        ART.px(c, 0, i * 11, W - i * 14, 11, 'rgba(150,180,205,' + (0.028 - i * 0.006).toFixed(3) + ')');
+      }
+      /* brick, close to the lens and out of focus, which here means chunky */
+      for (let y = 8; y < H - 18; y += 11) {
+        for (let x = ((y / 11) & 1) ? -8 : 0; x < W; x += 22) {
+          ART.px(c, x, y, 21, 10, 'rgba(255,255,255,.012)');
+          ART.px(c, x, y, 21, 1, 'rgba(255,255,255,.02)');
+        }
+      }
+      /* standing water at the bottom of it, moving a little */
+      ART.px(c, 0, H - 16, W, 16, 'rgba(24,56,60,.55)');
+      for (let x = 2; x < W; x += 13) {
+        ART.px(c, x, H - 15 + ((x + Math.round(T * 5)) % 3), 7, 1, 'rgba(120,200,200,.10)');
+      }
+
+      /* THE ARM, in from the bottom left, and the fist at the end of it */
+      const fx = Math.round(W * 0.52);
+      const fy = Math.round(H + 20 - ease * (H * 0.52 + 20));
+      SPR.povSleeve(c, -14, H + 24, fx - 16, fy + 20, 40, 26, suit, suitD, suitL);
+      if (me) SPR.povHand(c, fx, fy + 4, me, 1, 2, true);
+
+      /* AND THE THING HELD IN IT. A glow behind it, because in a frame this
+         dark the only lit object is the one you came for. */
+      const ir = 2;
+      const bob = Math.round(Math.sin(T * 2.6) * 1.2);
+      const ix = fx - 4;
+      const iy = fy - item.height * ir + 6 + bob;
+      PIX.disc(c, ix + item.width, iy + item.height, 26 + Math.sin(T * 3) * 2,
+        'rgba(255,231,160,.055)');
+      c.drawImage(item, 0, 0, item.width, item.height,
+        ix, iy, item.width * ir, item.height * ir);
+      /* a glint that crosses it once it is up */
+      if (rise >= 1) {
+        const g = ((T - 0.7) % 2.6) / 2.6;
+        if (g < 0.3) {
+          const gx = ix + Math.round(g / 0.3 * item.width * ir);
+          ART.px(c, gx, iy, 2, item.height * ir, 'rgba(255,255,255,.14)');
+        }
+      }
+      if (!stop) requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
     SFX.bank();
+
     await new Promise(res => {
       const done = () => {
         window.removeEventListener('pointerdown', done);
@@ -1432,11 +1494,94 @@ const CINE = {
       setTimeout(() => {
         window.addEventListener('pointerdown', done);
         window.addEventListener('keydown', done);
-      }, 350);
-      setTimeout(done, 4200);
+      }, 700);
+      setTimeout(done, 5200);
     });
+    stop = true;
     root.innerHTML = ''; root.className = 'hidden';
     CINE.letterbox(false);
+  },
+
+  /* ============================================================
+     THE EYEGLASS.
+
+     The rooms are painted at a detail nobody can see at room
+     scale. Hold the glass up and the actual painted room is
+     blown up five times inside a brass rim — so every scrap of
+     detail in the art is really there, and this is how you look
+     at it.
+     ============================================================ */
+  async glass(o) {
+    const root = CINE.pickRoot();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const P = PIX.PAL;
+    const src = o.cv;
+    const R = 96;                                  // the lens, in its own pixels
+    const W = R * 2 + 24, H = R * 2 + 24;
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.8 / W,
+      window.innerHeight * 0.62 / H)), 1, 4);
+    const wrap = U.el('div', 'glass-card');
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix glass-cv';
+    wrap.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    const cx = W / 2, cy = H / 2;
+
+    /* the brass, then the glass, then the room inside it */
+    PIX.disc(c, cx, cy, R + 10, P.K);
+    PIX.disc(c, cx, cy, R + 8, '#a5741f');
+    PIX.disc(c, cx, cy, R + 5, '#e0a63c');
+    PIX.disc(c, cx, cy, R + 2, '#6e4c12');
+    PIX.disc(c, cx, cy, R, P.K);
+    c.save();
+    c.beginPath();
+    c.arc(cx, cy, R - 1, 0, Math.PI * 2);
+    c.clip();
+    if (src) {
+      c.drawImage(src, 0, 0, src.width, src.height, cx - R, cy - R, R * 2, R * 2);
+    } else {
+      ART.px(c, cx - R, cy - R, R * 2, R * 2, '#141a1e');
+    }
+    /* the glass itself: a cold cast and a highlight across the top left */
+    ART.px(c, cx - R, cy - R, R * 2, R * 2, 'rgba(127,215,255,.07)');
+    for (let i = 0; i < 26; i++) {
+      ART.px(c, cx - R + i, cy - R + i, 40 - i, 2, 'rgba(255,255,255,.05)');
+    }
+    c.restore();
+    /* and a hair of dust on the lens, because it lives in a coat pocket */
+    for (let i = 0; i < 18; i++) {
+      const a = (i * 2.399), rr = R * 0.9 * Math.sqrt((i + 1) / 19);
+      ART.px(c, Math.round(cx + Math.cos(a) * rr), Math.round(cy + Math.sin(a) * rr),
+        1, 1, 'rgba(255,255,255,.08)');
+    }
+
+    const head = U.el('div', 'glass-head');
+    head.appendChild(UI.txt(o.title || 'A CLOSER LOOK', { scale: 3, color: PIX.PAL.G }));
+    (o.lines || []).forEach(l => {
+      head.appendChild(UI.wrap(l, 34, { scale: 2, color: PIX.PAL.W }));
+    });
+    head.appendChild(UI.txt('TAP TO PUT IT AWAY', { scale: 1, color: PIX.PAL.q }));
+    wrap.appendChild(head);
+    root.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    SFX.tick && SFX.tick();
+
+    await new Promise(res => {
+      const done = () => {
+        window.removeEventListener('pointerdown', done);
+        window.removeEventListener('keydown', done);
+        res();
+      };
+      setTimeout(() => {
+        window.addEventListener('pointerdown', done);
+        window.addEventListener('keydown', done);
+      }, 260);
+    });
+    root.innerHTML = ''; root.className = 'hidden';
   },
 
   /* you said a name out loud */

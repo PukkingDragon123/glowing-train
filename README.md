@@ -134,6 +134,31 @@ The five stops, and what they are:
 
 ![Pier Nineteen in the rain](docs/screen-pier.png)
 
+### The buildings have floors
+
+A stop is not one room. There are **cellar steps** in the laundry down to
+where the canal comes in, and **stairs over the pawn shop** to the room the
+broker actually sleeps in — each its own painted room, with its own props, and
+the case can be buried on either floor.
+
+### The animals
+
+![Sergeant](docs/screen-dog.png)
+
+There is a cat at every stop and a **dog at the station**, and none of them
+have anything to do with the case. They wander a few feet, sit down, wash, and
+if you walk up and put a hand out they come over. That is the whole feature.
+
+### The things that are just there
+
+![Through the glass](docs/screen-egg.png)
+
+A pokeball in a crate marked KANTO. A monster card in a sleeve, priced above
+the safe. A little flag from somewhere warmer over the kitchen hatch. A rubber
+duck going round in a drum with somebody's shirts. They are painted into the
+rooms at their real size, which at room scale is a smudge — the only way to
+know what any of them is is to hold the eyeglass up to it.
+
 ### The night is the clock
 
 Every place you drive to costs **35 minutes**, every prop you put your hand
@@ -148,7 +173,15 @@ cost a witness a detail; clear weather means the street can see you working.
 
 ### Clues are things, not hunches
 
-![What was in the drain](docs/screen-clue.png)
+![The pick-up](docs/screen-clue.png)
+
+Finding something is your own hand coming up out of the drain with the thing
+in it: first person, the room gone dark around the hole, the object turning
+over in your glove. There is a drawing of every kind of evidence in the game —
+a photograph, a cracked lens, a lift card, a brass casing, a cigar burned
+down, a matchbook, a folded note — and the one you found is the one in your
+fist, on the card, and in your coat afterwards.
+
 
 Every clue in the case is planted in exactly one prop in one place. Put your
 hand in the right drain and you come out with **a gold tooth cap**, **a
@@ -160,6 +193,27 @@ few loose notes, and sometimes somebody watching you do it.
 Witnesses fill the gaps: the launderer, the watchman, the broker, the
 waitress, the barman. *Was he wearing a hat? Both eyes? Any gold in his
 mouth?* They answer honestly — and the weather decides how much they saw.
+
+### What is in your hands
+
+![The eyeglass](docs/screen-glass.png)
+
+Three tools, three big drawn buttons, and which one is out changes what a
+click means. `1`, `2`, `3` or the buttons; the mouse cursor changes with them.
+
+| | | |
+|---|---|---|
+| **THE HAND** | walk, open, search, talk | the default |
+| **THE EYEGLASS** | **three minutes** to find out whether a prop is worth the **eighteen** that turning it over costs | it lies about a dry prop one time in four |
+| **THE IRON** | point it at something | rats are fair game. A witness is not, and the game will let you anyway |
+
+The eyeglass is not a gimmick: the rooms are painted at a pixel detail nobody
+can see at room scale, and the glass blows the **actual painted room** up five
+times inside a brass rim. Everything hidden in the art is really in there.
+
+The city has twenty-five things in it and the night has 560 minutes. Turning
+everything over is not on the table — so the glass is how you decide, and a
+prop the glass called hot wears a gold chevron until you get to it.
 
 ### Talking back
 
@@ -183,6 +237,14 @@ Nobody on this salary can afford petrol. **Work the taps** at the Green Lamp
 **Make a batch** at the Fly Trap (three donuts, stop the needle in the heat)
 and you eat one — *the only medicine in this game* — and the cook tells you
 which end of the city still has something in it.
+
+**Pick the lock.** The shed on Pier Nineteen has a new lock on it, and nobody
+puts a new lock on an empty shed. Three pins on the shear line and it opens;
+miss and it drops back.
+
+**Dust it for prints.** There is a print bench at the station. Powder, tape, a
+card and a steady hand will lift a name off what you carried back — worth a
+face off the wall, for half an hour of a night that has none, once a case.
 
 ### Errands, which pay in evidence
 
@@ -358,40 +420,47 @@ the frog leaning into a cut-in are the same frog.
 12. The taps — a glass filling, a head on it, and the line you are aiming for
 13. The fryer — oil moving, a needle sweeping, three donuts glazed
 14. The drums — a fat wet rat running a pipe, and a lid on a chain
-15. The FroggoMap — a city from above with the rain falling on all of it
-16. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
-17. Lamp cones, floor pools, flickering tubes and dust in the air
-18. Dialogue under cinema bars: the camera holds, the line types, a key ticks
-19. The sit-down — dark room, his eyes, the lamp stuttering on
-20. A lieutenant's entrance under cinema bars, with his name stamped on it
-21. The four-beat cock: hammer, cylinder, the held beat, the drop
-22. The steady check — the sweep, the bands, and the break
-23. Muzzle flash, cordite, the casing on the felt
-24. The slug in the air, with a shock ring and a wake
-25. The Persona cut-in — skewed banner, speed lines, red when it is lethal
-26. His grip, in four styles, arm anchored at the shoulder
-27. His reactions — the facepalm, the raised digit, the shrug
-28. Blood that lands, runs and stays — on him, and on your lens
-29. The blood-splat kill wipe, coming off like a sleeve on glass
-30. The drag loader — you, him, one swinging bulb, a smear on the boards
-31. First-person searching: your arm out, dust off the lining, his weight
-32. The mop — three passes a stain
-33. The bribe — chips arcing into a glove, one at a time
-34. The last-heart dread: a closing vignette and a heartbeat, twice a bar
-35. The ambulance — the wagon in the rain, then the corridor from a gurney
-36. The chapter card, and the take raining past the lens
-37. The dawn card — the sky coming up grey and the shift ending on you
-38. The courtroom, the gavel, and the first daylight in the game
-39. Two headstones and the rain stopping
-40. A burning board, and a frog-shaped hole in a chair
+15. The lock — three pins, a pick, and a shed nobody wants opened
+16. The print bench — powder, tape, and a whorl coming up ring by ring
+17. The pick-up — your own hand out of the dark with the thing in it
+18. The eyeglass — the painted room, five times closer, inside brass
+19. A dog that wags, a cat that sits and washes, and neither of them cares
+20. The FroggoMap — a city from above with the rain falling on all of it
+21. Idle blinks, weight shifts, and the tongue taking flies (a verlet chain)
+22. Lamp cones, floor pools, flickering tubes and dust in the air
+23. Dialogue under cinema bars: the camera holds, the line types, a key ticks
+24. The sit-down — dark room, his eyes, the lamp stuttering on
+25. A lieutenant's entrance under cinema bars, with his name stamped on it
+26. The four-beat cock: hammer, cylinder, the held beat, the drop
+27. The steady check — the sweep, the bands, and the break
+28. Muzzle flash, cordite, the casing on the felt
+29. The slug in the air, with a shock ring and a wake
+30. The Persona cut-in — skewed banner, speed lines, red when it is lethal
+31. His grip, in four styles, arm anchored at the shoulder
+32. His reactions — the facepalm, the raised digit, the shrug
+33. Blood that lands, runs and stays — on him, and on your lens
+34. The blood-splat kill wipe, coming off like a sleeve on glass
+35. The drag loader — you, him, one swinging bulb, a smear on the boards
+36. First-person searching: your arm out, dust off the lining, his weight
+37. The mop — three passes a stain
+38. The bribe — chips arcing into a glove, one at a time
+39. The last-heart dread: a closing vignette and a heartbeat, twice a bar
+40. The ambulance — the wagon in the rain, then the corridor from a gurney
+41. The chapter card, and the take raining past the lens
+42. The dawn card — the sky coming up grey and the shift ending on you
+43. The courtroom, the gavel, and the first daylight in the game
+44. Two headstones and the rain stopping
+45. A burning board, and a frog-shaped hole in a chair
 
 ## Keys
 
 Tapping is the whole control scheme, but: `A`/`D` or the arrows walk, `E` or
-`SPACE` uses what you are standing next to, **`P` takes the phone out of your
-coat**, `ENTER` sits down or walks out, `6–8` are the belt, `Q`/`E` are the
-gun tricks at the table, `R` bribes, `TAB` opens the case, `M` mutes, `H` is
-the house rules.
+`SPACE` uses what you are standing next to, **`1` `2` `3` are the hand, the
+eyeglass and the iron** (`Q` cycles them), **`P` takes the phone out of your
+coat**, `ENTER` sits down or walks out, `6–8` are the belt, `R` bribes, `TAB`
+opens the case, `M` mutes, `H` is the house rules. A mouse gets a drawn cursor
+per tool, corner brackets on whatever it is over, and numbered replies in
+every conversation.
 
 ## Project layout
 
@@ -404,9 +473,10 @@ js/pix.js         pixel engine: the palette, a sprite compiler, draw helpers
 js/art.js         THE PROP SHOP: painted pixel maps + the shading kit
 js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
 js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
-js/places.js      the five stops, painted: laundry, pier, pawn, diner, bar
+js/places.js      the stops, painted, and the floors under and over them
 js/phone.js       the FroggoPhone: the map, the file, the kit, the only menu
-js/jobs.js        the side work: the taps, the fryer, the drums
+js/jobs.js        the side work: taps, fryer, drums, lock, print kit
+js/tools.js       the belt: the hand, the eyeglass, the iron, the cursors
 js/rooms.js       the station: bullpen, board room, ward, line-up room
 js/story.js       THE CASE: chapters, the board, dialogue, errands, endings
 js/data.js        the crew, the guns, the belt, the questions, the tuning

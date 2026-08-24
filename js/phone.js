@@ -309,7 +309,8 @@ const PHONE = (() => {
     }
     got.forEach(cl => {
       const row = U.el('div', 'ph-clue got');
-      row.appendChild(SPR.clone(ART.art('ic_case', Math.max(1, k - 1)), 1));
+      /* the thing itself, not a generic tag */
+      row.appendChild(SPR.clone(ART.art(cl.icon || 'ev_note', Math.max(1, k - 1)), 1));
       const col = U.el('div', 'ph-cluecol');
       col.appendChild(line(cl.text, Math.max(1, k - 1), '#eae4d0', null));
       col.appendChild(line('FROM ' + ((CITY.PLACES[cl.at] || {}).short || 'THE CITY'), 1, '#8fb3a0', null));

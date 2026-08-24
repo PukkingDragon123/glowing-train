@@ -194,7 +194,7 @@ const STORY = {
       return { line: 'FOURTEEN MARSH ROW. GO AND FINISH IT.', icon: 'ic_star' };
     }
     if (STORY.capHasBrief()) {
-      return { line: 'SEE CAPTAIN ROOK FOR TONIGHT&#39;S LEAD', icon: 'ic_badge' };
+      return { line: "SEE CAPTAIN ROOK FOR TONIGHT'S LEAD", icon: 'ic_badge' };
     }
     if (!c) return { line: 'TAKE THE CAR OUT AND WORK THE LEAD', icon: 'ic_map' };
     if (c.known) return { line: 'NO LINE-UP FOR HIM: GO STRAIGHT THROUGH', icon: 'ic_badge' };
@@ -225,6 +225,52 @@ const STORY = {
 
   /* has the objective changed since last time anybody looked */
   objectiveKey() { return STORY.objective().line; },
+
+  /* ============================================================
+     AND WHICH THING IN THIS ROOM IT MEANS.
+
+     The objective is a sentence; the marker is a chevron over the
+     one thing in the room that sentence is about. Returned as the
+     spot or actor itself so the scene can put the mark exactly
+     where the thing is, whatever room you happen to be in.
+     ============================================================ */
+  wantHere(def) {
+    if (!def) return null;
+    const find = (ids) => {
+      for (const id of ids) {
+        const a = (def.actors || []).find(x => x.id === id && !x.gone);
+        if (a) return a;
+        const sp = (def.spots || []).find(x => x.id === id && !x.gone);
+        if (sp) return sp;
+      }
+      return null;
+    };
+
+    /* at the station */
+    if (def.id === 'precinct') {
+      if (STORY.capHasBrief()) return find(['cap']);
+      if (STORY.canFinish() && !STORY.atFinale()) return find(['board']);
+      const c0 = G.case;
+      if (c0 && !c0.done && CASE.left() <= 1) return find(['stairs', 'lineup']);
+      return find(['street', 'desk']);
+    }
+
+    /* out in the city: an errand that is done outranks anything else */
+    const owed = (STORY.questsLive() || []).find(x => x.state === 'ready' && x.q.place === G.place);
+    if (owed) return find(['wit']);
+
+    /* the prop the glass says is worth turning over */
+    if (G.place && G.looked) {
+      const hot = CITY.propsAt(G.place).find(pr =>
+        G.looked[G.place + ':' + pr] === 1 && !CITY.searched(G.place, pr));
+      if (hot) { const sp = find([hot]); if (sp) return sp; }
+    }
+    /* otherwise the first thing here nobody has been through */
+    const open = CITY.unsearchedAt(G.place || '');
+    for (const pr of open) { const sp = find([pr]); if (sp) return sp; }
+    /* nothing left down here: point at the stairs, or at the way out */
+    return find(['stairs', 'street']);
+  },
 
   async toPrecinct() {
     await UI.goto(() => { G.phase = 'precinct'; });
@@ -507,7 +553,9 @@ const STORY = {
       cl.seen = true;
       cl.foundAt = q.place + ':favour';
       STORY.note('HE GAVE IT UP: ' + cl.text);
-      await CINE.clueCard(cl, CASE.left());
+      /* HANDED OVER, NOT DUG UP — but it still goes in a bag in front of
+         you, so it gets the same beat as everything else you find. */
+      await CINE.pickUp(cl, CASE.left(), 'HANDED OVER BY ' + q.who);
     } else if (!opts.noCash) {
       await TUTOR.say('TAKE THE MONEY THEN. ' + q.pay + '.', who);
     }
@@ -589,7 +637,7 @@ const STORY = {
         { label: 'LOOK IN IT', note: 'YOU KEEP WHAT IS IN IT. HE IS DONE WITH YOU.' },
       ], you);
       if (pick === 1) {
-        STORY.note('OPENED ' + q.who + '&#39;S PARCEL. HE WILL HEAR ABOUT IT.');
+        STORY.note('OPENED ' + q.who + "'S PARCEL. HE WILL HEAR ABOUT IT.");
         await STORY.questPay(q, {
           noCash: true, voice: you,
           line: 'STRING, PAPER, AND SOMETHING HE DID NOT WANT A COP HOLDING.',
@@ -999,6 +1047,7 @@ const STORY = {
       await STORY.arrive('precinct');
     } else {
       CITY.visit(id);
+      G.floor = null;                     // you come in at street level
       G.phase = 'place';
       UI.render();
       await STORY.arrivePlace(id);
@@ -1020,13 +1069,290 @@ const STORY = {
     });
   },
 
+  /* ============================================================
+     THE PRINT KIT, ON THE BENCH AT THE STATION.
+
+     What you carried back has been handled. Powder, tape, a card,
+     and a steady hand gets you a name off it — which is worth a
+     face off the wall. It is expensive on purpose: half an hour of
+     a night that has none, and once a case.
+     ============================================================ */
+  async dustJob() {
+    if (CINE.busy) return;
+    const c = G.case;
+    if (!c || c.known) {
+      await TUTOR.say('NOTHING ON THE BENCH WORTH POWDERING.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.q, rim: PIX.PAL.t, hold: 1900, top: true });
+      return;
+    }
+    if (G.dusted) {
+      await TUTOR.say('YOU HAVE LIFTED EVERYTHING THAT WAS ON IT.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.q, rim: PIX.PAL.t, hold: 1900, top: true });
+      return;
+    }
+    const got = CITY.found();
+    if (!got.length) {
+      await TUTOR.say('YOU HAVE NOT BROUGHT ANYTHING BACK TO DUST.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.q, rim: PIX.PAL.t, hold: 2100, top: true });
+      return;
+    }
+    const r = await JOBS.prints();
+    G.dusted = 1;
+    CITY.spend('search', 1.7);
+    if (!r.clean) {
+      await TUTOR.say(r.hits ? r.hits + ' PARTIALS AND A SMUDGE. NOT ENOUGH TO SAY A NAME WITH.'
+        : 'YOU HAVE WIPED THE RIDGE OFF IT. THAT IS THAT.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.R, rim: PIX.PAL.r });
+      return;
+    }
+    /* a clean lift is worth a clue: it crosses somebody off */
+    const left = (c.clues || []).filter(cl => !cl.seen);
+    if (!left.length) {
+      await TUTOR.say('A CLEAN ONE. IT MATCHES WHAT YOU ALREADY KNOW.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.G, rim: PIX.PAL.g });
+      return;
+    }
+    const cl = left[0];
+    cl.seen = true;
+    cl.foundAt = 'precinct:dusted';
+    STORY.note('LIFTED A PRINT: ' + cl.text);
+    SFX.jackpot();
+    await CINE.pickUp(cl, CASE.left(), 'LIFTED OFF THE EVIDENCE AT THE STATION');
+  },
+
+  /* ============================================================
+     UP AND DOWN THE BUILDING.
+
+     The stairs are not a place on the map: they are inside one.
+     Going down them costs a couple of minutes and takes you to
+     another painted room whose props belong to the same stop.
+     ============================================================ */
+  async toFloor(to) {
+    if (CINE.busy) return;
+    const place = G.place;
+    const room = PLACES.build(place, to === place ? null : to);
+    if (!room) return;
+    G.floor = to === place ? null : to;
+    CITY.spend('talk');                       // a flight of stairs is a minute
+    SCENE.close();
+    await UI.goto(() => { G.phase = 'place'; });
+    if (G.phase !== 'place') { G.phase = 'place'; UI.render(); }
+    await CINE.establish({
+      name: room.stairs && room.stairs.to === place ? (room.id === 'cellar' ? 'THE CELLAR'
+        : room.id === 'above' ? 'OVER THE SHOP' : 'ANOTHER FLOOR')
+        : (CITY.PLACES[place] || {}).name || 'INSIDE',
+      sub: CITY.hhmm() + '  -  ' + (room.id === 'cellar' ? 'UNDER THE LAUNDRY'
+        : room.id === 'above' ? 'THE BROKER LIVES HERE' : 'GROUND FLOOR'),
+      from: Math.min(room.w - 10, (SCENE.me ? SCENE.me.x : 40) + 120),
+      to: SCENE.me ? SCENE.me.x : 40, ms: 1300,
+    });
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* what the glass said about a prop, if anything: 1 hot, -1 clean, 0 unseen */
+  lookedAt(place, prop) {
+    return (G.looked && G.looked[place + ':' + prop]) || 0;
+  },
+
+  /* ============================================================
+     THE ONE NICE THING IN THE GAME.
+
+     There is a cat at four of the five stops and a dog at the
+     station. Nothing in the case depends on any of them.
+     ============================================================ */
+  async petIt(a) {
+    if (CINE.busy) return;
+    a.pet = 2.2;
+    a.wait = 2.2;
+    for (let i = 0; i < 3; i++) {
+      a.hearts.push({ x: -4 + i * 4, y: a.y - (a.kind === 'dog' ? 26 : 22) - i * 3, t: i * 0.2 });
+    }
+    SFX.tone(a.kind === 'dog' ? 320 : 620, 0.16, 'triangle', 0.06);
+    setTimeout(() => SFX.tone(a.kind === 'dog' ? 380 : 720, 0.2, 'triangle', 0.05), 140);
+    const d = META.load();
+    d.pets = (d.pets || 0) + 1; META.save();
+    G.petted = (G.petted || 0) + 1;
+    const line = a.kind === 'dog'
+      ? U.pick(Math.random, [
+        'HE PUTS HIS WHOLE HEAD IN YOUR HAND. HE DOES THIS TO EVERYBODY.',
+        'THE DOG DOES NOT CARE WHOSE CASE IT IS. THE DOG IS PLEASED.',
+        'SOMEBODY HAS BEEN FEEDING HIM DONUTS. IT WAS YOU.',
+      ])
+      : U.pick(Math.random, [
+        'IT ALLOWS IT. FOR EIGHT SECONDS.',
+        'THE CAT HAS BEEN IN THIS ROOM LONGER THAN THE BODY WAS.',
+        'IT LEANS ON YOUR LEG AND LOOKS AT THE DOOR. IT KNOWS SOMETHING.',
+      ]);
+    await TUTOR.say(line, { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2400, top: true });
+    /* a cat that likes you is worth exactly one hour of not feeling awful */
+    if ((G.petted || 0) === 1) UI.stampSmall('THAT HELPED. SLIGHTLY.');
+    if (d.pets === 12) {
+      const dd = META.load(); dd.catFriend = 1; META.save();
+      UI.stampSmall('EVERY ANIMAL IN THIS CITY KNOWS YOU');
+    }
+  },
+
+  /* ============================================================
+     THE EYEGLASS.
+
+     Searching a prop costs eighteen minutes of a night that only
+     has five hundred and sixty. The glass costs five and tells you
+     whether it is worth it — most of the time. It is a hunch with a
+     lens on it, not an oracle: a dry prop reads clean three times
+     in four and lies to you the fourth.
+     ============================================================ */
+  glassRead(place, prop) {
+    /* fixed per prop per night, so looking twice tells you the same thing */
+    const h = U.hashSeed('look:' + G.seedStr + ':' + (G.day || 1) + ':' + place + ':' + prop);
+    const clue = !!CITY.plantedAt(place, prop);
+    if (clue) return { hot: true, sure: true };
+    return { hot: (h % 100) < 25, sure: false };     // a quarter of them lie
+  },
+
+  async lookClose(hit, x, y) {
+    if (CINE.busy || SCENE.busy()) return;
+    const wx = hit ? hit.x : x;
+    const wy = hit
+      ? (hit.top === undefined ? SCENE.H - 40 : (hit.top + (hit.bot === undefined ? SCENE.H - 20 : hit.bot)) / 2)
+      : y;
+    const cv = SCENE.magnify(wx, wy, 22, 5);
+    const label = hit ? (typeof hit.label === 'function' ? hit.label() : hit.label) : null;
+    const lines = [];
+    const place = G.place;
+    const isProp = hit && place && CITY.propsAt(place).indexOf(hit.id) >= 0;
+
+    if (hit && hit.look) lines.push(hit.look);
+
+    if (isProp) {
+      CITY.spend('look');
+      if (CITY.searched(place, hit.id)) {
+        lines.push('YOU HAVE ALREADY BEEN THROUGH THIS ONE.');
+      } else {
+        const r = STORY.glassRead(place, hit.id);
+        lines.push(r.hot
+          ? 'SOMETHING IN THERE IS NOT DIRT. WORTH THE EIGHTEEN MINUTES.'
+          : 'NOTHING IN THERE BUT WHAT YOU WOULD EXPECT.');
+        (G.looked = G.looked || {})[place + ':' + hit.id] = r.hot ? 1 : -1;
+      }
+    } else if (!hit) {
+      lines.push(U.pick(Math.random, [
+        "WET BRICK AND SOMEBODY ELSE'S PAINT.",
+        'THE ROOM, FIVE TIMES CLOSER. IT DOES NOT IMPROVE.',
+        'DUST, IN LAYERS. NOBODY HAS CLEANED IN HERE SINCE THE WAR.',
+      ]));
+    }
+    await CINE.glass({ cv, title: label || 'THROUGH THE GLASS', lines });
+    if (UI.syncStory) UI.syncStory();
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* ============================================================
+     THE IRON, OUT IN A ROOM.
+
+     Rats are vermin and the city pays a nickel a tail. A frog is a
+     witness, and the game will let you do it anyway — once, and
+     then nobody in that building will look at you again.
+     ============================================================ */
+  async shootRat(rat, x, y) {
+    if (CINE.busy || SCENE.busy()) return;
+    SCENE.killRat(rat);
+    SFX.shot();
+    FX.screen.flash(PIX.PAL.W, 0.22, 0.14);
+    FX.screen.shake(6);
+    G.ratsShot = (G.ratsShot || 0) + 1;
+    const pay = 5;
+    G.chips += pay;
+    UI.syncChips && UI.syncChips();
+    UI.stampSmall('ONE LESS RAT. +' + pay);
+    if (G.ratsShot === 10) {
+      const d = META.load(); d.ratKing = 1; META.save();
+      await TUTOR.say('TEN OF THEM. THE SANITATION DEPARTMENT SHOULD BE PAYING YOU.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2400, top: true });
+    }
+  },
+
+  /* a shot at nothing: noise, and the street hears it */
+  async shootWide(x, y) {
+    if (CINE.busy || SCENE.busy()) return;
+    SFX.shot();
+    FX.screen.flash(PIX.PAL.W, 0.18, 0.16);
+    FX.screen.shake(5);
+    G.heat = (G.heat || 0) + 1;
+    await TUTOR.say(U.pick(Math.random, [
+      "A HOLE IN SOMEBODY ELSE'S WALL. VERY GOOD, DETECTIVE.",
+      'THAT WAS LOUD AND IT WAS NOTHING.',
+      'YOU HAVE JUST TOLD THE WHOLE STREET WHERE YOU ARE.',
+    ]), { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2000, top: true });
+  },
+
+  /* pointing it at somebody who has done nothing yet */
+  async aimAt(o) {
+    if (CINE.busy || SCENE.busy()) return;
+    const isFrog = !!(o.key || o.def);
+    if (!isFrog) {
+      /* shooting the furniture. It is a way of searching, technically. */
+      SFX.shot();
+      FX.screen.flash(PIX.PAL.W, 0.18, 0.16);
+      FX.screen.shake(5);
+      G.heat = (G.heat || 0) + 1;
+      await TUTOR.say('YOU SHOT A ' + ((typeof o.label === 'function' ? o.label() : o.label) || 'THING') +
+        '. IT DID NOT CONFESS.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2200, top: true });
+      return;
+    }
+    const art = o.key ? SPR.frogCustom(o.key, o.def) : null;
+    const pick = await TUTOR.ask('YOU ARE POINTING A GUN AT A WITNESS.', [
+      { label: 'PUT IT AWAY', note: 'HE DID NOT SEE IT' },
+      { label: 'LEAN ON HIM', note: 'HE TALKS. HE ALSO REMEMBERS.' },
+    ], { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, art });
+    if (pick !== 1) { TOOLS.set('hand'); return; }
+
+    /* THREATENING A WITNESS WORKS. That is the problem with it. */
+    G.heat = (G.heat || 0) + 2;
+    STORY.note('PULLED A GUN ON ' + ((typeof o.label === 'function' ? o.label() : o.label) || 'A WITNESS') + '.');
+    const place = G.place;
+    const clues = (G.case && G.case.clues) || [];
+    const cl = clues.find(c2 => !c2.seen && c2.at === place) || clues.find(c2 => !c2.seen);
+    if (cl) {
+      cl.seen = true;
+      cl.foundAt = place + ':leaned';
+      await CINE.pickUp(cl, CASE.left(), 'TAKEN AT GUNPOINT');
+    } else {
+      await TUTOR.say('HE HAS NOTHING. HE IS JUST FRIGHTENED NOW.',
+        { name: 'A WITNESS', nameCol: PIX.PAL.R, rim: PIX.PAL.r, art });
+    }
+    G.burned = G.burned || {};
+    G.burned[place] = 1;
+    UI.stampSmall(((CITY.PLACES[place] || {}).short || 'HERE') + ' IS CLOSED TO YOU');
+    TOOLS.set('hand');
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
   /* ---------- putting your hand in something ---------- */
   async search(place, prop) {
     if (CINE.busy) return;
-    /* the two props that are jobs, not searches */
+    /* the props that are jobs, not searches */
     if (prop === 'pour') return STORY.pourJob();
     if (prop === 'donuts') return STORY.donutJob();
     if (prop === 'juke') return STORY.juke();
+    if (prop === 'kit') return STORY.dustJob();
+
+    /* THE SHED HAS A NEW LOCK ON IT. Nobody puts a new lock on an empty
+       shed, and nobody hands a detective a key. */
+    if (place === 'docks' && prop === 'shed' && !(G.picked && G.picked.shed)) {
+      const r = await JOBS.lock();
+      CITY.spend('talk', 2);
+      if (!r.open) {
+        await TUTOR.say(r.hits ? r.hits + ' OF THE THREE. THE LAST ONE DROPPED BACK.'
+          : 'THE PICK SLIPS. THAT LOCK IS NEWER THAN THE SHED.',
+          { name: 'THE LOCK', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+        return;
+      }
+      (G.picked = G.picked || {}).shed = 1;
+      STORY.note('PICKED THE LOCK ON THE SHED AT THE PIER.');
+      await TUTOR.say('THE SHACKLE COMES OFF IN YOUR HAND. NOW LOOK INSIDE.',
+        { name: 'THE LOCK', nameCol: PIX.PAL.G, rim: PIX.PAL.g });
+    }
 
     if (CITY.searched(place, prop)) {
       await TUTOR.say('YOU HAVE BEEN THROUGH THIS ONCE ALREADY.',
@@ -1045,7 +1371,8 @@ const STORY = {
         clue.foundAt = place + ':' + prop;
         STORY.note('FOUND AT ' + CITY.PLACES[place].short + ': ' + clue.text);
         SFX.jackpot();
-        await CINE.clueCard(clue, CASE.left());
+        await CINE.pickUp(clue, CASE.left(),
+          'OUT OF THE ' + String(prop).toUpperCase() + ' AT ' + CITY.PLACES[place].short);
         if (CASE.left() === 1) {
           await TUTOR.say('ONE FACE LEFT. TAKE IT TO THE STATION AND SAY THE NAME.',
             { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });

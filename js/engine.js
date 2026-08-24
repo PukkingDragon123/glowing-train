@@ -35,6 +35,7 @@ const E = {
     STORY.reset();
     /* the night, the sky, and a city with nothing turned over in it yet */
     if (typeof CITY !== 'undefined') CITY.reset();
+    if (typeof TOOLS !== 'undefined') TOOLS.reset();
     G.place = 'precinct';
     G.visited = { precinct: 1 };
     E.startBlind();

@@ -27,6 +27,37 @@ const PLACES = (() => {
     return U.hashSeed((G.seedStr || 'X') + ':' + (G.chapter || 1) + ':' + id);
   }
 
+  /* ============================================================
+     THE THINGS THAT ARE JUST THERE.
+
+     None of this is evidence. A pokeball behind the pawn shop
+     glass, a monster card somebody left on the bar, a flag over a
+     kitchen hatch, a rubber duck in a laundry drum. They are
+     painted into the room at their real size, which at room scale
+     is a smudge — so the only way to know what any of them is is
+     to hold the eyeglass up to it.
+     ============================================================ */
+  function egg(o) {
+    const sp = {
+      id: 'egg:' + o.id, x: o.x, y: o.y, w: 18,
+      top: o.y - 11, bot: o.y + 11,
+      egg: true, art: o.art,
+      label: o.label,
+      hint: 'WORTH A CLOSER LOOK',
+      look: o.look,
+    };
+    sp.onUse = () => STORY.lookClose(sp, sp.x, o.y);
+    return sp;
+  }
+
+  /* whatever eggs a room declared, painted into it at 1:1 */
+  function paintEggs(c, eggs) {
+    (eggs || []).forEach(e => {
+      const a = ART.art(e.art, 1);
+      c.drawImage(a, Math.round(e.x - a.width / 2), Math.round(e.y - a.height / 2));
+    });
+  }
+
   /* ---------- shared furniture ---------- */
 
   /* rain on the inside of a window, and the street light through it */
@@ -179,6 +210,67 @@ const PLACES = (() => {
          it backs onto, and the vault behind it slides past on its own. */
       archFrame(c, 232, 24, 84, 44, { bars: true });
 
+      /* ============================================================
+         AND EVERYTHING ELSE A WASH-HOUSE HAS IN IT.
+
+         The room was three machines, a chalk outline and a lot of
+         tile. What makes it a place somebody worked in all week is
+         the rest of it: sheets on a line across the middle, a
+         folding table with a stack nobody came back for, the
+         soap shelf, a mop in a bucket, and the water everywhere.
+         ============================================================ */
+
+      /* SHEETS ON A LINE, across the midground. Hung at a height you look
+         under, so the room has something between you and the back wall. */
+      px(c, 62, 30, 300, 1, '#5a5040');
+      for (let i = 0; i < 5; i++) {
+        const sx = 74 + i * 58, sw = 34 + (i % 2) * 8;
+        const sh = 22 + ((i * 7 + seed) % 10);
+        px(c, sx, 30, sw, sh, i % 2 ? '#cfc7b2' : '#ded6c2');
+        px(c, sx, 30, sw, 2, '#f0e9d6');
+        px(c, sx, 30 + sh - 2, sw, 2, 'rgba(0,0,0,.22)');
+        /* the fold shadows down it, and the sag at the bottom */
+        for (let k = 4; k < sw - 3; k += 7) px(c, sx + k, 32, 1, sh - 4, 'rgba(0,0,0,.10)');
+        px(c, sx + 2, 30 + sh, sw - 4, 1, 'rgba(0,0,0,.3)');
+        /* two pegs */
+        px(c, sx + 3, 28, 2, 4, '#8d6a3a');
+        px(c, sx + sw - 5, 28, 2, 4, '#8d6a3a');
+      }
+
+      /* THE FOLDING TABLE, with a stack nobody came back for */
+      ART.box(c, 176, FY - 30, 54, 8, { fill: '#8d8672', top: '#a8a08a', bot: '#4a4638', ink: p.K });
+      px(c, 182, FY - 22, 4, 22, p.K);
+      px(c, 220, FY - 22, 4, 22, p.K);
+      for (let i = 0; i < 4; i++) {
+        px(c, 184 + (i % 2) * 2, FY - 36 + i * 2, 38 - i * 2, 3, i % 2 ? '#ded2b4' : '#cfc4a6');
+        px(c, 184 + (i % 2) * 2, FY - 36 + i * 2, 38 - i * 2, 1, '#f0e6c8');
+      }
+
+      /* THE SOAP SHELF, and the row of tins on it */
+      px(c, 366, 52, 58, 3, '#4a4038');
+      px(c, 366, 55, 58, 2, 'rgba(0,0,0,.3)');
+      for (let i = 0; i < 5; i++) {
+        const tx = 370 + i * 11;
+        px(c, tx, 42, 9, 10, i % 2 ? '#4f7d9c' : '#9c6a4f');
+        px(c, tx, 42, 9, 2, i % 2 ? '#6f9dbc' : '#bc8a6f');
+        px(c, tx + 2, 45, 5, 3, '#ded2b4');
+      }
+
+      /* A MOP IN A BUCKET, left where somebody dropped it */
+      px(c, 44, FY - 14, 16, 14, p.K);
+      px(c, 45, FY - 13, 14, 12, '#3f5a60');
+      px(c, 45, FY - 13, 14, 2, '#5f7a80');
+      px(c, 46, FY - 6, 12, 5, 'rgba(120,190,200,.5)');
+      px(c, 56, FY - 46, 3, 34, '#8d6a3a');
+      px(c, 52, FY - 50, 11, 6, '#a8a08a');
+      px(c, 52, FY - 50, 11, 2, '#c9c0a8');
+
+      /* WATER, EVERYWHERE. It is a laundry: the floor is never dry. */
+      [[96, 20], [188, 26], [268, 18], [340, 22]].forEach(([wx, ww], i) => {
+        ART.dither(c, wx, FY - 5, ww, 6, 'rgba(120,180,210,.16)', 0.35, 11 + i * 4);
+        px(c, wx + 2, FY - 2, ww - 4, 1, 'rgba(170,215,235,.16)');
+      });
+
       /* the strip light, and the damp in the corners */
       for (const lx of [110, 210, 310]) c.drawImage(ART.hangLamp(16, 22, false), lx - 8, 0);
       ART.dither(c, 0, FY - 24, W, 24, 'rgba(0,0,0,.2)', 0.1, 31);
@@ -203,7 +295,7 @@ const PLACES = (() => {
       { id: 'outline', x: 256, w: 46, top: FY - 24, label: 'WHERE HE WAS',
         hint: 'LOOK AT THE FLOOR' },
       { id: 'till', x: 400, w: 52, top: FY - 42, label: 'THE TILL',
-        hint: 'NIGHT&#39;S TAKINGS' },
+        hint: "NIGHT'S TAKINGS" },
     ];
 
     const actors = [
@@ -211,9 +303,17 @@ const PLACES = (() => {
         tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true },
     ];
 
-    return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'duck', x: 137, y: FY - 30, art: 'eg_duck',
+        label: 'SOMETHING YELLOW IN THE DRUM',
+        look: "A RUBBER DUCK, GOING ROUND WITH SOMEBODY'S SHIRTS. IT HAS SEEN THINGS." }),
+    ];
+
+    return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 300, name: 'THE LAUNDRY CAT' }],
       depth: [{ x: 232, y: 24, w: 84, h: 44 }],
       enterX: 34, enterFace: 1,
+      stairs: { to: 'cellar', x: 214, label: 'THE CELLAR STEPS', hint: 'DOWN INTO THE WET' },
       lights: [{ x: 110, y: 14, r: 40 }, { x: 210, y: 14, r: 42, flicker: true },
                { x: 310, y: 14, r: 40 }] };
   }
@@ -346,7 +446,14 @@ const PLACES = (() => {
         tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true },
     ];
 
-    return { id: 'docks', w: W, floorY: FY, paint, actors, spots, outdoor: true,
+    const eggs = [
+      egg({ id: 'ball', x: 130, y: FY - 66, art: 'eg_ball',
+        label: 'SOMETHING RED AND WHITE',
+        look: 'A RED AND WHITE BALL WITH A BUTTON ON IT. THE CRATE SAYS KANTO.' }),
+    ];
+
+    return { id: 'docks', w: W, floorY: FY, paint, actors, spots, outdoor: true, eggs,
+      pets: [{ kind: 'cat', x: 250, name: 'A PIER CAT' }],
       depth: [{ x: 0, y: 0, w: W, h: 44 }],
       enterX: 26, enterFace: 1,
       lights: [{ x: 206, y: 60, r: 40, a: 0.1 }, { x: W - 144, y: 18, r: 46, flicker: true }] };
@@ -423,7 +530,7 @@ const PLACES = (() => {
       { id: 'safe', x: 366, w: 44, top: FY - 40, label: 'THE SAFE',
         hint: 'ASK HIM TO OPEN IT' },
       { id: 'shelf', x: 150, w: 150, top: 36, bot: 96, label: 'THE SHELVES',
-        hint: 'DEAD PEOPLE&#39;S THINGS' },
+        hint: "DEAD PEOPLE'S THINGS" },
     ];
 
     const actors = [
@@ -449,7 +556,18 @@ const PLACES = (() => {
       px(c, 259, FY - 38, 20, 1, '#8d8672');
     };
 
-    return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'card', x: 178, y: 58, art: 'eg_card',
+        label: 'A CARD IN A SLEEVE',
+        look: 'A MONSTER ON A CARD, IN A PLASTIC SLEEVE, PRICED AT MORE THAN THE SAFE.' }),
+      egg({ id: 'flag', x: 262, y: 52, art: 'eg_flag',
+        label: 'A LITTLE FLAG',
+        look: 'RED, WHITE AND BLUE IN BANDS. SOMEBODY A LONG WAY FROM HOME PAWNED IT.' }),
+    ];
+
+    return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 120, name: 'THE SHOP CAT' }],
+      stairs: { to: 'above', x: 336, label: 'THE STAIRS UP', hint: 'HE LIVES OVER THE SHOP' },
       depth: [{ x: 60, y: 34, w: 40, h: 66 }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 120, y: 20, r: 34 }, { x: 279, y: 28, r: 44 }] };
@@ -564,7 +682,14 @@ const PLACES = (() => {
       }
     };
 
-    return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'flag2', x: 293, y: FY - 72, art: 'eg_flag',
+        label: 'A FLAG OVER THE HATCH',
+        look: 'THE COOK IS FROM SOMEWHERE WARMER. THE CHILLI OIL IS HIS OWN.' }),
+    ];
+
+    return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 400, name: 'THE DINER CAT' }],
       depth: [{ x: 10, y: 20, w: 92, h: 40 }],
       enterX: 30, enterFace: 1,
       lights: [{ x: 90, y: 14, r: 38 }, { x: 200, y: 14, r: 40 }, { x: 320, y: 14, r: 38, flicker: true }] };
@@ -675,31 +800,198 @@ const PLACES = (() => {
         tag: 'A REGULAR', tagCol: PIX.PAL.d },
     ];
 
-    return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'card2', x: 200, y: FY - 34, art: 'eg_card',
+        label: 'A CARD ON THE BAR',
+        look: 'SOMEBODY WAS PLAYING A GAME OF CARDS WITH MONSTERS ON THEM. HE LOST.' }),
+    ];
+
+    return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 300, name: 'THE BAR CAT' }],
       depth: [{ x: 250, y: 26, w: 66, h: 32 }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 142, y: 26, r: 44 }, { x: 300, y: 16, r: 40, a: 0.06 },
                { x: W - 47, y: 20, r: 34, flicker: true }] };
   }
 
-  const BUILD = { laundry, docks, pawn, diner, bar };
+  /* ============================================================
+     THE FLOORS NOBODY SHOWS YOU.
+
+     A building is not one room. The laundry has a cellar under it
+     where the canal comes in, and the broker sleeps over his own
+     shop. Both are their own painted rooms with their own props in
+     them, reached by the stairs on the ground floor — so the city
+     is deeper than the map says it is.
+     ============================================================ */
+
+  /* under the laundry: the canal comes in here and nobody has mopped */
+  function laundryCellar() {
+    const W = 300, FY = 112, seed = seedFor('cellar');
+
+    const paint = (c) => {
+      const p = P();
+      c.drawImage(ART.wall(W, FY + 4, { tone: 'brick', railY: 0, seed: seed % 77 }), 0, 0);
+      c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 41 }), 0, FY - 2);
+      px(c, 0, FY - 3, W, 2, '#0b0f11');
+      /* THE WATER. The canal is on the other side of this wall and it knows. */
+      px(c, 0, FY - 2, W, 14, 'rgba(30,70,74,.55)');
+      for (let x = 2; x < W; x += 9) {
+        px(c, x, FY + ((x * 7 + seed) % 5), 6, 1, 'rgba(120,200,200,.12)');
+      }
+      /* pipes across the ceiling, dripping */
+      c.drawImage(ART.pipes(W, 12, seed % 31), 0, 12);
+      px(c, 0, 30, W, 2, '#1a1f24');
+      /* the boiler, big and asleep */
+      ART.box(c, 30, FY - 62, 58, 62, { fill: '#3a3129', top: '#4c4034', bot: '#1d1813', ink: p.K });
+      PIX.disc(c, 59, FY - 36, 17, p.K);
+      PIX.disc(c, 59, FY - 36, 15, '#241d17');
+      PIX.disc(c, 59, FY - 36, 8, '#5a2b12');
+      PIX.disc(c, 59, FY - 36, 5, '#c96a1e');
+      px(c, 44, FY - 70, 30, 9, p.K);
+      px(c, 46, FY - 68, 26, 5, '#2a231c');
+      ART.rivets(c, 34, FY - 58, 7, 9, p.K, '#6b5a48');
+      /* the sump: a hole in the floor with a grate off it */
+      px(c, 176, FY - 6, 46, 8, p.K);
+      px(c, 178, FY - 5, 42, 6, '#0a0d0e');
+      for (let i = 0; i < 5; i++) px(c, 180 + i * 9, FY - 5, 2, 6, '#2a3033');
+      px(c, 226, FY - 8, 20, 4, '#333b3e');
+      /* shelves of somebody's paperwork, gone to mould */
+      ART.box(c, 236, FY - 54, 52, 54, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
+      for (let r = 0; r < 3; r++) {
+        px(c, 238, FY - 46 + r * 16, 48, 2, '#2a2318');
+        for (let i = 0; i < 4; i++) {
+          px(c, 240 + i * 12, FY - 44 + r * 16, 9, 12, i % 2 ? '#7d7a68' : '#8d8672');
+          px(c, 240 + i * 12, FY - 44 + r * 16, 9, 2, 'rgba(0,0,0,.3)');
+        }
+      }
+      /* the steps back up, at the near end */
+      for (let i = 0; i < 6; i++) {
+        px(c, 4, FY - 8 - i * 9, 26 + i * 3, 9, i % 2 ? '#2a2f33' : '#232a2e');
+        px(c, 4, FY - 8 - i * 9, 26 + i * 3, 1, 'rgba(255,255,255,.06)');
+      }
+      sheen(c, 0, FY - 2, W, 16, 0.08);
+      ART.grain(c, 0, 0, W, SCENE.H, '#0d1114', '#161c20', seed % 53);
+    };
+
+    const spots = [
+      { id: 'sump', x: 199, w: 46, top: FY - 14, label: 'THE SUMP',
+        hint: 'THE CANAL COMES IN HERE' },
+      { id: 'boiler', x: 59, w: 58, top: FY - 64, label: 'THE BOILER',
+        hint: 'STILL WARM. SOMETHING IS BEHIND IT.' },
+    ];
+
+    const eggs = [
+      egg({ id: 'ball2', x: 262, y: FY - 40, art: 'eg_ball',
+        label: 'SOMETHING IN THE FILES',
+        look: 'ANOTHER ONE OF THOSE BALLS, FILED UNDER B. SOMEBODY IS COLLECTING THEM.' }),
+    ];
+
+    return { id: 'cellar', w: W, floorY: FY, paint, spots, eggs, indoorDark: true,
+      pets: [{ kind: 'cat', x: 150, name: 'A CELLAR CAT' }],
+      enterX: 30, enterFace: 1,
+      stairs: { to: 'laundry', x: 16, label: 'BACK UP THE STEPS', hint: 'INTO THE NOISE' },
+      lights: [{ x: 100, y: 32, r: 34, a: 0.07, flicker: true },
+               { x: 250, y: 32, r: 30, a: 0.05 }] };
+  }
+
+  /* over the pawn shop: where the broker actually lives */
+  function pawnAbove() {
+    const W = 280, FY = 106, seed = seedFor('above');
+
+    const paint = (c) => {
+      const p = P();
+      c.drawImage(ART.wall(W, FY + 4, { tone: 'grey', railY: 58, seed: seed % 63 }), 0, 0);
+      c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 37 }), 0, FY - 2);
+      px(c, 0, FY - 3, W, 2, '#12100e');
+      nightWindow(c, 196, 26, 54, 46, seed % 19);
+      /* a cot, slept in tonight */
+      c.drawImage(ART.bed(76, 30, false), 30, FY - 30);
+      /* a strongbox under it, which is the whole reason he sleeps here */
+      ART.box(c, 112, FY - 20, 34, 20, { fill: '#2f3540', top: '#404858', bot: '#191d24', ink: p.K });
+      px(c, 124, FY - 13, 10, 8, p.K);
+      px(c, 126, FY - 11, 6, 4, '#e0a63c');
+      ART.rivets(c, 115, FY - 18, 5, 7, p.K, '#7c8697');
+      /* a table with his supper on it and the day's takings beside it */
+      c.drawImage(ART.desk(62, 30, seed % 11), 150, FY - 30);
+      px(c, 162, FY - 40, 16, 6, '#8d8672');
+      px(c, 164, FY - 42, 12, 3, '#c9c0a8');
+      px(c, 186, FY - 38, 14, 4, '#e0a63c');
+      /* a picture of somebody, turned to the wall */
+      px(c, 88, 40, 22, 26, p.K);
+      px(c, 90, 42, 18, 22, '#5e5038');
+      px(c, 92, 44, 14, 18, '#4a3f2e');
+      /* the stairs back down, at the far end */
+      for (let i = 0; i < 6; i++) {
+        px(c, W - 30 - i * 3, FY - 8 - i * 9, 26 + i * 3, 9, i % 2 ? '#3a3229' : '#2f2822');
+        px(c, W - 30 - i * 3, FY - 8 - i * 9, 26 + i * 3, 1, 'rgba(255,255,255,.06)');
+      }
+      ART.grain(c, 0, 0, W, SCENE.H, '#100e12', '#1a171e', seed % 43);
+    };
+
+    const spots = [
+      { id: 'cot', x: 68, w: 76, top: FY - 34, label: 'THE COT',
+        hint: 'HE SLEEPS OVER HIS OWN SHOP' },
+      { id: 'strongbox', x: 129, w: 36, top: FY - 24, label: 'THE STRONGBOX',
+        hint: 'WHAT HE DOES NOT PUT IN THE SAFE' },
+    ];
+
+    const eggs = [
+      egg({ id: 'card3', x: 172, y: FY - 44, art: 'eg_card',
+        label: 'A CARD BY HIS SUPPER',
+        look: 'HE HAS BEEN READING THE BACK OF IT WHILE HE EATS. THE HOLO IS WORN OFF.' }),
+    ];
+
+    return { id: 'above', w: W, floorY: FY, paint, spots, eggs,
+      pets: [{ kind: 'cat', x: 210, name: 'HIS CAT' }],
+      enterX: W - 30, enterFace: -1,
+      stairs: { to: 'pawn', x: W - 16, label: 'BACK DOWN', hint: 'INTO THE SHOP' },
+      lights: [{ x: 170, y: 20, r: 38, a: 0.08 }] };
+  }
+
+  const BUILD = { laundry, docks, pawn, diner, bar, cellar: laundryCellar, above: pawnAbove };
+
+  /* the extra floors, by the place they belong to */
+  const FLOORS = { laundry: ['cellar'], pawn: ['above'] };
 
   return {
-    /* a place, dressed for tonight, with the searching wired up */
-    build(id) {
-      const fn = BUILD[id];
+    /* a place, dressed for tonight, with the searching wired up.
+       `floor` names another room in the same building — the laundry
+       cellar, the room over the pawn shop — and the props there
+       belong to the place you drove to, not to the floor. */
+    build(id, floor) {
+      const fn = BUILD[floor || id];
       if (!fn) return null;
       const room = fn();
+      room.place = id;
       /* every prop goes through the story so clue plumbing lives in one
-         place, and each one says whether it has already been turned over */
+         place, and each one says whether it has already been turned over.
+         An easter egg is not a prop and does not get searched. */
       room.spots = (room.spots || []).map(sp => {
+        if (sp.egg || sp.noSearch) return sp;
         const base = sp.hint;
         return Object.assign({}, sp, {
           hint: () => (CITY.searched(id, sp.id) ? 'NOTHING LEFT HERE'
-            : (typeof base === 'function' ? base() : base)),
+            : (STORY.lookedAt && STORY.lookedAt(id, sp.id) === 1 ? 'THE GLASS SAYS SOMETHING IS IN THERE'
+              : (typeof base === 'function' ? base() : base))),
           onUse: () => STORY.search(id, sp.id),
         });
       });
+      /* the eggs go in as things you can look at, and get painted in */
+      if (room.eggs && room.eggs.length) {
+        const inner = room.paint;
+        room.paint = (c, w, h) => { inner(c, w, h); paintEggs(c, room.eggs); };
+        room.spots = room.spots.concat(room.eggs);
+      }
+      /* and the stairs, if this building has another floor */
+      if (room.stairs) {
+        const st = room.stairs;
+        room.spots = room.spots.concat([{
+          id: 'stairs', x: st.x, w: 40, top: 24, bot: room.floorY + 4,
+          noSearch: true,
+          label: st.label, hint: st.hint,
+          onUse: () => STORY.toFloor(st.to),
+        }]);
+      }
       /* the witnesses answer questions; everybody else just talks */
       room.actors = (room.actors || []).map(a => Object.assign({}, a, {
         label: a.tag || a.label,
@@ -717,5 +1009,7 @@ const PLACES = (() => {
       return room;
     },
     has(id) { return !!BUILD[id]; },
+    /* which floors a place has, for the phone and the tests */
+    floorsOf(id) { return FLOORS[id] || []; },
   };
 })();

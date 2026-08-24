@@ -104,6 +104,8 @@ const SCENE = (() => {
      ============================================================ */
 
   let oy = 0;                    // how far down the room sits in the frame
+  let mouse = { x: 0, y: 0, on: false };
+  let hoverRat = null;
 
   const CEIL_MAX = 38;           // world px of headroom, at most
 
@@ -162,6 +164,7 @@ const SCENE = (() => {
     scale();
     back = paintBack(d);
     rats.length = 0; drips.length = 0; mark = null;
+    spawnPets();
     ratClock = 1.5 + Math.random() * 3;
     me.x = d.enterX === undefined ? 40 : d.enterX;
     me.face = d.enterFace || 1;
@@ -207,11 +210,58 @@ const SCENE = (() => {
     return cy / K - oy;
   }
 
+  /* the cursor says what the click is about to do */
+  function refreshCursor() {
+    if (!cv) return;
+    if (typeof TOOLS === 'undefined') { cv.style.cursor = hover ? 'pointer' : 'default'; return; }
+    cv.style.cursor = TOOLS.css(TOOLS.cur(), !!(hover || hoverRat));
+  }
+
+  /* ---------------------------------------------------------
+     THE GLASS.
+
+     The rooms are painted at full pixel detail and then drawn at
+     a third of it, so most of what is in the art is too small to
+     read. This crops the actual painted room around a point and
+     blows it up with hard edges — so anything hidden in a shelf
+     is really in there, and the glass is how you find it.
+     --------------------------------------------------------- */
+  function magnify(wx, wy, rad, k) {
+    if (!def || !back) return null;
+    rad = rad || 22; k = k || 5;
+    const x0 = Math.round(U.clamp(wx - rad, 0, Math.max(0, def.w - rad * 2)));
+    const y0 = Math.round(U.clamp(wy - rad, 0, Math.max(0, H - rad * 2)));
+    const o = ART.cv(rad * 2 * k, rad * 2 * k);
+    o.c.imageSmoothingEnabled = false;
+    o.c.drawImage(back, x0, y0, rad * 2, rad * 2, 0, 0, rad * 2 * k, rad * 2 * k);
+    return o.cv;
+  }
+
+  /* which rat, if any, is under a point */
+  function ratAt(x, y) {
+    for (const r of rats) {
+      if (r.dead) continue;
+      if (Math.abs(r.x - x) < 9 && Math.abs((r.y - 3) - y) < 9) return r;
+    }
+    return null;
+  }
+
   function targets() {
     if (!def) return [];
     const out = [];
     for (const a of (def.actors || [])) if (!a.gone) out.push(a);
     for (const s of (def.spots || [])) if (!s.gone && !(s.when && !s.when())) out.push(s);
+    /* the animals are things you can walk up to as well */
+    for (const a of pets) {
+      out.push({
+        id: 'pet:' + a.kind, x: a.x, w: 22,
+        top: a.y - (a.kind === 'dog' ? 24 : 20), bot: a.y + 2,
+        pet: a,
+        label: a.name,
+        hint: a.kind === 'dog' ? 'HE HAS BEEN WAITING ALL SHIFT' : 'IT IS NOT YOUR CAT',
+        onUse: () => STORY.petIt(a),
+      });
+    }
     return out;
   }
 
@@ -238,8 +288,11 @@ const SCENE = (() => {
     onMove = (ev) => {
       if (!def) return;
       const x = sceneX(ev), y = sceneY(ev);
+      mouse = { x, y, on: true };
       hover = pick(x, y);
-      cv.style.cursor = hover ? 'pointer' : 'default';
+      /* with the iron out, vermin are targets too */
+      hoverRat = (typeof TOOLS !== 'undefined' && TOOLS.is('iron')) ? ratAt(x, y) : null;
+      refreshCursor();
       if (drag && ev.buttons) {
         const dx = (ev.clientX - drag.x0) / K;
         drag.moved = Math.max(drag.moved, Math.abs(dx));
@@ -253,6 +306,21 @@ const SCENE = (() => {
       if (wasDrag) return;                    // that was a look, not a step
       const x = sceneX(ev), y = sceneY(ev);
       const hit = pick(x, y);
+      const tool = typeof TOOLS === 'undefined' ? 'hand' : TOOLS.cur();
+
+      /* THE EYEGLASS. You do not walk anywhere to look at something: you
+         hold it up from where you stand and the room comes to you. */
+      if (tool === 'glass') { STORY.lookClose(hit, x, y); return; }
+
+      /* THE IRON. A rat is a rat. A frog is a decision. */
+      if (tool === 'iron') {
+        const r = ratAt(x, y);
+        if (r) { STORY.shootRat(r, x, y); return; }
+        if (hit) { STORY.aimAt(hit); return; }
+        STORY.shootWide(x, y);
+        return;
+      }
+
       if (hit) goUse(hit);
       else walkTo(x);
     };
@@ -260,6 +328,8 @@ const SCENE = (() => {
       if (!def) return;
       const k = ev.key.toLowerCase();
       keys[k] = true;
+      /* the belt: 1 hand, 2 glass, 3 iron, Q to cycle */
+      if (typeof TOOLS !== 'undefined' && !busy && TOOLS.onKey(k)) { ev.preventDefault(); return; }
       if (k === 'e' || k === ' ' || k === 'enter') {
         ev.preventDefault();
         if (near && !busy) use(near);
@@ -358,15 +428,24 @@ const SCENE = (() => {
     }
     /* the walk cycle runs off ground covered, not off the clock, so the feet
        never skate: slow steps at the start of a stride, quick in the middle */
+    const NF = SPR.WALK_FRAMES || 8;
     if (moving) {
       const was = Math.floor(me.walk);
-      me.walk = (me.walk + Math.abs(me.v) * dt * 0.135) % 4;
-      if (Math.floor(me.walk) !== was && Math.floor(me.walk) % 2 === 0) {
+      me.walk = (me.walk + Math.abs(me.v) * dt * 0.135 * (NF / 4)) % NF;
+      /* a footfall lands on the two frames where a leg is planted */
+      const now2 = Math.floor(me.walk);
+      if (now2 !== was && now2 % (NF / 2) === 0) {
         SFX.tone(88 + Math.random() * 30, 0.03, 'square', 0.038);
         kickDust(0.4);
       }
-    } else me.walk = U.approach(me.walk, 0, 9, dt);
-    me.frame = Math.floor(me.walk) % 4;
+    } else {
+      /* WINDING DOWN, NOT SNAPPING. Coming to a stop he finishes the step he
+         is in rather than jumping back to the standing frame. */
+      const to = me.walk > NF / 2 ? NF : 0;
+      me.walk = U.approach(me.walk, to, 9, dt);
+      if (me.walk >= NF - 0.02) me.walk = 0;
+    }
+    me.frame = Math.floor(me.walk) % NF;
 
     /* what is within arm's reach */
     let best = null, bd = 26;
@@ -390,6 +469,7 @@ const SCENE = (() => {
     if (Math.abs(cam - camWant) < 0.4) cam = camWant;
 
     stepCritters(dt, 0);
+    stepPets(dt);
     if (def.onTick) def.onTick(dt, me);
   }
 
@@ -495,7 +575,134 @@ const SCENE = (() => {
 
   const rats = [];
   const drips = [];
+  const pets = [];
   let ratClock = 2 + Math.random() * 4;
+
+  /* ============================================================
+     THE ANIMALS THAT ARE NOT VERMIN.
+
+     A cat lives at four of the five stops and a dog lives at the
+     station. They wander a few feet, sit down, wash, and look at
+     you — and if you stand next to one and put a hand out it will
+     come over, which is the only thing in this game that is purely
+     nice. Drawn here rather than in the room art because a painted
+     cat is furniture and this one moves.
+     ============================================================ */
+  function spawnPets() {
+    pets.length = 0;
+    for (const p of (def.pets || [])) {
+      pets.push({
+        kind: p.kind || 'cat', name: p.name || (p.kind === 'dog' ? 'A DOG' : 'A CAT'),
+        home: p.x, x: p.x, y: p.y === undefined ? def.floorY : p.y,
+        dir: 1, v: 0, mood: 'sit', wait: 1 + Math.random() * 3,
+        t: Math.random() * 9, pet: 0, hearts: [],
+      });
+    }
+  }
+
+  function stepPets(dt) {
+    for (const a of pets) {
+      a.t += dt;
+      if (a.pet > 0) { a.pet -= dt; a.v = 0; }
+      else if (a.wait > 0) { a.wait -= dt; a.v = 0; }
+      else if (a.mood === 'sit') {
+        a.mood = 'walk';
+        a.dir = Math.random() < 0.5 ? -1 : 1;
+        a.v = (a.kind === 'dog' ? 20 : 14) + Math.random() * 10;
+      } else {
+        a.x += a.dir * a.v * dt;
+        if (a.x < a.home - 46 || a.x > a.home + 46 || Math.random() < dt * 0.5) {
+          a.mood = 'sit'; a.v = 0; a.wait = 1.5 + Math.random() * 4;
+          if (a.x < a.home - 46) a.dir = 1;
+          if (a.x > a.home + 46) a.dir = -1;
+        }
+      }
+      for (let i = a.hearts.length - 1; i >= 0; i--) {
+        const h = a.hearts[i];
+        h.t += dt; h.y -= dt * 14;
+        if (h.t > 1.4) a.hearts.splice(i, 1);
+      }
+    }
+  }
+
+  function drawPets(c, T) { for (const a of pets) drawPet(c, a, T); }
+
+  function drawPet(c, a, T) {
+    {
+      const x = Math.round(a.x), y = Math.round(a.y);
+      const f = a.dir > 0 ? 1 : -1;
+      const walking = a.v > 1;
+      const step = walking && Math.sin(a.t * 12) > 0 ? 1 : 0;
+      const purr = a.pet > 0;
+      const R = (dx, dy, w, h, col) =>
+        ART.px(c, f > 0 ? x + dx : x - dx - w, y + dy, w, h, col);
+
+      if (a.kind === 'dog') {
+        /* a big soft precinct dog: tan, one dark ear, always pleased */
+        const fur = '#b07a45', dk = '#6e4a30', lt = '#d0a06a', nose = '#2b2436';
+        R(-11, -2, 23, 2, 'rgba(0,0,0,.34)');
+        R(-9, -12, 18, 10, dk);
+        R(-8, -11, 16, 8, fur);
+        R(-8, -11, 16, 2, lt);
+        /* the head */
+        R(6, -17, 10, 9, dk);
+        R(7, -16, 8, 7, fur);
+        R(7, -16, 8, 2, lt);
+        R(13, -13, 3, 3, dk);            // muzzle
+        R(15, -12, 1, 1, nose);
+        R(11, -14, 2, 2, '#f4efe0');     // eye
+        R(11, -14, 1, 1, nose);
+        R(5, -20, 4, 5, dk);             // the flopped ear
+        /* the legs, and the tail that never stops */
+        R(-6, -3, 3, 4 - step, dk);
+        R(0, -3, 3, 3 + step, dk);
+        R(5, -3, 3, 4 - step, dk);
+        const wag = Math.round(Math.sin(a.t * (purr ? 18 : 7)) * 3);
+        for (let i = 0; i < 5; i++) R(-9 - i, -11 - i + wag * (i / 5), 2, 2, fur);
+        if (purr) { R(9, -22, 2, 2, '#ffd75e'); R(3, -23, 2, 2, '#ffd75e'); }
+      } else {
+        /* the cat: black, thin, and unimpressed */
+        const fur = '#2b2739', dk = '#181624', lt = '#413b52', eye = '#8ff7c8';
+        R(-8, -1, 17, 1, 'rgba(0,0,0,.3)');
+        const sit = !walking && !purr;
+        if (sit) {
+          /* sitting: a loaf with ears */
+          R(-6, -11, 13, 10, dk);
+          R(-5, -10, 11, 8, fur);
+          R(-5, -10, 11, 2, lt);
+          R(3, -16, 7, 7, dk);
+          R(4, -15, 5, 5, fur);
+          R(4, -18, 2, 3, dk); R(7, -18, 2, 3, dk);     // ears
+          R(5, -13, 1, 1, eye); R(8, -13, 1, 1, eye);
+          const curl = Math.round(Math.sin(a.t * 1.6) * 2);
+          for (let i = 0; i < 6; i++) R(-7 - i, -3 - (i > 3 ? curl : 0), 2, 2, fur);
+        } else {
+          R(-7, -8, 15, 6, dk);
+          R(-6, -7, 13, 4, fur);
+          R(-6, -7, 13, 1, lt);
+          R(5, -13, 7, 7, dk);
+          R(6, -12, 5, 5, fur);
+          R(6, -15, 2, 3, dk); R(9, -15, 2, 3, dk);
+          R(7, -10, 1, 1, eye); R(10, -10, 1, 1, eye);
+          R(-5, -2, 2, 2 - step, dk);
+          R(0, -2, 2, 1 + step, dk);
+          R(4, -2, 2, 2 - step, dk);
+          const up = purr ? -6 : 0;
+          for (let i = 0; i < 7; i++) {
+            R(-8 - i, -7 + up + Math.round(Math.sin(a.t * 3 + i * 0.5) * 2), 2, 2, fur);
+          }
+        }
+      }
+      /* what it thinks of you */
+      for (const h of a.hearts) {
+        const al = (1 - h.t / 1.4).toFixed(2);
+        ART.px(c, Math.round(a.x + h.x), Math.round(h.y), 2, 2, 'rgba(255,126,219,' + al + ')');
+        ART.px(c, Math.round(a.x + h.x - 2), Math.round(h.y), 2, 1, 'rgba(255,126,219,' + al + ')');
+        ART.px(c, Math.round(a.x + h.x + 2), Math.round(h.y), 2, 1, 'rgba(255,126,219,' + al + ')');
+      }
+    }
+  }
+
 
   function spawnRat() {
     if (!def || rats.length > 2) return;
@@ -515,6 +722,7 @@ const SCENE = (() => {
     for (let i = rats.length - 1; i >= 0; i--) {
       const r = rats[i];
       r.t += dt;
+      if (r.dead) { r.deadT = (r.deadT || 0) + dt; continue; }
       if (r.pause > 0) { r.pause -= dt; continue; }
       r.x += r.dir * r.v * dt;
       if (Math.random() < dt * 0.5) r.pause = 0.2 + Math.random() * 0.5;
@@ -553,6 +761,22 @@ const SCENE = (() => {
       const k = r.big ? 1 : 0;
       const x = Math.round(r.x), y = Math.round(r.y);
       const run = Math.sin(r.t * 22) > 0 ? 0 : 1;
+      /* SHOT. He is on his back with his feet up and he fades out of the
+         room in his own time. Nobody comes to collect him. */
+      if (r.dead) {
+        const a = Math.max(0, 1 - (r.deadT || 0) / 2.6);
+        c.globalAlpha = a;
+        ART.px(c, x - 6, y - 2, 13 + k, 3, '#4a4250');
+        ART.px(c, x - 6, y - 2, 13 + k, 1, '#6b6076');
+        ART.px(c, x - 3, y - 5, 2, 3, '#3a3444');
+        ART.px(c, x + 2, y - 5, 2, 3, '#3a3444');
+        ART.px(c, r.dir > 0 ? x + 7 : x - 8, y - 2, 2, 2, '#b3576b');
+        for (let i = 0; i < 4; i++) {
+          ART.px(c, x - 8 - i * 2, y + 1, 2, 1, 'rgba(140,34,48,' + (0.4 * a).toFixed(2) + ')');
+        }
+        c.globalAlpha = 1;
+        continue;
+      }
       /* A RAT ON A BLACK FLOOR HAS TO BE PAINTED LIGHT or it is a rumour:
          wet grey-brown with a lit back, not the near-black it would be. */
       const body = '#5b5163', dark = '#2b2436', lit = '#7d7288';
@@ -691,8 +915,62 @@ const SCENE = (() => {
     drawCritters(c, T);
     cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
 
+    /* ============================================================
+       WHERE THE JOB IS.
+
+       The objective says what to do; this says WHERE. A gold chevron
+       bobbing over the frog or the prop the current objective wants,
+       so nobody has to read a plate and then guess which of eleven
+       things in the room it meant.
+       ============================================================ */
+    if (typeof STORY !== 'undefined' && STORY.objective && !busy) {
+      const want = STORY.wantHere ? STORY.wantHere(def) : null;
+      if (want) {
+        /* well clear of the label plate that lands on whatever you are
+           standing next to: an actor gets it over his hat, a prop over
+           the top of the thing itself */
+        const wy = (want.top === undefined ? def.floorY - 62 : want.top - 22);
+        const bob = Math.round(Math.sin(T * 3.4) * 2);
+        const gx = Math.round(want.x);
+        for (let i = 0; i < 7; i++) {
+          ART.px(c, gx - 6 + i, wy + bob + i, 2, 2, i === 3 ? '#fff3c4' : '#ffd75e');
+          ART.px(c, gx + 6 - i, wy + bob + i, 2, 2, i === 3 ? '#fff3c4' : '#ffd75e');
+        }
+        ART.px(c, gx - 7, wy + bob - 2, 15, 2, 'rgba(0,0,0,.45)');
+        ART.px(c, gx - 1, wy + bob - 9, 2, 6, '#ffd75e');
+      }
+    }
+
+    /* WHAT THE MOUSE IS ON. Corner brackets in the tool's own colour, so a
+       pointer over a room always says what is about to happen and to what. */
+    {
+      const t = typeof TOOLS === 'undefined' ? null : TOOLS.of();
+      const tgt = hoverRat
+        ? { x: hoverRat.x, w: 20, top: hoverRat.y - 12, bot: hoverRat.y + 2 }
+        : hover;
+      if (tgt && !busy && t) {
+        const bw = Math.max(18, (tgt.w || 26) + 8);
+        const y0 = (tgt.top === undefined ? def.floorY - 46 : tgt.top) - 4;
+        const y1 = (tgt.bot === undefined ? def.floorY + 4 : tgt.bot) + 2;
+        const x0 = Math.round(tgt.x - bw / 2), x1 = Math.round(tgt.x + bw / 2);
+        const L = 5, col = t.tint;
+        const pulse = 0.55 + 0.45 * Math.abs(Math.sin(T * 3));
+        c.globalAlpha = pulse;
+        [[x0, y0, 1, 1], [x1 - L, y0, -1, 1], [x0, y1 - 1, 1, -1], [x1 - L, y1 - 1, -1, -1]]
+          .forEach(([bx, by, sx, sy]) => {
+            ART.px(c, sx > 0 ? bx : bx + L - 1, by, L, 1, col);
+            ART.px(c, sx > 0 ? bx : bx + L - 1, sy > 0 ? by : by, 1, L * sy, col);
+          });
+        c.globalAlpha = 1;
+      }
+    }
+
     /* furniture that people stand behind */
     if (def.onPaintFront) def.onPaintFront(c, T);
+    /* THE ANIMALS GO IN FRONT OF IT. A cat is twenty pixels tall and every
+       room has a counter across the front of it: behind the furniture, in
+       depth order, the dog was simply invisible. */
+    drawPets(c, T);
     /* the lamps, over the cast, so people stand in the light */
     for (const L of (def.lights || [])) {
       const flick = L.flicker ? (Math.sin(T * 13 + L.x) > 0.86 ? 0.5 : 1) : 1;
@@ -769,14 +1047,32 @@ const SCENE = (() => {
     if (def.onHud) def.onHud(c, K, viewW(), cam);
   }
 
+  /* ============================================================
+     THE IDLE.
+
+     Nobody in this game stands still. The chest goes up and down on
+     a slow count and the weight comes off one leg every few seconds,
+     and both are done by moving the sprite a pixel rather than by
+     drawing another one — so every frog in every room breathes for
+     free. Standing on the walk frame and twitching to the next one
+     (which is what this used to do) reads as a flinch, not a breath.
+     ============================================================ */
+  function idleOf(T, seed) {
+    const t = T * 0.85 + (seed % 17) * 0.7;
+    const rise = Math.sin(t) > 0.35 ? 1 : 0;              // the chest, 1px
+    const ph = (t * 0.11) % 1;                            // a shift every ~9s
+    const sway = ph < 0.1 ? Math.sin((ph / 0.1) * Math.PI) : 0;
+    return { rise, lean: Math.round(sway * 1.6) };
+  }
+
   function drawActor(c, a, T) {
     const face = a.face === undefined ? -1 : a.face;
-    /* somebody stood in a room still shifts his weight now and then */
-    const idle = a.still ? 0 : (Math.sin(T * 1.3 + (a.x % 9)) > 0.9 ? 1 : 0);
-    const r = rig(a, idle, face);
+    const r = rig(a, 0, face);
     const fy = a.y === undefined ? def.floorY : a.y;
+    const id = a.still ? { rise: 0, lean: 0 } : idleOf(T, Math.round(a.x));
+    const h = Math.max(1, r.h - id.rise);
     ART.px(c, Math.round(a.x - r.w / 3), fy, Math.round(r.w * 0.66), 2, 'rgba(0,0,0,.32)');
-    c.drawImage(r.cv, Math.round(a.x - r.w / 2), Math.round(fy - r.h + 1), r.w, r.h);
+    c.drawImage(r.cv, Math.round(a.x - r.w / 2) + id.lean, Math.round(fy - h + 1), r.w, h);
   }
 
   function drawMe(c, T) {
@@ -791,11 +1087,13 @@ const SCENE = (() => {
        the floor so his feet never leave it */
     const sq = me.land * 0.16;
     const st = Math.min(0.05, Math.abs(me.v) / SPEED * 0.05);
+    /* standing about, he breathes too */
+    const id = Math.abs(me.v) > 4 ? { rise: 0, lean: 0 } : idleOf(T, 3);
     const w = Math.max(1, Math.round(r.w * (1 + sq - st * 0.5)));
-    const h = Math.max(1, Math.round(r.h * (1 - sq + st)));
+    const h = Math.max(1, Math.round(r.h * (1 - sq + st)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
     ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
-    c.drawImage(r.cv, Math.round(me.x - w / 2), Math.round(fy - h + 1), w, h);
+    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
@@ -894,6 +1192,16 @@ const SCENE = (() => {
       return SCENE._me;
     },
     busy(v) { if (v !== undefined) busy = v; return busy; },
+    /* the tools reach into the room through these */
+    magnify, ratAt, refreshCursor,
+    rats() { return rats; },
+    pets() { return pets; },
+    killRat(r) {
+      r.dead = true; r.deadT = 0;
+      setTimeout(() => { const i = rats.indexOf(r); if (i >= 0) rats.splice(i, 1); }, 2600);
+    },
+    /* where the mouse last was, in room pixels */
+    mouseAt() { return mouse; },
     /* ============================================================
        THE CAMERA, WHEN THE STORY WANTS IT.
        ============================================================ */

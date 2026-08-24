@@ -77,7 +77,8 @@ const UI = {
       case 'board':      UI.buildRoom(app, ROOMS.boardRoom()); break;
       case 'ward':       UI.buildRoom(app, ROOMS.ward()); break;
       case 'blind':      UI.buildRoom(app, ROOMS.lineup()); break;
-      case 'place':      UI.buildRoom(app, PLACES.build(G.place) || ROOMS.precinct()); break;
+      case 'place':      UI.buildRoom(app,
+        PLACES.build(G.place, G.floor) || ROOMS.precinct()); break;
       case 'duel':
       case 'loot':       UI.buildDuel(app); DUEL.enter(); break;
       case 'ending':     UI.buildEnding(app); break;
@@ -124,7 +125,17 @@ const UI = {
       col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
       plate.appendChild(col);
       plate.onclick = () => PHONE.open('job');
-      wrap.appendChild(plate);
+
+      /* THE BELT. What is in your hands, and what a click is going to do
+         with it. Three big drawn buttons, because this is the only control
+         in the game that changes what everything else means. */
+      const col2 = U.el('div', 'corner-left');
+      col2.appendChild(plate);
+      const belt = U.el('div', 'tool-belt');
+      belt.id = 'tool-belt';
+      UI.fillBelt(belt, K);
+      col2.appendChild(belt);
+      wrap.appendChild(col2);
     }
 
     /* the right-hand stack: the phone, the money, and the two switches */
@@ -176,6 +187,32 @@ const UI = {
 
     wrap.appendChild(stack);
     app.appendChild(wrap);
+  },
+
+  /* the three tools, drawn, with the key that picks each one on it */
+  fillBelt(belt, K) {
+    if (typeof TOOLS === 'undefined') return;
+    belt.innerHTML = '';
+    TOOLS.LIST.forEach(t => {
+      const b = U.el('button', 'tool-btn' + (TOOLS.is(t.id) ? ' on' : ''));
+      b.dataset.tool = t.id;
+      b.appendChild(SPR.clone(ART.art(t.icon, K), 1));
+      const col = U.el('span', 'tool-col');
+      col.appendChild(UI.txt(t.word, { scale: Math.max(1, K - 1), shadow: null,
+        color: TOOLS.is(t.id) ? PIX.PAL.K : PIX.PAL.W }));
+      col.appendChild(UI.txt(t.key, { scale: 1, shadow: null,
+        color: TOOLS.is(t.id) ? PIX.PAL.K : PIX.PAL.q }));
+      b.appendChild(col);
+      b.onclick = () => TOOLS.set(t.id);
+      belt.appendChild(b);
+    });
+  },
+
+  syncTools() {
+    const belt = document.getElementById('tool-belt');
+    if (!belt) return;
+    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;
+    UI.fillBelt(belt, K);
   },
 
   /* the objective changed under us: repaint the plate in place */

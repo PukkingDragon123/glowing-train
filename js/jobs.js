@@ -7,6 +7,8 @@
      THE TAPS     pull three pints without wearing them
      THE FRYER    turn out a tray of donuts
      THE DRUMS    put a lid on three rats
+     THE LOCK     three pins on a shed nobody wants opened
+     THE PRINTS   lift three clean ones off what you brought back
 
    Both are the same shape — a moving thing you have to stop in
    the right place, three times — and both pay in the two things
@@ -342,6 +344,86 @@ const JOBS = (() => {
     for (let i = 0; i < s.hits; i++) ART.px(c, W - 19 + i * 5, H - 12, 3, 6, '#5b5163');
   }
 
+  /* ---------------------------------------------------------
+     THE LOCK. Three pins, a pick, and a shed on a pier with
+     something in it. Miss and the pin drops back.
+     --------------------------------------------------------- */
+  function drawLock(c, W, H, s) {
+    const P = PIX.PAL;
+    ART.px(c, 0, 0, W, H, '#0e1216');
+    ART.dither(c, 0, 0, W, H, 'rgba(0,0,0,.3)', 0.1, 19);
+    /* the padlock, filling the frame, seen from the side */
+    ART.box(c, 22, 22, 88, 54, { fill: '#4d545e', top: '#697382', bot: '#22262c', ink: P.K });
+    ART.rivets(c, 26, 26, 8, 11, '#2b3037', '#8d9298');
+    /* the shackle */
+    for (let i = 0; i < 20; i++) {
+      const a = Math.PI + (i / 19) * Math.PI;
+      ART.px(c, 66 + Math.round(Math.cos(a) * 22) - 3, 22 + Math.round(Math.sin(a) * 16), 6, 6, P.K);
+      ART.px(c, 66 + Math.round(Math.cos(a) * 22) - 2, 23 + Math.round(Math.sin(a) * 16), 4, 4, '#8d9298');
+    }
+    /* the keyway, and the three pins in it */
+    ART.px(c, 34, 34, 64, 32, P.K);
+    ART.px(c, 36, 36, 60, 28, '#171b20');
+    for (let i = 0; i < 3; i++) {
+      const px0 = 44 + i * 18;
+      const done2 = i < s.hits;
+      const live = i === s.round;
+      /* the pin, and how high it is sitting */
+      const h = done2 ? 20 : (live ? Math.round(20 * s.x) : 4);
+      ART.px(c, px0, 60 - h, 8, h + 4, done2 ? '#e0a63c' : '#6a7480');
+      ART.px(c, px0, 60 - h, 8, 2, done2 ? '#ffd75e' : '#98a2ab');
+      ART.px(c, px0 - 1, 59 - h, 10, 1, P.K);
+      /* THE SHEAR LINE this pin has to stop on */
+      if (live) {
+        const ly = 60 - Math.round(20 * s.centre);
+        const half = Math.max(2, Math.round(20 * s.band / 2));
+        ART.px(c, px0 - 4, ly - half, 16, half * 2, 'rgba(111,247,216,.2)');
+        ART.px(c, px0 - 4, ly, 16, 1, '#6ff7d8');
+      }
+    }
+    /* the pick, going in */
+    ART.px(c, 96, 58, 30, 2, '#c9d2d8');
+    ART.px(c, 118, 56, 12, 6, '#4a3f2e');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(200,240,255,' + (s.flash * 0.18).toFixed(3) + ')');
+    /* the pins already set, as a row of gold */
+    for (let i = 0; i < s.hits; i++) ART.px(c, 8 + i * 5, H - 8, 3, 4, '#ffd75e');
+  }
+
+  /* ---------------------------------------------------------
+     THE PRINTS. A brush over a lift card: too light and you get
+     nothing, too hard and you wipe the ridge off.
+     --------------------------------------------------------- */
+  function drawPrints(c, W, H, s) {
+    const P = PIX.PAL;
+    ART.px(c, 0, 0, W, H, '#191d24');
+    ART.dither(c, 0, 0, W, H, 'rgba(0,0,0,.28)', 0.1, 13);
+    /* the card on the bench */
+    ART.box(c, 18, 26, 96, 44, { fill: '#ded2b4', top: '#f0e6c8', bot: '#a99a78', ink: P.K });
+    ART.grain(c, 21, 29, 90, 38, '#d2c5a4', '#e8dcbc', 17);
+    /* the print coming up, ring by ring, as you get them */
+    const cx = 66, cy = 48;
+    for (let r = 2 + s.hits * 4; r >= 2; r -= 4) {
+      PIX.disc(c, cx, cy, r, r % 8 === 2 ? '#8d8672' : '#5a5648');
+    }
+    if (s.hits) PIX.disc(c, cx, cy, 2, '#2b2436');
+    /* THE PRESSURE BAR down the left: the band is the right weight */
+    const bx = 8, by = 20, bh = 56;
+    ART.px(c, bx - 1, by - 1, 8, bh + 2, P.K);
+    ART.px(c, bx, by, 6, bh, '#22282e');
+    const bandH = Math.max(4, Math.round(bh * s.band));
+    const cyb = by + Math.round(bh * s.centre);
+    ART.px(c, bx, cyb - (bandH >> 1), 6, bandH, 'rgba(111,247,216,.24)');
+    ART.px(c, bx, cyb, 6, 1, '#6ff7d8');
+    const ny = by + Math.round(bh * s.x);
+    ART.px(c, bx - 3, ny - 1, 12, 3, P.K);
+    ART.px(c, bx - 2, ny, 10, 1, '#ff6a5e');
+    /* the brush, riding the bar */
+    ART.px(c, 118, ny - 8, 8, 18, '#4a3f2e');
+    ART.px(c, 119, ny - 7, 6, 6, '#6e4a30');
+    for (let i = 0; i < 7; i++) ART.px(c, 112 + i, ny + 2 + (i % 2), 2, 6, '#2b2436');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.2).toFixed(3) + ')');
+  }
+
   return {
     meter,
 
@@ -371,6 +453,30 @@ const JOBS = (() => {
       const pay = r.hits * 6 + r.perfect * 4;
       G.chips += pay;
       return { pay, hits: r.hits, perfect: r.perfect, rounds: r.rounds };
+    },
+
+    /* three pins. Nothing to spend, everything to open. */
+    async lock() {
+      const r = await meter({
+        head: 'PICK THE LOCK',
+        sub: 'THREE PINS. SET EACH ONE ON THE SHEAR LINE.',
+        key: 'TAP TO SET THE PIN',
+        rounds: 3, band: 0.17, speed: 1.05,
+        draw: drawLock,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, open: r.hits >= 3 };
+    },
+
+    /* three clean lifts off what you brought back to the station */
+    async prints() {
+      const r = await meter({
+        head: 'DUST IT FOR PRINTS',
+        sub: 'THREE LIFTS. NOT TOO HARD OR THE RIDGE GOES.',
+        key: 'TAP AT THE RIGHT WEIGHT',
+        rounds: 3, band: 0.2, speed: 0.95,
+        draw: drawPrints,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, clean: r.hits >= 3 };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */

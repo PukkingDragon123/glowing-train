@@ -164,6 +164,18 @@ const ROOMS = (() => {
       for (const lx of [120, 240, 360, 480]) {
         c.drawImage(ART.hangLamp(16, 26, false), lx - 8, 0);
       }
+      /* THE PRINT BENCH, between the last desk and the lockers: powder,
+         tape, a stack of lift cards and a lamp on a bent neck. */
+      ART.box(c, 426, FY - 26, 46, 26, { fill: '#3f3a33', top: '#524b41', bot: '#221f1a', ink: p.K });
+      px(c, 430, FY - 32, 8, 6, '#22282e');            // the powder jar
+      px(c, 431, FY - 31, 6, 4, '#8d8672');
+      px(c, 441, FY - 30, 6, 4, '#2b2436');            // the brush
+      px(c, 442, FY - 33, 2, 4, '#4a3f2e');
+      px(c, 452, FY - 31, 14, 5, '#ded2b4');           // lift cards
+      px(c, 452, FY - 33, 14, 2, '#f0e6c8');
+      px(c, 468, FY - 44, 2, 18, '#3a3f46');           // the bench lamp
+      px(c, 462, FY - 48, 12, 5, '#3a3f46');
+      px(c, 463, FY - 43, 10, 1, '#ffe7a8');
       /* grime in the corners so it isn't a clean box */
       ART.dither(c, 0, FY - 20, W, 20, 'rgba(0,0,0,.22)', 0.12, 31);
     };
@@ -260,9 +272,20 @@ const ROOMS = (() => {
       hint: 'WHAT YOU CARRY',
       onUse: () => STORY.openLocker(),
     });
+    /* --- THE PRINT BENCH: powder, tape, and half an hour you do not have --- */
+    spots.push({
+      id: 'kit', x: 448, w: 48, top: FY - 50,
+      label: 'THE PRINT BENCH',
+      hint: () => (G.dusted ? 'YOU HAVE LIFTED WHAT THERE WAS'
+        : (typeof CITY !== 'undefined' && CITY.found().length
+          ? 'DUST WHAT YOU BROUGHT BACK' : 'NOTHING TO DUST YET')),
+      onUse: () => STORY.dustJob(),
+    });
 
     return {
       id: 'precinct', w: W, floorY: FY, paint, onPaintFront: front, actors, spots,
+      /* SERGEANT, WHO IS A DOG. Nobody signed him in either. */
+      pets: [{ kind: 'dog', x: 452, name: 'SERGEANT' }],
       depth: [{ x: 176, y: 31, w: 70, h: 44 }],
       enterX: 46, enterFace: 1,
       lights: [{ x: 120, y: 14, r: 40 }, { x: 240, y: 14, r: 40 },
@@ -423,6 +446,7 @@ const ROOMS = (() => {
 
     return {
       id: 'ward', w: W, floorY: FY, paint, spots, actors,
+      pets: [{ kind: 'cat', x: W - 70, name: 'THE WARD CAT' }],
       enterX: 62, enterFace: 1,
       lights: [{ x: 150, y: 8, r: 70, a: 0.05 }],
     };

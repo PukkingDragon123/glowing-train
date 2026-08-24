@@ -1984,6 +1984,8 @@ SPR.buildFrog = function (d, expr) {
     pain:    { lid: 0, pup: 0, bi: 1, bo: 0, by: 0 },
     dead:    { lid: 0, pup: 0, bi: 0, bo: 0, by: 0 },
     blink:   { lid: 7, pup: 3, bi: 0, bo: 0, by: 0 },   // the whole idle tell
+    talk:    { lid: 2, pup: 3, bi: 0, bo: -1, by: 0 },  // brows up, mid-sentence
+    talk2:   { lid: 2, pup: 3, bi: 0, bo: 0, by: 0 },
   };
   const X = EX[expr] || EX.neutral;
 
@@ -2201,6 +2203,23 @@ SPR.buildFrog = function (d, expr) {
       PIX.rect(ctx, cx - 5, my + 4, 11, 2, P.K);
       PIX.rect(ctx, cx - 4, my + 4, 9, 1, shade);
       goldStud(cx + mw - 6, my + 1);
+      break;
+    }
+    case 'talk': {
+      /* MID-WORD. The jaw is down, the ridge shows, the tongue is moving.
+         A plate flips between this and neutral while the line types itself
+         on, which is the difference between a frog talking to you and a
+         photograph of a frog with words next to it. */
+      maw(2, false);
+      line(-1, -1, P.K, 2, -1);
+      PIX.rect(ctx, cx - mw - 1, my - 1, 2, 4, P.K);
+      PIX.rect(ctx, cx + mw, my - 1, 2, 4, P.K);
+      break;
+    }
+    case 'talk2': {
+      /* the half-closed beat between two syllables */
+      maw(1, false);
+      line(-2, 0, P.K, 2, 0);
       break;
     }
     case 'pain': {
@@ -2450,6 +2469,12 @@ SPR.buildBody = function (d, o) {
      standing pose reads as a gorilla once you can see the whole frog. */
   const tuck = !!o.tuck;
   const armIn = seated || tuck;
+  /* THE SWING, -1..1. The arms used to be baked stiff into the bust and only
+     the hands bobbed, which is what made the walk look broken: a limb that
+     does not move attached to a hand that does. Now the elbow and the wrist
+     travel with the stride and the hand is hung off wherever the wrist
+     actually ended up. */
+  const swing = Math.max(-1, Math.min(1, o.swing || 0));
   const P = PIX.PAL;
   const C = SPR.costumeOf(d);
   const W = 116, H = 60, cx = 58;
@@ -3039,11 +3064,21 @@ SPR.buildBody = function (d, o) {
     /* Seated the arm hangs: shoulder, elbow and wrist stack up almost in a
        line. Bowed out the way the standing pose does it, the two-pixel
        stair steps turn the whole limb into a right angle. */
-    const elX  = cx + sgn * (baseHw - (armIn ? 8 : 1));   // elbow, out past the ribs
-    const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9));  // wrist in toward the felt
+    /* ONE ARM IN, ONE ARM OUT. The offset is the same sign on both sides, so
+       in screen space one arm comes across the body while the other swings
+       away from it — which is what a stride looks like from the front.
+       Mirroring it per side (the obvious thing) makes him shrug instead. */
+    const sw = Math.round(swing * 6);
+    /* AND ONE HAND RIDES HIGHER. Sliding both arms sideways alone reads as a
+       slide; the arm coming across also lifts while the trailing one hangs,
+       and that vertical difference is what sells it at room size. */
+    const lift = Math.round(sgn * swing * 2);
+    const elX  = cx + sgn * (baseHw - (armIn ? 8 : 1)) + Math.round(sw * 0.45);
+    const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw;   // wrist leads the swing
     /* seated, the sleeve head starts BELOW the coat's shoulder line, so the
        arm grows out of the jacket instead of notching a step into it */
-    const y0 = seated ? 13 : 8, yEl = 30, y2 = seated ? H : 57;
+    const y0 = seated ? 13 : 8, yEl = 30;
+    const y2 = seated ? H : 57 - Math.round(Math.abs(sw) * 0.35) - lift;
     const centerAt = (y) => {
       const t = y < yEl ? (y - y0) / (yEl - y0) : (y - yEl) / (y2 - yEl);
       const a = y < yEl ? shoX : elX, b = y < yEl ? elX : haX;
@@ -3089,9 +3124,18 @@ SPR.buildBody = function (d, o) {
       const c = centerAt(y), w = widthAt(y) - 2;
       const bare = y > rollY;
       PIX.rect(fctx, c - (w >> 1), y, w, 1, bare ? skin : sleeveC);
-      /* round the tube: lit on the inside edge, shaded on the outside */
-      PIX.rect(fctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, SH1);
-      PIX.rect(fctx, c + (sgn < 0 ? (w >> 1) - 1 : -(w >> 1)), y, 1, 1, 'rgba(255,255,255,.07)');
+      /* A LIMB, NOT A PANEL OF JACKET. On a coat this dark the black
+         outline disappears and all you see is a hand sliding about on a
+         slab, which is exactly what made the walk look broken. So the
+         forearm is lifted a shade out of the coat, rim-lit down its
+         outer edge, and it lays a hard shadow on the coat down its
+         inner one — the arm is in front of him now, and it reads. */
+      if (!seated) PIX.rect(fctx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.09)');
+      const outX = sgn < 0 ? c - (w >> 1) : c + (w >> 1) - 2;
+      const inX = sgn < 0 ? c + (w >> 1) - 1 : c - (w >> 1);
+      PIX.rect(fctx, outX, y, 2, 1, 'rgba(255,255,255,.20)');
+      PIX.rect(fctx, inX, y, 1, 1, SH1);
+      if (!seated) PIX.rect(fctx, inX + (sgn < 0 ? 1 : -2), y, 2, 1, 'rgba(0,0,0,.45)');
       if (!bare && stripe === 'chalk') {
         const lx = c - (w >> 1) + ((Math.abs(c) + 1) % stripeGap);
         PIX.rect(fctx, lx, y, 1, 1, CHALK);
@@ -3168,8 +3212,19 @@ SPR.buildBody = function (d, o) {
   ctx.drawImage(armCv, 0, 0);
   ctx.restore();
 
-  /* where the sleeves end, so the scene can put the hands exactly there */
+  /* where the sleeves end, so the scene can put the hands exactly there.
+     wrist is the old symmetric report; wristAt is the real per-side one,
+     which is the only thing that can follow a swing. */
   cv.wrist = { dx: baseHw - (armIn ? 13 : 9), dy: 56, cx: cx, h: H };
+  cv.wristAt = [-1, 1].map(sgn => {
+    const sw = Math.round(swing * 6);
+    const lift = Math.round(sgn * swing * 2);
+    return {
+      sgn,
+      x: cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw,
+      y: 56 - Math.round(Math.abs(sw) * 0.35) - lift,
+    };
+  });
 
   /* epaulets ride ON TOP of the shoulder, not under it */
   [-1, 1].forEach(sgn => {
@@ -3219,8 +3274,21 @@ SPR.frogMaster = function (id, expr) {
 
 /* mooks: same rig, any def */
 SPR.frogCustom = function (key, def, expr) {
-  return SPR.cached('frogc_' + key + '_' + (expr || 'neutral'),
+  const cv = SPR.cached('frogc_' + key + '_' + (expr || 'neutral'),
     () => SPR.buildFrog(def, expr));
+  /* WHO THIS IS, WRITTEN ON THE CANVAS. Every dialogue plate in the game
+     is handed a finished portrait, so without this there is no way to ask
+     for the same frog with his mouth open. */
+  cv.pkey = key; cv.pdef = def; cv.pexpr = expr || 'neutral';
+  return cv;
+};
+
+/* the same portrait, mid-word: a plate flips between these two while the
+   line types itself on, and stops on the closed one when it lands */
+SPR.portraitTalk = function (art, open) {
+  if (!art || !art.pkey || !art.pdef) return art;
+  if (art.pexpr && art.pexpr !== 'neutral') return art;   // an angry frog stays angry
+  return SPR.frogCustom(art.pkey, art.pdef, open ? 'talk' : 'talk2');
 };
 
 SPR.bodyCustom = function (key, def, seated) {
@@ -3229,8 +3297,10 @@ SPR.bodyCustom = function (key, def, seated) {
 };
 
 /* the same bust with its arms in, for a frog you can see the legs of */
-SPR.bodyStanding = function (key, def) {
-  return SPR.cached('body_' + key + '_stand', () => SPR.buildBody(def, { tuck: true }));
+SPR.bodyStanding = function (key, def, swing) {
+  const sw = Math.round((swing || 0) * 100) / 100;
+  return SPR.cached('body_' + key + '_stand' + sw,
+    () => SPR.buildBody(def, { tuck: true, swing: sw }));
 };
 
 SPR.frogEl = function (id, scale, cls, expr) {
@@ -4187,15 +4257,30 @@ SPR.mugshot = function (key, def, k) {
    body and the same four-fingered hands — so the frog you walk
    past in the bullpen is the frog you sit down across from.
 
-   opts: { frame } — 0..3 of the walk cycle. Frame 0 is standing.
+   opts: { frame } — 0..7 of the walk cycle. Frame 0 is standing.
+
+   EIGHT FRAMES, NOT FOUR. Four was two poses and their mirrors, which
+   at any decent frame rate reads as a flicker between two drawings.
+   Eight sampled off a sine gives the stride a middle: the leg leaves
+   the ground, passes, plants, and takes the weight, and the arm on the
+   other side does the same thing a beat behind it.
    ============================================================ */
+SPR.WALK_FRAMES = 8;
+
+/* the phase of the cycle, -1..1, as a smooth curve rather than a table */
+SPR.walkPhase = function (frame) {
+  const n = SPR.WALK_FRAMES;
+  return Math.sin(((frame % n) / n) * Math.PI * 2);
+};
+
 SPR.frogWhole = function (key, def, opts) {
   opts = opts || {};
-  const frame = opts.frame | 0;
+  const frame = ((opts.frame | 0) % SPR.WALK_FRAMES + SPR.WALK_FRAMES) % SPR.WALK_FRAMES;
   return SPR.cached('whole_' + key + ':' + frame, () => {
     const P = PIX.PAL;
+    const ph = SPR.walkPhase(frame);
     const head = SPR.frogCustom('fb:' + key, def);
-    const body = SPR.bodyStanding('fb:' + key, def);
+    const body = SPR.bodyStanding('fb:' + key, def, ph);
     /* PROPORTION. The portrait head and the duel bust were both drawn for a
        frog sitting at a table, where you never see him below the chest. Used
        whole they made a barrel: a huge head on a slab of shoulders with
@@ -4212,11 +4297,12 @@ SPR.frogWhole = function (key, def, opts) {
     const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false;
 
-    /* THE WALK. Two legs in opposite phase, the whole frog rising a pixel
-       on the passing beats — read at a third of this size it is enough to
-       say "walking" without a second sprite sheet. */
-    const swing = [0, 5, 0, -5][frame];
-    const bob = [0, -2, 0, -1][frame];
+    /* THE WALK. Two legs in opposite phase, the whole frog rising on the
+       passing beats. The bob is twice the stride frequency, because you go
+       up once per step and there are two steps in a cycle. */
+    const swing = Math.round(ph * 6);
+    const bob = -Math.round((1 - Math.cos(((frame % SPR.WALK_FRAMES) /
+      SPR.WALK_FRAMES) * Math.PI * 4)) * 1.1);
     const bodyTop = hh - NECK + bob;
     const cx = Math.round(W / 2);
 
@@ -4227,9 +4313,10 @@ SPR.frogWhole = function (key, def, opts) {
     const hipY = bodyTop + bh - 6;
     const spread = def.fat ? 10 : 8;      // hips, not a pair of stilts
     [-1, 1].forEach(sgn => {
-      const step = sgn * swing;
-      const lx = cx + sgn * spread + Math.round(step * 0.5);
-      const len = LEGS - Math.abs(step) * 0.3;
+      /* the leading leg is the one the swing is carrying toward */
+      const lead = sgn * swing > 0;
+      const lx = cx + sgn * spread + Math.round(swing * 0.9);
+      const len = LEGS - (lead ? Math.abs(swing) * 0.55 : 0);
       PIX.rect(c, lx - 7, hipY, 14, len, P.K);
       PIX.rect(c, lx - 6, hipY, 12, len - 2, legC);
       PIX.rect(c, lx - 6, hipY, 2, len - 2, 'rgba(255,255,255,.07)');
@@ -4237,8 +4324,8 @@ SPR.frogWhole = function (key, def, opts) {
       /* trouser crease + cuff */
       PIX.rect(c, lx - 6, hipY + len - 9, 12, 2, 'rgba(0,0,0,.3)');
       PIX.rect(c, lx - 1, hipY + 4, 1, len - 14, 'rgba(255,255,255,.05)');
-      /* the shoe, pointed out, lifting on the back beat */
-      const sh = hipY + len - 4 - (step > 0 ? 2 : 0);
+      /* the shoe, pointed out, lifting on the beat this leg is swinging */
+      const sh = hipY + len - 4 - (lead ? Math.round(Math.abs(swing) * 0.5) : 0);
       PIX.rect(c, lx - 8 + sgn * 2, sh, 16, 6, P.K);
       PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 4, '#1c1a2c');
       PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 1, 'rgba(255,255,255,.16)');
@@ -4264,14 +4351,12 @@ SPR.frogWhole = function (key, def, opts) {
     /* HANDS. The bust stops at a shirt cuff because the duel paints the
        hands onto the felt itself. Standing up he needs his own, hung on the
        wrist the body reports, swinging against the leg on the same beat. */
-    const wr = body.wrist;
+    const wr = body.wristAt;
     if (wr) {
       const bx = Math.round((W - bw) / 2);
-      const sw = Math.round(swing * 0.3);
-      [-1, 1].forEach(sgn => {
-        const hx = bx + Math.round((wr.cx + sgn * wr.dx) * BS);
-        const hy = bodyTop + Math.round(wr.dy * BS) - sgn * sw;
-        SPR.frogHand(c, hx, hy, def, sgn, { noCuff: true, grip: true });
+      wr.forEach(w => {
+        SPR.frogHand(c, bx + Math.round(w.x * BS), bodyTop + Math.round(w.y * BS),
+          def, w.sgn, { noCuff: true, grip: true });
       });
     }
 

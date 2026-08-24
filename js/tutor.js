@@ -150,10 +150,16 @@ const TUTOR = {
       if (hushed) TUTOR.hush(true);
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
+      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
       const build = (reveal) => {
         holder.innerHTML = '';
+        /* HIS MOUTH MOVES WHILE HE IS TALKING. Three characters a flap,
+           which at this type speed is about eighty milliseconds — a frog
+           saying something rather than a photograph with words beside it. */
+        const art = reveal === null || reveal === undefined ? base
+          : SPR.portraitTalk(base, Math.floor(reveal / 6) % 2 === 0);
         holder.appendChild(TUTOR.plate({
-          art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
+          art,
           name: opts.name || 'THE CAPTAIN',
           nameCol: opts.nameCol,
           rim: opts.rim,
@@ -180,11 +186,11 @@ const TUTOR = {
       };
       TUTOR.finishTyping = finishTyping;
       typing = setInterval(() => {
-        typed += 2;
+        typed += 3;
         if (typed >= line.length) { finishTyping(); return; }
         build(typed);
-        if (typed % 6 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
-      }, 26);
+        if (typed % 9 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
+      }, 22);
 
       let closed = false;
       const done = () => {
@@ -237,10 +243,13 @@ const TUTOR = {
       const holder = U.el('div', 'tut-plate');
       const rack = U.el('div', 'reply-rack');
 
+      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
       const build = (reveal) => {
         holder.innerHTML = '';
+        const art = reveal === null || reveal === undefined ? base
+          : SPR.portraitTalk(base, Math.floor(reveal / 6) % 2 === 0);
         holder.appendChild(TUTOR.plate({
-          art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
+          art,
           name: opts.name || 'THE CAPTAIN',
           nameCol: opts.nameCol,
           rim: opts.rim,
@@ -263,7 +272,12 @@ const TUTOR = {
         rack.innerHTML = '';
         replies.forEach((r, i) => {
           const b = U.el('button', 'reply-btn' + (r.dim ? ' dim' : ''));
-          b.appendChild(PIXFONT.render('>', { scale: k, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+          /* THE NUMBER, NOT A CHEVRON. The number keys already worked and
+             nothing said so; now the key is printed on the thing it
+             presses, which is the only honest place for it. */
+          const num = U.el('span', 'reply-num');
+          num.appendChild(PIXFONT.render(String(i + 1), { scale: k, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+          b.appendChild(num);
           const col = U.el('span', 'reply-col');
           UI.wrapLines(typeof r === 'string' ? r : r.label, 38).forEach(t => {
             col.appendChild(PIXFONT.render(t, { scale: k, color: PIX.PAL.W, shadow: PIX.PAL.K }));
@@ -271,6 +285,8 @@ const TUTOR = {
           if (r.note) col.appendChild(PIXFONT.render(r.note, { scale: Math.max(1, k - 2), color: PIX.PAL.q, shadow: null }));
           b.appendChild(col);
           b.onclick = () => finish(i);
+          /* a mouse gets the same feedback a thumb does */
+          b.onmouseenter = () => { SFX.tone(1100, 0.02, 'square', 0.02); };
           rack.appendChild(b);
         });
         requestAnimationFrame(() => rack.classList.add('in'));
@@ -289,11 +305,11 @@ const TUTOR = {
       TUTOR._close = () => finish(-1);
       TUTOR.finishTyping = finishTyping;
       typing = setInterval(() => {
-        typed += 2;
+        typed += 3;
         if (typed >= line.length) { finishTyping(); return; }
         build(typed);
-        if (typed % 6 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
-      }, 24);
+        if (typed % 9 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
+      }, 20);
 
       const finish = (i) => {
         if (done) return;

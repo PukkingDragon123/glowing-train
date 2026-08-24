@@ -2515,6 +2515,9 @@ body.in-scene #app { overflow: hidden; }
   position: fixed; inset: 0; z-index: 162;
   overflow: hidden; pointer-events: auto;
   background: rgba(4,5,8,.93);
+  /* the pickers position themselves absolutely; the pick-up and the glass
+     are ordinary blocks and want the middle of the screen */
+  display: flex; align-items: center; justify-content: center;
 }
 #cine-pick.hidden { display: none; }
 #cine-pick .ch-wrap,
@@ -2755,19 +2758,6 @@ body.in-scene #app { overflow: hidden; }
 .ph-shut { min-width: 180px; justify-content: center; background: linear-gradient(180deg, #8ff7c8, #2ec4a9); }
 
 /* ============================================================
-   32. THE THING IN YOUR HAND — the clue card
-   ============================================================ */
-
-.clue-card {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  transform: translateY(14px) scale(.9); opacity: 0;
-  transition: transform .22s cubic-bezier(.2,1.6,.4,1), opacity .22s;
-}
-.clue-card.in { transform: none; opacity: 1; }
-.clue-card canvas { image-rendering: pixelated; filter: drop-shadow(0 6px 0 rgba(0,0,0,.5)); }
-.clue-head { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
-
-/* ============================================================
    33. THE SIDE JOBS — the taps and the fryer
    ============================================================ */
 
@@ -2838,6 +2828,30 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 @keyframes obj-bump {
   from { transform: translateX(-8px) scale(.96); }
   to { transform: none; }
+}
+
+/* the left-hand column: what you are doing, and what is in your hands */
+.corner-left {
+  pointer-events: auto;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+}
+.tool-belt { display: flex; gap: 6px; }
+.tool-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: linear-gradient(180deg, #2a3038, #171c22);
+  border: var(--bd-thick) solid #0a0d11; border-radius: 0;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), 0 5px 0 rgba(0,0,0,.5);
+  padding: 6px 10px; cursor: pointer; min-height: 44px;
+}
+.tool-btn.on {
+  background: linear-gradient(180deg, #8ff7c8, #2ec4a9);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.2), 0 5px 0 rgba(0,0,0,.5);
+}
+.tool-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), 0 3px 0 rgba(0,0,0,.5); }
+.tool-col { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+@media (max-width: 620px) {
+  .tool-btn { padding: 5px 7px; gap: 5px; min-height: 40px; }
+  .tool-col { display: none; }
 }
 
 /* the right-hand stack */
@@ -2912,7 +2926,20 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   box-shadow: inset 0 0 0 2px rgba(111,247,216,.14), 0 5px 0 rgba(0,0,0,.5);
   padding: 10px 14px; min-height: 52px;
 }
-.reply-btn:hover { box-shadow: inset 0 0 0 2px rgba(111,247,216,.4), 0 5px 0 rgba(0,0,0,.5); }
+.reply-btn:hover, .reply-btn:focus-visible {
+  background: linear-gradient(180deg, rgba(30,52,42,.98), rgba(14,28,22,.98));
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.55), 0 5px 0 rgba(0,0,0,.5);
+  outline: none;
+}
+.reply-btn:hover .reply-num { background: #6ff7d8; }
+/* the key that presses this, printed on it */
+.reply-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px; min-height: 26px; padding: 2px 4px;
+  background: rgba(111,247,216,.16);
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.3);
+}
+.reply-num canvas { display: block; }
 .reply-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(111,247,216,.4), 0 3px 0 rgba(0,0,0,.5); }
 .reply-btn.dim { opacity: .72; }
 .reply-btn canvas { image-rendering: pixelated; display: block; width: auto; height: auto; flex: none; }
@@ -2921,6 +2948,29 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   .reply-btn { padding: 8px 10px; min-height: 46px; gap: 8px; }
   .reply-rack { gap: 5px; }
 }
+
+/* ============================================================
+   36. THE PICK-UP AND THE EYEGLASS
+   Two full-frame beats: your hand coming out of a drain with
+   something in it, and the room blown up inside a brass rim.
+   ============================================================ */
+.pick-card, .glass-card {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  opacity: 0; transform: scale(.96) translateY(10px);
+  transition: opacity .2s, transform .24s cubic-bezier(.2,1.5,.4,1);
+}
+.pick-card.in, .glass-card.in { opacity: 1; transform: none; }
+.pick-cv, .glass-cv {
+  image-rendering: pixelated; display: block;
+  border: var(--bd-thick) solid #0a0d11;
+  box-shadow: 0 8px 0 rgba(0,0,0,.55);
+}
+.glass-cv { border: 0; box-shadow: none; }
+.pick-head, .glass-head {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  text-align: center; max-width: min(92vw, 720px);
+}
+.pick-head canvas, .glass-head canvas { display: block; }
 </style>
 </head>
 <body>
@@ -6045,6 +6095,8 @@ SPR.buildFrog = function (d, expr) {
     pain:    { lid: 0, pup: 0, bi: 1, bo: 0, by: 0 },
     dead:    { lid: 0, pup: 0, bi: 0, bo: 0, by: 0 },
     blink:   { lid: 7, pup: 3, bi: 0, bo: 0, by: 0 },   // the whole idle tell
+    talk:    { lid: 2, pup: 3, bi: 0, bo: -1, by: 0 },  // brows up, mid-sentence
+    talk2:   { lid: 2, pup: 3, bi: 0, bo: 0, by: 0 },
   };
   const X = EX[expr] || EX.neutral;
 
@@ -6262,6 +6314,23 @@ SPR.buildFrog = function (d, expr) {
       PIX.rect(ctx, cx - 5, my + 4, 11, 2, P.K);
       PIX.rect(ctx, cx - 4, my + 4, 9, 1, shade);
       goldStud(cx + mw - 6, my + 1);
+      break;
+    }
+    case 'talk': {
+      /* MID-WORD. The jaw is down, the ridge shows, the tongue is moving.
+         A plate flips between this and neutral while the line types itself
+         on, which is the difference between a frog talking to you and a
+         photograph of a frog with words next to it. */
+      maw(2, false);
+      line(-1, -1, P.K, 2, -1);
+      PIX.rect(ctx, cx - mw - 1, my - 1, 2, 4, P.K);
+      PIX.rect(ctx, cx + mw, my - 1, 2, 4, P.K);
+      break;
+    }
+    case 'talk2': {
+      /* the half-closed beat between two syllables */
+      maw(1, false);
+      line(-2, 0, P.K, 2, 0);
       break;
     }
     case 'pain': {
@@ -6511,6 +6580,12 @@ SPR.buildBody = function (d, o) {
      standing pose reads as a gorilla once you can see the whole frog. */
   const tuck = !!o.tuck;
   const armIn = seated || tuck;
+  /* THE SWING, -1..1. The arms used to be baked stiff into the bust and only
+     the hands bobbed, which is what made the walk look broken: a limb that
+     does not move attached to a hand that does. Now the elbow and the wrist
+     travel with the stride and the hand is hung off wherever the wrist
+     actually ended up. */
+  const swing = Math.max(-1, Math.min(1, o.swing || 0));
   const P = PIX.PAL;
   const C = SPR.costumeOf(d);
   const W = 116, H = 60, cx = 58;
@@ -7100,11 +7175,21 @@ SPR.buildBody = function (d, o) {
     /* Seated the arm hangs: shoulder, elbow and wrist stack up almost in a
        line. Bowed out the way the standing pose does it, the two-pixel
        stair steps turn the whole limb into a right angle. */
-    const elX  = cx + sgn * (baseHw - (armIn ? 8 : 1));   // elbow, out past the ribs
-    const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9));  // wrist in toward the felt
+    /* ONE ARM IN, ONE ARM OUT. The offset is the same sign on both sides, so
+       in screen space one arm comes across the body while the other swings
+       away from it — which is what a stride looks like from the front.
+       Mirroring it per side (the obvious thing) makes him shrug instead. */
+    const sw = Math.round(swing * 6);
+    /* AND ONE HAND RIDES HIGHER. Sliding both arms sideways alone reads as a
+       slide; the arm coming across also lifts while the trailing one hangs,
+       and that vertical difference is what sells it at room size. */
+    const lift = Math.round(sgn * swing * 2);
+    const elX  = cx + sgn * (baseHw - (armIn ? 8 : 1)) + Math.round(sw * 0.45);
+    const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw;   // wrist leads the swing
     /* seated, the sleeve head starts BELOW the coat's shoulder line, so the
        arm grows out of the jacket instead of notching a step into it */
-    const y0 = seated ? 13 : 8, yEl = 30, y2 = seated ? H : 57;
+    const y0 = seated ? 13 : 8, yEl = 30;
+    const y2 = seated ? H : 57 - Math.round(Math.abs(sw) * 0.35) - lift;
     const centerAt = (y) => {
       const t = y < yEl ? (y - y0) / (yEl - y0) : (y - yEl) / (y2 - yEl);
       const a = y < yEl ? shoX : elX, b = y < yEl ? elX : haX;
@@ -7150,9 +7235,18 @@ SPR.buildBody = function (d, o) {
       const c = centerAt(y), w = widthAt(y) - 2;
       const bare = y > rollY;
       PIX.rect(fctx, c - (w >> 1), y, w, 1, bare ? skin : sleeveC);
-      /* round the tube: lit on the inside edge, shaded on the outside */
-      PIX.rect(fctx, c + (sgn < 0 ? -(w >> 1) : (w >> 1) - 2), y, 2, 1, SH1);
-      PIX.rect(fctx, c + (sgn < 0 ? (w >> 1) - 1 : -(w >> 1)), y, 1, 1, 'rgba(255,255,255,.07)');
+      /* A LIMB, NOT A PANEL OF JACKET. On a coat this dark the black
+         outline disappears and all you see is a hand sliding about on a
+         slab, which is exactly what made the walk look broken. So the
+         forearm is lifted a shade out of the coat, rim-lit down its
+         outer edge, and it lays a hard shadow on the coat down its
+         inner one — the arm is in front of him now, and it reads. */
+      if (!seated) PIX.rect(fctx, c - (w >> 1), y, w, 1, 'rgba(255,255,255,.09)');
+      const outX = sgn < 0 ? c - (w >> 1) : c + (w >> 1) - 2;
+      const inX = sgn < 0 ? c + (w >> 1) - 1 : c - (w >> 1);
+      PIX.rect(fctx, outX, y, 2, 1, 'rgba(255,255,255,.20)');
+      PIX.rect(fctx, inX, y, 1, 1, SH1);
+      if (!seated) PIX.rect(fctx, inX + (sgn < 0 ? 1 : -2), y, 2, 1, 'rgba(0,0,0,.45)');
       if (!bare && stripe === 'chalk') {
         const lx = c - (w >> 1) + ((Math.abs(c) + 1) % stripeGap);
         PIX.rect(fctx, lx, y, 1, 1, CHALK);
@@ -7229,8 +7323,19 @@ SPR.buildBody = function (d, o) {
   ctx.drawImage(armCv, 0, 0);
   ctx.restore();
 
-  /* where the sleeves end, so the scene can put the hands exactly there */
+  /* where the sleeves end, so the scene can put the hands exactly there.
+     wrist is the old symmetric report; wristAt is the real per-side one,
+     which is the only thing that can follow a swing. */
   cv.wrist = { dx: baseHw - (armIn ? 13 : 9), dy: 56, cx: cx, h: H };
+  cv.wristAt = [-1, 1].map(sgn => {
+    const sw = Math.round(swing * 6);
+    const lift = Math.round(sgn * swing * 2);
+    return {
+      sgn,
+      x: cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw,
+      y: 56 - Math.round(Math.abs(sw) * 0.35) - lift,
+    };
+  });
 
   /* epaulets ride ON TOP of the shoulder, not under it */
   [-1, 1].forEach(sgn => {
@@ -7280,8 +7385,21 @@ SPR.frogMaster = function (id, expr) {
 
 /* mooks: same rig, any def */
 SPR.frogCustom = function (key, def, expr) {
-  return SPR.cached('frogc_' + key + '_' + (expr || 'neutral'),
+  const cv = SPR.cached('frogc_' + key + '_' + (expr || 'neutral'),
     () => SPR.buildFrog(def, expr));
+  /* WHO THIS IS, WRITTEN ON THE CANVAS. Every dialogue plate in the game
+     is handed a finished portrait, so without this there is no way to ask
+     for the same frog with his mouth open. */
+  cv.pkey = key; cv.pdef = def; cv.pexpr = expr || 'neutral';
+  return cv;
+};
+
+/* the same portrait, mid-word: a plate flips between these two while the
+   line types itself on, and stops on the closed one when it lands */
+SPR.portraitTalk = function (art, open) {
+  if (!art || !art.pkey || !art.pdef) return art;
+  if (art.pexpr && art.pexpr !== 'neutral') return art;   // an angry frog stays angry
+  return SPR.frogCustom(art.pkey, art.pdef, open ? 'talk' : 'talk2');
 };
 
 SPR.bodyCustom = function (key, def, seated) {
@@ -7290,8 +7408,10 @@ SPR.bodyCustom = function (key, def, seated) {
 };
 
 /* the same bust with its arms in, for a frog you can see the legs of */
-SPR.bodyStanding = function (key, def) {
-  return SPR.cached('body_' + key + '_stand', () => SPR.buildBody(def, { tuck: true }));
+SPR.bodyStanding = function (key, def, swing) {
+  const sw = Math.round((swing || 0) * 100) / 100;
+  return SPR.cached('body_' + key + '_stand' + sw,
+    () => SPR.buildBody(def, { tuck: true, swing: sw }));
 };
 
 SPR.frogEl = function (id, scale, cls, expr) {
@@ -8248,15 +8368,30 @@ SPR.mugshot = function (key, def, k) {
    body and the same four-fingered hands — so the frog you walk
    past in the bullpen is the frog you sit down across from.
 
-   opts: { frame } — 0..3 of the walk cycle. Frame 0 is standing.
+   opts: { frame } — 0..7 of the walk cycle. Frame 0 is standing.
+
+   EIGHT FRAMES, NOT FOUR. Four was two poses and their mirrors, which
+   at any decent frame rate reads as a flicker between two drawings.
+   Eight sampled off a sine gives the stride a middle: the leg leaves
+   the ground, passes, plants, and takes the weight, and the arm on the
+   other side does the same thing a beat behind it.
    ============================================================ */
+SPR.WALK_FRAMES = 8;
+
+/* the phase of the cycle, -1..1, as a smooth curve rather than a table */
+SPR.walkPhase = function (frame) {
+  const n = SPR.WALK_FRAMES;
+  return Math.sin(((frame % n) / n) * Math.PI * 2);
+};
+
 SPR.frogWhole = function (key, def, opts) {
   opts = opts || {};
-  const frame = opts.frame | 0;
+  const frame = ((opts.frame | 0) % SPR.WALK_FRAMES + SPR.WALK_FRAMES) % SPR.WALK_FRAMES;
   return SPR.cached('whole_' + key + ':' + frame, () => {
     const P = PIX.PAL;
+    const ph = SPR.walkPhase(frame);
     const head = SPR.frogCustom('fb:' + key, def);
-    const body = SPR.bodyStanding('fb:' + key, def);
+    const body = SPR.bodyStanding('fb:' + key, def, ph);
     /* PROPORTION. The portrait head and the duel bust were both drawn for a
        frog sitting at a table, where you never see him below the chest. Used
        whole they made a barrel: a huge head on a slab of shoulders with
@@ -8273,11 +8408,12 @@ SPR.frogWhole = function (key, def, opts) {
     const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false;
 
-    /* THE WALK. Two legs in opposite phase, the whole frog rising a pixel
-       on the passing beats — read at a third of this size it is enough to
-       say "walking" without a second sprite sheet. */
-    const swing = [0, 5, 0, -5][frame];
-    const bob = [0, -2, 0, -1][frame];
+    /* THE WALK. Two legs in opposite phase, the whole frog rising on the
+       passing beats. The bob is twice the stride frequency, because you go
+       up once per step and there are two steps in a cycle. */
+    const swing = Math.round(ph * 6);
+    const bob = -Math.round((1 - Math.cos(((frame % SPR.WALK_FRAMES) /
+      SPR.WALK_FRAMES) * Math.PI * 4)) * 1.1);
     const bodyTop = hh - NECK + bob;
     const cx = Math.round(W / 2);
 
@@ -8288,9 +8424,10 @@ SPR.frogWhole = function (key, def, opts) {
     const hipY = bodyTop + bh - 6;
     const spread = def.fat ? 10 : 8;      // hips, not a pair of stilts
     [-1, 1].forEach(sgn => {
-      const step = sgn * swing;
-      const lx = cx + sgn * spread + Math.round(step * 0.5);
-      const len = LEGS - Math.abs(step) * 0.3;
+      /* the leading leg is the one the swing is carrying toward */
+      const lead = sgn * swing > 0;
+      const lx = cx + sgn * spread + Math.round(swing * 0.9);
+      const len = LEGS - (lead ? Math.abs(swing) * 0.55 : 0);
       PIX.rect(c, lx - 7, hipY, 14, len, P.K);
       PIX.rect(c, lx - 6, hipY, 12, len - 2, legC);
       PIX.rect(c, lx - 6, hipY, 2, len - 2, 'rgba(255,255,255,.07)');
@@ -8298,8 +8435,8 @@ SPR.frogWhole = function (key, def, opts) {
       /* trouser crease + cuff */
       PIX.rect(c, lx - 6, hipY + len - 9, 12, 2, 'rgba(0,0,0,.3)');
       PIX.rect(c, lx - 1, hipY + 4, 1, len - 14, 'rgba(255,255,255,.05)');
-      /* the shoe, pointed out, lifting on the back beat */
-      const sh = hipY + len - 4 - (step > 0 ? 2 : 0);
+      /* the shoe, pointed out, lifting on the beat this leg is swinging */
+      const sh = hipY + len - 4 - (lead ? Math.round(Math.abs(swing) * 0.5) : 0);
       PIX.rect(c, lx - 8 + sgn * 2, sh, 16, 6, P.K);
       PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 4, '#1c1a2c');
       PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 1, 'rgba(255,255,255,.16)');
@@ -8325,14 +8462,12 @@ SPR.frogWhole = function (key, def, opts) {
     /* HANDS. The bust stops at a shirt cuff because the duel paints the
        hands onto the felt itself. Standing up he needs his own, hung on the
        wrist the body reports, swinging against the leg on the same beat. */
-    const wr = body.wrist;
+    const wr = body.wristAt;
     if (wr) {
       const bx = Math.round((W - bw) / 2);
-      const sw = Math.round(swing * 0.3);
-      [-1, 1].forEach(sgn => {
-        const hx = bx + Math.round((wr.cx + sgn * wr.dx) * BS);
-        const hy = bodyTop + Math.round(wr.dy * BS) - sgn * sw;
-        SPR.frogHand(c, hx, hy, def, sgn, { noCuff: true, grip: true });
+      wr.forEach(w => {
+        SPR.frogHand(c, bx + Math.round(w.x * BS), bodyTop + Math.round(w.y * BS),
+          def, w.sgn, { noCuff: true, grip: true });
       });
     }
 
@@ -8815,6 +8950,302 @@ const ART = (() => {
     '....KKKKKK....',
     '..............',
     '..............',
+  ]);
+
+  /* ---------------- the tool belt ---------------- */
+
+  paint('ic_hand', [
+    '..............',
+    '.....KK.......',
+    '....KGGK.KK...',
+    '....KGGKKGGK..',
+    '..KK.KGGKGGKK.',
+    '.KGGKKGGKGGKGK',
+    '.KGGKGGGGGGKGK',
+    '.KGGGGGGGGGGGK',
+    '..KGGGGGGGGGK.',
+    '..KGGGGGGGGGK.',
+    '...KGGGGGGGGK.',
+    '....KGGGGGGK..',
+    '.....KGGGGK...',
+    '......KKKK....',
+  ]);
+
+  paint('ic_lens', [
+    '...KKKKKK.....',
+    '..KWWWWWWK....',
+    '.KWLLLLLLWK...',
+    'KWLLlllllLWK..',
+    'KWLlllllllLWK.',
+    'KWLlllllllLWK.',
+    'KWLLlllllLLWK.',
+    'KWWLLlllLLWWK.',
+    '.KWWLLLLLWWK..',
+    '..KKWWWWWKK...',
+    '....KKGGKK....',
+    '......KGGKK...',
+    '.......KGGKK..',
+    '........KKKK..',
+  ]);
+
+  paint('ic_iron', [
+    '..............',
+    '...KKKKKKKK...',
+    '..KSSSSSSSSK..',
+    '..KSttttttSK..',
+    '.KKSSSSSSSSKK.',
+    '.KSSSKKKKSSSK.',
+    '.KSSSKssKSSK..',
+    '..KKSSSKKK....',
+    '...KSSSK......',
+    '...KUUUK......',
+    '..KUbbUK......',
+    '..KUbbUK......',
+    '..KUUUUK......',
+    '...KKKK.......',
+  ]);
+
+  paint('ic_paw', [
+    '..............',
+    '..KK....KK....',
+    '.KGGK..KGGK...',
+    '.KGGK..KGGK...',
+    '..KK.KK.KK....',
+    '....KGGK......',
+    '..KK.KK.KK....',
+    '.KGGK..KGGK...',
+    '..KK....KK....',
+    '...KKKKKK.....',
+    '..KGGGGGGK....',
+    '.KGGGGGGGGK...',
+    '.KGGGGGGGGK...',
+    '..KKKKKKKK....',
+  ]);
+
+  /* ============================================================
+     THE EVIDENCE.
+
+     Every clue in the case is a THING, and until now the card that
+     announced one drew a grey rectangle where the thing should be.
+     These are those things: 16x16, one per test the board runs, and
+     they turn up in the pick-up, on the card and in your coat.
+     ============================================================ */
+
+  paint('ev_photo', [
+    'KKKKKKKKKKKKKKKK',
+    'KWWWWWWWWWWWWWWK',
+    'KWttttttttttttWK',
+    'KWtssssssssssTWK',
+    'KWtsSSqqqqsssTWK',
+    'KWtsSKKKKqsssTWK',
+    'KWtsKFFFFKssTTWK',
+    'KWtsKFKKFKssTTWK',
+    'KWtsKFFFFKsTTTWK',
+    'KWtssKKKKssTTTWK',
+    'KWtssssssTTTTTWK',
+    'KWttttttTTTTTTWK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWWWWWWWWWWKKK',
+    'KWWWWWWWWWWWKK..',
+    'KKKKKKKKKKKKK...',
+  ]);
+
+  paint('ev_glass', [
+    '................',
+    '.....KKKKKK.....',
+    '...KKLLLLLLKK...',
+    '..KLLllllllLLK..',
+    '.KLlllWlllllllK.',
+    '.KLllWWllllllLK.',
+    'KLllWlllllllllLK',
+    'KLlWllllllKllllK',
+    'KLllllllKKlllllK',
+    'KLlllllKllllllLK',
+    '.KLllKKllllllLK.',
+    '.KLlKlllllllLLK.',
+    '..KKLLllllLLKK..',
+    '...KKLLLLLLKK...',
+    '.....KKKKKK.....',
+    '................',
+  ]);
+
+  paint('ev_print', [
+    'KKKKKKKKKKKKKKKK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWKKKKKKKKWWWK',
+    'KWWKttttttttKWWK',
+    'KWKt.KKKKKK.tKWK',
+    'KWKt.KttttK.tKWK',
+    'KWKt.Kt..tK.tKWK',
+    'KWKt.Kt..tK.tKWK',
+    'KWKt.KttttK.tKWK',
+    'KWKt.KKKKKK.tKWK',
+    'KWWKttttttttKWWK',
+    'KWWWKKKKKKKKWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWKKKWWKKKKWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KKKKKKKKKKKKKKKK',
+  ]);
+
+  paint('ev_shell', [
+    '................',
+    '......KKKK......',
+    '.....KGGGGK.....',
+    '.....KGhhGK.....',
+    '....KKGhhGKK....',
+    '....KGGGGGGK....',
+    '....KGhhhhGK....',
+    '....KGhHHhGK....',
+    '....KGhHHhGK....',
+    '....KGhHHhGK....',
+    '....KGhhhhGK....',
+    '....KGGhhGGK....',
+    '....KKGGGGKK....',
+    '.....KKKKKK.....',
+    '................',
+    '................',
+  ]);
+
+  paint('ev_butt', [
+    '................',
+    '................',
+    '..........KKK...',
+    '.........KOOK...',
+    '........KKoOK...',
+    '.....KKKKuoKK...',
+    '...KKUUUuuKK....',
+    '..KUbbbUUuK.....',
+    '..KUbBbbUUK.....',
+    '..KUbbbbUK......',
+    '...KKUUUKK......',
+    '.....KKKK.......',
+    '..qq............',
+    '.q..q...q.......',
+    '................',
+    '................',
+  ]);
+
+  paint('ev_match', [
+    '................',
+    '..KKKKKKKKKKKK..',
+    '..KddddddddddK..',
+    '..KdWWWWWWWWdK..',
+    '..KdWKKKKKKWdK..',
+    '..KdWKrrrrKWdK..',
+    '..KdWKrKKrKWdK..',
+    '..KdWKrrrrKWdK..',
+    '..KdWKKKKKKWdK..',
+    '..KdWWWWWWWWdK..',
+    '..KddddddddddK..',
+    '..KKKKKKKKKKKK..',
+    '...KWKWKWKWK....',
+    '...KRKRKRKRK....',
+    '...KKKKKKKKK....',
+    '................',
+  ]);
+
+  paint('ev_note', [
+    '................',
+    '.KKKKKKKKKKKKKK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWttttttWWWWWK.',
+    '.KWttttttttWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWtttttttttWWK.',
+    '.KWttttttWWWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWttttttttWWWK.',
+    '.KWttttWWWWWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWWWWWWWKKKKKK.',
+    '.KWWWWWWKK......',
+    '.KKKKKKKK.......',
+    '................',
+  ]);
+
+  /* ============================================================
+     AND THE THINGS THAT ARE JUST THERE.
+
+     Nothing in this block is evidence and none of it does anything.
+     They are the reward for holding the eyeglass up to a shelf in a
+     pawn shop at two in the morning.
+     ============================================================ */
+
+  paint('eg_ball', [
+    '.....KKKKKK.....',
+    '...KKrrrrrrKK...',
+    '..KrrrrrrrrrrK..',
+    '.KrrrrrrrrrrrrK.',
+    '.KrrrrrrrrrrrrK.',
+    'KrrrrrrrrrrrrrrK',
+    'KKKKKKKKKKKKKKKK',
+    'KKKKKKWWWWKKKKKK',
+    'KWWWWWWKKWWWWWWK',
+    'KWWWWWWKKWWWWWWK',
+    'KWWWWWWWWWWWWWWK',
+    '.KWWWWWWWWWWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '..KWWWWWWWWWWK..',
+    '...KKWWWWWWKK...',
+    '.....KKKKKK.....',
+  ]);
+
+  paint('eg_card', [
+    '.KKKKKKKKKKKK...',
+    '.KGGGGGGGGGGK...',
+    '.KGWWWWWWWWGKKKK',
+    '.KGWVVVVVVWGKGGK',
+    '.KGWVFFFFVWGKGGK',
+    '.KGWVFOOFVWGKGGK',
+    '.KGWVFOOFVWGKGGK',
+    '.KGWVFFFFVWGKGGK',
+    '.KGWVVVVVVWGKGGK',
+    '.KGWWWWWWWWGKGGK',
+    '.KGWttttttWGKGGK',
+    '.KGWtttttWWGKGGK',
+    '.KGWWWWWWWWGKGGK',
+    '.KGGGGGGGGGGKGGK',
+    '.KKKKKKKKKKKKGGK',
+    '.............KKK',
+  ]);
+
+  paint('eg_flag', [
+    '................',
+    'KKKKKKKKKKKKKKKK',
+    'KrrrrrrrrrrrrrrK',
+    'KrrrrrrrrrrrrrrK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KVVVVVVVVVVVVVVK',
+    'KVVVVVVVVVVVVVVK',
+    'KVVVVVVVVVVVVVVK',
+    'KVVVVVVVVVVVVVVK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KrrrrrrrrrrrrrrK',
+    'KrrrrrrrrrrrrrrK',
+    'KKKKKKKKKKKKKKKK',
+    '.K..............',
+  ]);
+
+  paint('eg_duck', [
+    '................',
+    '................',
+    '.......KKKK.....',
+    '......KGGGGK....',
+    '.....KGGKGGK....',
+    '.....KGGGGGKKK..',
+    '.....KGGGGKOOK..',
+    '....KKGGGKKKKK..',
+    '..KKGGGGGGGKK...',
+    '.KGGGGGGGGGGGK..',
+    'KGGGGGGGGGGGGGK.',
+    'KGGGGGGGGGGGGK..',
+    '.KGGGGGGGGGGK...',
+    '..KKGGGGGGKK....',
+    '....KKKKKK......',
+    '................',
   ]);
 
   paint('ic_clock', [
@@ -11126,6 +11557,7 @@ const E = {
     STORY.reset();
     /* the night, the sky, and a city with nothing turned over in it yet */
     if (typeof CITY !== 'undefined') CITY.reset();
+    if (typeof TOOLS !== 'undefined') TOOLS.reset();
     G.place = 'precinct';
     G.visited = { precinct: 1 };
     E.startBlind();
@@ -12218,6 +12650,8 @@ const SCENE = (() => {
      ============================================================ */
 
   let oy = 0;                    // how far down the room sits in the frame
+  let mouse = { x: 0, y: 0, on: false };
+  let hoverRat = null;
 
   const CEIL_MAX = 38;           // world px of headroom, at most
 
@@ -12276,6 +12710,7 @@ const SCENE = (() => {
     scale();
     back = paintBack(d);
     rats.length = 0; drips.length = 0; mark = null;
+    spawnPets();
     ratClock = 1.5 + Math.random() * 3;
     me.x = d.enterX === undefined ? 40 : d.enterX;
     me.face = d.enterFace || 1;
@@ -12321,11 +12756,58 @@ const SCENE = (() => {
     return cy / K - oy;
   }
 
+  /* the cursor says what the click is about to do */
+  function refreshCursor() {
+    if (!cv) return;
+    if (typeof TOOLS === 'undefined') { cv.style.cursor = hover ? 'pointer' : 'default'; return; }
+    cv.style.cursor = TOOLS.css(TOOLS.cur(), !!(hover || hoverRat));
+  }
+
+  /* ---------------------------------------------------------
+     THE GLASS.
+
+     The rooms are painted at full pixel detail and then drawn at
+     a third of it, so most of what is in the art is too small to
+     read. This crops the actual painted room around a point and
+     blows it up with hard edges — so anything hidden in a shelf
+     is really in there, and the glass is how you find it.
+     --------------------------------------------------------- */
+  function magnify(wx, wy, rad, k) {
+    if (!def || !back) return null;
+    rad = rad || 22; k = k || 5;
+    const x0 = Math.round(U.clamp(wx - rad, 0, Math.max(0, def.w - rad * 2)));
+    const y0 = Math.round(U.clamp(wy - rad, 0, Math.max(0, H - rad * 2)));
+    const o = ART.cv(rad * 2 * k, rad * 2 * k);
+    o.c.imageSmoothingEnabled = false;
+    o.c.drawImage(back, x0, y0, rad * 2, rad * 2, 0, 0, rad * 2 * k, rad * 2 * k);
+    return o.cv;
+  }
+
+  /* which rat, if any, is under a point */
+  function ratAt(x, y) {
+    for (const r of rats) {
+      if (r.dead) continue;
+      if (Math.abs(r.x - x) < 9 && Math.abs((r.y - 3) - y) < 9) return r;
+    }
+    return null;
+  }
+
   function targets() {
     if (!def) return [];
     const out = [];
     for (const a of (def.actors || [])) if (!a.gone) out.push(a);
     for (const s of (def.spots || [])) if (!s.gone && !(s.when && !s.when())) out.push(s);
+    /* the animals are things you can walk up to as well */
+    for (const a of pets) {
+      out.push({
+        id: 'pet:' + a.kind, x: a.x, w: 22,
+        top: a.y - (a.kind === 'dog' ? 24 : 20), bot: a.y + 2,
+        pet: a,
+        label: a.name,
+        hint: a.kind === 'dog' ? 'HE HAS BEEN WAITING ALL SHIFT' : 'IT IS NOT YOUR CAT',
+        onUse: () => STORY.petIt(a),
+      });
+    }
     return out;
   }
 
@@ -12352,8 +12834,11 @@ const SCENE = (() => {
     onMove = (ev) => {
       if (!def) return;
       const x = sceneX(ev), y = sceneY(ev);
+      mouse = { x, y, on: true };
       hover = pick(x, y);
-      cv.style.cursor = hover ? 'pointer' : 'default';
+      /* with the iron out, vermin are targets too */
+      hoverRat = (typeof TOOLS !== 'undefined' && TOOLS.is('iron')) ? ratAt(x, y) : null;
+      refreshCursor();
       if (drag && ev.buttons) {
         const dx = (ev.clientX - drag.x0) / K;
         drag.moved = Math.max(drag.moved, Math.abs(dx));
@@ -12367,6 +12852,21 @@ const SCENE = (() => {
       if (wasDrag) return;                    // that was a look, not a step
       const x = sceneX(ev), y = sceneY(ev);
       const hit = pick(x, y);
+      const tool = typeof TOOLS === 'undefined' ? 'hand' : TOOLS.cur();
+
+      /* THE EYEGLASS. You do not walk anywhere to look at something: you
+         hold it up from where you stand and the room comes to you. */
+      if (tool === 'glass') { STORY.lookClose(hit, x, y); return; }
+
+      /* THE IRON. A rat is a rat. A frog is a decision. */
+      if (tool === 'iron') {
+        const r = ratAt(x, y);
+        if (r) { STORY.shootRat(r, x, y); return; }
+        if (hit) { STORY.aimAt(hit); return; }
+        STORY.shootWide(x, y);
+        return;
+      }
+
       if (hit) goUse(hit);
       else walkTo(x);
     };
@@ -12374,6 +12874,8 @@ const SCENE = (() => {
       if (!def) return;
       const k = ev.key.toLowerCase();
       keys[k] = true;
+      /* the belt: 1 hand, 2 glass, 3 iron, Q to cycle */
+      if (typeof TOOLS !== 'undefined' && !busy && TOOLS.onKey(k)) { ev.preventDefault(); return; }
       if (k === 'e' || k === ' ' || k === 'enter') {
         ev.preventDefault();
         if (near && !busy) use(near);
@@ -12472,15 +12974,24 @@ const SCENE = (() => {
     }
     /* the walk cycle runs off ground covered, not off the clock, so the feet
        never skate: slow steps at the start of a stride, quick in the middle */
+    const NF = SPR.WALK_FRAMES || 8;
     if (moving) {
       const was = Math.floor(me.walk);
-      me.walk = (me.walk + Math.abs(me.v) * dt * 0.135) % 4;
-      if (Math.floor(me.walk) !== was && Math.floor(me.walk) % 2 === 0) {
+      me.walk = (me.walk + Math.abs(me.v) * dt * 0.135 * (NF / 4)) % NF;
+      /* a footfall lands on the two frames where a leg is planted */
+      const now2 = Math.floor(me.walk);
+      if (now2 !== was && now2 % (NF / 2) === 0) {
         SFX.tone(88 + Math.random() * 30, 0.03, 'square', 0.038);
         kickDust(0.4);
       }
-    } else me.walk = U.approach(me.walk, 0, 9, dt);
-    me.frame = Math.floor(me.walk) % 4;
+    } else {
+      /* WINDING DOWN, NOT SNAPPING. Coming to a stop he finishes the step he
+         is in rather than jumping back to the standing frame. */
+      const to = me.walk > NF / 2 ? NF : 0;
+      me.walk = U.approach(me.walk, to, 9, dt);
+      if (me.walk >= NF - 0.02) me.walk = 0;
+    }
+    me.frame = Math.floor(me.walk) % NF;
 
     /* what is within arm's reach */
     let best = null, bd = 26;
@@ -12504,6 +13015,7 @@ const SCENE = (() => {
     if (Math.abs(cam - camWant) < 0.4) cam = camWant;
 
     stepCritters(dt, 0);
+    stepPets(dt);
     if (def.onTick) def.onTick(dt, me);
   }
 
@@ -12609,7 +13121,134 @@ const SCENE = (() => {
 
   const rats = [];
   const drips = [];
+  const pets = [];
   let ratClock = 2 + Math.random() * 4;
+
+  /* ============================================================
+     THE ANIMALS THAT ARE NOT VERMIN.
+
+     A cat lives at four of the five stops and a dog lives at the
+     station. They wander a few feet, sit down, wash, and look at
+     you — and if you stand next to one and put a hand out it will
+     come over, which is the only thing in this game that is purely
+     nice. Drawn here rather than in the room art because a painted
+     cat is furniture and this one moves.
+     ============================================================ */
+  function spawnPets() {
+    pets.length = 0;
+    for (const p of (def.pets || [])) {
+      pets.push({
+        kind: p.kind || 'cat', name: p.name || (p.kind === 'dog' ? 'A DOG' : 'A CAT'),
+        home: p.x, x: p.x, y: p.y === undefined ? def.floorY : p.y,
+        dir: 1, v: 0, mood: 'sit', wait: 1 + Math.random() * 3,
+        t: Math.random() * 9, pet: 0, hearts: [],
+      });
+    }
+  }
+
+  function stepPets(dt) {
+    for (const a of pets) {
+      a.t += dt;
+      if (a.pet > 0) { a.pet -= dt; a.v = 0; }
+      else if (a.wait > 0) { a.wait -= dt; a.v = 0; }
+      else if (a.mood === 'sit') {
+        a.mood = 'walk';
+        a.dir = Math.random() < 0.5 ? -1 : 1;
+        a.v = (a.kind === 'dog' ? 20 : 14) + Math.random() * 10;
+      } else {
+        a.x += a.dir * a.v * dt;
+        if (a.x < a.home - 46 || a.x > a.home + 46 || Math.random() < dt * 0.5) {
+          a.mood = 'sit'; a.v = 0; a.wait = 1.5 + Math.random() * 4;
+          if (a.x < a.home - 46) a.dir = 1;
+          if (a.x > a.home + 46) a.dir = -1;
+        }
+      }
+      for (let i = a.hearts.length - 1; i >= 0; i--) {
+        const h = a.hearts[i];
+        h.t += dt; h.y -= dt * 14;
+        if (h.t > 1.4) a.hearts.splice(i, 1);
+      }
+    }
+  }
+
+  function drawPets(c, T) { for (const a of pets) drawPet(c, a, T); }
+
+  function drawPet(c, a, T) {
+    {
+      const x = Math.round(a.x), y = Math.round(a.y);
+      const f = a.dir > 0 ? 1 : -1;
+      const walking = a.v > 1;
+      const step = walking && Math.sin(a.t * 12) > 0 ? 1 : 0;
+      const purr = a.pet > 0;
+      const R = (dx, dy, w, h, col) =>
+        ART.px(c, f > 0 ? x + dx : x - dx - w, y + dy, w, h, col);
+
+      if (a.kind === 'dog') {
+        /* a big soft precinct dog: tan, one dark ear, always pleased */
+        const fur = '#b07a45', dk = '#6e4a30', lt = '#d0a06a', nose = '#2b2436';
+        R(-11, -2, 23, 2, 'rgba(0,0,0,.34)');
+        R(-9, -12, 18, 10, dk);
+        R(-8, -11, 16, 8, fur);
+        R(-8, -11, 16, 2, lt);
+        /* the head */
+        R(6, -17, 10, 9, dk);
+        R(7, -16, 8, 7, fur);
+        R(7, -16, 8, 2, lt);
+        R(13, -13, 3, 3, dk);            // muzzle
+        R(15, -12, 1, 1, nose);
+        R(11, -14, 2, 2, '#f4efe0');     // eye
+        R(11, -14, 1, 1, nose);
+        R(5, -20, 4, 5, dk);             // the flopped ear
+        /* the legs, and the tail that never stops */
+        R(-6, -3, 3, 4 - step, dk);
+        R(0, -3, 3, 3 + step, dk);
+        R(5, -3, 3, 4 - step, dk);
+        const wag = Math.round(Math.sin(a.t * (purr ? 18 : 7)) * 3);
+        for (let i = 0; i < 5; i++) R(-9 - i, -11 - i + wag * (i / 5), 2, 2, fur);
+        if (purr) { R(9, -22, 2, 2, '#ffd75e'); R(3, -23, 2, 2, '#ffd75e'); }
+      } else {
+        /* the cat: black, thin, and unimpressed */
+        const fur = '#2b2739', dk = '#181624', lt = '#413b52', eye = '#8ff7c8';
+        R(-8, -1, 17, 1, 'rgba(0,0,0,.3)');
+        const sit = !walking && !purr;
+        if (sit) {
+          /* sitting: a loaf with ears */
+          R(-6, -11, 13, 10, dk);
+          R(-5, -10, 11, 8, fur);
+          R(-5, -10, 11, 2, lt);
+          R(3, -16, 7, 7, dk);
+          R(4, -15, 5, 5, fur);
+          R(4, -18, 2, 3, dk); R(7, -18, 2, 3, dk);     // ears
+          R(5, -13, 1, 1, eye); R(8, -13, 1, 1, eye);
+          const curl = Math.round(Math.sin(a.t * 1.6) * 2);
+          for (let i = 0; i < 6; i++) R(-7 - i, -3 - (i > 3 ? curl : 0), 2, 2, fur);
+        } else {
+          R(-7, -8, 15, 6, dk);
+          R(-6, -7, 13, 4, fur);
+          R(-6, -7, 13, 1, lt);
+          R(5, -13, 7, 7, dk);
+          R(6, -12, 5, 5, fur);
+          R(6, -15, 2, 3, dk); R(9, -15, 2, 3, dk);
+          R(7, -10, 1, 1, eye); R(10, -10, 1, 1, eye);
+          R(-5, -2, 2, 2 - step, dk);
+          R(0, -2, 2, 1 + step, dk);
+          R(4, -2, 2, 2 - step, dk);
+          const up = purr ? -6 : 0;
+          for (let i = 0; i < 7; i++) {
+            R(-8 - i, -7 + up + Math.round(Math.sin(a.t * 3 + i * 0.5) * 2), 2, 2, fur);
+          }
+        }
+      }
+      /* what it thinks of you */
+      for (const h of a.hearts) {
+        const al = (1 - h.t / 1.4).toFixed(2);
+        ART.px(c, Math.round(a.x + h.x), Math.round(h.y), 2, 2, 'rgba(255,126,219,' + al + ')');
+        ART.px(c, Math.round(a.x + h.x - 2), Math.round(h.y), 2, 1, 'rgba(255,126,219,' + al + ')');
+        ART.px(c, Math.round(a.x + h.x + 2), Math.round(h.y), 2, 1, 'rgba(255,126,219,' + al + ')');
+      }
+    }
+  }
+
 
   function spawnRat() {
     if (!def || rats.length > 2) return;
@@ -12629,6 +13268,7 @@ const SCENE = (() => {
     for (let i = rats.length - 1; i >= 0; i--) {
       const r = rats[i];
       r.t += dt;
+      if (r.dead) { r.deadT = (r.deadT || 0) + dt; continue; }
       if (r.pause > 0) { r.pause -= dt; continue; }
       r.x += r.dir * r.v * dt;
       if (Math.random() < dt * 0.5) r.pause = 0.2 + Math.random() * 0.5;
@@ -12667,6 +13307,22 @@ const SCENE = (() => {
       const k = r.big ? 1 : 0;
       const x = Math.round(r.x), y = Math.round(r.y);
       const run = Math.sin(r.t * 22) > 0 ? 0 : 1;
+      /* SHOT. He is on his back with his feet up and he fades out of the
+         room in his own time. Nobody comes to collect him. */
+      if (r.dead) {
+        const a = Math.max(0, 1 - (r.deadT || 0) / 2.6);
+        c.globalAlpha = a;
+        ART.px(c, x - 6, y - 2, 13 + k, 3, '#4a4250');
+        ART.px(c, x - 6, y - 2, 13 + k, 1, '#6b6076');
+        ART.px(c, x - 3, y - 5, 2, 3, '#3a3444');
+        ART.px(c, x + 2, y - 5, 2, 3, '#3a3444');
+        ART.px(c, r.dir > 0 ? x + 7 : x - 8, y - 2, 2, 2, '#b3576b');
+        for (let i = 0; i < 4; i++) {
+          ART.px(c, x - 8 - i * 2, y + 1, 2, 1, 'rgba(140,34,48,' + (0.4 * a).toFixed(2) + ')');
+        }
+        c.globalAlpha = 1;
+        continue;
+      }
       /* A RAT ON A BLACK FLOOR HAS TO BE PAINTED LIGHT or it is a rumour:
          wet grey-brown with a lit back, not the near-black it would be. */
       const body = '#5b5163', dark = '#2b2436', lit = '#7d7288';
@@ -12805,8 +13461,62 @@ const SCENE = (() => {
     drawCritters(c, T);
     cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
 
+    /* ============================================================
+       WHERE THE JOB IS.
+
+       The objective says what to do; this says WHERE. A gold chevron
+       bobbing over the frog or the prop the current objective wants,
+       so nobody has to read a plate and then guess which of eleven
+       things in the room it meant.
+       ============================================================ */
+    if (typeof STORY !== 'undefined' && STORY.objective && !busy) {
+      const want = STORY.wantHere ? STORY.wantHere(def) : null;
+      if (want) {
+        /* well clear of the label plate that lands on whatever you are
+           standing next to: an actor gets it over his hat, a prop over
+           the top of the thing itself */
+        const wy = (want.top === undefined ? def.floorY - 62 : want.top - 22);
+        const bob = Math.round(Math.sin(T * 3.4) * 2);
+        const gx = Math.round(want.x);
+        for (let i = 0; i < 7; i++) {
+          ART.px(c, gx - 6 + i, wy + bob + i, 2, 2, i === 3 ? '#fff3c4' : '#ffd75e');
+          ART.px(c, gx + 6 - i, wy + bob + i, 2, 2, i === 3 ? '#fff3c4' : '#ffd75e');
+        }
+        ART.px(c, gx - 7, wy + bob - 2, 15, 2, 'rgba(0,0,0,.45)');
+        ART.px(c, gx - 1, wy + bob - 9, 2, 6, '#ffd75e');
+      }
+    }
+
+    /* WHAT THE MOUSE IS ON. Corner brackets in the tool's own colour, so a
+       pointer over a room always says what is about to happen and to what. */
+    {
+      const t = typeof TOOLS === 'undefined' ? null : TOOLS.of();
+      const tgt = hoverRat
+        ? { x: hoverRat.x, w: 20, top: hoverRat.y - 12, bot: hoverRat.y + 2 }
+        : hover;
+      if (tgt && !busy && t) {
+        const bw = Math.max(18, (tgt.w || 26) + 8);
+        const y0 = (tgt.top === undefined ? def.floorY - 46 : tgt.top) - 4;
+        const y1 = (tgt.bot === undefined ? def.floorY + 4 : tgt.bot) + 2;
+        const x0 = Math.round(tgt.x - bw / 2), x1 = Math.round(tgt.x + bw / 2);
+        const L = 5, col = t.tint;
+        const pulse = 0.55 + 0.45 * Math.abs(Math.sin(T * 3));
+        c.globalAlpha = pulse;
+        [[x0, y0, 1, 1], [x1 - L, y0, -1, 1], [x0, y1 - 1, 1, -1], [x1 - L, y1 - 1, -1, -1]]
+          .forEach(([bx, by, sx, sy]) => {
+            ART.px(c, sx > 0 ? bx : bx + L - 1, by, L, 1, col);
+            ART.px(c, sx > 0 ? bx : bx + L - 1, sy > 0 ? by : by, 1, L * sy, col);
+          });
+        c.globalAlpha = 1;
+      }
+    }
+
     /* furniture that people stand behind */
     if (def.onPaintFront) def.onPaintFront(c, T);
+    /* THE ANIMALS GO IN FRONT OF IT. A cat is twenty pixels tall and every
+       room has a counter across the front of it: behind the furniture, in
+       depth order, the dog was simply invisible. */
+    drawPets(c, T);
     /* the lamps, over the cast, so people stand in the light */
     for (const L of (def.lights || [])) {
       const flick = L.flicker ? (Math.sin(T * 13 + L.x) > 0.86 ? 0.5 : 1) : 1;
@@ -12883,14 +13593,32 @@ const SCENE = (() => {
     if (def.onHud) def.onHud(c, K, viewW(), cam);
   }
 
+  /* ============================================================
+     THE IDLE.
+
+     Nobody in this game stands still. The chest goes up and down on
+     a slow count and the weight comes off one leg every few seconds,
+     and both are done by moving the sprite a pixel rather than by
+     drawing another one — so every frog in every room breathes for
+     free. Standing on the walk frame and twitching to the next one
+     (which is what this used to do) reads as a flinch, not a breath.
+     ============================================================ */
+  function idleOf(T, seed) {
+    const t = T * 0.85 + (seed % 17) * 0.7;
+    const rise = Math.sin(t) > 0.35 ? 1 : 0;              // the chest, 1px
+    const ph = (t * 0.11) % 1;                            // a shift every ~9s
+    const sway = ph < 0.1 ? Math.sin((ph / 0.1) * Math.PI) : 0;
+    return { rise, lean: Math.round(sway * 1.6) };
+  }
+
   function drawActor(c, a, T) {
     const face = a.face === undefined ? -1 : a.face;
-    /* somebody stood in a room still shifts his weight now and then */
-    const idle = a.still ? 0 : (Math.sin(T * 1.3 + (a.x % 9)) > 0.9 ? 1 : 0);
-    const r = rig(a, idle, face);
+    const r = rig(a, 0, face);
     const fy = a.y === undefined ? def.floorY : a.y;
+    const id = a.still ? { rise: 0, lean: 0 } : idleOf(T, Math.round(a.x));
+    const h = Math.max(1, r.h - id.rise);
     ART.px(c, Math.round(a.x - r.w / 3), fy, Math.round(r.w * 0.66), 2, 'rgba(0,0,0,.32)');
-    c.drawImage(r.cv, Math.round(a.x - r.w / 2), Math.round(fy - r.h + 1), r.w, r.h);
+    c.drawImage(r.cv, Math.round(a.x - r.w / 2) + id.lean, Math.round(fy - h + 1), r.w, h);
   }
 
   function drawMe(c, T) {
@@ -12905,11 +13633,13 @@ const SCENE = (() => {
        the floor so his feet never leave it */
     const sq = me.land * 0.16;
     const st = Math.min(0.05, Math.abs(me.v) / SPEED * 0.05);
+    /* standing about, he breathes too */
+    const id = Math.abs(me.v) > 4 ? { rise: 0, lean: 0 } : idleOf(T, 3);
     const w = Math.max(1, Math.round(r.w * (1 + sq - st * 0.5)));
-    const h = Math.max(1, Math.round(r.h * (1 - sq + st)));
+    const h = Math.max(1, Math.round(r.h * (1 - sq + st)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
     ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
-    c.drawImage(r.cv, Math.round(me.x - w / 2), Math.round(fy - h + 1), w, h);
+    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
@@ -13008,6 +13738,16 @@ const SCENE = (() => {
       return SCENE._me;
     },
     busy(v) { if (v !== undefined) busy = v; return busy; },
+    /* the tools reach into the room through these */
+    magnify, ratAt, refreshCursor,
+    rats() { return rats; },
+    pets() { return pets; },
+    killRat(r) {
+      r.dead = true; r.deadT = 0;
+      setTimeout(() => { const i = rats.indexOf(r); if (i >= 0) rats.splice(i, 1); }, 2600);
+    },
+    /* where the mouse last was, in room pixels */
+    mouseAt() { return mouse; },
     /* ============================================================
        THE CAMERA, WHEN THE STORY WANTS IT.
        ============================================================ */
@@ -13117,9 +13857,13 @@ const CITY = (() => {
      can play a night) without painting a single canvas.
      --------------------------------------------------------- */
   const PROPS = {
-    laundry: ['drain', 'machine', 'cart', 'outline', 'till'],
+    /* THE LAST TWO IN EACH OF THESE ARE DOWNSTAIRS OR UPSTAIRS. A building
+       is not one room: the laundry has a cellar the canal comes into and
+       the broker sleeps over his own shop, and the case can be buried on
+       either floor. */
+    laundry: ['drain', 'machine', 'cart', 'outline', 'till', 'sump', 'boiler'],
     docks:   ['crates', 'barrel', 'water', 'shed', 'rope'],
-    pawn:    ['case', 'ledger', 'safe', 'shelf'],
+    pawn:    ['case', 'ledger', 'safe', 'shelf', 'cot', 'strongbox'],
     diner:   ['urn', 'booth', 'bin', 'hatch'],
     bar:     ['stool', 'till', 'coats'],
   };
@@ -13139,6 +13883,11 @@ const CITY = (() => {
      where you look is the game. */
   const COST = {
     travel: 35, search: 18, ask: 12, talk: 6, job: 45, lineup: 20,
+    /* THE GLASS is the cheap move: three minutes to find out whether a
+       prop is worth the eighteen that turning it over costs. The city has
+       twenty-five things in it and the night has 560 minutes: without a way
+       to triage that, a night is nothing but blank drawers. */
+    look: 3,
   };
 
   function reset() {
@@ -13177,8 +13926,11 @@ const CITY = (() => {
   }
 
   function spend(kind, mult) {
-    const c = (COST[kind] || 5) * (mult === undefined ? 1 : mult);
-    G.clock = (G.clock === undefined ? START : G.clock) + c;
+    /* ROUNDED, ALWAYS. A half-cost action (a favour, a flight of stairs) used
+       to leave a fraction of a minute on the clock, and the corner of the
+       screen read 23:41.5 for the rest of the night. */
+    const c = Math.round((COST[kind] || 5) * (mult === undefined ? 1 : mult));
+    G.clock = Math.round((G.clock === undefined ? START : G.clock)) + c;
     if (UI && UI.syncStory) UI.syncStory();
     return c;
   }
@@ -13267,7 +14019,7 @@ const CITY = (() => {
 
   /* the junk you turn up when there was nothing to turn up */
   const NOTHING = [
-    'LINT. A BUTTON. SOMEBODY ELSE&#39;S BAD NIGHT.',
+    "LINT. A BUTTON. SOMEBODY ELSE'S BAD NIGHT.",
     'NOTHING. WHOEVER CAME THROUGH HERE WAS CAREFUL.',
     'WET PAPER. THE INK IS GONE.',
     'A DEAD ROACH AND A BUS TICKET FROM MARCH.',
@@ -13341,6 +14093,37 @@ const PLACES = (() => {
      does not crawl around the walls every time you walk back in */
   function seedFor(id) {
     return U.hashSeed((G.seedStr || 'X') + ':' + (G.chapter || 1) + ':' + id);
+  }
+
+  /* ============================================================
+     THE THINGS THAT ARE JUST THERE.
+
+     None of this is evidence. A pokeball behind the pawn shop
+     glass, a monster card somebody left on the bar, a flag over a
+     kitchen hatch, a rubber duck in a laundry drum. They are
+     painted into the room at their real size, which at room scale
+     is a smudge — so the only way to know what any of them is is
+     to hold the eyeglass up to it.
+     ============================================================ */
+  function egg(o) {
+    const sp = {
+      id: 'egg:' + o.id, x: o.x, y: o.y, w: 18,
+      top: o.y - 11, bot: o.y + 11,
+      egg: true, art: o.art,
+      label: o.label,
+      hint: 'WORTH A CLOSER LOOK',
+      look: o.look,
+    };
+    sp.onUse = () => STORY.lookClose(sp, sp.x, o.y);
+    return sp;
+  }
+
+  /* whatever eggs a room declared, painted into it at 1:1 */
+  function paintEggs(c, eggs) {
+    (eggs || []).forEach(e => {
+      const a = ART.art(e.art, 1);
+      c.drawImage(a, Math.round(e.x - a.width / 2), Math.round(e.y - a.height / 2));
+    });
   }
 
   /* ---------- shared furniture ---------- */
@@ -13495,6 +14278,67 @@ const PLACES = (() => {
          it backs onto, and the vault behind it slides past on its own. */
       archFrame(c, 232, 24, 84, 44, { bars: true });
 
+      /* ============================================================
+         AND EVERYTHING ELSE A WASH-HOUSE HAS IN IT.
+
+         The room was three machines, a chalk outline and a lot of
+         tile. What makes it a place somebody worked in all week is
+         the rest of it: sheets on a line across the middle, a
+         folding table with a stack nobody came back for, the
+         soap shelf, a mop in a bucket, and the water everywhere.
+         ============================================================ */
+
+      /* SHEETS ON A LINE, across the midground. Hung at a height you look
+         under, so the room has something between you and the back wall. */
+      px(c, 62, 30, 300, 1, '#5a5040');
+      for (let i = 0; i < 5; i++) {
+        const sx = 74 + i * 58, sw = 34 + (i % 2) * 8;
+        const sh = 22 + ((i * 7 + seed) % 10);
+        px(c, sx, 30, sw, sh, i % 2 ? '#cfc7b2' : '#ded6c2');
+        px(c, sx, 30, sw, 2, '#f0e9d6');
+        px(c, sx, 30 + sh - 2, sw, 2, 'rgba(0,0,0,.22)');
+        /* the fold shadows down it, and the sag at the bottom */
+        for (let k = 4; k < sw - 3; k += 7) px(c, sx + k, 32, 1, sh - 4, 'rgba(0,0,0,.10)');
+        px(c, sx + 2, 30 + sh, sw - 4, 1, 'rgba(0,0,0,.3)');
+        /* two pegs */
+        px(c, sx + 3, 28, 2, 4, '#8d6a3a');
+        px(c, sx + sw - 5, 28, 2, 4, '#8d6a3a');
+      }
+
+      /* THE FOLDING TABLE, with a stack nobody came back for */
+      ART.box(c, 176, FY - 30, 54, 8, { fill: '#8d8672', top: '#a8a08a', bot: '#4a4638', ink: p.K });
+      px(c, 182, FY - 22, 4, 22, p.K);
+      px(c, 220, FY - 22, 4, 22, p.K);
+      for (let i = 0; i < 4; i++) {
+        px(c, 184 + (i % 2) * 2, FY - 36 + i * 2, 38 - i * 2, 3, i % 2 ? '#ded2b4' : '#cfc4a6');
+        px(c, 184 + (i % 2) * 2, FY - 36 + i * 2, 38 - i * 2, 1, '#f0e6c8');
+      }
+
+      /* THE SOAP SHELF, and the row of tins on it */
+      px(c, 366, 52, 58, 3, '#4a4038');
+      px(c, 366, 55, 58, 2, 'rgba(0,0,0,.3)');
+      for (let i = 0; i < 5; i++) {
+        const tx = 370 + i * 11;
+        px(c, tx, 42, 9, 10, i % 2 ? '#4f7d9c' : '#9c6a4f');
+        px(c, tx, 42, 9, 2, i % 2 ? '#6f9dbc' : '#bc8a6f');
+        px(c, tx + 2, 45, 5, 3, '#ded2b4');
+      }
+
+      /* A MOP IN A BUCKET, left where somebody dropped it */
+      px(c, 44, FY - 14, 16, 14, p.K);
+      px(c, 45, FY - 13, 14, 12, '#3f5a60');
+      px(c, 45, FY - 13, 14, 2, '#5f7a80');
+      px(c, 46, FY - 6, 12, 5, 'rgba(120,190,200,.5)');
+      px(c, 56, FY - 46, 3, 34, '#8d6a3a');
+      px(c, 52, FY - 50, 11, 6, '#a8a08a');
+      px(c, 52, FY - 50, 11, 2, '#c9c0a8');
+
+      /* WATER, EVERYWHERE. It is a laundry: the floor is never dry. */
+      [[96, 20], [188, 26], [268, 18], [340, 22]].forEach(([wx, ww], i) => {
+        ART.dither(c, wx, FY - 5, ww, 6, 'rgba(120,180,210,.16)', 0.35, 11 + i * 4);
+        px(c, wx + 2, FY - 2, ww - 4, 1, 'rgba(170,215,235,.16)');
+      });
+
       /* the strip light, and the damp in the corners */
       for (const lx of [110, 210, 310]) c.drawImage(ART.hangLamp(16, 22, false), lx - 8, 0);
       ART.dither(c, 0, FY - 24, W, 24, 'rgba(0,0,0,.2)', 0.1, 31);
@@ -13519,7 +14363,7 @@ const PLACES = (() => {
       { id: 'outline', x: 256, w: 46, top: FY - 24, label: 'WHERE HE WAS',
         hint: 'LOOK AT THE FLOOR' },
       { id: 'till', x: 400, w: 52, top: FY - 42, label: 'THE TILL',
-        hint: 'NIGHT&#39;S TAKINGS' },
+        hint: "NIGHT'S TAKINGS" },
     ];
 
     const actors = [
@@ -13527,9 +14371,17 @@ const PLACES = (() => {
         tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true },
     ];
 
-    return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'duck', x: 137, y: FY - 30, art: 'eg_duck',
+        label: 'SOMETHING YELLOW IN THE DRUM',
+        look: "A RUBBER DUCK, GOING ROUND WITH SOMEBODY'S SHIRTS. IT HAS SEEN THINGS." }),
+    ];
+
+    return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 300, name: 'THE LAUNDRY CAT' }],
       depth: [{ x: 232, y: 24, w: 84, h: 44 }],
       enterX: 34, enterFace: 1,
+      stairs: { to: 'cellar', x: 214, label: 'THE CELLAR STEPS', hint: 'DOWN INTO THE WET' },
       lights: [{ x: 110, y: 14, r: 40 }, { x: 210, y: 14, r: 42, flicker: true },
                { x: 310, y: 14, r: 40 }] };
   }
@@ -13662,7 +14514,14 @@ const PLACES = (() => {
         tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true },
     ];
 
-    return { id: 'docks', w: W, floorY: FY, paint, actors, spots, outdoor: true,
+    const eggs = [
+      egg({ id: 'ball', x: 130, y: FY - 66, art: 'eg_ball',
+        label: 'SOMETHING RED AND WHITE',
+        look: 'A RED AND WHITE BALL WITH A BUTTON ON IT. THE CRATE SAYS KANTO.' }),
+    ];
+
+    return { id: 'docks', w: W, floorY: FY, paint, actors, spots, outdoor: true, eggs,
+      pets: [{ kind: 'cat', x: 250, name: 'A PIER CAT' }],
       depth: [{ x: 0, y: 0, w: W, h: 44 }],
       enterX: 26, enterFace: 1,
       lights: [{ x: 206, y: 60, r: 40, a: 0.1 }, { x: W - 144, y: 18, r: 46, flicker: true }] };
@@ -13739,7 +14598,7 @@ const PLACES = (() => {
       { id: 'safe', x: 366, w: 44, top: FY - 40, label: 'THE SAFE',
         hint: 'ASK HIM TO OPEN IT' },
       { id: 'shelf', x: 150, w: 150, top: 36, bot: 96, label: 'THE SHELVES',
-        hint: 'DEAD PEOPLE&#39;S THINGS' },
+        hint: "DEAD PEOPLE'S THINGS" },
     ];
 
     const actors = [
@@ -13765,7 +14624,18 @@ const PLACES = (() => {
       px(c, 259, FY - 38, 20, 1, '#8d8672');
     };
 
-    return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'card', x: 178, y: 58, art: 'eg_card',
+        label: 'A CARD IN A SLEEVE',
+        look: 'A MONSTER ON A CARD, IN A PLASTIC SLEEVE, PRICED AT MORE THAN THE SAFE.' }),
+      egg({ id: 'flag', x: 262, y: 52, art: 'eg_flag',
+        label: 'A LITTLE FLAG',
+        look: 'RED, WHITE AND BLUE IN BANDS. SOMEBODY A LONG WAY FROM HOME PAWNED IT.' }),
+    ];
+
+    return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 120, name: 'THE SHOP CAT' }],
+      stairs: { to: 'above', x: 336, label: 'THE STAIRS UP', hint: 'HE LIVES OVER THE SHOP' },
       depth: [{ x: 60, y: 34, w: 40, h: 66 }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 120, y: 20, r: 34 }, { x: 279, y: 28, r: 44 }] };
@@ -13880,7 +14750,14 @@ const PLACES = (() => {
       }
     };
 
-    return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'flag2', x: 293, y: FY - 72, art: 'eg_flag',
+        label: 'A FLAG OVER THE HATCH',
+        look: 'THE COOK IS FROM SOMEWHERE WARMER. THE CHILLI OIL IS HIS OWN.' }),
+    ];
+
+    return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 400, name: 'THE DINER CAT' }],
       depth: [{ x: 10, y: 20, w: 92, h: 40 }],
       enterX: 30, enterFace: 1,
       lights: [{ x: 90, y: 14, r: 38 }, { x: 200, y: 14, r: 40 }, { x: 320, y: 14, r: 38, flicker: true }] };
@@ -13991,31 +14868,198 @@ const PLACES = (() => {
         tag: 'A REGULAR', tagCol: PIX.PAL.d },
     ];
 
-    return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, actors, spots,
+    const eggs = [
+      egg({ id: 'card2', x: 200, y: FY - 34, art: 'eg_card',
+        label: 'A CARD ON THE BAR',
+        look: 'SOMEBODY WAS PLAYING A GAME OF CARDS WITH MONSTERS ON THEM. HE LOST.' }),
+    ];
+
+    return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+      pets: [{ kind: 'cat', x: 300, name: 'THE BAR CAT' }],
       depth: [{ x: 250, y: 26, w: 66, h: 32 }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 142, y: 26, r: 44 }, { x: 300, y: 16, r: 40, a: 0.06 },
                { x: W - 47, y: 20, r: 34, flicker: true }] };
   }
 
-  const BUILD = { laundry, docks, pawn, diner, bar };
+  /* ============================================================
+     THE FLOORS NOBODY SHOWS YOU.
+
+     A building is not one room. The laundry has a cellar under it
+     where the canal comes in, and the broker sleeps over his own
+     shop. Both are their own painted rooms with their own props in
+     them, reached by the stairs on the ground floor — so the city
+     is deeper than the map says it is.
+     ============================================================ */
+
+  /* under the laundry: the canal comes in here and nobody has mopped */
+  function laundryCellar() {
+    const W = 300, FY = 112, seed = seedFor('cellar');
+
+    const paint = (c) => {
+      const p = P();
+      c.drawImage(ART.wall(W, FY + 4, { tone: 'brick', railY: 0, seed: seed % 77 }), 0, 0);
+      c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 41 }), 0, FY - 2);
+      px(c, 0, FY - 3, W, 2, '#0b0f11');
+      /* THE WATER. The canal is on the other side of this wall and it knows. */
+      px(c, 0, FY - 2, W, 14, 'rgba(30,70,74,.55)');
+      for (let x = 2; x < W; x += 9) {
+        px(c, x, FY + ((x * 7 + seed) % 5), 6, 1, 'rgba(120,200,200,.12)');
+      }
+      /* pipes across the ceiling, dripping */
+      c.drawImage(ART.pipes(W, 12, seed % 31), 0, 12);
+      px(c, 0, 30, W, 2, '#1a1f24');
+      /* the boiler, big and asleep */
+      ART.box(c, 30, FY - 62, 58, 62, { fill: '#3a3129', top: '#4c4034', bot: '#1d1813', ink: p.K });
+      PIX.disc(c, 59, FY - 36, 17, p.K);
+      PIX.disc(c, 59, FY - 36, 15, '#241d17');
+      PIX.disc(c, 59, FY - 36, 8, '#5a2b12');
+      PIX.disc(c, 59, FY - 36, 5, '#c96a1e');
+      px(c, 44, FY - 70, 30, 9, p.K);
+      px(c, 46, FY - 68, 26, 5, '#2a231c');
+      ART.rivets(c, 34, FY - 58, 7, 9, p.K, '#6b5a48');
+      /* the sump: a hole in the floor with a grate off it */
+      px(c, 176, FY - 6, 46, 8, p.K);
+      px(c, 178, FY - 5, 42, 6, '#0a0d0e');
+      for (let i = 0; i < 5; i++) px(c, 180 + i * 9, FY - 5, 2, 6, '#2a3033');
+      px(c, 226, FY - 8, 20, 4, '#333b3e');
+      /* shelves of somebody's paperwork, gone to mould */
+      ART.box(c, 236, FY - 54, 52, 54, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
+      for (let r = 0; r < 3; r++) {
+        px(c, 238, FY - 46 + r * 16, 48, 2, '#2a2318');
+        for (let i = 0; i < 4; i++) {
+          px(c, 240 + i * 12, FY - 44 + r * 16, 9, 12, i % 2 ? '#7d7a68' : '#8d8672');
+          px(c, 240 + i * 12, FY - 44 + r * 16, 9, 2, 'rgba(0,0,0,.3)');
+        }
+      }
+      /* the steps back up, at the near end */
+      for (let i = 0; i < 6; i++) {
+        px(c, 4, FY - 8 - i * 9, 26 + i * 3, 9, i % 2 ? '#2a2f33' : '#232a2e');
+        px(c, 4, FY - 8 - i * 9, 26 + i * 3, 1, 'rgba(255,255,255,.06)');
+      }
+      sheen(c, 0, FY - 2, W, 16, 0.08);
+      ART.grain(c, 0, 0, W, SCENE.H, '#0d1114', '#161c20', seed % 53);
+    };
+
+    const spots = [
+      { id: 'sump', x: 199, w: 46, top: FY - 14, label: 'THE SUMP',
+        hint: 'THE CANAL COMES IN HERE' },
+      { id: 'boiler', x: 59, w: 58, top: FY - 64, label: 'THE BOILER',
+        hint: 'STILL WARM. SOMETHING IS BEHIND IT.' },
+    ];
+
+    const eggs = [
+      egg({ id: 'ball2', x: 262, y: FY - 40, art: 'eg_ball',
+        label: 'SOMETHING IN THE FILES',
+        look: 'ANOTHER ONE OF THOSE BALLS, FILED UNDER B. SOMEBODY IS COLLECTING THEM.' }),
+    ];
+
+    return { id: 'cellar', w: W, floorY: FY, paint, spots, eggs, indoorDark: true,
+      pets: [{ kind: 'cat', x: 150, name: 'A CELLAR CAT' }],
+      enterX: 30, enterFace: 1,
+      stairs: { to: 'laundry', x: 16, label: 'BACK UP THE STEPS', hint: 'INTO THE NOISE' },
+      lights: [{ x: 100, y: 32, r: 34, a: 0.07, flicker: true },
+               { x: 250, y: 32, r: 30, a: 0.05 }] };
+  }
+
+  /* over the pawn shop: where the broker actually lives */
+  function pawnAbove() {
+    const W = 280, FY = 106, seed = seedFor('above');
+
+    const paint = (c) => {
+      const p = P();
+      c.drawImage(ART.wall(W, FY + 4, { tone: 'grey', railY: 58, seed: seed % 63 }), 0, 0);
+      c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 37 }), 0, FY - 2);
+      px(c, 0, FY - 3, W, 2, '#12100e');
+      nightWindow(c, 196, 26, 54, 46, seed % 19);
+      /* a cot, slept in tonight */
+      c.drawImage(ART.bed(76, 30, false), 30, FY - 30);
+      /* a strongbox under it, which is the whole reason he sleeps here */
+      ART.box(c, 112, FY - 20, 34, 20, { fill: '#2f3540', top: '#404858', bot: '#191d24', ink: p.K });
+      px(c, 124, FY - 13, 10, 8, p.K);
+      px(c, 126, FY - 11, 6, 4, '#e0a63c');
+      ART.rivets(c, 115, FY - 18, 5, 7, p.K, '#7c8697');
+      /* a table with his supper on it and the day's takings beside it */
+      c.drawImage(ART.desk(62, 30, seed % 11), 150, FY - 30);
+      px(c, 162, FY - 40, 16, 6, '#8d8672');
+      px(c, 164, FY - 42, 12, 3, '#c9c0a8');
+      px(c, 186, FY - 38, 14, 4, '#e0a63c');
+      /* a picture of somebody, turned to the wall */
+      px(c, 88, 40, 22, 26, p.K);
+      px(c, 90, 42, 18, 22, '#5e5038');
+      px(c, 92, 44, 14, 18, '#4a3f2e');
+      /* the stairs back down, at the far end */
+      for (let i = 0; i < 6; i++) {
+        px(c, W - 30 - i * 3, FY - 8 - i * 9, 26 + i * 3, 9, i % 2 ? '#3a3229' : '#2f2822');
+        px(c, W - 30 - i * 3, FY - 8 - i * 9, 26 + i * 3, 1, 'rgba(255,255,255,.06)');
+      }
+      ART.grain(c, 0, 0, W, SCENE.H, '#100e12', '#1a171e', seed % 43);
+    };
+
+    const spots = [
+      { id: 'cot', x: 68, w: 76, top: FY - 34, label: 'THE COT',
+        hint: 'HE SLEEPS OVER HIS OWN SHOP' },
+      { id: 'strongbox', x: 129, w: 36, top: FY - 24, label: 'THE STRONGBOX',
+        hint: 'WHAT HE DOES NOT PUT IN THE SAFE' },
+    ];
+
+    const eggs = [
+      egg({ id: 'card3', x: 172, y: FY - 44, art: 'eg_card',
+        label: 'A CARD BY HIS SUPPER',
+        look: 'HE HAS BEEN READING THE BACK OF IT WHILE HE EATS. THE HOLO IS WORN OFF.' }),
+    ];
+
+    return { id: 'above', w: W, floorY: FY, paint, spots, eggs,
+      pets: [{ kind: 'cat', x: 210, name: 'HIS CAT' }],
+      enterX: W - 30, enterFace: -1,
+      stairs: { to: 'pawn', x: W - 16, label: 'BACK DOWN', hint: 'INTO THE SHOP' },
+      lights: [{ x: 170, y: 20, r: 38, a: 0.08 }] };
+  }
+
+  const BUILD = { laundry, docks, pawn, diner, bar, cellar: laundryCellar, above: pawnAbove };
+
+  /* the extra floors, by the place they belong to */
+  const FLOORS = { laundry: ['cellar'], pawn: ['above'] };
 
   return {
-    /* a place, dressed for tonight, with the searching wired up */
-    build(id) {
-      const fn = BUILD[id];
+    /* a place, dressed for tonight, with the searching wired up.
+       `floor` names another room in the same building — the laundry
+       cellar, the room over the pawn shop — and the props there
+       belong to the place you drove to, not to the floor. */
+    build(id, floor) {
+      const fn = BUILD[floor || id];
       if (!fn) return null;
       const room = fn();
+      room.place = id;
       /* every prop goes through the story so clue plumbing lives in one
-         place, and each one says whether it has already been turned over */
+         place, and each one says whether it has already been turned over.
+         An easter egg is not a prop and does not get searched. */
       room.spots = (room.spots || []).map(sp => {
+        if (sp.egg || sp.noSearch) return sp;
         const base = sp.hint;
         return Object.assign({}, sp, {
           hint: () => (CITY.searched(id, sp.id) ? 'NOTHING LEFT HERE'
-            : (typeof base === 'function' ? base() : base)),
+            : (STORY.lookedAt && STORY.lookedAt(id, sp.id) === 1 ? 'THE GLASS SAYS SOMETHING IS IN THERE'
+              : (typeof base === 'function' ? base() : base))),
           onUse: () => STORY.search(id, sp.id),
         });
       });
+      /* the eggs go in as things you can look at, and get painted in */
+      if (room.eggs && room.eggs.length) {
+        const inner = room.paint;
+        room.paint = (c, w, h) => { inner(c, w, h); paintEggs(c, room.eggs); };
+        room.spots = room.spots.concat(room.eggs);
+      }
+      /* and the stairs, if this building has another floor */
+      if (room.stairs) {
+        const st = room.stairs;
+        room.spots = room.spots.concat([{
+          id: 'stairs', x: st.x, w: 40, top: 24, bot: room.floorY + 4,
+          noSearch: true,
+          label: st.label, hint: st.hint,
+          onUse: () => STORY.toFloor(st.to),
+        }]);
+      }
       /* the witnesses answer questions; everybody else just talks */
       room.actors = (room.actors || []).map(a => Object.assign({}, a, {
         label: a.tag || a.label,
@@ -14033,6 +15077,8 @@ const PLACES = (() => {
       return room;
     },
     has(id) { return !!BUILD[id]; },
+    /* which floors a place has, for the phone and the tests */
+    floorsOf(id) { return FLOORS[id] || []; },
   };
 })();
 </script>
@@ -14349,7 +15395,8 @@ const PHONE = (() => {
     }
     got.forEach(cl => {
       const row = U.el('div', 'ph-clue got');
-      row.appendChild(SPR.clone(ART.art('ic_case', Math.max(1, k - 1)), 1));
+      /* the thing itself, not a generic tag */
+      row.appendChild(SPR.clone(ART.art(cl.icon || 'ev_note', Math.max(1, k - 1)), 1));
       const col = U.el('div', 'ph-cluecol');
       col.appendChild(line(cl.text, Math.max(1, k - 1), '#eae4d0', null));
       col.appendChild(line('FROM ' + ((CITY.PLACES[cl.at] || {}).short || 'THE CITY'), 1, '#8fb3a0', null));
@@ -14496,6 +15543,8 @@ const PHONE = (() => {
      THE TAPS     pull three pints without wearing them
      THE FRYER    turn out a tray of donuts
      THE DRUMS    put a lid on three rats
+     THE LOCK     three pins on a shed nobody wants opened
+     THE PRINTS   lift three clean ones off what you brought back
 
    Both are the same shape — a moving thing you have to stop in
    the right place, three times — and both pay in the two things
@@ -14831,6 +15880,86 @@ const JOBS = (() => {
     for (let i = 0; i < s.hits; i++) ART.px(c, W - 19 + i * 5, H - 12, 3, 6, '#5b5163');
   }
 
+  /* ---------------------------------------------------------
+     THE LOCK. Three pins, a pick, and a shed on a pier with
+     something in it. Miss and the pin drops back.
+     --------------------------------------------------------- */
+  function drawLock(c, W, H, s) {
+    const P = PIX.PAL;
+    ART.px(c, 0, 0, W, H, '#0e1216');
+    ART.dither(c, 0, 0, W, H, 'rgba(0,0,0,.3)', 0.1, 19);
+    /* the padlock, filling the frame, seen from the side */
+    ART.box(c, 22, 22, 88, 54, { fill: '#4d545e', top: '#697382', bot: '#22262c', ink: P.K });
+    ART.rivets(c, 26, 26, 8, 11, '#2b3037', '#8d9298');
+    /* the shackle */
+    for (let i = 0; i < 20; i++) {
+      const a = Math.PI + (i / 19) * Math.PI;
+      ART.px(c, 66 + Math.round(Math.cos(a) * 22) - 3, 22 + Math.round(Math.sin(a) * 16), 6, 6, P.K);
+      ART.px(c, 66 + Math.round(Math.cos(a) * 22) - 2, 23 + Math.round(Math.sin(a) * 16), 4, 4, '#8d9298');
+    }
+    /* the keyway, and the three pins in it */
+    ART.px(c, 34, 34, 64, 32, P.K);
+    ART.px(c, 36, 36, 60, 28, '#171b20');
+    for (let i = 0; i < 3; i++) {
+      const px0 = 44 + i * 18;
+      const done2 = i < s.hits;
+      const live = i === s.round;
+      /* the pin, and how high it is sitting */
+      const h = done2 ? 20 : (live ? Math.round(20 * s.x) : 4);
+      ART.px(c, px0, 60 - h, 8, h + 4, done2 ? '#e0a63c' : '#6a7480');
+      ART.px(c, px0, 60 - h, 8, 2, done2 ? '#ffd75e' : '#98a2ab');
+      ART.px(c, px0 - 1, 59 - h, 10, 1, P.K);
+      /* THE SHEAR LINE this pin has to stop on */
+      if (live) {
+        const ly = 60 - Math.round(20 * s.centre);
+        const half = Math.max(2, Math.round(20 * s.band / 2));
+        ART.px(c, px0 - 4, ly - half, 16, half * 2, 'rgba(111,247,216,.2)');
+        ART.px(c, px0 - 4, ly, 16, 1, '#6ff7d8');
+      }
+    }
+    /* the pick, going in */
+    ART.px(c, 96, 58, 30, 2, '#c9d2d8');
+    ART.px(c, 118, 56, 12, 6, '#4a3f2e');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(200,240,255,' + (s.flash * 0.18).toFixed(3) + ')');
+    /* the pins already set, as a row of gold */
+    for (let i = 0; i < s.hits; i++) ART.px(c, 8 + i * 5, H - 8, 3, 4, '#ffd75e');
+  }
+
+  /* ---------------------------------------------------------
+     THE PRINTS. A brush over a lift card: too light and you get
+     nothing, too hard and you wipe the ridge off.
+     --------------------------------------------------------- */
+  function drawPrints(c, W, H, s) {
+    const P = PIX.PAL;
+    ART.px(c, 0, 0, W, H, '#191d24');
+    ART.dither(c, 0, 0, W, H, 'rgba(0,0,0,.28)', 0.1, 13);
+    /* the card on the bench */
+    ART.box(c, 18, 26, 96, 44, { fill: '#ded2b4', top: '#f0e6c8', bot: '#a99a78', ink: P.K });
+    ART.grain(c, 21, 29, 90, 38, '#d2c5a4', '#e8dcbc', 17);
+    /* the print coming up, ring by ring, as you get them */
+    const cx = 66, cy = 48;
+    for (let r = 2 + s.hits * 4; r >= 2; r -= 4) {
+      PIX.disc(c, cx, cy, r, r % 8 === 2 ? '#8d8672' : '#5a5648');
+    }
+    if (s.hits) PIX.disc(c, cx, cy, 2, '#2b2436');
+    /* THE PRESSURE BAR down the left: the band is the right weight */
+    const bx = 8, by = 20, bh = 56;
+    ART.px(c, bx - 1, by - 1, 8, bh + 2, P.K);
+    ART.px(c, bx, by, 6, bh, '#22282e');
+    const bandH = Math.max(4, Math.round(bh * s.band));
+    const cyb = by + Math.round(bh * s.centre);
+    ART.px(c, bx, cyb - (bandH >> 1), 6, bandH, 'rgba(111,247,216,.24)');
+    ART.px(c, bx, cyb, 6, 1, '#6ff7d8');
+    const ny = by + Math.round(bh * s.x);
+    ART.px(c, bx - 3, ny - 1, 12, 3, P.K);
+    ART.px(c, bx - 2, ny, 10, 1, '#ff6a5e');
+    /* the brush, riding the bar */
+    ART.px(c, 118, ny - 8, 8, 18, '#4a3f2e');
+    ART.px(c, 119, ny - 7, 6, 6, '#6e4a30');
+    for (let i = 0; i < 7; i++) ART.px(c, 112 + i, ny + 2 + (i % 2), 2, 6, '#2b2436');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.2).toFixed(3) + ')');
+  }
+
   return {
     meter,
 
@@ -14860,6 +15989,30 @@ const JOBS = (() => {
       const pay = r.hits * 6 + r.perfect * 4;
       G.chips += pay;
       return { pay, hits: r.hits, perfect: r.perfect, rounds: r.rounds };
+    },
+
+    /* three pins. Nothing to spend, everything to open. */
+    async lock() {
+      const r = await meter({
+        head: 'PICK THE LOCK',
+        sub: 'THREE PINS. SET EACH ONE ON THE SHEAR LINE.',
+        key: 'TAP TO SET THE PIN',
+        rounds: 3, band: 0.17, speed: 1.05,
+        draw: drawLock,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, open: r.hits >= 3 };
+    },
+
+    /* three clean lifts off what you brought back to the station */
+    async prints() {
+      const r = await meter({
+        head: 'DUST IT FOR PRINTS',
+        sub: 'THREE LIFTS. NOT TOO HARD OR THE RIDGE GOES.',
+        key: 'TAP AT THE RIGHT WEIGHT',
+        rounds: 3, band: 0.2, speed: 0.95,
+        draw: drawPrints,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, clean: r.hits >= 3 };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */
@@ -15046,6 +16199,18 @@ const ROOMS = (() => {
       for (const lx of [120, 240, 360, 480]) {
         c.drawImage(ART.hangLamp(16, 26, false), lx - 8, 0);
       }
+      /* THE PRINT BENCH, between the last desk and the lockers: powder,
+         tape, a stack of lift cards and a lamp on a bent neck. */
+      ART.box(c, 426, FY - 26, 46, 26, { fill: '#3f3a33', top: '#524b41', bot: '#221f1a', ink: p.K });
+      px(c, 430, FY - 32, 8, 6, '#22282e');            // the powder jar
+      px(c, 431, FY - 31, 6, 4, '#8d8672');
+      px(c, 441, FY - 30, 6, 4, '#2b2436');            // the brush
+      px(c, 442, FY - 33, 2, 4, '#4a3f2e');
+      px(c, 452, FY - 31, 14, 5, '#ded2b4');           // lift cards
+      px(c, 452, FY - 33, 14, 2, '#f0e6c8');
+      px(c, 468, FY - 44, 2, 18, '#3a3f46');           // the bench lamp
+      px(c, 462, FY - 48, 12, 5, '#3a3f46');
+      px(c, 463, FY - 43, 10, 1, '#ffe7a8');
       /* grime in the corners so it isn't a clean box */
       ART.dither(c, 0, FY - 20, W, 20, 'rgba(0,0,0,.22)', 0.12, 31);
     };
@@ -15142,9 +16307,20 @@ const ROOMS = (() => {
       hint: 'WHAT YOU CARRY',
       onUse: () => STORY.openLocker(),
     });
+    /* --- THE PRINT BENCH: powder, tape, and half an hour you do not have --- */
+    spots.push({
+      id: 'kit', x: 448, w: 48, top: FY - 50,
+      label: 'THE PRINT BENCH',
+      hint: () => (G.dusted ? 'YOU HAVE LIFTED WHAT THERE WAS'
+        : (typeof CITY !== 'undefined' && CITY.found().length
+          ? 'DUST WHAT YOU BROUGHT BACK' : 'NOTHING TO DUST YET')),
+      onUse: () => STORY.dustJob(),
+    });
 
     return {
       id: 'precinct', w: W, floorY: FY, paint, onPaintFront: front, actors, spots,
+      /* SERGEANT, WHO IS A DOG. Nobody signed him in either. */
+      pets: [{ kind: 'dog', x: 452, name: 'SERGEANT' }],
       depth: [{ x: 176, y: 31, w: 70, h: 44 }],
       enterX: 46, enterFace: 1,
       lights: [{ x: 120, y: 14, r: 40 }, { x: 240, y: 14, r: 40 },
@@ -15305,6 +16481,7 @@ const ROOMS = (() => {
 
     return {
       id: 'ward', w: W, floorY: FY, paint, spots, actors,
+      pets: [{ kind: 'cat', x: W - 70, name: 'THE WARD CAT' }],
       enterX: 62, enterFace: 1,
       lights: [{ x: 150, y: 8, r: 70, a: 0.05 }],
     };
@@ -15651,7 +16828,7 @@ const STORY = {
       return { line: 'FOURTEEN MARSH ROW. GO AND FINISH IT.', icon: 'ic_star' };
     }
     if (STORY.capHasBrief()) {
-      return { line: 'SEE CAPTAIN ROOK FOR TONIGHT&#39;S LEAD', icon: 'ic_badge' };
+      return { line: "SEE CAPTAIN ROOK FOR TONIGHT'S LEAD", icon: 'ic_badge' };
     }
     if (!c) return { line: 'TAKE THE CAR OUT AND WORK THE LEAD', icon: 'ic_map' };
     if (c.known) return { line: 'NO LINE-UP FOR HIM: GO STRAIGHT THROUGH', icon: 'ic_badge' };
@@ -15682,6 +16859,52 @@ const STORY = {
 
   /* has the objective changed since last time anybody looked */
   objectiveKey() { return STORY.objective().line; },
+
+  /* ============================================================
+     AND WHICH THING IN THIS ROOM IT MEANS.
+
+     The objective is a sentence; the marker is a chevron over the
+     one thing in the room that sentence is about. Returned as the
+     spot or actor itself so the scene can put the mark exactly
+     where the thing is, whatever room you happen to be in.
+     ============================================================ */
+  wantHere(def) {
+    if (!def) return null;
+    const find = (ids) => {
+      for (const id of ids) {
+        const a = (def.actors || []).find(x => x.id === id && !x.gone);
+        if (a) return a;
+        const sp = (def.spots || []).find(x => x.id === id && !x.gone);
+        if (sp) return sp;
+      }
+      return null;
+    };
+
+    /* at the station */
+    if (def.id === 'precinct') {
+      if (STORY.capHasBrief()) return find(['cap']);
+      if (STORY.canFinish() && !STORY.atFinale()) return find(['board']);
+      const c0 = G.case;
+      if (c0 && !c0.done && CASE.left() <= 1) return find(['stairs', 'lineup']);
+      return find(['street', 'desk']);
+    }
+
+    /* out in the city: an errand that is done outranks anything else */
+    const owed = (STORY.questsLive() || []).find(x => x.state === 'ready' && x.q.place === G.place);
+    if (owed) return find(['wit']);
+
+    /* the prop the glass says is worth turning over */
+    if (G.place && G.looked) {
+      const hot = CITY.propsAt(G.place).find(pr =>
+        G.looked[G.place + ':' + pr] === 1 && !CITY.searched(G.place, pr));
+      if (hot) { const sp = find([hot]); if (sp) return sp; }
+    }
+    /* otherwise the first thing here nobody has been through */
+    const open = CITY.unsearchedAt(G.place || '');
+    for (const pr of open) { const sp = find([pr]); if (sp) return sp; }
+    /* nothing left down here: point at the stairs, or at the way out */
+    return find(['stairs', 'street']);
+  },
 
   async toPrecinct() {
     await UI.goto(() => { G.phase = 'precinct'; });
@@ -15964,7 +17187,9 @@ const STORY = {
       cl.seen = true;
       cl.foundAt = q.place + ':favour';
       STORY.note('HE GAVE IT UP: ' + cl.text);
-      await CINE.clueCard(cl, CASE.left());
+      /* HANDED OVER, NOT DUG UP — but it still goes in a bag in front of
+         you, so it gets the same beat as everything else you find. */
+      await CINE.pickUp(cl, CASE.left(), 'HANDED OVER BY ' + q.who);
     } else if (!opts.noCash) {
       await TUTOR.say('TAKE THE MONEY THEN. ' + q.pay + '.', who);
     }
@@ -16046,7 +17271,7 @@ const STORY = {
         { label: 'LOOK IN IT', note: 'YOU KEEP WHAT IS IN IT. HE IS DONE WITH YOU.' },
       ], you);
       if (pick === 1) {
-        STORY.note('OPENED ' + q.who + '&#39;S PARCEL. HE WILL HEAR ABOUT IT.');
+        STORY.note('OPENED ' + q.who + "'S PARCEL. HE WILL HEAR ABOUT IT.");
         await STORY.questPay(q, {
           noCash: true, voice: you,
           line: 'STRING, PAPER, AND SOMETHING HE DID NOT WANT A COP HOLDING.',
@@ -16456,6 +17681,7 @@ const STORY = {
       await STORY.arrive('precinct');
     } else {
       CITY.visit(id);
+      G.floor = null;                     // you come in at street level
       G.phase = 'place';
       UI.render();
       await STORY.arrivePlace(id);
@@ -16477,13 +17703,290 @@ const STORY = {
     });
   },
 
+  /* ============================================================
+     THE PRINT KIT, ON THE BENCH AT THE STATION.
+
+     What you carried back has been handled. Powder, tape, a card,
+     and a steady hand gets you a name off it — which is worth a
+     face off the wall. It is expensive on purpose: half an hour of
+     a night that has none, and once a case.
+     ============================================================ */
+  async dustJob() {
+    if (CINE.busy) return;
+    const c = G.case;
+    if (!c || c.known) {
+      await TUTOR.say('NOTHING ON THE BENCH WORTH POWDERING.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.q, rim: PIX.PAL.t, hold: 1900, top: true });
+      return;
+    }
+    if (G.dusted) {
+      await TUTOR.say('YOU HAVE LIFTED EVERYTHING THAT WAS ON IT.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.q, rim: PIX.PAL.t, hold: 1900, top: true });
+      return;
+    }
+    const got = CITY.found();
+    if (!got.length) {
+      await TUTOR.say('YOU HAVE NOT BROUGHT ANYTHING BACK TO DUST.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.q, rim: PIX.PAL.t, hold: 2100, top: true });
+      return;
+    }
+    const r = await JOBS.prints();
+    G.dusted = 1;
+    CITY.spend('search', 1.7);
+    if (!r.clean) {
+      await TUTOR.say(r.hits ? r.hits + ' PARTIALS AND A SMUDGE. NOT ENOUGH TO SAY A NAME WITH.'
+        : 'YOU HAVE WIPED THE RIDGE OFF IT. THAT IS THAT.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.R, rim: PIX.PAL.r });
+      return;
+    }
+    /* a clean lift is worth a clue: it crosses somebody off */
+    const left = (c.clues || []).filter(cl => !cl.seen);
+    if (!left.length) {
+      await TUTOR.say('A CLEAN ONE. IT MATCHES WHAT YOU ALREADY KNOW.',
+        { name: 'THE PRINT KIT', nameCol: PIX.PAL.G, rim: PIX.PAL.g });
+      return;
+    }
+    const cl = left[0];
+    cl.seen = true;
+    cl.foundAt = 'precinct:dusted';
+    STORY.note('LIFTED A PRINT: ' + cl.text);
+    SFX.jackpot();
+    await CINE.pickUp(cl, CASE.left(), 'LIFTED OFF THE EVIDENCE AT THE STATION');
+  },
+
+  /* ============================================================
+     UP AND DOWN THE BUILDING.
+
+     The stairs are not a place on the map: they are inside one.
+     Going down them costs a couple of minutes and takes you to
+     another painted room whose props belong to the same stop.
+     ============================================================ */
+  async toFloor(to) {
+    if (CINE.busy) return;
+    const place = G.place;
+    const room = PLACES.build(place, to === place ? null : to);
+    if (!room) return;
+    G.floor = to === place ? null : to;
+    CITY.spend('talk');                       // a flight of stairs is a minute
+    SCENE.close();
+    await UI.goto(() => { G.phase = 'place'; });
+    if (G.phase !== 'place') { G.phase = 'place'; UI.render(); }
+    await CINE.establish({
+      name: room.stairs && room.stairs.to === place ? (room.id === 'cellar' ? 'THE CELLAR'
+        : room.id === 'above' ? 'OVER THE SHOP' : 'ANOTHER FLOOR')
+        : (CITY.PLACES[place] || {}).name || 'INSIDE',
+      sub: CITY.hhmm() + '  -  ' + (room.id === 'cellar' ? 'UNDER THE LAUNDRY'
+        : room.id === 'above' ? 'THE BROKER LIVES HERE' : 'GROUND FLOOR'),
+      from: Math.min(room.w - 10, (SCENE.me ? SCENE.me.x : 40) + 120),
+      to: SCENE.me ? SCENE.me.x : 40, ms: 1300,
+    });
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* what the glass said about a prop, if anything: 1 hot, -1 clean, 0 unseen */
+  lookedAt(place, prop) {
+    return (G.looked && G.looked[place + ':' + prop]) || 0;
+  },
+
+  /* ============================================================
+     THE ONE NICE THING IN THE GAME.
+
+     There is a cat at four of the five stops and a dog at the
+     station. Nothing in the case depends on any of them.
+     ============================================================ */
+  async petIt(a) {
+    if (CINE.busy) return;
+    a.pet = 2.2;
+    a.wait = 2.2;
+    for (let i = 0; i < 3; i++) {
+      a.hearts.push({ x: -4 + i * 4, y: a.y - (a.kind === 'dog' ? 26 : 22) - i * 3, t: i * 0.2 });
+    }
+    SFX.tone(a.kind === 'dog' ? 320 : 620, 0.16, 'triangle', 0.06);
+    setTimeout(() => SFX.tone(a.kind === 'dog' ? 380 : 720, 0.2, 'triangle', 0.05), 140);
+    const d = META.load();
+    d.pets = (d.pets || 0) + 1; META.save();
+    G.petted = (G.petted || 0) + 1;
+    const line = a.kind === 'dog'
+      ? U.pick(Math.random, [
+        'HE PUTS HIS WHOLE HEAD IN YOUR HAND. HE DOES THIS TO EVERYBODY.',
+        'THE DOG DOES NOT CARE WHOSE CASE IT IS. THE DOG IS PLEASED.',
+        'SOMEBODY HAS BEEN FEEDING HIM DONUTS. IT WAS YOU.',
+      ])
+      : U.pick(Math.random, [
+        'IT ALLOWS IT. FOR EIGHT SECONDS.',
+        'THE CAT HAS BEEN IN THIS ROOM LONGER THAN THE BODY WAS.',
+        'IT LEANS ON YOUR LEG AND LOOKS AT THE DOOR. IT KNOWS SOMETHING.',
+      ]);
+    await TUTOR.say(line, { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2400, top: true });
+    /* a cat that likes you is worth exactly one hour of not feeling awful */
+    if ((G.petted || 0) === 1) UI.stampSmall('THAT HELPED. SLIGHTLY.');
+    if (d.pets === 12) {
+      const dd = META.load(); dd.catFriend = 1; META.save();
+      UI.stampSmall('EVERY ANIMAL IN THIS CITY KNOWS YOU');
+    }
+  },
+
+  /* ============================================================
+     THE EYEGLASS.
+
+     Searching a prop costs eighteen minutes of a night that only
+     has five hundred and sixty. The glass costs five and tells you
+     whether it is worth it — most of the time. It is a hunch with a
+     lens on it, not an oracle: a dry prop reads clean three times
+     in four and lies to you the fourth.
+     ============================================================ */
+  glassRead(place, prop) {
+    /* fixed per prop per night, so looking twice tells you the same thing */
+    const h = U.hashSeed('look:' + G.seedStr + ':' + (G.day || 1) + ':' + place + ':' + prop);
+    const clue = !!CITY.plantedAt(place, prop);
+    if (clue) return { hot: true, sure: true };
+    return { hot: (h % 100) < 25, sure: false };     // a quarter of them lie
+  },
+
+  async lookClose(hit, x, y) {
+    if (CINE.busy || SCENE.busy()) return;
+    const wx = hit ? hit.x : x;
+    const wy = hit
+      ? (hit.top === undefined ? SCENE.H - 40 : (hit.top + (hit.bot === undefined ? SCENE.H - 20 : hit.bot)) / 2)
+      : y;
+    const cv = SCENE.magnify(wx, wy, 22, 5);
+    const label = hit ? (typeof hit.label === 'function' ? hit.label() : hit.label) : null;
+    const lines = [];
+    const place = G.place;
+    const isProp = hit && place && CITY.propsAt(place).indexOf(hit.id) >= 0;
+
+    if (hit && hit.look) lines.push(hit.look);
+
+    if (isProp) {
+      CITY.spend('look');
+      if (CITY.searched(place, hit.id)) {
+        lines.push('YOU HAVE ALREADY BEEN THROUGH THIS ONE.');
+      } else {
+        const r = STORY.glassRead(place, hit.id);
+        lines.push(r.hot
+          ? 'SOMETHING IN THERE IS NOT DIRT. WORTH THE EIGHTEEN MINUTES.'
+          : 'NOTHING IN THERE BUT WHAT YOU WOULD EXPECT.');
+        (G.looked = G.looked || {})[place + ':' + hit.id] = r.hot ? 1 : -1;
+      }
+    } else if (!hit) {
+      lines.push(U.pick(Math.random, [
+        "WET BRICK AND SOMEBODY ELSE'S PAINT.",
+        'THE ROOM, FIVE TIMES CLOSER. IT DOES NOT IMPROVE.',
+        'DUST, IN LAYERS. NOBODY HAS CLEANED IN HERE SINCE THE WAR.',
+      ]));
+    }
+    await CINE.glass({ cv, title: label || 'THROUGH THE GLASS', lines });
+    if (UI.syncStory) UI.syncStory();
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* ============================================================
+     THE IRON, OUT IN A ROOM.
+
+     Rats are vermin and the city pays a nickel a tail. A frog is a
+     witness, and the game will let you do it anyway — once, and
+     then nobody in that building will look at you again.
+     ============================================================ */
+  async shootRat(rat, x, y) {
+    if (CINE.busy || SCENE.busy()) return;
+    SCENE.killRat(rat);
+    SFX.shot();
+    FX.screen.flash(PIX.PAL.W, 0.22, 0.14);
+    FX.screen.shake(6);
+    G.ratsShot = (G.ratsShot || 0) + 1;
+    const pay = 5;
+    G.chips += pay;
+    UI.syncChips && UI.syncChips();
+    UI.stampSmall('ONE LESS RAT. +' + pay);
+    if (G.ratsShot === 10) {
+      const d = META.load(); d.ratKing = 1; META.save();
+      await TUTOR.say('TEN OF THEM. THE SANITATION DEPARTMENT SHOULD BE PAYING YOU.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2400, top: true });
+    }
+  },
+
+  /* a shot at nothing: noise, and the street hears it */
+  async shootWide(x, y) {
+    if (CINE.busy || SCENE.busy()) return;
+    SFX.shot();
+    FX.screen.flash(PIX.PAL.W, 0.18, 0.16);
+    FX.screen.shake(5);
+    G.heat = (G.heat || 0) + 1;
+    await TUTOR.say(U.pick(Math.random, [
+      "A HOLE IN SOMEBODY ELSE'S WALL. VERY GOOD, DETECTIVE.",
+      'THAT WAS LOUD AND IT WAS NOTHING.',
+      'YOU HAVE JUST TOLD THE WHOLE STREET WHERE YOU ARE.',
+    ]), { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2000, top: true });
+  },
+
+  /* pointing it at somebody who has done nothing yet */
+  async aimAt(o) {
+    if (CINE.busy || SCENE.busy()) return;
+    const isFrog = !!(o.key || o.def);
+    if (!isFrog) {
+      /* shooting the furniture. It is a way of searching, technically. */
+      SFX.shot();
+      FX.screen.flash(PIX.PAL.W, 0.18, 0.16);
+      FX.screen.shake(5);
+      G.heat = (G.heat || 0) + 1;
+      await TUTOR.say('YOU SHOT A ' + ((typeof o.label === 'function' ? o.label() : o.label) || 'THING') +
+        '. IT DID NOT CONFESS.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2200, top: true });
+      return;
+    }
+    const art = o.key ? SPR.frogCustom(o.key, o.def) : null;
+    const pick = await TUTOR.ask('YOU ARE POINTING A GUN AT A WITNESS.', [
+      { label: 'PUT IT AWAY', note: 'HE DID NOT SEE IT' },
+      { label: 'LEAN ON HIM', note: 'HE TALKS. HE ALSO REMEMBERS.' },
+    ], { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, art });
+    if (pick !== 1) { TOOLS.set('hand'); return; }
+
+    /* THREATENING A WITNESS WORKS. That is the problem with it. */
+    G.heat = (G.heat || 0) + 2;
+    STORY.note('PULLED A GUN ON ' + ((typeof o.label === 'function' ? o.label() : o.label) || 'A WITNESS') + '.');
+    const place = G.place;
+    const clues = (G.case && G.case.clues) || [];
+    const cl = clues.find(c2 => !c2.seen && c2.at === place) || clues.find(c2 => !c2.seen);
+    if (cl) {
+      cl.seen = true;
+      cl.foundAt = place + ':leaned';
+      await CINE.pickUp(cl, CASE.left(), 'TAKEN AT GUNPOINT');
+    } else {
+      await TUTOR.say('HE HAS NOTHING. HE IS JUST FRIGHTENED NOW.',
+        { name: 'A WITNESS', nameCol: PIX.PAL.R, rim: PIX.PAL.r, art });
+    }
+    G.burned = G.burned || {};
+    G.burned[place] = 1;
+    UI.stampSmall(((CITY.PLACES[place] || {}).short || 'HERE') + ' IS CLOSED TO YOU');
+    TOOLS.set('hand');
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
   /* ---------- putting your hand in something ---------- */
   async search(place, prop) {
     if (CINE.busy) return;
-    /* the two props that are jobs, not searches */
+    /* the props that are jobs, not searches */
     if (prop === 'pour') return STORY.pourJob();
     if (prop === 'donuts') return STORY.donutJob();
     if (prop === 'juke') return STORY.juke();
+    if (prop === 'kit') return STORY.dustJob();
+
+    /* THE SHED HAS A NEW LOCK ON IT. Nobody puts a new lock on an empty
+       shed, and nobody hands a detective a key. */
+    if (place === 'docks' && prop === 'shed' && !(G.picked && G.picked.shed)) {
+      const r = await JOBS.lock();
+      CITY.spend('talk', 2);
+      if (!r.open) {
+        await TUTOR.say(r.hits ? r.hits + ' OF THE THREE. THE LAST ONE DROPPED BACK.'
+          : 'THE PICK SLIPS. THAT LOCK IS NEWER THAN THE SHED.',
+          { name: 'THE LOCK', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+        return;
+      }
+      (G.picked = G.picked || {}).shed = 1;
+      STORY.note('PICKED THE LOCK ON THE SHED AT THE PIER.');
+      await TUTOR.say('THE SHACKLE COMES OFF IN YOUR HAND. NOW LOOK INSIDE.',
+        { name: 'THE LOCK', nameCol: PIX.PAL.G, rim: PIX.PAL.g });
+    }
 
     if (CITY.searched(place, prop)) {
       await TUTOR.say('YOU HAVE BEEN THROUGH THIS ONCE ALREADY.',
@@ -16502,7 +18005,8 @@ const STORY = {
         clue.foundAt = place + ':' + prop;
         STORY.note('FOUND AT ' + CITY.PLACES[place].short + ': ' + clue.text);
         SFX.jackpot();
-        await CINE.clueCard(clue, CASE.left());
+        await CINE.pickUp(clue, CASE.left(),
+          'OUT OF THE ' + String(prop).toUpperCase() + ' AT ' + CITY.PLACES[place].short);
         if (CASE.left() === 1) {
           await TUTOR.say('ONE FACE LEFT. TAKE IT TO THE STATION AND SAY THE NAME.',
             { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
@@ -17007,7 +18511,8 @@ const UI = {
       case 'board':      UI.buildRoom(app, ROOMS.boardRoom()); break;
       case 'ward':       UI.buildRoom(app, ROOMS.ward()); break;
       case 'blind':      UI.buildRoom(app, ROOMS.lineup()); break;
-      case 'place':      UI.buildRoom(app, PLACES.build(G.place) || ROOMS.precinct()); break;
+      case 'place':      UI.buildRoom(app,
+        PLACES.build(G.place, G.floor) || ROOMS.precinct()); break;
       case 'duel':
       case 'loot':       UI.buildDuel(app); DUEL.enter(); break;
       case 'ending':     UI.buildEnding(app); break;
@@ -17054,7 +18559,17 @@ const UI = {
       col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
       plate.appendChild(col);
       plate.onclick = () => PHONE.open('job');
-      wrap.appendChild(plate);
+
+      /* THE BELT. What is in your hands, and what a click is going to do
+         with it. Three big drawn buttons, because this is the only control
+         in the game that changes what everything else means. */
+      const col2 = U.el('div', 'corner-left');
+      col2.appendChild(plate);
+      const belt = U.el('div', 'tool-belt');
+      belt.id = 'tool-belt';
+      UI.fillBelt(belt, K);
+      col2.appendChild(belt);
+      wrap.appendChild(col2);
     }
 
     /* the right-hand stack: the phone, the money, and the two switches */
@@ -17106,6 +18621,32 @@ const UI = {
 
     wrap.appendChild(stack);
     app.appendChild(wrap);
+  },
+
+  /* the three tools, drawn, with the key that picks each one on it */
+  fillBelt(belt, K) {
+    if (typeof TOOLS === 'undefined') return;
+    belt.innerHTML = '';
+    TOOLS.LIST.forEach(t => {
+      const b = U.el('button', 'tool-btn' + (TOOLS.is(t.id) ? ' on' : ''));
+      b.dataset.tool = t.id;
+      b.appendChild(SPR.clone(ART.art(t.icon, K), 1));
+      const col = U.el('span', 'tool-col');
+      col.appendChild(UI.txt(t.word, { scale: Math.max(1, K - 1), shadow: null,
+        color: TOOLS.is(t.id) ? PIX.PAL.K : PIX.PAL.W }));
+      col.appendChild(UI.txt(t.key, { scale: 1, shadow: null,
+        color: TOOLS.is(t.id) ? PIX.PAL.K : PIX.PAL.q }));
+      b.appendChild(col);
+      b.onclick = () => TOOLS.set(t.id);
+      belt.appendChild(b);
+    });
+  },
+
+  syncTools() {
+    const belt = document.getElementById('tool-belt');
+    if (!belt) return;
+    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;
+    UI.fillBelt(belt, K);
   },
 
   /* the objective changed under us: repaint the plate in place */
@@ -22478,44 +24019,106 @@ const CINE = {
      bars close, the room goes away, and what you found is held up
      to the light with what it means written under it.
      ============================================================ */
-  async clueCard(clue, left) {
-    const root = CINE.stage();
+  /* ============================================================
+     THE PICK-UP.
+
+     Finding something used to be a card with a grey rectangle on
+     it. This is your own hand coming up out of the drain with the
+     thing in it: first person, the room gone dark around the hole,
+     the object turning over in your glove, and then the bag.
+     ============================================================ */
+  async pickUp(clue, left, where) {
+    /* THE PICK LAYER, not the cutscene stage: an establishing shot that
+       finishes half a second later used to wipe this straight off. */
+    const root = CINE.pickRoot();
     CINE.letterbox(true);
     root.className = 'anim-cut';
     root.innerHTML = '';
-    const wrap = U.el('div', 'clue-card');
+    const P = PIX.PAL;
+    const W = 168, H = 116;
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.92 / W,
+      window.innerHeight * 0.66 / H)), 2, 7);
+    const wrap = U.el('div', 'pick-card');
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix pick-cv';
+    wrap.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
 
-    /* the evidence bag: a manila envelope with a window in it */
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth / 120, window.innerHeight / 90)), 2, 6);
-    const o = ART.cv(96, 62), c = o.c, P = PIX.PAL;
-    ART.box(c, 0, 0, 96, 62, { fill: '#ded2b4', top: '#f0e6c8', bot: '#a99a78', ink: P.K });
-    ART.grain(c, 3, 3, 90, 56, '#d2c5a4', '#e8dcbc', 19);
-    ART.px(c, 6, 6, 84, 18, '#12101d');
-    ART.px(c, 7, 7, 82, 16, 'rgba(150,200,220,.18)');       // the window
-    ART.px(c, 6, 30, 60, 2, '#8d8672');
-    ART.px(c, 6, 36, 74, 2, '#8d8672');
-    ART.px(c, 6, 42, 48, 2, '#8d8672');
-    /* the evidence stamp, sized to the word rather than the other way round */
-    const st = PIXFONT.render('EVIDENCE', { scale: 1, color: '#ffe7e0', shadow: null });
-    const sw = st.width + 6;
-    ART.px(c, 90 - sw, 44, sw, 12, '#b8232f');
-    ART.px(c, 91 - sw, 45, sw - 2, 10, '#8c1a24');
-    c.drawImage(st, 93 - sw, 48);
-    /* whatever it was, sitting in the window */
-    const ic = clue.icon && PIX.get ? null : null;
-    ART.px(c, 40, 10, 16, 10, '#3a3f52');
-    ART.px(c, 42, 12, 12, 6, '#6f7a94');
-    wrap.appendChild(SPR.clone(o.cv, K));
-
-    const head = U.el('div', 'clue-head');
-    head.appendChild(UI.wrap('YOU FOUND SOMETHING', 22, { scale: 3, color: PIX.PAL.q }));
-    head.appendChild(UI.wrap(clue.text, 26, { scale: 4, color: PIX.PAL.W, outline: PIX.PAL.K }));
+    const head = U.el('div', 'pick-head');
+    if (where) head.appendChild(UI.wrap(where, 30, { scale: 2, color: PIX.PAL.N }));
+    head.appendChild(UI.wrap(clue.text, 30, { scale: 3, color: PIX.PAL.W, outline: PIX.PAL.K }));
     head.appendChild(UI.wrap(left > 1 ? left + ' FACES STILL FIT' : 'THAT IS ONE FACE LEFT',
-      26, { scale: 3, color: left > 1 ? PIX.PAL.G : PIX.PAL.Y }));
+      28, { scale: 2, color: left > 1 ? PIX.PAL.G : PIX.PAL.Y }));
     wrap.appendChild(head);
     root.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('in'));
+
+    const item = ART.art(clue.icon || 'ev_note', 1);
+    const me = DUEL.myDef ? DUEL.myDef() : null;
+    /* his own suit, lifted out of the dark so the arm reads as an arm */
+    const suit = '#3a4256', suitD = '#20252f', suitL = '#525d75';
+    const t0 = performance.now();
+    let stop = false;
+
+    const draw = (now) => {
+      const T = (now - t0) / 1000;
+      const rise = U.clamp(T / 0.7, 0, 1);
+      const ease = 1 - Math.pow(1 - rise, 3);
+      c.clearRect(0, 0, W, H);
+
+      /* THE INSIDE OF WHEREVER YOU PUT YOUR HAND. Dark, close, and wet. */
+      ART.px(c, 0, 0, W, H, '#0a0c10');
+      ART.grain(c, 0, 0, W, H, '#0c0f13', '#12171d', 23);
+      /* a hard light from up and left. In four wide steps, not forty thin
+         ones: at this magnification a per-row ramp is a set of scanlines. */
+      for (let i = 0; i < 4; i++) {
+        ART.px(c, 0, i * 11, W - i * 14, 11, 'rgba(150,180,205,' + (0.028 - i * 0.006).toFixed(3) + ')');
+      }
+      /* brick, close to the lens and out of focus, which here means chunky */
+      for (let y = 8; y < H - 18; y += 11) {
+        for (let x = ((y / 11) & 1) ? -8 : 0; x < W; x += 22) {
+          ART.px(c, x, y, 21, 10, 'rgba(255,255,255,.012)');
+          ART.px(c, x, y, 21, 1, 'rgba(255,255,255,.02)');
+        }
+      }
+      /* standing water at the bottom of it, moving a little */
+      ART.px(c, 0, H - 16, W, 16, 'rgba(24,56,60,.55)');
+      for (let x = 2; x < W; x += 13) {
+        ART.px(c, x, H - 15 + ((x + Math.round(T * 5)) % 3), 7, 1, 'rgba(120,200,200,.10)');
+      }
+
+      /* THE ARM, in from the bottom left, and the fist at the end of it */
+      const fx = Math.round(W * 0.52);
+      const fy = Math.round(H + 20 - ease * (H * 0.52 + 20));
+      SPR.povSleeve(c, -14, H + 24, fx - 16, fy + 20, 40, 26, suit, suitD, suitL);
+      if (me) SPR.povHand(c, fx, fy + 4, me, 1, 2, true);
+
+      /* AND THE THING HELD IN IT. A glow behind it, because in a frame this
+         dark the only lit object is the one you came for. */
+      const ir = 2;
+      const bob = Math.round(Math.sin(T * 2.6) * 1.2);
+      const ix = fx - 4;
+      const iy = fy - item.height * ir + 6 + bob;
+      PIX.disc(c, ix + item.width, iy + item.height, 26 + Math.sin(T * 3) * 2,
+        'rgba(255,231,160,.055)');
+      c.drawImage(item, 0, 0, item.width, item.height,
+        ix, iy, item.width * ir, item.height * ir);
+      /* a glint that crosses it once it is up */
+      if (rise >= 1) {
+        const g = ((T - 0.7) % 2.6) / 2.6;
+        if (g < 0.3) {
+          const gx = ix + Math.round(g / 0.3 * item.width * ir);
+          ART.px(c, gx, iy, 2, item.height * ir, 'rgba(255,255,255,.14)');
+        }
+      }
+      if (!stop) requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
     SFX.bank();
+
     await new Promise(res => {
       const done = () => {
         window.removeEventListener('pointerdown', done);
@@ -22525,11 +24128,94 @@ const CINE = {
       setTimeout(() => {
         window.addEventListener('pointerdown', done);
         window.addEventListener('keydown', done);
-      }, 350);
-      setTimeout(done, 4200);
+      }, 700);
+      setTimeout(done, 5200);
     });
+    stop = true;
     root.innerHTML = ''; root.className = 'hidden';
     CINE.letterbox(false);
+  },
+
+  /* ============================================================
+     THE EYEGLASS.
+
+     The rooms are painted at a detail nobody can see at room
+     scale. Hold the glass up and the actual painted room is
+     blown up five times inside a brass rim — so every scrap of
+     detail in the art is really there, and this is how you look
+     at it.
+     ============================================================ */
+  async glass(o) {
+    const root = CINE.pickRoot();
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const P = PIX.PAL;
+    const src = o.cv;
+    const R = 96;                                  // the lens, in its own pixels
+    const W = R * 2 + 24, H = R * 2 + 24;
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.8 / W,
+      window.innerHeight * 0.62 / H)), 1, 4);
+    const wrap = U.el('div', 'glass-card');
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix glass-cv';
+    wrap.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    const cx = W / 2, cy = H / 2;
+
+    /* the brass, then the glass, then the room inside it */
+    PIX.disc(c, cx, cy, R + 10, P.K);
+    PIX.disc(c, cx, cy, R + 8, '#a5741f');
+    PIX.disc(c, cx, cy, R + 5, '#e0a63c');
+    PIX.disc(c, cx, cy, R + 2, '#6e4c12');
+    PIX.disc(c, cx, cy, R, P.K);
+    c.save();
+    c.beginPath();
+    c.arc(cx, cy, R - 1, 0, Math.PI * 2);
+    c.clip();
+    if (src) {
+      c.drawImage(src, 0, 0, src.width, src.height, cx - R, cy - R, R * 2, R * 2);
+    } else {
+      ART.px(c, cx - R, cy - R, R * 2, R * 2, '#141a1e');
+    }
+    /* the glass itself: a cold cast and a highlight across the top left */
+    ART.px(c, cx - R, cy - R, R * 2, R * 2, 'rgba(127,215,255,.07)');
+    for (let i = 0; i < 26; i++) {
+      ART.px(c, cx - R + i, cy - R + i, 40 - i, 2, 'rgba(255,255,255,.05)');
+    }
+    c.restore();
+    /* and a hair of dust on the lens, because it lives in a coat pocket */
+    for (let i = 0; i < 18; i++) {
+      const a = (i * 2.399), rr = R * 0.9 * Math.sqrt((i + 1) / 19);
+      ART.px(c, Math.round(cx + Math.cos(a) * rr), Math.round(cy + Math.sin(a) * rr),
+        1, 1, 'rgba(255,255,255,.08)');
+    }
+
+    const head = U.el('div', 'glass-head');
+    head.appendChild(UI.txt(o.title || 'A CLOSER LOOK', { scale: 3, color: PIX.PAL.G }));
+    (o.lines || []).forEach(l => {
+      head.appendChild(UI.wrap(l, 34, { scale: 2, color: PIX.PAL.W }));
+    });
+    head.appendChild(UI.txt('TAP TO PUT IT AWAY', { scale: 1, color: PIX.PAL.q }));
+    wrap.appendChild(head);
+    root.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    SFX.tick && SFX.tick();
+
+    await new Promise(res => {
+      const done = () => {
+        window.removeEventListener('pointerdown', done);
+        window.removeEventListener('keydown', done);
+        res();
+      };
+      setTimeout(() => {
+        window.addEventListener('pointerdown', done);
+        window.addEventListener('keydown', done);
+      }, 260);
+    });
+    root.innerHTML = ''; root.className = 'hidden';
   },
 
   /* you said a name out loud */
@@ -24213,6 +25899,141 @@ const LOOT = {
 const LOOT_CFG = LOOT_TUNING;
 </script>
 <script>
+/* ==== js/tools.js ==== */
+/* ============================================================
+   SHELL & DEBT — tools.js
+   WHAT IS IN YOUR HANDS.
+
+   A detective has three of them, and which one is out changes
+   what a click means:
+
+     THE HAND      walk, open, search, talk. The default.
+     THE EYEGLASS  hold it up to something and look at it properly.
+                   The room is drawn at full pixel detail and most
+                   of that detail is too small to see at room
+                   scale — so the glass magnifies the actual
+                   painted room, and everything hidden in the art
+                   is in there waiting.
+     THE IRON      point it at something. Rats are fair game. A
+                   frog is not, and the game will let you anyway.
+
+   The tool owns the mouse cursor, so a mouse over the room always
+   says what the click is about to do.
+   ============================================================ */
+
+const TOOLS = (() => {
+
+  const LIST = [
+    { id: 'hand', word: 'HAND', key: '1', icon: 'ic_hand',
+      hint: 'WALK, OPEN, SEARCH, TALK', tint: '#6ff7d8' },
+    { id: 'glass', word: 'EYEGLASS', key: '2', icon: 'ic_lens',
+      hint: 'LOOK CLOSE AT SOMETHING', tint: '#ffd75e' },
+    { id: 'iron', word: 'THE IRON', key: '3', icon: 'ic_iron',
+      hint: 'AIM AT IT. RATS ARE FAIR GAME.', tint: '#ff6a5e' },
+  ];
+
+  let cur = 'hand';
+  const cursors = {};
+
+  function of(id) { return LIST.find(t => t.id === (id || cur)) || LIST[0]; }
+
+  /* ---------------------------------------------------------
+     THE CURSOR.
+
+     Drawn, not a system arrow: a pointing glove, a lens with a
+     handle, or a set of crosshairs, blown up to 2x and handed to
+     CSS as a data URL with its own hot spot.
+     --------------------------------------------------------- */
+  function cursorFor(id) {
+    if (cursors[id]) return cursors[id];
+    const K = 2, S = 16;
+    const cv = document.createElement('canvas');
+    cv.width = S * K; cv.height = S * K;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    const P = PIX.PAL;
+    const px = (x, y, w, h, col) => ART.px(c, x, y, w, h, col);
+
+    if (id === 'iron') {
+      /* crosshairs, with a gap in the middle so you can see what you are
+         about to do to whatever is under them */
+      const g = P.K, r = '#ff6a5e';
+      px(1, 7, 5, 2, g); px(10, 7, 5, 2, g);
+      px(7, 1, 2, 5, g); px(7, 10, 2, 5, g);
+      px(1, 7, 5, 1, r); px(10, 8, 5, 1, r);
+      px(7, 1, 1, 5, r); px(8, 10, 1, 5, r);
+      px(7, 7, 2, 2, r);
+      cursors[id] = { url: cv.toDataURL(), hx: 8 * K, hy: 8 * K };
+      return cursors[id];
+    }
+    if (id === 'glass') {
+      /* the lens, held up: rim, glass, and a handle going down-right */
+      PIX.disc(c, 6, 6, 6, P.K);
+      PIX.disc(c, 6, 6, 5, '#cfe6f2');
+      PIX.disc(c, 6, 6, 4, 'rgba(127,215,255,.55)');
+      px(4, 3, 3, 1, '#ffffff');
+      px(3, 4, 1, 2, '#ffffff');
+      px(10, 10, 2, 2, P.K);
+      px(11, 11, 4, 4, P.K);
+      px(12, 12, 3, 3, '#e0a63c');
+      cursors[id] = { url: cv.toDataURL(), hx: 6 * K, hy: 6 * K };
+      return cursors[id];
+    }
+    /* the hand: a pointing glove */
+    px(5, 1, 3, 6, P.K);
+    px(6, 2, 1, 5, '#f4efe0');
+    px(3, 6, 9, 8, P.K);
+    px(4, 7, 7, 6, '#8fe6c8');
+    px(4, 7, 7, 2, '#c9f7e4');
+    px(4, 12, 7, 1, 'rgba(0,0,0,.35)');
+    px(7, 7, 1, 5, 'rgba(0,0,0,.22)');
+    cursors[id] = { url: cv.toDataURL(), hx: 6 * K, hy: 2 * K };
+    return cursors[id];
+  }
+
+  /* what CSS should put on the element the mouse is over */
+  function css(id, hot) {
+    const c = cursorFor(id || cur);
+    return 'url(' + c.url + ') ' + c.hx + ' ' + c.hy + ', ' + (hot ? 'pointer' : 'default');
+  }
+
+  return {
+    LIST, of, cursorFor, css,
+
+    cur() { return cur; },
+    is(id) { return cur === id; },
+
+    set(id) {
+      if (!LIST.some(t => t.id === id) || cur === id) return false;
+      cur = id;
+      SFX.tick && SFX.tick();
+      if (UI.syncTools) UI.syncTools();
+      if (SCENE.refreshCursor) SCENE.refreshCursor();
+      const t = of(id);
+      UI.stampSmall && UI.stampSmall(t.word + ': ' + t.hint);
+      return true;
+    },
+
+    /* the belt goes round on TAB-less keys, so a thumb can cycle it too */
+    cycle() {
+      const i = LIST.findIndex(t => t.id === cur);
+      TOOLS.set(LIST[(i + 1) % LIST.length].id);
+    },
+
+    /* a keypress, if it belongs to us */
+    onKey(k) {
+      const t = LIST.find(t2 => t2.key === k);
+      if (t) { TOOLS.set(t.id); return true; }
+      if (k === 'q') { TOOLS.cycle(); return true; }
+      return false;
+    },
+
+    reset() { cur = 'hand'; },
+  };
+})();
+</script>
+<script>
 /* ==== js/tutor.js ==== */
 'use strict';
 /* ============================================================
@@ -24366,10 +26187,16 @@ const TUTOR = {
       if (hushed) TUTOR.hush(true);
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
+      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
       const build = (reveal) => {
         holder.innerHTML = '';
+        /* HIS MOUTH MOVES WHILE HE IS TALKING. Three characters a flap,
+           which at this type speed is about eighty milliseconds — a frog
+           saying something rather than a photograph with words beside it. */
+        const art = reveal === null || reveal === undefined ? base
+          : SPR.portraitTalk(base, Math.floor(reveal / 6) % 2 === 0);
         holder.appendChild(TUTOR.plate({
-          art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
+          art,
           name: opts.name || 'THE CAPTAIN',
           nameCol: opts.nameCol,
           rim: opts.rim,
@@ -24396,11 +26223,11 @@ const TUTOR = {
       };
       TUTOR.finishTyping = finishTyping;
       typing = setInterval(() => {
-        typed += 2;
+        typed += 3;
         if (typed >= line.length) { finishTyping(); return; }
         build(typed);
-        if (typed % 6 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
-      }, 26);
+        if (typed % 9 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
+      }, 22);
 
       let closed = false;
       const done = () => {
@@ -24453,10 +26280,13 @@ const TUTOR = {
       const holder = U.el('div', 'tut-plate');
       const rack = U.el('div', 'reply-rack');
 
+      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
       const build = (reveal) => {
         holder.innerHTML = '';
+        const art = reveal === null || reveal === undefined ? base
+          : SPR.portraitTalk(base, Math.floor(reveal / 6) % 2 === 0);
         holder.appendChild(TUTOR.plate({
-          art: opts.art || SPR.frogCustom('handler', HANDLER_DEF),
+          art,
           name: opts.name || 'THE CAPTAIN',
           nameCol: opts.nameCol,
           rim: opts.rim,
@@ -24479,7 +26309,12 @@ const TUTOR = {
         rack.innerHTML = '';
         replies.forEach((r, i) => {
           const b = U.el('button', 'reply-btn' + (r.dim ? ' dim' : ''));
-          b.appendChild(PIXFONT.render('>', { scale: k, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+          /* THE NUMBER, NOT A CHEVRON. The number keys already worked and
+             nothing said so; now the key is printed on the thing it
+             presses, which is the only honest place for it. */
+          const num = U.el('span', 'reply-num');
+          num.appendChild(PIXFONT.render(String(i + 1), { scale: k, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+          b.appendChild(num);
           const col = U.el('span', 'reply-col');
           UI.wrapLines(typeof r === 'string' ? r : r.label, 38).forEach(t => {
             col.appendChild(PIXFONT.render(t, { scale: k, color: PIX.PAL.W, shadow: PIX.PAL.K }));
@@ -24487,6 +26322,8 @@ const TUTOR = {
           if (r.note) col.appendChild(PIXFONT.render(r.note, { scale: Math.max(1, k - 2), color: PIX.PAL.q, shadow: null }));
           b.appendChild(col);
           b.onclick = () => finish(i);
+          /* a mouse gets the same feedback a thumb does */
+          b.onmouseenter = () => { SFX.tone(1100, 0.02, 'square', 0.02); };
           rack.appendChild(b);
         });
         requestAnimationFrame(() => rack.classList.add('in'));
@@ -24505,11 +26342,11 @@ const TUTOR = {
       TUTOR._close = () => finish(-1);
       TUTOR.finishTyping = finishTyping;
       typing = setInterval(() => {
-        typed += 2;
+        typed += 3;
         if (typed >= line.length) { finishTyping(); return; }
         build(typed);
-        if (typed % 6 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
-      }, 24);
+        if (typed % 9 === 0) SFX.tone(1400 + Math.random() * 500, 0.012, 'square', 0.028);
+      }, 20);
 
       const finish = (i) => {
         if (done) return;

@@ -334,6 +334,302 @@ const ART = (() => {
     '..............',
   ]);
 
+  /* ---------------- the tool belt ---------------- */
+
+  paint('ic_hand', [
+    '..............',
+    '.....KK.......',
+    '....KGGK.KK...',
+    '....KGGKKGGK..',
+    '..KK.KGGKGGKK.',
+    '.KGGKKGGKGGKGK',
+    '.KGGKGGGGGGKGK',
+    '.KGGGGGGGGGGGK',
+    '..KGGGGGGGGGK.',
+    '..KGGGGGGGGGK.',
+    '...KGGGGGGGGK.',
+    '....KGGGGGGK..',
+    '.....KGGGGK...',
+    '......KKKK....',
+  ]);
+
+  paint('ic_lens', [
+    '...KKKKKK.....',
+    '..KWWWWWWK....',
+    '.KWLLLLLLWK...',
+    'KWLLlllllLWK..',
+    'KWLlllllllLWK.',
+    'KWLlllllllLWK.',
+    'KWLLlllllLLWK.',
+    'KWWLLlllLLWWK.',
+    '.KWWLLLLLWWK..',
+    '..KKWWWWWKK...',
+    '....KKGGKK....',
+    '......KGGKK...',
+    '.......KGGKK..',
+    '........KKKK..',
+  ]);
+
+  paint('ic_iron', [
+    '..............',
+    '...KKKKKKKK...',
+    '..KSSSSSSSSK..',
+    '..KSttttttSK..',
+    '.KKSSSSSSSSKK.',
+    '.KSSSKKKKSSSK.',
+    '.KSSSKssKSSK..',
+    '..KKSSSKKK....',
+    '...KSSSK......',
+    '...KUUUK......',
+    '..KUbbUK......',
+    '..KUbbUK......',
+    '..KUUUUK......',
+    '...KKKK.......',
+  ]);
+
+  paint('ic_paw', [
+    '..............',
+    '..KK....KK....',
+    '.KGGK..KGGK...',
+    '.KGGK..KGGK...',
+    '..KK.KK.KK....',
+    '....KGGK......',
+    '..KK.KK.KK....',
+    '.KGGK..KGGK...',
+    '..KK....KK....',
+    '...KKKKKK.....',
+    '..KGGGGGGK....',
+    '.KGGGGGGGGK...',
+    '.KGGGGGGGGK...',
+    '..KKKKKKKK....',
+  ]);
+
+  /* ============================================================
+     THE EVIDENCE.
+
+     Every clue in the case is a THING, and until now the card that
+     announced one drew a grey rectangle where the thing should be.
+     These are those things: 16x16, one per test the board runs, and
+     they turn up in the pick-up, on the card and in your coat.
+     ============================================================ */
+
+  paint('ev_photo', [
+    'KKKKKKKKKKKKKKKK',
+    'KWWWWWWWWWWWWWWK',
+    'KWttttttttttttWK',
+    'KWtssssssssssTWK',
+    'KWtsSSqqqqsssTWK',
+    'KWtsSKKKKqsssTWK',
+    'KWtsKFFFFKssTTWK',
+    'KWtsKFKKFKssTTWK',
+    'KWtsKFFFFKsTTTWK',
+    'KWtssKKKKssTTTWK',
+    'KWtssssssTTTTTWK',
+    'KWttttttTTTTTTWK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWWWWWWWWWWKKK',
+    'KWWWWWWWWWWWKK..',
+    'KKKKKKKKKKKKK...',
+  ]);
+
+  paint('ev_glass', [
+    '................',
+    '.....KKKKKK.....',
+    '...KKLLLLLLKK...',
+    '..KLLllllllLLK..',
+    '.KLlllWlllllllK.',
+    '.KLllWWllllllLK.',
+    'KLllWlllllllllLK',
+    'KLlWllllllKllllK',
+    'KLllllllKKlllllK',
+    'KLlllllKllllllLK',
+    '.KLllKKllllllLK.',
+    '.KLlKlllllllLLK.',
+    '..KKLLllllLLKK..',
+    '...KKLLLLLLKK...',
+    '.....KKKKKK.....',
+    '................',
+  ]);
+
+  paint('ev_print', [
+    'KKKKKKKKKKKKKKKK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWKKKKKKKKWWWK',
+    'KWWKttttttttKWWK',
+    'KWKt.KKKKKK.tKWK',
+    'KWKt.KttttK.tKWK',
+    'KWKt.Kt..tK.tKWK',
+    'KWKt.Kt..tK.tKWK',
+    'KWKt.KttttK.tKWK',
+    'KWKt.KKKKKK.tKWK',
+    'KWWKttttttttKWWK',
+    'KWWWKKKKKKKKWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWKKKWWKKKKWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KKKKKKKKKKKKKKKK',
+  ]);
+
+  paint('ev_shell', [
+    '................',
+    '......KKKK......',
+    '.....KGGGGK.....',
+    '.....KGhhGK.....',
+    '....KKGhhGKK....',
+    '....KGGGGGGK....',
+    '....KGhhhhGK....',
+    '....KGhHHhGK....',
+    '....KGhHHhGK....',
+    '....KGhHHhGK....',
+    '....KGhhhhGK....',
+    '....KGGhhGGK....',
+    '....KKGGGGKK....',
+    '.....KKKKKK.....',
+    '................',
+    '................',
+  ]);
+
+  paint('ev_butt', [
+    '................',
+    '................',
+    '..........KKK...',
+    '.........KOOK...',
+    '........KKoOK...',
+    '.....KKKKuoKK...',
+    '...KKUUUuuKK....',
+    '..KUbbbUUuK.....',
+    '..KUbBbbUUK.....',
+    '..KUbbbbUK......',
+    '...KKUUUKK......',
+    '.....KKKK.......',
+    '..qq............',
+    '.q..q...q.......',
+    '................',
+    '................',
+  ]);
+
+  paint('ev_match', [
+    '................',
+    '..KKKKKKKKKKKK..',
+    '..KddddddddddK..',
+    '..KdWWWWWWWWdK..',
+    '..KdWKKKKKKWdK..',
+    '..KdWKrrrrKWdK..',
+    '..KdWKrKKrKWdK..',
+    '..KdWKrrrrKWdK..',
+    '..KdWKKKKKKWdK..',
+    '..KdWWWWWWWWdK..',
+    '..KddddddddddK..',
+    '..KKKKKKKKKKKK..',
+    '...KWKWKWKWK....',
+    '...KRKRKRKRK....',
+    '...KKKKKKKKK....',
+    '................',
+  ]);
+
+  paint('ev_note', [
+    '................',
+    '.KKKKKKKKKKKKKK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWttttttWWWWWK.',
+    '.KWttttttttWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWtttttttttWWK.',
+    '.KWttttttWWWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWttttttttWWWK.',
+    '.KWttttWWWWWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '.KWWWWWWWKKKKKK.',
+    '.KWWWWWWKK......',
+    '.KKKKKKKK.......',
+    '................',
+  ]);
+
+  /* ============================================================
+     AND THE THINGS THAT ARE JUST THERE.
+
+     Nothing in this block is evidence and none of it does anything.
+     They are the reward for holding the eyeglass up to a shelf in a
+     pawn shop at two in the morning.
+     ============================================================ */
+
+  paint('eg_ball', [
+    '.....KKKKKK.....',
+    '...KKrrrrrrKK...',
+    '..KrrrrrrrrrrK..',
+    '.KrrrrrrrrrrrrK.',
+    '.KrrrrrrrrrrrrK.',
+    'KrrrrrrrrrrrrrrK',
+    'KKKKKKKKKKKKKKKK',
+    'KKKKKKWWWWKKKKKK',
+    'KWWWWWWKKWWWWWWK',
+    'KWWWWWWKKWWWWWWK',
+    'KWWWWWWWWWWWWWWK',
+    '.KWWWWWWWWWWWWK.',
+    '.KWWWWWWWWWWWWK.',
+    '..KWWWWWWWWWWK..',
+    '...KKWWWWWWKK...',
+    '.....KKKKKK.....',
+  ]);
+
+  paint('eg_card', [
+    '.KKKKKKKKKKKK...',
+    '.KGGGGGGGGGGK...',
+    '.KGWWWWWWWWGKKKK',
+    '.KGWVVVVVVWGKGGK',
+    '.KGWVFFFFVWGKGGK',
+    '.KGWVFOOFVWGKGGK',
+    '.KGWVFOOFVWGKGGK',
+    '.KGWVFFFFVWGKGGK',
+    '.KGWVVVVVVWGKGGK',
+    '.KGWWWWWWWWGKGGK',
+    '.KGWttttttWGKGGK',
+    '.KGWtttttWWGKGGK',
+    '.KGWWWWWWWWGKGGK',
+    '.KGGGGGGGGGGKGGK',
+    '.KKKKKKKKKKKKGGK',
+    '.............KKK',
+  ]);
+
+  paint('eg_flag', [
+    '................',
+    'KKKKKKKKKKKKKKKK',
+    'KrrrrrrrrrrrrrrK',
+    'KrrrrrrrrrrrrrrK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KVVVVVVVVVVVVVVK',
+    'KVVVVVVVVVVVVVVK',
+    'KVVVVVVVVVVVVVVK',
+    'KVVVVVVVVVVVVVVK',
+    'KWWWWWWWWWWWWWWK',
+    'KWWWWWWWWWWWWWWK',
+    'KrrrrrrrrrrrrrrK',
+    'KrrrrrrrrrrrrrrK',
+    'KKKKKKKKKKKKKKKK',
+    '.K..............',
+  ]);
+
+  paint('eg_duck', [
+    '................',
+    '................',
+    '.......KKKK.....',
+    '......KGGGGK....',
+    '.....KGGKGGK....',
+    '.....KGGGGGKKK..',
+    '.....KGGGGKOOK..',
+    '....KKGGGKKKKK..',
+    '..KKGGGGGGGKK...',
+    '.KGGGGGGGGGGGK..',
+    'KGGGGGGGGGGGGGK.',
+    'KGGGGGGGGGGGGK..',
+    '.KGGGGGGGGGGK...',
+    '..KKGGGGGGKK....',
+    '....KKKKKK......',
+    '................',
+  ]);
+
   paint('ic_clock', [
     '....KKKKKK....',
     '..KKWWWWWWKK..',
