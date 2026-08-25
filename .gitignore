@@ -2,3 +2,4 @@ node_modules/
 dev/shots/
 .scratch/
 node_modules/
+dist/artifact.html
