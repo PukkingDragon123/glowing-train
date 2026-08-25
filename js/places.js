@@ -959,7 +959,11 @@ const PLACES = (() => {
        cellar, the room over the pawn shop — and the props there
        belong to the place you drove to, not to the floor. */
     build(id, floor) {
-      const fn = BUILD[floor || id];
+      /* the landmarks live in paris.js: looked up here rather than imported
+         so neither file has to load before the other */
+      const want = floor || id;
+      const fn = BUILD[want] ||
+        (typeof PARIS !== 'undefined' ? PARIS.BUILD[want] : null);
       if (!fn) return null;
       const room = fn();
       room.place = id;
@@ -992,12 +996,18 @@ const PLACES = (() => {
           onUse: () => STORY.toFloor(st.to),
         }]);
       }
-      /* the witnesses answer questions; everybody else just talks */
+      /* the witnesses answer questions; everybody else just talks — except
+         the ones with a job on them, who want something first */
       room.actors = (room.actors || []).map(a => Object.assign({}, a, {
         label: a.tag || a.label,
-        hint: a.witness ? () => (CASE.left() > 1 ? 'ASK HIM SOMETHING' : 'HE IS DONE TALKING')
-          : 'TALK',
-        onUse: a.witness ? () => STORY.askWitness(id, a.id) : () => STORY.placeTalk(id, a.id),
+        hint: a.job === 'cups' ? 'TEN ON THE BALL'
+          : a.job === 'sit' ? 'HE WANTS SOMEBODY TO SIT'
+            : a.witness ? () => (CASE.left() > 1 ? 'ASK HIM SOMETHING' : 'HE IS DONE TALKING')
+              : 'TALK',
+        onUse: a.job === 'cups' ? () => STORY.cupGame(a)
+          : a.job === 'sit' ? () => STORY.sitForPainter(a)
+            : a.witness ? () => STORY.askWitness(id, a.id)
+              : () => STORY.placeTalk(id, a.id),
       }));
       /* and the way out is the phone in your coat */
       room.spots.push({

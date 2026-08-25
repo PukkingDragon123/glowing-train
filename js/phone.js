@@ -1,23 +1,40 @@
 /* ============================================================
-   THE FROGGOPHONE.
+   THE PHONE.
 
-   A brick with a green screen, and the only interface in the game.
-   There is no bar across the top of the play area any more: the
-   clock, the money, the case, the map and your pockets are all in
-   here, behind four icons.
+   It is 1937 and you are carrying a slab of glass, which is the
+   one thing in this game nobody in it remarks on. There is no bar
+   across the top of the play area: the clock, the money, the case,
+   the map, your pockets and your conscience are all in here.
 
-     FROGGOMAP   the city from above. Tap a stop, drive there.
-     CASE FILE   what you turned over, what it rules out, who fits.
-     THE KIT     what is in your coat: tools, and the evidence bags.
-     THE JOB     what you are supposed to be doing, and how far in.
+     LOCK SCREEN   the hour, the date, and what came in
+     HOME          a grid of apps, and a dock along the bottom
+     PLAN          the city from above. Tap a stop, drive there.
+     CASE          what you turned over, what it rules out, who fits.
+     COAT          what is in it: tools, cargo, evidence bags.
+     WORK          what you are supposed to be doing, and how far in.
+     KARMA         what this city thinks of you, and why.
+     JOBS          what is going on tonight that pays.
 
-   Everything is drawn: the map, the icons, the frame, the type. No
-   glyph fonts, no emoji, no rounded chrome, nothing small.
+   Everything is drawn: the device, the notch, the status bar, the
+   icons, the map and the type. No glyph fonts, no emoji, no
+   rounded chrome, nothing small.
    ============================================================ */
 
 const PHONE = (() => {
 
-  let app = 'map', tick = null;
+  /* view is 'lock', 'home', or the id of an app */
+  let view = 'lock', app = 'map', tick = null;
+
+  /* the apps, in the order they sit on the home screen. The last four are
+     also the dock, because those are the four you actually use. */
+  const APPGRID = [
+    { id: 'map', word: 'PLAN', icon: 'ic_map', dock: true },
+    { id: 'case', word: 'CASE', icon: 'ic_case', dock: true },
+    { id: 'kit', word: 'COAT', icon: 'ic_bag', dock: true },
+    { id: 'job', word: 'WORK', icon: 'ic_star', dock: true },
+    { id: 'karma', word: 'KARMA', icon: 'ic_paw' },
+    { id: 'jobs', word: 'JOBS', icon: 'ic_coin' },
+  ];
 
   function layer() {
     let r = document.getElementById('phone-root');
@@ -102,11 +119,15 @@ const PHONE = (() => {
     const p = entry.place;
     const here = CITY.at(p.id);
     const hot = !!(G.tips && G.tips[p.id]) && CITY.leftAt(p.id) > 0;
+    /* A CITY BIGGER THAN THE CASE. Eleven stops, and tonight's file only
+       touches seven of them: the rest are dimmed so nobody burns
+       thirty-five minutes driving to the catacombs for nothing. */
+    const inCase = typeof CASE === 'undefined' || CASE.stops().indexOf(p.id) >= 0;
     /* somebody at this stop is owed something, or owes you something */
     const errand = (typeof STORY !== 'undefined' && STORY.questsLive ? STORY.questsLive() : [])
       .find(x => x.q.place === p.id || (x.q.kind === 'carry' && x.q.to === p.id && x.state === 'taken'));
     const b = U.el('button', 'map-pin' + (here ? ' here' : '') + (hot ? ' hot' : '') +
-      (errand ? ' errand' : ''));
+      (errand ? ' errand' : '') + (inCase ? '' : ' cold'));
     b.style.left = p.x + '%';
     b.style.top = p.y + '%';
     b.appendChild(SPR.clone(ART.art(p.icon || 'ic_map', k), 1));
@@ -133,46 +154,217 @@ const PHONE = (() => {
   }
 
   /* ---------- the screen furniture ---------- */
+  /* ============================================================
+     THE STATUS BAR.
+
+     Carrier, signal, the hour, and a battery that is always about
+     to matter. Drawn, like everything else, one pixel at a time.
+     ============================================================ */
   function statusBar(k) {
     const bar = U.el('div', 'ph-status');
-    const s = CITY.sky();
     const left = CITY.minutesLeft();
+    const total = CITY.START ? (24 * 60 - CITY.START) + CITY.END : 560;
+    const pc = U.clamp(Math.round((left / total) * 100), 0, 100);
 
-    const t = U.el('span', 'ph-stat');
-    t.appendChild(SPR.clone(ART.art('ic_clock', k - 1), 1));
-    t.appendChild(line(CITY.hhmm(), k, left < 120 ? '#ff6a5e' : '#8ff7c8'));
-    bar.appendChild(t);
+    /* the carrier, and the signal beside it */
+    const l = U.el('span', 'ph-stat');
+    const sig = ART.cv(11, 8);
+    for (let i = 0; i < 4; i++) {
+      const h = 2 + i * 2, on = i < 3;
+      ART.px(sig.c, i * 3, 8 - h, 2, h, on ? '#eae4d0' : 'rgba(234,228,208,.28)');
+    }
+    l.appendChild(SPR.clone(sig.cv, Math.max(1, k - 1)));
+    l.appendChild(line('SURETE', Math.max(1, k - 1), '#8fb3a0', null));
+    bar.appendChild(l);
 
-    const mid = U.el('span', 'ph-stat col');
-    mid.appendChild(line(s.word, Math.max(1, k - 1), '#7fd7ff'));
-    mid.appendChild(line(Math.max(0, Math.round(left / 60)) + 'H OF SHIFT LEFT',
-      Math.max(1, k - 2), '#5f8f7f'));
+    /* the hour, in the middle, because that is where it lives */
+    const mid = U.el('span', 'ph-stat');
+    mid.appendChild(line(CITY.hhmm(), k, left < 120 ? '#ff6a5e' : '#eae4d0', null));
     bar.appendChild(mid);
 
-    const m = U.el('span', 'ph-stat');
-    m.appendChild(SPR.clone(ART.art('ic_coin', k - 1), 1));
-    m.appendChild(line(String(G.chips), k, '#ffd75e'));
-    bar.appendChild(m);
+    /* and the battery, which is the night */
+    const r = U.el('span', 'ph-stat');
+    r.appendChild(line(pc + '%', Math.max(1, k - 1), pc < 25 ? '#ff6a5e' : '#8fb3a0', null));
+    const bat = ART.cv(20, 10);
+    ART.px(bat.c, 0, 1, 17, 8, '#eae4d0');
+    ART.px(bat.c, 1, 2, 15, 6, '#0b1a12');
+    ART.px(bat.c, 17, 4, 2, 3, '#eae4d0');
+    const fill = Math.max(1, Math.round(15 * pc / 100));
+    ART.px(bat.c, 1, 2, fill, 6, pc < 25 ? '#ff6a5e' : '#8ff7c8');
+    r.appendChild(SPR.clone(bat.cv, Math.max(1, k - 1)));
+    bar.appendChild(r);
     return bar;
   }
 
-  const APPS = [
-    ['map', 'MAP', 'ic_map'],
-    ['case', 'CASE', 'ic_case'],
-    ['kit', 'KIT', 'ic_bag'],
-    ['job', 'JOB', 'ic_star'],
-  ];
+  /* ============================================================
+     THE LOCK SCREEN.
 
-  function tabs(k) {
-    const row = U.el('div', 'ph-tabs');
-    APPS.forEach(([id, word, icon]) => {
-      const b = U.el('button', 'ph-tab' + (app === id ? ' on' : ''));
-      b.appendChild(SPR.clone(ART.art(icon, k), 1));
-      b.appendChild(line(word, Math.max(1, k - 1), app === id ? '#0b1a14' : '#8ff7c8', null));
-      b.onclick = () => { app = id; SFX.tick && SFX.tick(); render(); };
+     The hour twice the size of anything else, the date under it,
+     and whatever came in while the phone was in your coat.
+     ============================================================ */
+  function lockScreen(k) {
+    const wrap = U.el('div', 'ph-lock');
+    const hour = U.el('div', 'ph-hour');
+    hour.appendChild(line(CITY.hhmm(), k + 3, '#f4efe0', '#04120c'));
+    wrap.appendChild(hour);
+    const w = CITY.watch(), sky = CITY.sky();
+    wrap.appendChild(line('NIGHT ' + (G.day || 1) + '  -  ' + w.word + '  -  ' + sky.word,
+      Math.max(1, k - 1), '#8fb3a0', null));
+
+    /* the notifications: what the night has told you so far */
+    const notes = U.el('div', 'ph-notes');
+    const ob = STORY.objective();
+    const push = (icon, head, body2) => {
+      const n = U.el('div', 'ph-note');
+      n.appendChild(SPR.clone(ART.art(icon, Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(head, Math.max(1, k - 1), '#eae4d0', null));
+      UI.wrapLines(body2, 30).forEach(t => col.appendChild(line(t, 1, '#8fb3a0', null)));
+      n.appendChild(col);
+      notes.appendChild(n);
+    };
+    push(ob.icon || 'ic_star', 'LA BRIGADE', ob.line);
+    const owed = (STORY.questsLive() || []).filter(x => x.state === 'ready');
+    if (owed.length) push('ic_bag', owed[0].q.who, 'HE OWES YOU. GO BACK FOR IT.');
+    const km = STORY.karma ? STORY.karma() : null;
+    if (km && km.last) push('ic_paw', 'KARMA ' + (km.score > 0 ? '+' : '') + km.score, km.last);
+    wrap.appendChild(notes);
+
+    const go = U.el('button', 'ph-unlock');
+    go.appendChild(line('SLIDE TO UNLOCK', k, '#0b1a14', null));
+    go.onclick = () => { view = 'home'; SFX.tick && SFX.tick(); render(); };
+    wrap.appendChild(go);
+    return wrap;
+  }
+
+  /* ============================================================
+     THE HOME SCREEN.
+
+     A grid of apps with their names under them, and a dock along
+     the bottom with the four you actually open.
+     ============================================================ */
+  function homeScreen(k) {
+    const wrap = U.el('div', 'ph-home');
+    const grid = U.el('div', 'ph-grid');
+    APPGRID.forEach(a => {
+      const b = U.el('button', 'ph-icon');
+      b.appendChild(SPR.clone(ART.art(a.icon, k + 1), 1));
+      b.appendChild(line(a.word, Math.max(1, k - 1), '#eae4d0', '#04120c'));
+      /* a badge, when the app has something waiting in it */
+      const n = badgeFor(a.id);
+      if (n) {
+        const bd = U.el('span', 'ph-badge');
+        bd.appendChild(line(String(n), Math.max(1, k - 1), '#f4efe0', null));
+        b.appendChild(bd);
+      }
+      b.onclick = () => { view = a.id; app = a.id; SFX.tick && SFX.tick(); render(); };
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  /* how many things are waiting in each app */
+  function badgeFor(id) {
+    if (id === 'map') return (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
+    if (id === 'case') return CITY.found().length;
+    if (id === 'kit') return Object.keys(G.cargo || {}).length;
+    if (id === 'jobs') return (STORY.jobsOpen ? STORY.jobsOpen().length : 0);
+    return 0;
+  }
+
+  /* the dock: the same four apps, always there */
+  function dock(k) {
+    const row = U.el('div', 'ph-dock');
+    APPGRID.filter(a => a.dock).forEach(a => {
+      const b = U.el('button', 'ph-tab' + (view === a.id ? ' on' : ''));
+      b.appendChild(SPR.clone(ART.art(a.icon, k), 1));
+      b.appendChild(line(a.word, Math.max(1, k - 1), view === a.id ? '#0b1a14' : '#8ff7c8', null));
+      b.onclick = () => { view = a.id; app = a.id; SFX.tick && SFX.tick(); render(); };
       row.appendChild(b);
     });
     return row;
+  }
+
+  /* the bar at the top of an open app: back to the home screen, and a name */
+  function navBar(k, title) {
+    const bar = U.el('div', 'ph-nav');
+    const back = U.el('button', 'ph-back');
+    back.appendChild(line('<', k, '#8ff7c8', null));
+    back.onclick = () => { view = 'home'; SFX.tick && SFX.tick(); render(); };
+    bar.appendChild(back);
+    bar.appendChild(line(title, k, '#eae4d0', null));
+    const pad = U.el('span'); pad.style.minWidth = '28px';
+    bar.appendChild(pad);
+    return bar;
+  }
+
+  /* ============================================================
+     KARMA — what this city thinks of you, and why
+     ============================================================ */
+  function karmaApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const km = STORY.karma();
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line(km.word, k + 1, km.score >= 0 ? '#8ff7c8' : '#ff6a5e'));
+    head.appendChild(line((km.score > 0 ? '+' : '') + km.score + '  KARMA',
+      k, '#eae4d0', null));
+    UI.wrapLines(km.blurb, 30).forEach(t => head.appendChild(line(t, Math.max(1, k - 1), '#8fb3a0', null)));
+    wrap.appendChild(head);
+
+    /* the bar, from bad to good, with you on it */
+    const bar = ART.cv(120, 12);
+    ART.px(bar.c, 0, 3, 120, 6, '#123');
+    ART.px(bar.c, 0, 3, 60, 6, 'rgba(209,59,69,.35)');
+    ART.px(bar.c, 60, 3, 60, 6, 'rgba(46,196,169,.35)');
+    ART.px(bar.c, 59, 1, 2, 10, 'rgba(244,239,224,.5)');
+    const px2 = U.clamp(60 + Math.round(km.score * 2.2), 2, 117);
+    ART.px(bar.c, px2 - 2, 0, 5, 12, '#12101d');
+    ART.px(bar.c, px2 - 1, 1, 3, 10, km.score >= 0 ? '#8ff7c8' : '#ff6a5e');
+    wrap.appendChild(SPR.clone(bar.cv, Math.max(1, k - 1)));
+
+    const log = U.el('div', 'ph-clues');
+    const deeds = (G.karmaLog || []).slice(-7).reverse();
+    if (!deeds.length) {
+      const row = U.el('div', 'ph-clue');
+      row.appendChild(line('NOTHING EITHER WAY, YET.', Math.max(1, k - 1), '#5f8f7f', null));
+      log.appendChild(row);
+    }
+    deeds.forEach(d => {
+      const row = U.el('div', 'ph-clue' + (d.n > 0 ? ' got' : ''));
+      row.appendChild(SPR.clone(ART.art(d.n > 0 ? 'ic_paw' : 'ic_iron', Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      UI.wrapLines(d.what, 30).forEach(t => col.appendChild(line(t, Math.max(1, k - 1), '#eae4d0', null)));
+      col.appendChild(line((d.n > 0 ? '+' : '') + d.n, 1, d.n > 0 ? '#6ff7d8' : '#ff6a5e', null));
+      row.appendChild(col);
+      log.appendChild(row);
+    });
+    wrap.appendChild(log);
+    return wrap;
+  }
+
+  /* ============================================================
+     JOBS — what is going on tonight that pays
+     ============================================================ */
+  function jobsApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('WORK GOING SPARE', k, '#eae4d0'));
+    head.appendChild(line('NOBODY LIVES ON THIS SALARY', Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const list = U.el('div', 'ph-clues');
+    (STORY.jobsBoard ? STORY.jobsBoard() : []).forEach(j => {
+      const row = U.el('div', 'ph-clue' + (j.done ? '' : ' got'));
+      row.appendChild(SPR.clone(ART.art(j.icon || 'ic_coin', Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(j.name, Math.max(1, k - 1), j.done ? '#5f8f7f' : '#eae4d0', null));
+      UI.wrapLines(j.done ? 'DONE TONIGHT' : j.where, 32)
+        .forEach(t => col.appendChild(line(t, 1, j.done ? '#3f6f5f' : '#8fb3a0', null)));
+      row.appendChild(col);
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+    return wrap;
   }
 
   /* ---------- FROGGOMAP ---------- */
@@ -389,21 +581,43 @@ const PHONE = (() => {
     root.innerHTML = '';
 
     const body = U.el('div', 'ph-body');
-    body.appendChild(U.el('i', 'ph-aerial'));
-    /* the earpiece grille, so the brick reads as a phone */
-    const top = U.el('div', 'ph-grille');
-    for (let i = 0; i < 7; i++) top.appendChild(U.el('i'));
-    body.appendChild(top);
+    /* THE NOTCH. A slab of glass with a bite out of the top of it, the
+       earpiece and the camera in the bite, because that is what a phone
+       looks like and nobody in 1937 is going to ask. */
+    const notch = U.el('div', 'ph-notch');
+    const grille = U.el('i', 'ph-ear');
+    notch.appendChild(grille);
+    notch.appendChild(U.el('i', 'ph-lens'));
+    body.appendChild(notch);
 
     const screen = U.el('div', 'ph-screen');
     screen.appendChild(statusBar(k));
-    screen.appendChild(tabs(k));
-    screen.appendChild(app === 'case' ? caseApp(k)
-      : app === 'kit' ? kitApp(k)
-        : app === 'job' ? jobApp(k) : mapApp(k));
+
+    if (view === 'lock') {
+      screen.appendChild(lockScreen(k));
+    } else if (view === 'home') {
+      screen.appendChild(homeScreen(k));
+      screen.appendChild(dock(k));
+    } else {
+      const a = APPGRID.find(x => x.id === view) || APPGRID[0];
+      screen.appendChild(navBar(k, a.word));
+      screen.appendChild(view === 'case' ? caseApp(k)
+        : view === 'kit' ? kitApp(k)
+          : view === 'job' ? jobApp(k)
+            : view === 'karma' ? karmaApp(k)
+              : view === 'jobs' ? jobsApp(k) : mapApp(k));
+      screen.appendChild(dock(k));
+    }
     body.appendChild(screen);
 
+    /* the home bar, which is how you get out of anything */
     const keys = U.el('div', 'ph-keys');
+    const homeBtn = U.el('button', 'ph-home-bar');
+    homeBtn.onclick = () => {
+      if (view === 'home' || view === 'lock') PHONE.close();
+      else { view = 'home'; SFX.tick && SFX.tick(); render(); }
+    };
+    keys.appendChild(homeBtn);
     const shut = U.el('button', 'big-btn ph-shut');
     shut.appendChild(line('POCKET IT', k, '#0b1a14', null));
     shut.onclick = () => PHONE.close();
@@ -418,7 +632,10 @@ const PHONE = (() => {
     open(which) {
       if (typeof CINE !== 'undefined' && CINE.busy) return;
       if (typeof UI !== 'undefined' && !UI.isScene(G.phase)) return;
-      app = which || app || 'map';
+      /* asked for an app, go straight to it; asked for nothing, the lock
+         screen, because that is what taking a phone out looks like */
+      if (which) { app = which; view = which; }
+      else if (view === 'lock' || !view) view = 'lock';
       render();
       SFX.tick && SFX.tick();
       if (tick) clearInterval(tick);
@@ -442,6 +659,8 @@ const PHONE = (() => {
       return !!(r && r.className === 'phone-on');
     },
     toggle(which) { PHONE.isOpen() ? PHONE.close() : PHONE.open(which); },
-    app() { return app; },
+    app() { return view === 'lock' || view === 'home' ? view : app; },
+    /* the lock screen next time it comes out of the coat */
+    lock() { view = 'lock'; },
   };
 })();

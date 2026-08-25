@@ -549,6 +549,7 @@ const STORY = {
     }
     CITY.spend('job', 0.5);
     STORY.note('DID ' + q.who + ' A FAVOUR.');
+    STORY.karmaHit('errand');
     if (cl) {
       cl.seen = true;
       cl.foundAt = q.place + ':favour';
@@ -638,6 +639,7 @@ const STORY = {
       ], you);
       if (pick === 1) {
         STORY.note('OPENED ' + q.who + "'S PARCEL. HE WILL HEAR ABOUT IT.");
+        STORY.karmaHit('parcel');
         await STORY.questPay(q, {
           noCash: true, voice: you,
           line: 'STRING, PAPER, AND SOMETHING HE DID NOT WANT A COP HOLDING.',
@@ -1155,6 +1157,254 @@ const STORY = {
   },
 
   /* ============================================================
+     THE PAVEMENT.
+
+     Every dog in this city fouls it and nobody in this city picks
+     it up. There is a scoop and a bag on the back of the sanitation
+     cart at every stop, and three minutes of your night, and the
+     only thing you get for it is that somebody does not step in it.
+     ============================================================ */
+  async scoopIt(mess) {
+    if (CINE.busy) return;
+    const r = await JOBS.scoop();
+    CITY.spend('talk', 0.5);
+    (G.jobsDone = G.jobsDone || {}).scoop = 1;
+    if (!r.clean) {
+      await TUTOR.say(r.hits ? "MOST OF IT. THE REST IS SOMEBODY ELSE'S PROBLEM NOW."
+        : 'YOU HAVE MADE IT WORSE AND YOU HAVE IT ON YOUR SHOE.',
+      { name: 'THE PAVEMENT', nameCol: PIX.PAL.q, rim: PIX.PAL.t });
+      if (mess) mess.done = r.hits > 0;
+      return;
+    }
+    if (mess) mess.done = true;
+    STORY.karmaHit('clean');
+    G.chips += 4;
+    UI.syncChips && UI.syncChips();
+    STORY.note('CLEANED THE PAVEMENT AT ' + ((CITY.PLACES[G.place] || {}).short || 'A STOP') + '.');
+    await TUTOR.say(U.pick(Math.random, [
+      'CLEAN PAVEMENT. IN THIS CITY THAT IS PRACTICALLY A MIRACLE.',
+      'A FROG IN A GOOD COAT WITH A BAG OF THAT. THE STREET SAW IT.',
+      'NOBODY IS GOING TO STEP IN IT NOW. THAT IS THE WHOLE REWARD.',
+    ]), { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2400, top: true });
+  },
+
+  /* ============================================================
+     THE THREE CUPS.
+
+     A frog with a folding table and a crowd of his own friends in
+     it. You can play — and he will let you win the first one — or
+     you can run the table yourself, which pays better and costs
+     you something you cannot buy back.
+     ============================================================ */
+  async cupGame(o) {
+    if (CINE.busy) return;
+    const art = o && o.key ? SPR.frogCustom(o.key, o.def) : null;
+    const who = { name: 'THE CUP MAN', nameCol: PIX.PAL.R, rim: PIX.PAL.r, art };
+    if (G.jobsDone && G.jobsDone.cups) {
+      await TUTOR.say('WE ARE DONE, YOU AND ME.', Object.assign({ hold: 2000, top: true }, who));
+      return;
+    }
+    const pick = await TUTOR.ask(
+      'TEN ON THE BALL, DETECTIVE. THE HAND IS SLOWER THAN THE EYE, THEY SAY.', [
+        { label: 'PUT TEN ON IT', note: 'IF YOU CAN FOLLOW IT' },
+        { label: 'WARN THE MARK OFF', note: 'HE HAS RENT IN THAT HAND' },
+        { label: 'RUN THE TABLE YOURSELF', note: 'IT PAYS. IT COSTS.' },
+        { label: 'WALK ON', dim: true },
+      ], who);
+
+    if (pick === 1) {
+      (G.jobsDone = G.jobsDone || {}).cups = 1;
+      STORY.karmaHit('warn');
+      CITY.spend('talk');
+      await TUTOR.say('THE MARK PUTS HIS MONEY AWAY AND GOES HOME. THE CUP MAN LOOKS AT YOU.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+      await TUTOR.say('THAT WAS MY RENT. I HOPE YOU FEEL WONDERFUL.', who);
+      return;
+    }
+    if (pick === 2) {
+      (G.jobsDone = G.jobsDone || {}).cups = 1;
+      const r = await JOBS.cups(false);
+      CITY.spend('job', 0.6);
+      STORY.karmaHit('scam');
+      const take = 18 + r.hits * 9;
+      G.chips += take;
+      UI.syncChips && UI.syncChips();
+      UI.chipTick && UI.chipTick(take);
+      STORY.note('RAN THE CUPS ON THE BUTTE FOR ' + take + '.');
+      await TUTOR.say('THEY NEVER SEE IT. ' + take + ' AND A BAD TASTE.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+      return;
+    }
+    if (pick !== 0) return;
+
+    /* playing it straight: he is quicker than you are */
+    const r = await JOBS.cups(true);
+    (G.jobsDone = G.jobsDone || {}).cups = 1;
+    CITY.spend('job', 0.5);
+    if (r.won) {
+      const win = 22;
+      G.chips += win;
+      UI.syncChips && UI.syncChips();
+      UI.chipTick && UI.chipTick(win);
+      STORY.note('BEAT THE CUPS ON THE BUTTE.');
+      await TUTOR.say('NOBODY BEATS THAT TABLE. ' + win + ', AND GET OFF MY SQUARE.', who);
+      /* and a frog who has just lost money tells you things */
+      if (G.case) {
+        G.case.quiz = (G.case.quiz || 0) + 1;
+        await TUTOR.say('ASK ME YOUR QUESTION. QUICKLY.', who);
+      }
+    } else {
+      const lost = Math.min(10, G.chips);
+      G.chips -= lost;
+      UI.syncChips && UI.syncChips();
+      await TUTOR.say('IT WAS NEVER UNDER THAT ONE. IT IS NEVER UNDER ANY OF THEM.', who);
+    }
+  },
+
+  /* ============================================================
+     THE PAINTER ON THE BUTTE.
+
+     He has been painting the same street for eleven years, he has
+     a baguette in his coat and nobody to sit for him. Sitting
+     costs you twenty minutes of a night you cannot spare, and he
+     talks the entire time — which is the point, because he watches
+     this square all day.
+     ============================================================ */
+  async sitForPainter(o) {
+    if (CINE.busy) return;
+    const art = o && o.key ? SPR.frogCustom(o.key, o.def) : null;
+    const who = { name: 'THE PAINTER', nameCol: PIX.PAL.O, rim: PIX.PAL.o, art };
+    if (G.jobsDone && G.jobsDone.sit) {
+      await TUTOR.say('I HAVE YOUR FACE. GO AND USE IT SOMEWHERE.',
+        Object.assign({ hold: 2000, top: true }, who));
+      return;
+    }
+    const pick = await TUTOR.ask(
+      'SIT FOR ME. TWENTY MINUTES. I HAVE HALF A LOAF AND NOBODY TO LOOK AT.', [
+        { label: 'I WILL SIT', note: 'HE WATCHES THIS SQUARE ALL DAY' },
+        { label: 'NOT TONIGHT', dim: true },
+      ], who);
+    if (pick !== 0) return;
+
+    (G.jobsDone = G.jobsDone || {}).sit = 1;
+    CITY.spend('ask', 1.7);
+    STORY.karmaHit('sit');
+    await TUTOR.say('HOLD THE HAT. NO — HOLD IT LIKE YOU MEAN IT.', who);
+    await TUTOR.say(U.pick(Math.random, [
+      'I PAINT THIS STREET EVERY NIGHT AND EVERY NIGHT IT IS DIFFERENT PEOPLE.',
+      "THE BREAD IS YESTERDAY'S. THE LIGHT IS THE SAME AS IT ALWAYS IS.",
+      'YOU HAVE A FACE LIKE A MAN WHO HAS READ THE FILE. THAT IS NOT A COMPLIMENT.',
+    ]), who);
+    /* and what he saw, which is the actual pay */
+    const clues = (G.case && G.case.clues) || [];
+    const cl = clues.find(c2 => !c2.seen && c2.at === G.place) || clues.find(c2 => !c2.seen);
+    if (cl) {
+      cl.seen = true;
+      cl.foundAt = 'butte:painter';
+      STORY.note('THE PAINTER SAW IT: ' + cl.text);
+      await TUTOR.say('AND WHILE YOU SAT THERE I REMEMBERED SOMETHING.', who);
+      await CINE.pickUp(cl, CASE.left(), 'FROM A PAINTER WHO NEVER LOOKS AWAY');
+    } else {
+      G.chips += 8;
+      UI.syncChips && UI.syncChips();
+      await TUTOR.say('TAKE THE BREAD. IT IS ALL I HAVE AND YOU SAT STILL.', who);
+    }
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* ============================================================
+     KARMA.
+
+     Nobody in this city keeps a ledger of what you do, so the game
+     does. Every deed moves one number: cleaning up after somebody
+     else's dog, tipping a busker, letting a scammer keep his cups,
+     putting a gun in a witness's face, taking money off a frog who
+     had none. It shows on the phone, it changes what the street
+     says to you, and at the end it decides which of the two
+     endings you have actually earned.
+     ============================================================ */
+  KARMA: {
+    pet: { n: 1, what: 'PUT A HAND OUT TO AN ANIMAL' },
+    clean: { n: 3, what: "CLEANED UP AFTER SOMEBODY ELSE'S DOG" },
+    tip: { n: 2, what: 'TIPPED A BUSKER WHO NEEDED IT' },
+    sit: { n: 2, what: 'SAT FOR A PAINTER WHO HAD NOBODY' },
+    warn: { n: 2, what: 'WARNED A MARK OFF THE CUPS' },
+    donut: { n: 1, what: 'FED THE NIGHT SHIFT' },
+    errand: { n: 1, what: 'DID SOMEBODY A FAVOUR AND MEANT IT' },
+    rat: { n: 0, what: 'SHOT A RAT. THE CITY IS INDIFFERENT.' },
+    scam: { n: -3, what: 'RAN THE CUPS ON A TOURIST' },
+    wide: { n: -1, what: 'FIRED A GUN IN THE STREET' },
+    lean: { n: -6, what: "PUT A GUN IN A WITNESS'S FACE" },
+    parcel: { n: -2, what: 'OPENED A PARCEL YOU WERE TRUSTED WITH' },
+    wrong: { n: -4, what: 'NAMED A FROG WHO HAD DONE NOTHING' },
+    steal: { n: -2, what: 'TOOK MONEY OFF SOMEBODY WHO HAD NONE' },
+  },
+
+  /* move it, remember why, and say so */
+  karmaHit(id, mult) {
+    const k = STORY.KARMA[id];
+    if (!k) return 0;
+    const n = Math.round(k.n * (mult === undefined ? 1 : mult));
+    if (!n) return 0;
+    G.karmaScore = (G.karmaScore || 0) + n;
+    G.karmaLog = G.karmaLog || [];
+    G.karmaLog.push({ id, n, what: k.what });
+    if (G.karmaLog.length > 24) G.karmaLog.shift();
+    /* it follows you between cases, because a reputation does */
+    const d = META.load();
+    d.karma = (d.karma || 0) + n; META.save();
+    if (UI.stampSmall) UI.stampSmall('KARMA ' + (n > 0 ? '+' : '') + n);
+    return n;
+  },
+
+  /* where you stand, in a word */
+  karma() {
+    const score = G.karmaScore || 0;
+    const last = (G.karmaLog || []).length
+      ? G.karmaLog[G.karmaLog.length - 1].what : null;
+    const band = score >= 14 ? 0 : score >= 5 ? 1 : score > -5 ? 2 : score > -14 ? 3 : 4;
+    const WORD = ['A GOOD COP', 'STILL DECENT', 'A COP', 'GETTING UGLY', 'A BAD COP'];
+    const BLURB = [
+      'PEOPLE TELL YOU THINGS THEY DO NOT HAVE TO. IT ADDS UP.',
+      'NOBODY IS FRIGHTENED OF YOU YET, WHICH HELPS.',
+      'YOU HAVE NOT DONE ANYTHING THE CITY WILL REMEMBER EITHER WAY.',
+      'WORD IS GETTING ROUND. WITNESSES ARE GETTING SHORTER.',
+      'THEY TALK TO YOU BECAUSE THEY ARE AFRAID. IT SHOWS IN THE FILE.',
+    ];
+    return { score, band, word: WORD[band], blurb: BLURB[band], last };
+  },
+
+  /* what a witness thinks of you before you open your mouth */
+  karmaMood() {
+    const b = STORY.karma().band;
+    return b <= 1 ? 1 : b === 2 ? 0 : -1;
+  },
+
+  /* ============================================================
+     THE JOBS BOARD.
+
+     A detective on this salary works the room. This is every bit
+     of paying work the night has in it, where it is, and whether
+     you have already done it.
+     ============================================================ */
+  JOBS_BOARD: [
+    { id: 'pour', name: 'WORK THE TAPS', where: 'LE MOULIN ROUGE', icon: 'ic_glass' },
+    { id: 'donuts', name: 'MAKE A BATCH', where: 'CAFE DU PONT', icon: 'ic_cup' },
+    { id: 'rats', name: 'CLEAR THE DRUMS', where: 'LAVERIE DU CANAL', icon: 'ic_rat' },
+    { id: 'scoop', name: 'THE PAVEMENT', where: 'ANYWHERE A DOG HAS BEEN', icon: 'ic_paw' },
+    { id: 'sit', name: 'SIT FOR THE PAINTER', where: 'LA BUTTE', icon: 'ic_star' },
+    { id: 'cups', name: 'THE THREE CUPS', where: 'LA BUTTE', icon: 'ic_coin' },
+    { id: 'kit', name: 'DUST FOR PRINTS', where: 'LA BRIGADE', icon: 'ic_case' },
+  ],
+
+  jobsBoard() {
+    return STORY.JOBS_BOARD.map(j => Object.assign({}, j, {
+      done: !!(G.jobsDone && G.jobsDone[j.id]),
+    }));
+  },
+  jobsOpen() { return STORY.jobsBoard().filter(j => !j.done); },
+
+  /* ============================================================
      THE ONE NICE THING IN THE GAME.
 
      There is a cat at four of the five stops and a dog at the
@@ -1172,6 +1422,7 @@ const STORY = {
     const d = META.load();
     d.pets = (d.pets || 0) + 1; META.save();
     G.petted = (G.petted || 0) + 1;
+    STORY.karmaHit('pet');
     const line = a.kind === 'dog'
       ? U.pick(Math.random, [
         'HE PUTS HIS WHOLE HEAD IN YOUR HAND. HE DOES THIS TO EVERYBODY.',
@@ -1260,6 +1511,7 @@ const STORY = {
     FX.screen.flash(PIX.PAL.W, 0.22, 0.14);
     FX.screen.shake(6);
     G.ratsShot = (G.ratsShot || 0) + 1;
+    STORY.karmaHit('rat');
     const pay = 5;
     G.chips += pay;
     UI.syncChips && UI.syncChips();
@@ -1278,6 +1530,7 @@ const STORY = {
     FX.screen.flash(PIX.PAL.W, 0.18, 0.16);
     FX.screen.shake(5);
     G.heat = (G.heat || 0) + 1;
+    STORY.karmaHit('wide');
     await TUTOR.say(U.pick(Math.random, [
       "A HOLE IN SOMEBODY ELSE'S WALL. VERY GOOD, DETECTIVE.",
       'THAT WAS LOUD AND IT WAS NOTHING.',
@@ -1309,6 +1562,7 @@ const STORY = {
 
     /* THREATENING A WITNESS WORKS. That is the problem with it. */
     G.heat = (G.heat || 0) + 2;
+    STORY.karmaHit('lean');
     STORY.note('PULLED A GUN ON ' + ((typeof o.label === 'function' ? o.label() : o.label) || 'A WITNESS') + '.');
     const place = G.place;
     const clues = (G.case && G.case.clues) || [];

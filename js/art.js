@@ -334,6 +334,93 @@ const ART = (() => {
     '..............',
   ]);
 
+  /* ---------------- the city, on the map ---------------- */
+
+  paint('ic_tower', [
+    '......KK......',
+    '......GK......',
+    '.....KGGK.....',
+    '.....KGGK.....',
+    '....KGGGGK....',
+    '....KGKKGK....',
+    '...KGGGGGGK...',
+    '...KGKKKKGK...',
+    '..KGGGGGGGGK..',
+    '..KGKKKKKKGK..',
+    '.KGGKKKKKKGGK.',
+    '.KGKKKKKKKKGK.',
+    'KGGKKKKKKKKGGK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_arch', [
+    '..............',
+    '.KKKKKKKKKKKK.',
+    '.KwwwwwwwwwwK.',
+    '.KwqqqqqqqqwK.',
+    '.KwwwwwwwwwwK.',
+    '.Kwwwqqqqwwwk.',
+    '.KwwKKKKKKwwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKGGKKKwK.',
+    'KKwKKKGGKKKwKK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_dome', [
+    '......KK......',
+    '.....KGGK.....',
+    '....KWWWWK....',
+    '...KWWWWWWK...',
+    '..KWWWWWWWWK..',
+    '..KWWqqqqWWK..',
+    '.KWWWWWWWWWWK.',
+    'KWWWKWWWWKWWWK',
+    'KWWKKWWWWKKWWK',
+    'KWWKKKWWKKKWWK',
+    'KWWKKKKKKKKWWK',
+    'KWWKKKKKKKKWWK',
+    'KWWKKKKKKKKWWK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_glass2', [
+    '......KK......',
+    '.....KLLK.....',
+    '.....KLLK.....',
+    '....KLLLLK....',
+    '....KLKKLK....',
+    '...KLLKKLLK...',
+    '...KLKKKKLK...',
+    '..KLLKKKKLLK..',
+    '..KLKKKKKKLK..',
+    '.KLLKKKKKKLLK.',
+    '.KLKKKKKKKKLK.',
+    'KLLKKKKKKKKLLK',
+    'KGGGGGGGGGGGGK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_skull', [
+    '...KKKKKKKK...',
+    '..KWWWWWWWWK..',
+    '.KWWWWWWWWWWK.',
+    'KWWWWWWWWWWWWK',
+    'KWWKKKWWKKKWWK',
+    'KWKKKKWWKKKKWK',
+    'KWKKKKWWKKKKWK',
+    'KWWKKKWWKKKWWK',
+    'KWWWWWKKWWWWWK',
+    'KWWWWKWWKWWWWK',
+    '.KWWWWWWWWWWK.',
+    '..KWKWKWKWKWK.',
+    '..KWKWKWKWKWK.',
+    '...KKKKKKKKK..',
+  ]);
+
   /* ---------------- the tool belt ---------------- */
 
   paint('ic_hand', [

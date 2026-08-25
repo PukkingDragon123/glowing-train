@@ -26,38 +26,76 @@ const CITY = (() => {
      --------------------------------------------------------- */
   const PLACES = {
     precinct: {
-      id: 'precinct', name: 'THE PRECINCT', sub: 'HOMICIDE DIVISION - AFTER HOURS',
-      short: 'PRECINCT', x: 52, y: 62, icon: 'ic_badge', hub: true,
+      id: 'precinct', name: 'LA BRIGADE', sub: 'HOMICIDE, THIRD FLOOR, AFTER HOURS',
+      short: 'LA BRIGADE', x: 50, y: 56, icon: 'ic_badge', hub: true,
       blurb: 'YOUR DESK. THE BOARD. THE CAPTAIN.',
     },
     laundry: {
-      id: 'laundry', name: 'THE CANAL LAUNDRY', sub: 'WHERE THEY FOUND HIM',
-      short: 'LAUNDRY', x: 22, y: 30, icon: 'ic_drum', scene: true,
+      id: 'laundry', name: 'LAVERIE DU CANAL', sub: 'WHERE THEY FOUND HIM',
+      short: 'THE LAVERIE', x: 74, y: 26, icon: 'ic_drum', scene: true,
       blurb: 'THE BODY WAS IN HERE. THE MACHINES ARE STILL WARM.',
     },
     docks: {
-      id: 'docks', name: 'PIER NINETEEN', sub: 'THE CANAL GOES OUT TO THE BAY',
-      short: 'THE PIER', x: 14, y: 74, icon: 'ic_anchor', scene: true,
+      id: 'docks', name: 'QUAI DE LA RAPEE', sub: 'THE RIVER GOES OUT PAST HERE',
+      short: 'THE QUAI', x: 80, y: 70, icon: 'ic_anchor', scene: true,
       blurb: 'CRATES NOBODY SIGNED FOR AND A CRANE THAT RUNS AT NIGHT.',
     },
     pawn: {
-      id: 'pawn', name: 'MARSH ROW PAWN', sub: 'OPEN LATE, ASKS NOTHING',
-      short: 'PAWN SHOP', x: 74, y: 34, icon: 'ic_ring', scene: true,
+      id: 'pawn', name: 'MONT-DE-PIETE', sub: 'OPEN LATE, ASKS NOTHING',
+      short: 'THE PAWN', x: 62, y: 34, icon: 'ic_ring', scene: true,
       blurb: 'EVERYTHING TAKEN OFF A BODY ENDS UP BEHIND THIS GLASS.',
     },
     diner: {
-      id: 'diner', name: 'THE FLY TRAP', sub: 'COFFEE, DONUTS, NO QUESTIONS',
-      short: 'THE DINER', x: 60, y: 18, icon: 'ic_cup', scene: true,
+      id: 'diner', name: 'CAFE DU PONT', sub: 'COFFEE, PASTRY, NO QUESTIONS',
+      short: 'THE CAFE', x: 44, y: 44, icon: 'ic_cup', scene: true,
       blurb: 'THE NIGHT SHIFT EATS HERE. SO DOES EVERYBODY ELSE.',
     },
     bar: {
-      id: 'bar', name: 'THE GREEN LAMP', sub: 'THE CREW DRINKS HERE',
-      short: 'THE BAR', x: 86, y: 78, icon: 'ic_glass', scene: true,
-      blurb: 'IF HE HAS FRIENDS, THEY ARE AT THIS BAR TONIGHT.',
+      id: 'bar', name: 'LE MOULIN ROUGE', sub: 'THE CREW DRINKS UNDER THE WINDMILL',
+      short: 'THE MOULIN', x: 46, y: 12, icon: 'ic_glass', scene: true,
+      blurb: 'IF HE HAS FRIENDS, THEY ARE UNDER THAT WINDMILL TONIGHT.',
+    },
+
+    /* ---------------------------------------------------------
+       AND THE CITY ITSELF.
+
+       Five places you work and six you cross. The landmarks are
+       not decoration: they have things in them to turn over, frogs
+       in them to lean on, and they are where the crew does its
+       business, because nobody watches you in a crowd.
+       --------------------------------------------------------- */
+    tower: {
+      id: 'tower', name: 'LA TOUR', sub: 'THE CHAMP DE MARS, UNDER ALL OF IT',
+      short: 'LA TOUR', x: 20, y: 50, icon: 'ic_tower', scene: true,
+      blurb: 'EIGHT THOUSAND TONS OF IRON AND NOBODY LOOKING DOWN.',
+    },
+    arch: {
+      id: 'arch', name: "L'ARC", sub: 'TWELVE AVENUES AND A FLAME',
+      short: "L'ARC", x: 24, y: 30, icon: 'ic_arch', scene: true,
+      blurb: 'EVERY CAR IN THE CITY GOES ROUND IT AND NONE OF THEM STOP.',
+    },
+    butte: {
+      id: 'butte', name: 'LA BUTTE', sub: 'MONTMARTRE, ABOVE THE WHOLE MESS',
+      short: 'LA BUTTE', x: 56, y: 8, icon: 'ic_dome', scene: true,
+      blurb: 'PAINTERS, PICKPOCKETS AND THE WHITEST CHURCH IN FRANCE.',
+    },
+    museum: {
+      id: 'museum', name: 'LE MUSEE', sub: 'THE PALACE COURTYARD, AFTER CLOSING',
+      short: 'LE MUSEE', x: 48, y: 40, icon: 'ic_glass2', scene: true,
+      blurb: 'A GLASS PYRAMID LIT FROM UNDERNEATH AND TWO TIRED GUARDS.',
+    },
+    catacombs: {
+      id: 'catacombs', name: 'LES CATACOMBES', sub: 'SIX MILLION OF THEM, DOWN THERE',
+      short: 'THE BONES', x: 40, y: 82, icon: 'ic_skull', scene: true,
+      blurb: 'THE ONLY ROOM IN THIS CITY NOBODY HAS EVER BUGGED.',
     },
   };
 
-  const ORDER = ['laundry', 'docks', 'pawn', 'diner', 'bar'];
+  const ORDER = ['laundry', 'docks', 'pawn', 'diner', 'bar',
+    'tower', 'arch', 'butte', 'museum', 'catacombs'];
+
+  /* the five you work a case in. The landmarks are where the crew is. */
+  const WORK = ['laundry', 'docks', 'pawn', 'diner', 'bar'];
 
   /* ---------------------------------------------------------
      WHAT THERE IS TO SEARCH.
@@ -77,6 +115,12 @@ const CITY = (() => {
     pawn:    ['case', 'ledger', 'safe', 'shelf', 'cot', 'strongbox'],
     diner:   ['urn', 'booth', 'bin', 'hatch'],
     bar:     ['stool', 'till', 'coats'],
+    /* and the city: fewer things, but the ones worth crossing town for */
+    tower:      ['gravel', 'stand', 'brazier', 'kiosk'],
+    arch:       ['flame', 'wreath', 'cab', 'bench2', 'map'],
+    butte:      ['easel', 'steps', 'crate2', 'table'],
+    museum:     ['fountain', 'glass', 'crate3', 'door'],
+    catacombs:  ['bones', 'niche', 'plaque', 'pool'],
   };
 
   /* ---------------------------------------------------------
@@ -86,12 +130,14 @@ const CITY = (() => {
      when it runs out the shift is over and the captain wants you
      off the street — you keep everything you found.
      --------------------------------------------------------- */
-  const START = 20 * 60 + 40;          // 20:40
+  const START = 20 * 60;               // 20:00
   const END = 6 * 60;                  // 06:00, next morning
 
-  /* A NIGHT IS 560 MINUTES. Turning over every prop in the city would take
-     about 600, so the night is deliberately too short to search everything:
-     where you look is the game. */
+  /* A NIGHT IS 600 MINUTES. Paris has eleven stops in it and about forty-five
+     things to turn over, which is well over a thousand minutes of searching:
+     the night is deliberately far too short to do it all. The eyeglass is
+     what makes it playable — three minutes to find out whether a thing is
+     worth the eighteen — and where you look is still the whole game. */
   const COST = {
     travel: 35, search: 18, ask: 12, talk: 6, job: 45, lineup: 20,
     /* THE GLASS is the cheap move: three minutes to find out whether a
@@ -242,7 +288,7 @@ const CITY = (() => {
   function unsearchedAt(id) { return propsAt(id).filter(pr => !searched(id, pr)); }
 
   return {
-    PLACES, ORDER, PROPS, WEATHER, COST, START, END,
+    PLACES, ORDER, WORK, PROPS, WEATHER, COST, START, END,
     propsAt, unsearchedAt,
     reset, spend, hhmm, watch, minutesLeft, nightOver,
     rollWeather, sky, here, at, distance,
@@ -262,6 +308,8 @@ const CITY = (() => {
           id, place: p,
           visited: !!(G.visited && G.visited[id]),
           left: leftAt(id),
+          /* is this stop part of tonight's case at all */
+          inCase: (typeof CASE === 'undefined' ? true : CASE.stops().indexOf(id) >= 0),
           hint: (G.tips && G.tips[id]) || null,
         };
       });

@@ -23,7 +23,13 @@ const SCENE = (() => {
   let cv, ctx, K = 4;            // display canvas + integer scale
   let raf = null, t0 = 0, last = 0;
   let cam = 0, camWant = 0, drag = null;
-  let me = { x: 60, v: 0, frame: 0, face: 1, walk: 0, land: 0, target: null, act: null };
+  /* THE WALKER HAS TWO AXES NOW.
+     x runs along the street; z runs INTO it, 0 at the kerb nearest the
+     camera and 1 at the far wall. A room says how deep it is with
+     depthBand (rows); a room that does not say is flat, and behaves
+     exactly the way every room did before. */
+  let me = { x: 60, v: 0, z: 0.12, vz: 0, tz: null, frame: 0, face: 1, faceZ: 0,
+    walk: 0, land: 0, target: null, act: null };
   let hover = null, near = null, busy = false;
   const keys = {};
   const puffs = [];                 // dust off his heels
@@ -84,9 +90,10 @@ const SCENE = (() => {
   }
 
   /* { cv, w, h } — the picture, and the room-space box it goes in */
-  function rig(d, frame, face) {
+  function rig(d, frame, face, back) {
     const down = lodFor();
-    const cv = SPR.rigLOD(d.key || SPR.defKey(d), d.def || d, frame, face, down);
+    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : ''),
+      d.def || d, frame, face, down, back);
     return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
   }
 
@@ -165,6 +172,8 @@ const SCENE = (() => {
     back = paintBack(d);
     rats.length = 0; drips.length = 0; mark = null;
     spawnPets();
+    spawnCrowd();
+    spawnTraffic();
     ratClock = 1.5 + Math.random() * 3;
     me.x = d.enterX === undefined ? 40 : d.enterX;
     me.face = d.enterFace || 1;
@@ -210,6 +219,35 @@ const SCENE = (() => {
     return cy / K - oy;
   }
 
+  /* ============================================================
+     DEPTH.
+
+     One number per room — how many world rows of walkable ground
+     there are between the kerb and the back wall — and everything
+     else falls out of it: where a walker's feet land, how big he is
+     drawn, who is in front of whom, and what a click on the road
+     actually means.
+     ============================================================ */
+  function band() { return (def && def.depthBand) || 0; }
+  function floorAt(z) {
+    return def.floorY - Math.round((z || 0) * band());
+  }
+  /* further away is smaller, but never so much that he turns into a dot */
+  function scaleAt(z) {
+    return band() ? 1 - (z || 0) * 0.24 : 1;
+  }
+  /* a click on the ground, turned back into a place on it */
+  function zFromY(y) {
+    const b = band();
+    if (!b) return 0;
+    return U.clamp((def.floorY - y) / b, 0, 1);
+  }
+  /* how far apart two things on the ground really are */
+  function dist2(ax, az, bx, bz) {
+    const dz = (az - bz) * band() * 1.6;          // a step back is worth more
+    return Math.hypot(ax - bx, dz);
+  }
+
   /* the cursor says what the click is about to do */
   function refreshCursor() {
     if (!cv) return;
@@ -253,13 +291,26 @@ const SCENE = (() => {
     for (const s of (def.spots || [])) if (!s.gone && !(s.when && !s.when())) out.push(s);
     /* the animals are things you can walk up to as well */
     for (const a of pets) {
+      const fy = a.y === undefined ? floorAt(a.z) : a.y;
       out.push({
-        id: 'pet:' + a.kind, x: a.x, w: 22,
-        top: a.y - (a.kind === 'dog' ? 24 : 20), bot: a.y + 2,
+        id: 'pet:' + a.kind, x: a.x, w: 22, z: a.z,
+        top: fy - (a.kind === 'dog' ? 24 : 20), bot: fy + 2,
         pet: a,
         label: a.name,
         hint: a.kind === 'dog' ? 'HE HAS BEEN WAITING ALL SHIFT' : 'IT IS NOT YOUR CAT',
         onUse: () => STORY.petIt(a),
+      });
+    }
+    /* and what one of them left on the pavement */
+    for (const m of messes) {
+      if (m.done) continue;
+      const fy = floorAt(m.z);
+      out.push({
+        id: 'mess', x: m.x, w: 20, z: m.z, top: fy - 12, bot: fy + 3,
+        mess: m,
+        label: 'SOMETHING ON THE PAVEMENT',
+        hint: 'THERE IS A SCOOP ON THE CART',
+        onUse: () => STORY.scoopIt(m),
       });
     }
     return out;
@@ -268,8 +319,11 @@ const SCENE = (() => {
   function pick(x, y) {
     let best = null, bd = 1e9;
     for (const o of targets()) {
-      const w = o.w || 26, top = o.top === undefined ? def.floorY - 44 : o.top;
-      const bot = o.bot === undefined ? def.floorY + 6 : o.bot;
+      const w = o.w || 26;
+      /* a thing standing back in the room has its box up there with it */
+      const fy = floorAt(o.z), dy = fy - def.floorY;
+      const top = o.top === undefined ? fy - 44 : o.top + dy;
+      const bot = o.bot === undefined ? fy + 6 : o.bot + dy;
       if (x > o.x - w / 2 - 4 && x < o.x + w / 2 + 4 && y > top - 8 && y < bot + 4) {
         const dd = Math.abs(x - o.x);
         if (dd < bd) { bd = dd; best = o; }
@@ -322,7 +376,7 @@ const SCENE = (() => {
       }
 
       if (hit) goUse(hit);
-      else walkTo(x);
+      else walkTo(x, zFromY(y));
     };
     onKey = (ev) => {
       if (!def) return;
@@ -355,26 +409,37 @@ const SCENE = (() => {
     onDown = null;
   }
 
-  function walkTo(x) {
+  function walkTo(x, z) {
     if (!def) return;
     me.target = U.clamp(x, 12, def.w - 12);
+    me.tz = band() ? U.clamp(z === undefined ? me.z : z, 0, 1) : null;
     me.act = null;
-    setMark(me.target);
+    setMark(me.target, me.tz === null ? me.z : me.tz);
   }
 
   /* walk over there and then do the thing */
   function goUse(o) {
     const stand = o.x + (o.standOff === undefined ? (me.x > o.x ? 16 : -16) : o.standOff);
     me.target = U.clamp(stand, 12, def.w - 12);
+    /* stand a little in front of whatever it is rather than inside it */
+    const oz = o.z === undefined ? (band() ? 0.2 : 0) : o.z;
+    me.tz = band() ? U.clamp(oz - 0.1, 0, 1) : null;
     me.act = o;
-    setMark(o.x);
-    if (Math.abs(me.x - me.target) < 6) { me.target = null; use(o); }
+    setMark(o.x, oz);
+    if (dist2(me.x, me.z, me.target, me.tz === null ? me.z : me.tz) < 7) {
+      me.target = null; me.tz = null; use(o);
+    }
   }
 
   async function use(o) {
     if (busy || !o || !o.onUse) return;
     busy = true;
     me.face = o.x >= me.x ? 1 : -1;
+    /* HE REACHES FOR IT. Two pixels toward the thing and a little squash,
+       held for a beat, so using something looks like doing something
+       rather than like a menu opening. */
+    me.reach = 0.42;
+    me.reachTo = Math.sign(o.x - me.x) || me.face;
     try { await o.onUse(); } finally { busy = false; }
   }
 
@@ -403,12 +468,37 @@ const SCENE = (() => {
       /* how much room braking needs at this speed; inside it, brake */
       const brake = (me.v * me.v) / (2 * ACCEL) + 1.5;
       want = Math.abs(d) <= brake ? 0 : Math.sign(d);
-      if (Math.abs(d) < 1.4 && Math.abs(me.v) < 8) {
+      const zDone = me.tz === null || me.tz === undefined || Math.abs(me.tz - me.z) * band() < 2;
+      if (Math.abs(d) < 1.4 && Math.abs(me.v) < 8 && zDone) {
         me.x = me.target; me.target = null; me.v = 0;
+        if (me.tz !== null && me.tz !== undefined) { me.z = me.tz; me.tz = null; }
         land(0.7);
         if (me.act) { const a = me.act; me.act = null; use(a); }
       }
     }
+    /* THE SECOND AXIS. Up and down the road with W/S or the arrows, and
+       toward whatever the last click was, at a rate that keeps a diagonal
+       walk looking like one walk rather than two. */
+    let kz = 0;
+    if (keys['w'] || keys['arrowup']) kz -= 1;
+    if (keys['s'] || keys['arrowdown']) kz += 1;
+    if (kz) { me.tz = null; me.act = null; }
+    const b = band();
+    if (b) {
+      let wz = 0;
+      if (kz) wz = -kz;                                  // up the screen is away
+      else if (me.tz !== null && me.tz !== undefined) {
+        const dz = me.tz - me.z;
+        wz = Math.abs(dz) * b > 1.6 ? Math.sign(dz) : 0;
+        if (!wz) { me.z = me.tz; me.tz = null; }
+      }
+      const tv = wz * (SPEED * 0.62) / b;                 // z is 0..1, not pixels
+      me.vz += U.clamp(tv - me.vz, -(ACCEL / b) * dt, (ACCEL / b) * dt);
+      if (!wz && Math.abs(me.vz) < 0.02) me.vz = 0;
+      me.z = U.clamp(me.z + me.vz * dt, 0, 1);
+      me.faceZ = Math.abs(me.vz) * b > 8 ? Math.sign(me.vz) : 0;
+    } else { me.vz = 0; me.faceZ = 0; }
+
     if (want || Math.abs(me.v) > 0.5) {
       const target = want * SPEED;
       const rate = want ? ACCEL : ACCEL * 1.6;     // brakes bite harder
@@ -421,6 +511,7 @@ const SCENE = (() => {
     } else me.v = 0;
     /* the squash from the last landing, and the dust it kicked */
     if (me.land > 0) me.land = Math.max(0, me.land - dt * 4.5);
+    if (me.reach > 0) me.reach = Math.max(0, me.reach - dt * 1.6);
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p2 = puffs[i];
       p2.t += dt; p2.x += p2.vx * dt; p2.y += p2.vy * dt; p2.vy += 26 * dt;
@@ -429,9 +520,11 @@ const SCENE = (() => {
     /* the walk cycle runs off ground covered, not off the clock, so the feet
        never skate: slow steps at the start of a stride, quick in the middle */
     const NF = SPR.WALK_FRAMES || 8;
+    if (band() && Math.abs(me.vz) * band() > 6) moving = true;
     if (moving) {
       const was = Math.floor(me.walk);
-      me.walk = (me.walk + Math.abs(me.v) * dt * 0.135 * (NF / 4)) % NF;
+      const ground = Math.hypot(Math.abs(me.v), Math.abs(me.vz) * band());
+      me.walk = (me.walk + ground * dt * 0.135 * (NF / 4)) % NF;
       /* a footfall lands on the two frames where a leg is planted */
       const now2 = Math.floor(me.walk);
       if (now2 !== was && now2 % (NF / 2) === 0) {
@@ -447,10 +540,10 @@ const SCENE = (() => {
     }
     me.frame = Math.floor(me.walk) % NF;
 
-    /* what is within arm's reach */
+    /* what is within arm's reach, measured across the ground */
     let best = null, bd = 26;
     for (const o of targets()) {
-      const d = Math.abs(o.x - me.x);
+      const d = dist2(o.x, o.z === undefined ? me.z : o.z, me.x, me.z);
       if (d < bd) { bd = d; best = o; }
     }
     near = best;
@@ -470,6 +563,8 @@ const SCENE = (() => {
 
     stepCritters(dt, 0);
     stepPets(dt);
+    stepCrowd(dt);
+    stepTraffic(dt);
     if (def.onTick) def.onTick(dt, me);
   }
 
@@ -579,6 +674,146 @@ const SCENE = (() => {
   let ratClock = 2 + Math.random() * 4;
 
   /* ============================================================
+     THE CROWD.
+
+     Paris is not empty at eleven at night. A room can ask for a
+     crowd and get one: walkers spread across the far half of the
+     depth band, drawn as silhouettes with a hat, a coat, two legs
+     and — when it is raining, which it usually is — an umbrella.
+     They are not people you can talk to. They are the reason the
+     boulevard looks like a boulevard.
+     ============================================================ */
+  const crowd = [];
+
+  function spawnCrowd() {
+    crowd.length = 0;
+    const cf = def.crowd;
+    if (!cf || !band()) return;
+    const n = cf.n || 10;
+    const rng = U.mulberry32(U.hashSeed('crowd:' + def.id));
+    const COATS = ['#2a2f3d', '#3a2f2a', '#242a33', '#332a3a', '#1f2a2a', '#3a3630'];
+    const HATS = ['#12101d', '#1c1a2c', '#2b2436', '#241d17'];
+    for (let i = 0; i < n; i++) {
+      crowd.push({
+        x: rng() * def.w,
+        z: (cf.z0 === undefined ? 0.4 : cf.z0) +
+           rng() * ((cf.z1 === undefined ? 1 : cf.z1) - (cf.z0 === undefined ? 0.4 : cf.z0)),
+        dir: rng() < 0.5 ? -1 : 1,
+        v: 9 + rng() * 13,
+        coat: COATS[Math.floor(rng() * COATS.length)],
+        hat: HATS[Math.floor(rng() * HATS.length)],
+        brolly: rng() < 0.55,
+        brollyCol: ['#2b2436', '#3a2a2a', '#20303a', '#2a2a1f'][Math.floor(rng() * 4)],
+        t: rng() * 9,
+        tall: rng() < 0.3 ? 1 : 0,
+      });
+    }
+  }
+
+  /* ============================================================
+     THE TRAFFIC.
+
+     Twelve avenues meet at the Arch and none of them stop. Cars
+     as silhouettes with two lights, crossing the far half of the
+     band, because a roundabout with nothing going round it is a
+     car park.
+     ============================================================ */
+  const cars = [];
+
+  function spawnTraffic() {
+    cars.length = 0;
+    const tf = def.traffic;
+    if (!tf || !band()) return;
+    const rng = U.mulberry32(U.hashSeed('cars:' + def.id));
+    for (let i = 0; i < (tf.n || 4); i++) {
+      cars.push({
+        x: rng() * def.w,
+        z: (tf.z0 || 0.6) + rng() * ((tf.z1 || 0.95) - (tf.z0 || 0.6)),
+        dir: rng() < 0.5 ? -1 : 1,
+        v: 44 + rng() * 40,
+        col: ['#1c1f26', '#2a1f1f', '#1f2630', '#26221c'][Math.floor(rng() * 4)],
+        len: 34 + Math.floor(rng() * 16),
+      });
+    }
+  }
+
+  function stepTraffic(dt) {
+    for (const a of cars) {
+      a.x += a.dir * a.v * dt;
+      if (a.x < -70) a.x = def.w + 60;
+      if (a.x > def.w + 70) a.x = -60;
+    }
+  }
+
+  function drawTraffic(c) {
+    for (const a of cars) {
+      const sc = scaleAt(a.z), fy = floorAt(a.z);
+      const L = Math.max(10, Math.round(a.len * sc));
+      const h = Math.max(4, Math.round(13 * sc));
+      const x = Math.round(a.x), y = fy - h;
+      ART.px(c, x, fy - 1, L, 2, 'rgba(0,0,0,.35)');
+      ART.px(c, x, y, L, h, a.col);
+      ART.px(c, x, y, L, 1, 'rgba(255,255,255,.10)');
+      /* the cabin */
+      ART.px(c, x + Math.round(L * 0.24), y - Math.round(h * 0.5), Math.round(L * 0.5),
+        Math.round(h * 0.6), a.col);
+      ART.px(c, x + Math.round(L * 0.28), y - Math.round(h * 0.4), Math.round(L * 0.42),
+        Math.max(2, Math.round(h * 0.35)), 'rgba(150,200,220,.18)');
+      /* and the two lights, going the way it is going */
+      const fx = a.dir > 0 ? x + L - 2 : x;
+      ART.px(c, fx, y + Math.round(h * 0.3), 2, 2, '#ffe7a8');
+      ART.px(c, a.dir > 0 ? x : x + L - 2, y + Math.round(h * 0.3), 2, 2, '#d13b45');
+      ART.px(c, fx + (a.dir > 0 ? 2 : -8), y + Math.round(h * 0.3), 8, 1, 'rgba(255,231,168,.16)');
+    }
+  }
+
+  function stepCrowd(dt) {
+    for (const w of crowd) {
+      w.t += dt;
+      w.x += w.dir * w.v * dt;
+      if (w.x < -14) { w.x = def.w + 12; }
+      if (w.x > def.w + 14) { w.x = -12; }
+    }
+  }
+
+  function drawCrowd(c, T) {
+    if (!crowd.length) return;
+    const wet = typeof CITY !== 'undefined' && CITY.sky && CITY.sky().drops > 0.5;
+    for (const w of crowd) {
+      const sc = scaleAt(w.z);
+      const fy = floorAt(w.z);
+      const h = Math.round(26 * sc) + w.tall;
+      const bw = Math.max(4, Math.round(9 * sc));
+      const x = Math.round(w.x), y = fy - h;
+      const step = Math.sin(w.t * 9) > 0 ? 1 : 0;
+      /* the shadow he is standing in */
+      ART.px(c, x - bw, fy, bw * 2, 1, 'rgba(0,0,0,.3)');
+      /* legs */
+      ART.px(c, x - bw + 1, y + h - 7, 2, 7 - step, '#14121c');
+      ART.px(c, x + bw - 3, y + h - 7, 2, 6 + step, '#14121c');
+      /* the coat */
+      ART.px(c, x - bw, y + 6, bw * 2, h - 12, w.coat);
+      ART.px(c, x - bw, y + 6, bw * 2, 1, 'rgba(255,255,255,.10)');
+      ART.px(c, x + bw - 2, y + 6, 2, h - 12, 'rgba(0,0,0,.28)');
+      /* the head and the hat */
+      ART.px(c, x - 2, y + 2, 5, 5, '#3f5c46');
+      ART.px(c, x - 3, y, 7, 2, w.hat);
+      ART.px(c, x - 2, y - 2, 5, 2, w.hat);
+      /* and the umbrella, because it is Paris and it is raining */
+      if (w.brolly && wet) {
+        /* SIZED TO THE FROG UNDER IT. Drawn at a fixed width it came out
+           bigger than he was and the crowd turned into a bed of mushrooms. */
+        const uw = Math.max(4, Math.round(bw * 1.25));
+        const uy = y - 4;
+        ART.px(c, x - uw, uy + 2, uw * 2, 1, w.brollyCol);
+        ART.px(c, x - uw + 1, uy, uw * 2 - 2, 2, w.brollyCol);
+        ART.px(c, x - 1, uy - 1, 3, 1, w.brollyCol);
+        ART.px(c, x, uy + 3, 1, 5, '#4a3f2e');
+      }
+    }
+  }
+
+  /* ============================================================
      THE ANIMALS THAT ARE NOT VERMIN.
 
      A cat lives at four of the five stops and a dog lives at the
@@ -588,14 +823,28 @@ const SCENE = (() => {
      nice. Drawn here rather than in the room art because a painted
      cat is furniture and this one moves.
      ============================================================ */
+  /* WHAT THE DOG LEAVES. Every dog in this city fouls the pavement and
+     nobody picks it up, so there is a thing on the ground with a hotspot
+     on it and a scoop on the back of the cart. */
+  const messes = [];
+
+  function dropMess(a) {
+    if (messes.filter(m => !m.done).length > 1) return;
+    messes.push({ x: a.x, z: a.z === undefined ? 0.1 : a.z, t: 0, done: false });
+  }
+
   function spawnPets() {
     pets.length = 0;
+    messes.length = 0;
     for (const p of (def.pets || [])) {
       pets.push({
         kind: p.kind || 'cat', name: p.name || (p.kind === 'dog' ? 'A DOG' : 'A CAT'),
-        home: p.x, x: p.x, y: p.y === undefined ? def.floorY : p.y,
+        home: p.x, x: p.x,
+        z: p.z === undefined ? (band() ? 0.1 : 0) : p.z,
+        y: p.y,
         dir: 1, v: 0, mood: 'sit', wait: 1 + Math.random() * 3,
         t: Math.random() * 9, pet: 0, hearts: [],
+        fouls: !!p.fouls, foulClock: 6 + Math.random() * 14,
       });
     }
   }
@@ -603,6 +852,10 @@ const SCENE = (() => {
   function stepPets(dt) {
     for (const a of pets) {
       a.t += dt;
+      if (a.fouls) {
+        a.foulClock -= dt;
+        if (a.foulClock <= 0) { dropMess(a); a.foulClock = 30 + Math.random() * 40; }
+      }
       if (a.pet > 0) { a.pet -= dt; a.v = 0; }
       else if (a.wait > 0) { a.wait -= dt; a.v = 0; }
       else if (a.mood === 'sit') {
@@ -625,11 +878,32 @@ const SCENE = (() => {
     }
   }
 
-  function drawPets(c, T) { for (const a of pets) drawPet(c, a, T); }
+  function drawPets(c, T) {
+    /* what the dog left, before anybody steps in it */
+    for (const m of messes) {
+      if (m.done) continue;
+      const x = Math.round(m.x), y = floorAt(m.z);
+      const sc = scaleAt(m.z);
+      const r = Math.max(2, Math.round(4 * sc));
+      ART.px(c, x - r - 2, y - 1, r * 2 + 5, 2, 'rgba(0,0,0,.3)');
+      PIX.disc(c, x, y - r, r + 1, '#241708');
+      PIX.disc(c, x, y - r, r, '#4a3118');
+      PIX.disc(c, x - 1, y - r - 1, Math.max(1, r - 2), '#63431f');
+      PIX.disc(c, x + 2, y - r - 3, Math.max(1, r - 3), '#4a3118');
+      /* two flies, doing their job */
+      const a2 = T * 3 + m.x;
+      ART.px(c, x + Math.round(Math.cos(a2) * 6), y - r - 7 + Math.round(Math.sin(a2 * 1.4) * 3),
+        1, 1, '#12101d');
+      ART.px(c, x + Math.round(Math.cos(a2 + 2) * 5), y - r - 5 + Math.round(Math.sin(a2) * 3),
+        1, 1, '#12101d');
+    }
+    for (const a of pets) drawPet(c, a, T);
+  }
 
   function drawPet(c, a, T) {
     {
-      const x = Math.round(a.x), y = Math.round(a.y);
+      const x = Math.round(a.x);
+      const y = Math.round(a.y === undefined ? floorAt(a.z) : a.y);
       const f = a.dir > 0 ? 1 : -1;
       const walking = a.v > 1;
       const step = walking && Math.sin(a.t * 12) > 0 ? 1 : 0;
@@ -812,14 +1086,14 @@ const SCENE = (() => {
      ============================================================ */
   let mark = null;
 
-  function setMark(x) { mark = { x, t: 0 }; }
+  function setMark(x, z) { mark = { x, z: z === undefined ? 0 : z, t: 0 }; }
 
   function drawMark(c, T) {
     if (!mark) return;
     if (me.target === null) { mark.t += 0.06; if (mark.t > 1) { mark = null; return; } }
     else mark.t = 0;
     const a = 1 - mark.t;
-    const x = Math.round(mark.x), y = def.floorY;
+    const x = Math.round(mark.x), y = floorAt(mark.z);
     const bob = Math.round(Math.sin(T * 7) * 1.5);
     /* a stepped chevron over a ring on the floor */
     ART.px(c, x - 5, y - 2, 11, 2, 'rgba(255,215,94,' + (0.16 * a).toFixed(3) + ')');
@@ -904,13 +1178,17 @@ const SCENE = (() => {
     }
     if (def.onPaintOver) def.onPaintOver(c, T, cam, viewW());
 
+    /* the traffic, then the crowd: both behind everybody who matters */
+    drawTraffic(c);
+    drawCrowd(c, T);
+
     /* everybody in it, back to front by x-depth then y */
     const cast = [];
     for (const a of (def.actors || [])) {
       if (a.gone) continue;
-      cast.push({ y: a.y === undefined ? def.floorY : a.y, draw: () => drawActor(c, a, T) });
+      cast.push({ y: a.y === undefined ? floorAt(a.z) : a.y, draw: () => drawActor(c, a, T) });
     }
-    cast.push({ y: def.floorY + 0.5, draw: () => drawMe(c, T) });
+    cast.push({ y: floorAt(me.z) + 0.5, draw: () => drawMe(c, T) });
     drawMark(c, T);
     drawCritters(c, T);
     cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
@@ -928,8 +1206,17 @@ const SCENE = (() => {
       if (want) {
         /* well clear of the label plate that lands on whatever you are
            standing next to: an actor gets it over his hat, a prop over
-           the top of the thing itself */
-        const wy = (want.top === undefined ? def.floorY - 62 : want.top - 22);
+           the top of the thing itself.
+
+           A SPOT CAN BE A WALL, though. The bone wall in the catacombs
+           is sixty rows tall and its top is the lintel, so hanging the
+           chevron over the top of it put it through the lettering and
+           off the ceiling. Hang it over the top of the thing, or forty
+           rows over the foot of it, whichever sits lower — and never
+           off the top of the room. */
+        const wTop = want.top === undefined ? def.floorY - 40
+          : (want.bot === undefined ? want.top : Math.max(want.top, want.bot - 40));
+        const wy = Math.max(11, wTop - 22);
         const bob = Math.round(Math.sin(T * 3.4) * 2);
         const gx = Math.round(want.x);
         for (let i = 0; i < 7; i++) {
@@ -1067,17 +1354,21 @@ const SCENE = (() => {
 
   function drawActor(c, a, T) {
     const face = a.face === undefined ? -1 : a.face;
-    const r = rig(a, 0, face);
-    const fy = a.y === undefined ? def.floorY : a.y;
+    const r = rig(a, a.frame || 0, face, a.back);
+    const fy = a.y === undefined ? floorAt(a.z) : a.y;
     const id = a.still ? { rise: 0, lean: 0 } : idleOf(T, Math.round(a.x));
-    const h = Math.max(1, r.h - id.rise);
-    ART.px(c, Math.round(a.x - r.w / 3), fy, Math.round(r.w * 0.66), 2, 'rgba(0,0,0,.32)');
-    c.drawImage(r.cv, Math.round(a.x - r.w / 2) + id.lean, Math.round(fy - h + 1), r.w, h);
+    const sc = scaleAt(a.z);
+    const w = Math.max(1, Math.round(r.w * sc));
+    const h = Math.max(1, Math.round(r.h * sc) - id.rise);
+    ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(0,0,0,.32)');
+    c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
   }
 
   function drawMe(c, T) {
-    const r = rig(SCENE.meDef(), me.frame, me.face);
-    const fy = def.floorY;
+    /* WALKING AWAY, YOU SEE HIS BACK. The rig is the same frog; the head
+       just has nothing on the front of it. */
+    const r = rig(SCENE.meDef(), me.frame, me.face, me.faceZ < 0);
+    const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
       const a = 0.3 * (1 - p2.t / p2.life);
@@ -1089,11 +1380,15 @@ const SCENE = (() => {
     const st = Math.min(0.05, Math.abs(me.v) / SPEED * 0.05);
     /* standing about, he breathes too */
     const id = Math.abs(me.v) > 4 ? { rise: 0, lean: 0 } : idleOf(T, 3);
-    const w = Math.max(1, Math.round(r.w * (1 + sq - st * 0.5)));
-    const h = Math.max(1, Math.round(r.h * (1 - sq + st)) - id.rise);
+    const sc = scaleAt(me.z);
+    /* the reach: a lean toward whatever he is doing, and a little crouch */
+    const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
+    const lean = Math.round(rc * 3) * (me.reachTo || 1);
+    const w = Math.max(1, Math.round(r.w * sc * (1 + sq - st * 0.5 + rc * 0.04)));
+    const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
     ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
-    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
+    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean + lean, Math.round(fy - h + 1), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
@@ -1196,6 +1491,8 @@ const SCENE = (() => {
     magnify, ratAt, refreshCursor,
     rats() { return rats; },
     pets() { return pets; },
+    messes() { return messes; },
+    debugFoul() { if (pets.length) dropMess(pets[0]); },
     killRat(r) {
       r.dead = true; r.deadT = 0;
       setTimeout(() => { const i = rats.indexOf(r); if (i >= 0) rats.splice(i, 1); }, 2600);

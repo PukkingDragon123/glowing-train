@@ -314,8 +314,11 @@ function driver() {
     G.place = 'precinct';
     let guard = 0, searches = 0, errands = 0, looks = 0;
     while (!CITY.nightOver() && CASE.left() > 1 && guard++ < 80) {
-      /* somewhere with anything left to turn over */
-      const open = CITY.ORDER.filter(id => CITY.unsearchedAt(id).length);
+      /* somewhere in TONIGHT'S FILE with anything left to turn over. The
+         city has eleven stops and the case only touches seven: a bot that
+         drives to all of them is measuring a game nobody plays. */
+      const stops = CASE.stops();
+      const open = stops.filter(id => CITY.unsearchedAt(id).length);
       if (!open.length) break;
       /* a bot with a tip follows it; otherwise it picks a stop at random */
       const tipped = open.filter(id => G.tips && G.tips[id]);

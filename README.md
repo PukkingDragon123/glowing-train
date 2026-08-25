@@ -92,27 +92,75 @@ money in your coat, then a file pulled before the shift change (**+1 look at
 the evidence, all night**), and one night, *"whatever happens up there — come
 home after"* — **+1 heart, all night**. It carries between cases.
 
-## The city
+## The city is Paris
 
-![FroggoMap](docs/screen-map.png)
+![The plan](docs/screen-map.png)
 
-The case is not in one room any more. **It is buried in five places across
-town**, and the only way to it is the brick in your coat.
+The case is not in one room any more. **It is buried across the city**, and
+the only way to it is the phone in your coat.
 
-**The FroggoPhone** (tap `PH`, or `P`) is the only menu in the game:
+Five of the stops are work: a laundry on the canal where they found him, the
+quay, the pawn, the café, the cabaret under the windmill. The other six are
+Paris, and they are why you took this job:
 
-- **FROGGOMAP** — the city drawn from above, the canal cutting through it,
-  five stops and the station. Tap one and you drive there. A stop with
-  something in it wears a gold `!`; a stop where somebody is owed a favour
-  wears the errand bag.
+| | |
+|---|---|
+| **LA TOUR** | eight thousand tons of iron over the Champ de Mars, and nobody looking down |
+| **L'ARC** | twelve avenues, a flame that has not gone out since 1923, and the metro underneath |
+| **LA BUTTE** | Montmartre: the whitest church in France, painters, and a frog with three cups |
+| **LE MUSÉE** | the palace courtyard after closing, a glass pyramid lit from below |
+| **LES CATACOMBES** | six million of them, and the only room in this city nobody has ever bugged |
+| **LE MÉTRO** | white tile, an enamel sign, and the last train long gone |
+
+![La Tour](docs/screen-tower.png)
+
+![La Butte](docs/screen-butte.png)
+
+![Les Catacombes](docs/screen-catacombs.png)
+
+None of it is a photograph. The tower is a profile curve and an X-brace
+lattice, the basilica is three domes that are widest where they meet the
+roof, the ossuary is a wall of skulls generated a row at a time — all of it
+drawn by the same code that draws the frog, at boot, from nothing.
+
+Tonight's file only touches seven of the eleven, and the plan dims the ones
+it does not — nobody should burn thirty-five minutes driving to the
+catacombs for nothing. The rest of Paris is still there, with work in it.
+
+### You can walk into it
+
+The rooms are not a line any more. Every street has a **depth band** you can
+walk up and down — `W`/`S`, the arrows, or just tap where you want to stand —
+and the frog gets smaller as he goes back, turns his back to you when he
+walks away, and sorts in front of and behind everything else in the room.
+The boulevards are full of people doing the same thing under umbrellas, and
+the traffic at the Étoile does not stop for any of them.
+
+**The phone** (tap `PHONE`, or `P`) is the only menu in the game, and it is a
+slab of glass with a bite out of the top of it, which is the one thing in
+1937 nobody in this game remarks on. It has a lock screen with the hour, the
+night's weather and what came in; a home screen of apps with badges on them;
+and a dock:
+
+![The lock screen](docs/screen-lock.png)
+
+![The home screen](docs/screen-home.png)
+
+- **PLAN** — the city drawn from above, the river cutting through it, eleven
+  stops and the Brigade. Tap one and you drive there. A stop with something
+  in it wears a gold `!`; a stop where somebody is owed a favour wears the
+  errand bag; a stop tonight's file does not touch is dimmed.
 - **CASE FILE** — what you have turned over, what each piece rules out, and
   which faces still fit.
 - **THE KIT** — your coat, laid out: the iron, the belt, every evidence bag
   you are carrying, and anything you agreed to run across town for somebody
   else.
-- **THE JOB** — what you are supposed to be doing *right now*, tonight's
+- **WORK** — what you are supposed to be doing *right now*, tonight's
   chapter, the Bullfrog board, every errand you are in the middle of, and the
   last few lines of the file.
+- **KARMA** — what this city thinks of you, and every deed that got you
+  there.
+- **JOBS** — everything going on tonight that pays, and where it is.
 
 ![The kit](docs/screen-kit.png)
 
@@ -162,10 +210,12 @@ know what any of them is is to hold the eyeglass up to it.
 ### The night is the clock
 
 Every place you drive to costs **35 minutes**, every prop you put your hand
-in costs **18**, a question costs **12**. The shift ends at **06:00** —
-turning over everything in the city would take about **600 minutes and you
-have 560**, so *where you look* is the whole game. Run the night out and the
-captain pulls you off the street; you keep what you found.
+in costs **18**, a look through the eyeglass costs **3**, a question costs
+**12**. The shift runs **20:00 to 06:00** — **600 minutes** against a city
+with about **forty-five things** in it to turn over, which is well over a
+thousand minutes of searching. It is deliberately impossible, so *where you
+look* is the whole game. Run the night out and the captain pulls you off the
+street; you keep what you found.
 
 The sky is not decoration either. It rolls every time you drive: **rain**,
 **hard rain**, **storm**, **fog**, **clear and cold**. Fog and heavy rain
@@ -245,6 +295,38 @@ miss and it drops back.
 **Dust it for prints.** There is a print bench at the station. Powder, tape, a
 card and a steady hand will lift a name off what you carried back — worth a
 face off the wall, for half an hour of a night that has none, once a case.
+
+### Karma
+
+![Karma](docs/screen-karma.png)
+
+Nobody in this city keeps a ledger of what you do, so the game does. Cleaning
+up after somebody else's dog is worth three. Sitting for a painter who has
+nobody to look at is worth two. Warning a mark off the cups is worth two.
+Putting a gun in a witness's face is worth **minus six**, and it works, which
+is the problem with it. Running the cups yourself is minus three and pays
+better than the job.
+
+It follows you between cases, the street reads it before you open your mouth,
+and at the end it is weighed with everything else.
+
+### The jobs
+
+![The pavement](docs/screen-scoop.png)
+
+Nobody lives on this salary. **Work the taps** at the Moulin, **make a batch**
+at the café, **clear the drums** at the laundry, **pick the lock** on the shed
+at the quay, **dust for prints** at the Brigade — and, this being Paris:
+
+- **THE PAVEMENT.** Every dog in this city fouls it and nobody picks it up.
+  There is a scoop on the back of the cart, three passes to get it, and the
+  only reward is that somebody does not step in it.
+- **THE THREE CUPS.** A frog with a folding table on the Butte. Play him and
+  he is faster than your eye. Warn the mark off and he loses his rent. Or run
+  the table yourself, which pays and costs.
+- **THE PAINTER.** Eleven years painting the same street, half a loaf in his
+  coat and nobody to sit for him. Twenty minutes of a night you cannot spare
+  — and he watches that square all day, so he has seen things.
 
 ### Errands, which pay in evidence
 
@@ -454,7 +536,8 @@ the frog leaning into a cut-in are the same frog.
 
 ## Keys
 
-Tapping is the whole control scheme, but: `A`/`D` or the arrows walk, `E` or
+Tapping is the whole control scheme, but: `A`/`D` walk, **`W`/`S` walk up and
+down the road**, the arrows do both, `E` or
 `SPACE` uses what you are standing next to, **`1` `2` `3` are the hand, the
 eyeglass and the iron** (`Q` cycles them), **`P` takes the phone out of your
 coat**, `ENTER` sits down or walks out, `6–8` are the belt, `R` bribes, `TAB`
@@ -473,9 +556,13 @@ js/pix.js         pixel engine: the palette, a sprite compiler, draw helpers
 js/art.js         THE PROP SHOP: painted pixel maps + the shading kit
 js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
 js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
-js/places.js      the stops, painted, and the floors under and over them
+js/places.js      the working stops, and the floors under and over them
+js/paris.js       the city itself: the Tower, the Arch, the Butte, the
+                  Museum, the Catacombs, the Metro, and the furniture of
+                  Paris — Haussmann, plane trees, Wallace fountains
 js/phone.js       the FroggoPhone: the map, the file, the kit, the only menu
-js/jobs.js        the side work: taps, fryer, drums, lock, print kit
+js/jobs.js        the side work: taps, fryer, drums, lock, prints, scoop,
+                  and three cups with a ball under one of them
 js/tools.js       the belt: the hand, the eyeglass, the iron, the cursors
 js/rooms.js       the station: bullpen, board room, ward, line-up room
 js/story.js       THE CASE: chapters, the board, dialogue, errands, endings

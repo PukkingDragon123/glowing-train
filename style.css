@@ -2688,6 +2688,9 @@ body.in-scene #app { overflow: hidden; }
 /* somebody at this stop wants something, or is holding something for you */
 .pin-tag { display: inline-flex; align-items: center; gap: 3px; }
 .map-pin.errand .pin-tag { border-color: #e0a63c; }
+/* a stop tonight's file does not touch: still there, still drivable, dim */
+.map-pin.cold { opacity: .5; }
+.map-pin.cold .pin-tag { border-color: rgba(111,247,216,.16); }
 .map-pin:active { transform: translate(-50%, -100%) translateY(2px); }
 
 /* the case file and the kit */
@@ -2734,7 +2737,7 @@ body.in-scene #app { overflow: hidden; }
 }
 .ph-errands .ph-clue { align-self: stretch; }
 
-.ph-keys { display: flex; justify-content: center; }
+.ph-keys { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .ph-shut { min-width: 180px; justify-content: center; background: linear-gradient(180deg, #8ff7c8, #2ec4a9); }
 
 /* ============================================================
@@ -2951,3 +2954,87 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   text-align: center; max-width: min(92vw, 720px);
 }
 .pick-head canvas, .glass-head canvas { display: block; }
+
+/* ============================================================
+   37. THE PHONE, AS A PHONE
+   A slab of glass with a bite out of the top, a lock screen, a
+   grid of apps, a dock and a home bar. Square corners stepped in
+   at the edges: this is pixel art, not a product render.
+   ============================================================ */
+.ph-notch {
+  position: relative; align-self: center;
+  width: 86px; height: 14px;
+  background: #05100c;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.6);
+}
+.ph-ear { width: 34px; height: 4px; background: #0f2a20; display: block; }
+.ph-lens { width: 6px; height: 6px; background: #123; box-shadow: inset 0 0 0 2px #0a1a12; display: block; }
+
+.ph-lock {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 10px 6px 6px; align-self: stretch;
+}
+.ph-hour canvas { display: block; }
+.ph-notes { display: flex; flex-direction: column; gap: 6px; align-self: stretch; }
+.ph-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 8px;
+  background: rgba(10,26,20,.85);
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.16);
+}
+.ph-unlock {
+  margin-top: 4px; align-self: stretch; min-height: 44px;
+  background: linear-gradient(180deg, #8ff7c8, #2ec4a9);
+  border: var(--bd-thick) solid #0a0d11; border-radius: 0;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 5px 0 rgba(0,0,0,.5);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.ph-unlock:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 3px 0 rgba(0,0,0,.5); }
+
+.ph-home { align-self: stretch; padding: 6px 2px; }
+.ph-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px 6px; justify-items: center;
+}
+.ph-icon {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: none; border: 0; padding: 4px 2px; cursor: pointer;
+}
+.ph-icon canvas { image-rendering: pixelated; display: block; }
+.ph-icon:active { transform: translateY(2px); }
+.ph-icon > canvas:first-child {
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.22), 0 3px 0 rgba(0,0,0,.45);
+  background: rgba(10,30,22,.7);
+  padding: 4px;
+}
+.ph-badge {
+  position: absolute; top: -2px; right: -2px;
+  min-width: 18px; min-height: 18px; padding: 1px 3px;
+  background: #b8232f; box-shadow: inset 0 0 0 2px #f4efe0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ph-dock {
+  display: flex; gap: 4px; align-self: stretch; margin-top: auto;
+  padding: 5px 4px; background: rgba(8,22,17,.8);
+  box-shadow: inset 0 2px 0 rgba(111,247,216,.14);
+}
+.ph-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  align-self: stretch; padding: 3px 4px 5px;
+  box-shadow: inset 0 -2px 0 rgba(111,247,216,.14);
+}
+.ph-back {
+  background: rgba(111,247,216,.12); border: 0; cursor: pointer;
+  min-width: 30px; min-height: 26px; display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.3);
+}
+.ph-back:active { transform: translateY(2px); }
+.ph-home-bar {
+  width: 108px; height: 8px; margin: 0 auto 4px;
+  background: #cfe6dc; border: 0; border-radius: 0; cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0,0,0,.5);
+}
+.ph-home-bar:active { transform: translateY(2px); }

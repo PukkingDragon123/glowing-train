@@ -9,6 +9,10 @@
      THE DRUMS    put a lid on three rats
      THE LOCK     three pins on a shed nobody wants opened
      THE PRINTS   lift three clean ones off what you brought back
+     THE SCOOP    what the dog left, off the pavement, before
+                  somebody steps in it
+     THE CUPS     three cups, one ball, and a frog who does this
+                  for a living
 
    Both are the same shape — a moving thing you have to stop in
    the right place, three times — and both pay in the two things
@@ -424,6 +428,118 @@ const JOBS = (() => {
     if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.2).toFixed(3) + ')');
   }
 
+  /* ---------------------------------------------------------
+     THE PAVEMENT. A dog has been here. The scoop is on a stick and
+     the bag is in your other hand and the whole city is watching.
+     --------------------------------------------------------- */
+  function drawScoop(c, W, H, s) {
+    const P = PIX.PAL;
+    /* the pavement, close up, wet */
+    ART.px(c, 0, 0, W, H, '#2b2e33');
+    for (let ry = 0; ry < H; ry += 7) {
+      const off = ((ry / 7) % 2) ? 6 : 0;
+      for (let rx = -off; rx < W; rx += 12) {
+        ART.px(c, rx, ry, 11, 6, (rx + ry) % 5 ? '#31353b' : '#2a2d33');
+        ART.px(c, rx, ry, 11, 1, 'rgba(255,255,255,.05)');
+      }
+    }
+    ART.dither(c, 0, 0, W, H, 'rgba(90,150,160,.08)', 0.12, 17);
+    /* WHAT THE DOG LEFT, in the middle, drawn with as much dignity as
+       the situation allows: three coils and a shine on them */
+    const tx = 8 + Math.round((W - 16) * s.centre);
+    if (s.hits < 3) {
+      for (let i = 2; i >= s.hits; i--) {
+        const cy = H - 22 + i * 4;
+        const r = 9 - i * 2;
+        PIX.disc(c, tx, cy, r + 1, '#2a1c10');
+        PIX.disc(c, tx, cy, r, '#4a3118');
+        PIX.disc(c, tx - 2, cy - 2, Math.max(1, r - 4), '#63431f');
+      }
+      /* the flies, because of course */
+      for (let i = 0; i < 3; i++) {
+        const a = s.x * 6 + i * 2.1;
+        ART.px(c, tx + Math.round(Math.cos(a) * 13), H - 28 + Math.round(Math.sin(a * 1.3) * 6),
+          1, 1, '#12101d');
+      }
+    } else {
+      /* a clean flag of pavement where it used to be */
+      ART.px(c, tx - 12, H - 18, 25, 12, '#3a4046');
+      ART.px(c, tx - 12, H - 18, 25, 2, '#4d545c');
+    }
+    /* THE SCOOP, swinging, and the band that is over the thing itself */
+    const half = Math.max(5, Math.round((W - 16) * s.band / 2));
+    ART.px(c, tx - half, H - 34, half * 2, 30, 'rgba(111,247,216,.10)');
+    ART.px(c, tx - half, H - 34, 1, 30, 'rgba(111,247,216,.35)');
+    ART.px(c, tx + half - 1, H - 34, 1, 30, 'rgba(111,247,216,.35)');
+    const sx = 8 + Math.round((W - 16) * s.x);
+    ART.px(c, sx - 1, 4, 3, H - 40, '#6e4a30');           // the handle
+    ART.px(c, sx - 1, 4, 1, H - 40, '#8a5f3d');
+    ART.px(c, sx - 9, H - 38, 19, 5, P.K);                // the pan
+    ART.px(c, sx - 8, H - 37, 17, 3, '#9aa3b8');
+    ART.px(c, sx - 8, H - 34, 17, 2, '#646d84');
+    /* the bag in your other hand, filling up */
+    ART.px(c, W - 22, H - 26, 16, 24, '#20242a');
+    ART.px(c, W - 22, H - 26, 16, 2, '#333944');
+    for (let i = 0; i < s.hits; i++) ART.px(c, W - 19 + i * 4, H - 10, 3, 6, '#4a3118');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(200,255,220,' + (s.flash * 0.14).toFixed(3) + ')');
+  }
+
+  /* ---------------------------------------------------------
+     THE CUPS. Three of them, one ball, and a frog who does this
+     for a living. The band is the cup it is under; the marker is
+     your eye, and his hands are faster than it.
+     --------------------------------------------------------- */
+  function drawCups(c, W, H, s) {
+    const P = PIX.PAL;
+    ART.px(c, 0, 0, W, H, '#181a20');
+    ART.dither(c, 0, 0, W, H, 'rgba(0,0,0,.3)', 0.1, 13);
+    /* the folding table, and the crowd behind it */
+    for (let i = 0; i < 7; i++) {
+      const bx = 6 + i * 19;
+      ART.px(c, bx, 8, 11, 16, '#22262e');
+      ART.px(c, bx + 2, 4, 7, 6, '#2f4436');
+      ART.px(c, bx + 1, 2, 9, 3, '#12101d');
+    }
+    ART.px(c, 0, 26, W, 4, '#12101d');
+    ART.box(c, 8, 30, W - 16, 16, { fill: '#4a3f2e', top: '#61533b', bot: '#241d14', ink: P.K });
+    ART.px(c, 8, 46, W - 16, H - 46, '#1c1f24');
+    /* THE THREE CUPS. The one over the ball is the band. */
+    for (let i = 0; i < 3; i++) {
+      const cx2 = 26 + i * 40;
+      const lifted = s.flash > 0.3 && Math.abs((s.centre * W) - cx2) < 20;
+      const cy = 30 - (lifted ? 12 : 0);
+      /* the ball, if this cup is up and it was under it */
+      if (lifted) {
+        PIX.disc(c, cx2 + 8, 26, 4, P.K);
+        PIX.disc(c, cx2 + 8, 26, 3, '#f4efe0');
+      }
+      ART.px(c, cx2, cy - 16, 17, 17, P.K);
+      ART.px(c, cx2 + 1, cy - 15, 15, 15, '#b8232f');
+      ART.px(c, cx2 + 1, cy - 15, 15, 3, '#d94a52');
+      ART.px(c, cx2 + 1, cy - 4, 15, 3, '#8c1a24');
+      ART.px(c, cx2 - 1, cy - 1, 19, 2, P.K);
+      ART.px(c, cx2, cy - 1, 17, 1, '#8c1a24');
+    }
+    /* his hands, moving, which is the whole trick */
+    const hx = 12 + Math.round((W - 24) * ((s.x * 1.7) % 1));
+    ART.px(c, hx - 7, 14, 15, 9, '#2f5a3a');
+    ART.px(c, hx - 6, 15, 13, 6, '#4f8a55');
+    ART.px(c, hx - 6, 15, 13, 2, '#6fae70');
+    /* YOUR EYE: the marker you are stopping */
+    const ex = 8 + Math.round((W - 16) * s.x);
+    ART.px(c, ex - 1, H - 20, 3, 14, '#ffd75e');
+    ART.px(c, ex - 5, H - 8, 11, 3, '#ffd75e');
+    ART.px(c, ex - 3, H - 24, 7, 4, '#12101d');
+    ART.px(c, ex - 2, H - 23, 5, 2, '#ffe7a8');
+    /* the band: where the ball actually is */
+    const half = Math.max(6, Math.round((W - 16) * s.band / 2));
+    const bx2 = 8 + Math.round((W - 16) * s.centre);
+    ART.px(c, bx2 - half, H - 6, half * 2, 3, 'rgba(111,247,216,.22)');
+    /* the pot, and the tally */
+    for (let i = 0; i < s.hits; i++) ART.px(c, W - 14 - i * 6, 34, 4, 4, '#ffd75e');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.16).toFixed(3) + ')');
+  }
+
   return {
     meter,
 
@@ -477,6 +593,30 @@ const JOBS = (() => {
         draw: drawPrints,
       });
       return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, clean: r.hits >= 3 };
+    },
+
+    /* the pavement. Nobody pays you for this. You do it anyway. */
+    async scoop() {
+      const r = await meter({
+        head: 'THE PAVEMENT',
+        sub: 'THREE PASSES. GET THE SCOOP OVER IT.',
+        key: 'TAP TO SCOOP',
+        rounds: 3, band: 0.2, speed: 1.1,
+        draw: drawScoop,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, clean: r.hits >= 3 };
+    },
+
+    /* three cups, one ball, and a frog who does this for a living */
+    async cups(hard) {
+      const r = await meter({
+        head: 'THE THREE CUPS',
+        sub: 'FOLLOW THE BALL. STOP ON THE CUP IT IS UNDER.',
+        key: 'TAP TO CALL IT',
+        rounds: 3, band: hard ? 0.12 : 0.17, speed: hard ? 1.9 : 1.5,
+        draw: drawCups,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, won: r.hits >= 2 };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */

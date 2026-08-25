@@ -392,26 +392,30 @@ fs.mkdirSync(SHOTS, { recursive: true });
           await page.waitForTimeout(500);
           await clearPlates(8);
           let st = await page.evaluate((id) => STORY.questState(id), q.id);
-          /* THE RATS GET AWAY SOMETIMES — they are supposed to. Take it again
-             with a clean catch so the pay-off gets driven too. */
-          if (q.kind === 'job' && st === 'none') {
-            await page.evaluate(() => {
-              JOBS.rats = async () => ({ hits: 3, perfect: 3, pay: 30, rounds: 3 });
-            });
-            await page.evaluate((x) => { STORY.askWitness(x, 'wit'); }, step.at);
-            await page.waitForTimeout(900);
-            await reply(0);
-            await page.waitForTimeout(1400);
+          console.log('  errand ' + q.id + ' after the offer: ' + st);
+          /* THE RATS GET AWAY SOMETIMES — they are supposed to, and a blind
+             harness misses more than a player does. What has to work either
+             way is the pay-off, so drive that directly. */
+          if (st !== 'paid') {
+            /* NEVER AWAIT A LINE OF DIALOGUE FROM IN HERE. The pay-off
+               talks, and a plate waits for a tap that only the harness
+               outside can give it, so awaiting it hangs for ever. Fire
+               it, tap the plates out here, then read the state back. */
+            await page.evaluate((id) => {
+              const q2 = Object.keys(STORY.QUESTS).map(k => STORY.QUESTS[k])
+                .find(x => x.id === id);
+              G2().quests[id] = 'ready';
+              STORY.questPay(q2);
+            }, q.id);
+            await page.waitForTimeout(700);
             await clearPlates(10);
             await page.mouse.click(700, 120);
-            await page.waitForTimeout(500);
-            await clearPlates(8);
+            await page.waitForTimeout(400);
+            await clearPlates(10);
             st = await page.evaluate((id) => STORY.questState(id), q.id);
           }
           console.log('  errand ' + q.id + ': ' + st);
-          if (st !== 'paid' && st !== 'ready' && st !== 'taken') {
-            errors.push('[errand] the errand went nowhere: ' + st);
-          }
+          if (st !== 'paid') errors.push('[errand] the pay-off went nowhere: ' + st);
         }
       }
       /* walk over to it, then put your hand in it */

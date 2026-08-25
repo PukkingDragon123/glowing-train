@@ -2708,6 +2708,9 @@ body.in-scene #app { overflow: hidden; }
 /* somebody at this stop wants something, or is holding something for you */
 .pin-tag { display: inline-flex; align-items: center; gap: 3px; }
 .map-pin.errand .pin-tag { border-color: #e0a63c; }
+/* a stop tonight's file does not touch: still there, still drivable, dim */
+.map-pin.cold { opacity: .5; }
+.map-pin.cold .pin-tag { border-color: rgba(111,247,216,.16); }
 .map-pin:active { transform: translate(-50%, -100%) translateY(2px); }
 
 /* the case file and the kit */
@@ -2754,7 +2757,7 @@ body.in-scene #app { overflow: hidden; }
 }
 .ph-errands .ph-clue { align-self: stretch; }
 
-.ph-keys { display: flex; justify-content: center; }
+.ph-keys { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .ph-shut { min-width: 180px; justify-content: center; background: linear-gradient(180deg, #8ff7c8, #2ec4a9); }
 
 /* ============================================================
@@ -2971,6 +2974,90 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   text-align: center; max-width: min(92vw, 720px);
 }
 .pick-head canvas, .glass-head canvas { display: block; }
+
+/* ============================================================
+   37. THE PHONE, AS A PHONE
+   A slab of glass with a bite out of the top, a lock screen, a
+   grid of apps, a dock and a home bar. Square corners stepped in
+   at the edges: this is pixel art, not a product render.
+   ============================================================ */
+.ph-notch {
+  position: relative; align-self: center;
+  width: 86px; height: 14px;
+  background: #05100c;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.6);
+}
+.ph-ear { width: 34px; height: 4px; background: #0f2a20; display: block; }
+.ph-lens { width: 6px; height: 6px; background: #123; box-shadow: inset 0 0 0 2px #0a1a12; display: block; }
+
+.ph-lock {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 10px 6px 6px; align-self: stretch;
+}
+.ph-hour canvas { display: block; }
+.ph-notes { display: flex; flex-direction: column; gap: 6px; align-self: stretch; }
+.ph-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 8px;
+  background: rgba(10,26,20,.85);
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.16);
+}
+.ph-unlock {
+  margin-top: 4px; align-self: stretch; min-height: 44px;
+  background: linear-gradient(180deg, #8ff7c8, #2ec4a9);
+  border: var(--bd-thick) solid #0a0d11; border-radius: 0;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 5px 0 rgba(0,0,0,.5);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.ph-unlock:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 3px 0 rgba(0,0,0,.5); }
+
+.ph-home { align-self: stretch; padding: 6px 2px; }
+.ph-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px 6px; justify-items: center;
+}
+.ph-icon {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: none; border: 0; padding: 4px 2px; cursor: pointer;
+}
+.ph-icon canvas { image-rendering: pixelated; display: block; }
+.ph-icon:active { transform: translateY(2px); }
+.ph-icon > canvas:first-child {
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.22), 0 3px 0 rgba(0,0,0,.45);
+  background: rgba(10,30,22,.7);
+  padding: 4px;
+}
+.ph-badge {
+  position: absolute; top: -2px; right: -2px;
+  min-width: 18px; min-height: 18px; padding: 1px 3px;
+  background: #b8232f; box-shadow: inset 0 0 0 2px #f4efe0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ph-dock {
+  display: flex; gap: 4px; align-self: stretch; margin-top: auto;
+  padding: 5px 4px; background: rgba(8,22,17,.8);
+  box-shadow: inset 0 2px 0 rgba(111,247,216,.14);
+}
+.ph-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  align-self: stretch; padding: 3px 4px 5px;
+  box-shadow: inset 0 -2px 0 rgba(111,247,216,.14);
+}
+.ph-back {
+  background: rgba(111,247,216,.12); border: 0; cursor: pointer;
+  min-width: 30px; min-height: 26px; display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.3);
+}
+.ph-back:active { transform: translateY(2px); }
+.ph-home-bar {
+  width: 108px; height: 8px; margin: 0 auto 4px;
+  background: #cfe6dc; border: 0; border-radius: 0; cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0,0,0,.5);
+}
+.ph-home-bar:active { transform: translateY(2px); }
 </style>
 </head>
 <body>
@@ -8384,10 +8471,52 @@ SPR.walkPhase = function (frame) {
   return Math.sin(((frame % n) / n) * Math.PI * 2);
 };
 
+/* ============================================================
+   THE CARTOON PASS.
+
+   Every part of the rig is drawn with its own ink line, which is
+   right up close and disappears the moment he stands in front of
+   a busy room: the coat is dark, the wall is dark, and the
+   silhouette goes with it. This walks the alpha channel once and
+   lays a hard black line all the way round the outside of him,
+   then puts a rim light down the side the lamps are on — which is
+   the whole difference between a drawing and a smudge.
+   ============================================================ */
+SPR.inkEdge = function (cv, rim) {
+  const c = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const im = c.getImageData(0, 0, W, H);
+  const d = im.data;
+  const out = new Uint8ClampedArray(d);
+  const A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (d[i + 3] > 24) {
+        /* a solid pixel with nothing above-left of it catches the lamp */
+        if (rim && A(x - 1, y) < 24 && A(x, y - 1) < 24) {
+          out[i] = Math.min(255, d[i] + 46);
+          out[i + 1] = Math.min(255, d[i + 1] + 46);
+          out[i + 2] = Math.min(255, d[i + 2] + 46);
+        }
+        continue;
+      }
+      /* a hole with something next to it becomes the outline */
+      if (A(x - 1, y) > 128 || A(x + 1, y) > 128 || A(x, y - 1) > 128 || A(x, y + 1) > 128) {
+        out[i] = 12; out[i + 1] = 10; out[i + 2] = 24; out[i + 3] = 255;
+      }
+    }
+  }
+  im.data.set(out);
+  c.putImageData(im, 0, 0);
+  return cv;
+};
+
 SPR.frogWhole = function (key, def, opts) {
   opts = opts || {};
   const frame = ((opts.frame | 0) % SPR.WALK_FRAMES + SPR.WALK_FRAMES) % SPR.WALK_FRAMES;
-  return SPR.cached('whole_' + key + ':' + frame, () => {
+  const back = !!opts.back;
+  return SPR.cached('whole_' + key + ':' + frame + (back ? ':b' : ''), () => {
     const P = PIX.PAL;
     const ph = SPR.walkPhase(frame);
     const head = SPR.frogCustom('fb:' + key, def);
@@ -8472,6 +8601,52 @@ SPR.frogWhole = function (key, def, opts) {
     }
 
     c.drawImage(head, Math.round((W - hw) / 2), bob, hw, hh);
+
+    /* ------------------------------------------------------------
+       WALKING AWAY FROM YOU.
+
+       Same frog, same hat, same coat — and nothing on the front of
+       his head, because you are behind him. The face is painted out
+       in his own skin with the nape shadow under the hat band and
+       the shoulders read the rest. Cheaper than a second rig and at
+       room scale you cannot tell the difference.
+       ------------------------------------------------------------ */
+    if (back) {
+      /* the coat has no lapels and no tie on the back of it: one panel of
+         cloth between the sleeves, a yoke seam across the shoulders and a
+         vent down the middle */
+      const bx2 = Math.round((W - bw) / 2);
+      const px0 = bx2 + Math.round(bw * 0.24), pw = Math.round(bw * 0.52);
+      const py0 = bodyTop + Math.round(bh * 0.16), ph = Math.round(bh * 0.80);
+      PIX.rect(c, px0, py0, pw, ph, coatC);
+      PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.07)');
+      PIX.rect(c, px0, py0 + 6, pw, 1, 'rgba(0,0,0,.34)');          // the yoke
+      PIX.rect(c, px0 + Math.round(pw / 2), py0 + 7, 1, ph - 7, 'rgba(0,0,0,.30)');
+      PIX.rect(c, px0 + pw - 3, py0 + 2, 3, ph - 2, 'rgba(0,0,0,.20)');
+      const hx = Math.round((W - hw) / 2);
+      const sk = P[def.skin[0]] || P.F;
+      const sh = P[def.skin[1]] || P.f;
+      const dk = P[def.skin[2]] || P.e;
+      /* the skull, from behind: a dome of skin inside the existing outline */
+      const cx2 = hx + Math.round(hw / 2);
+      const ey = bob + Math.round(hh * 0.46);
+      SPR.ellipse(c, cx2, ey, Math.round(hw * 0.40), Math.round(hh * 0.30), sk);
+      SPR.ellipse(c, cx2, ey + Math.round(hh * 0.06), Math.round(hw * 0.36),
+        Math.round(hh * 0.22), sh);
+      /* the two humps a frog's eyes make, seen from behind */
+      const eo = Math.round(hw * 0.19);
+      SPR.ellipse(c, cx2 - eo, ey - Math.round(hh * 0.16), 7, 5, sk);
+      SPR.ellipse(c, cx2 + eo, ey - Math.round(hh * 0.16), 7, 5, sk);
+      PIX.rect(c, cx2 - eo - 7, ey - Math.round(hh * 0.16), 14, 1, sh);
+      PIX.rect(c, cx2 + eo - 7, ey - Math.round(hh * 0.16), 14, 1, sh);
+      /* the nape, and the collar under it */
+      PIX.rect(c, cx2 - Math.round(hw * 0.30), ey + Math.round(hh * 0.22),
+        Math.round(hw * 0.60), 3, dk);
+      PIX.rect(c, cx2 - Math.round(hw * 0.22), ey + Math.round(hh * 0.28),
+        Math.round(hw * 0.44), 2, 'rgba(0,0,0,.35)');
+    }
+    /* and one hard line all the way round him, with a rim light on it */
+    SPR.inkEdge(cv, true);
     return cv;
   });
 };
@@ -8508,12 +8683,15 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    the frame sizes where that does not come out even, plus mugshots
    and pins.
    ============================================================ */
-SPR.rigLOD = function (key, def, frame, face, down) {
+SPR.rigLOD = function (key, def, frame, face, down, back) {
   down = down || 3;
-  const f = ((frame | 0) % 4 + 4) % 4;
+  /* EIGHT FRAMES, NOT FOUR. This used to fold the frame number modulo four,
+     which quietly threw away half of the walk cycle the rig had drawn. */
+  const NF = SPR.WALK_FRAMES;
+  const f = (((frame | 0) % NF) + NF) % NF;
   const fc = face < 0 ? -1 : 1;
-  return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down, () => {
-    const src = SPR.frogWhole(key, def, { frame: f });
+  return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down + (back ? ':b' : ''), () => {
+    const src = SPR.frogWhole(key, def, { frame: f, back: !!back });
     if (down === 1 && fc > 0) return src;
     const w = Math.max(1, Math.round(src.width / down));
     const h = Math.max(1, Math.round(src.height / down));
@@ -8950,6 +9128,93 @@ const ART = (() => {
     '....KKKKKK....',
     '..............',
     '..............',
+  ]);
+
+  /* ---------------- the city, on the map ---------------- */
+
+  paint('ic_tower', [
+    '......KK......',
+    '......GK......',
+    '.....KGGK.....',
+    '.....KGGK.....',
+    '....KGGGGK....',
+    '....KGKKGK....',
+    '...KGGGGGGK...',
+    '...KGKKKKGK...',
+    '..KGGGGGGGGK..',
+    '..KGKKKKKKGK..',
+    '.KGGKKKKKKGGK.',
+    '.KGKKKKKKKKGK.',
+    'KGGKKKKKKKKGGK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_arch', [
+    '..............',
+    '.KKKKKKKKKKKK.',
+    '.KwwwwwwwwwwK.',
+    '.KwqqqqqqqqwK.',
+    '.KwwwwwwwwwwK.',
+    '.Kwwwqqqqwwwk.',
+    '.KwwKKKKKKwwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKKKKKKwK.',
+    '.KwKKKGGKKKwK.',
+    'KKwKKKGGKKKwKK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_dome', [
+    '......KK......',
+    '.....KGGK.....',
+    '....KWWWWK....',
+    '...KWWWWWWK...',
+    '..KWWWWWWWWK..',
+    '..KWWqqqqWWK..',
+    '.KWWWWWWWWWWK.',
+    'KWWWKWWWWKWWWK',
+    'KWWKKWWWWKKWWK',
+    'KWWKKKWWKKKWWK',
+    'KWWKKKKKKKKWWK',
+    'KWWKKKKKKKKWWK',
+    'KWWKKKKKKKKWWK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_glass2', [
+    '......KK......',
+    '.....KLLK.....',
+    '.....KLLK.....',
+    '....KLLLLK....',
+    '....KLKKLK....',
+    '...KLLKKLLK...',
+    '...KLKKKKLK...',
+    '..KLLKKKKLLK..',
+    '..KLKKKKKKLK..',
+    '.KLLKKKKKKLLK.',
+    '.KLKKKKKKKKLK.',
+    'KLLKKKKKKKKLLK',
+    'KGGGGGGGGGGGGK',
+    'KKKKKKKKKKKKKK',
+  ]);
+
+  paint('ic_skull', [
+    '...KKKKKKKK...',
+    '..KWWWWWWWWK..',
+    '.KWWWWWWWWWWK.',
+    'KWWWWWWWWWWWWK',
+    'KWWKKKWWKKKWWK',
+    'KWKKKKWWKKKKWK',
+    'KWKKKKWWKKKKWK',
+    'KWWKKKWWKKKWWK',
+    'KWWWWWKKWWWWWK',
+    'KWWWWKWWKWWWWK',
+    '.KWWWWWWWWWWK.',
+    '..KWKWKWKWKWK.',
+    '..KWKWKWKWKWK.',
+    '...KKKKKKKKK..',
   ]);
 
   /* ---------------- the tool belt ---------------- */
@@ -11396,18 +11661,34 @@ const CASE = {
 
      A clue is not a card you turn over at a table any more: it is
      a thing in a place. Every unseen clue gets buried in one prop
-     in one of the five stops, spread so that no single trip solves
-     the case and no stop is a dead end. The order the props come
-     back in is seeded, so the same case is the same hunt.
+     in one of the stops, spread so that no single trip solves the
+     case and no stop is a dead end. The order the props come back
+     in is seeded, so the same case is the same hunt.
+
+     THE CITY IS BIGGER THAN THE CASE. There are eleven stops on
+     the map now and only a handful of clues: burying them across
+     all eleven would make every night a driving job. So a case
+     picks the five working stops plus two of the landmarks, and
+     the rest of Paris is somewhere you go for other reasons.
      ------------------------------------------------------------ */
+  /* the stops this case is actually in, for the map and the harness */
+  stops() {
+    const c = G.case;
+    if (c && c.stops) return c.stops.slice();
+    return (typeof CITY !== 'undefined' ? (CITY.WORK || CITY.ORDER) : []).slice();
+  },
+
   plant() {
     const c = G.case;
     if (!c || typeof CITY === 'undefined') return;
     const rng = G.rng || Math.random;
-    /* every searchable prop in the city, place by place. This comes off
-       CITY.PROPS rather than off the rooms: planting a case must not have
-       to paint five canvases, and the balance harness has no canvas at all. */
-    const slots = CITY.ORDER.map(id => ({
+    /* every searchable prop in the case's stops, place by place. This comes
+       off CITY.PROPS rather than off the rooms: planting a case must not
+       have to paint a canvas, and the balance harness has none at all. */
+    const work = (CITY.WORK || CITY.ORDER).slice();
+    const extra = U.shuffle(rng, CITY.ORDER.filter(id => work.indexOf(id) < 0)).slice(0, 2);
+    c.stops = work.concat(extra);
+    const slots = c.stops.map(id => ({
       place: id, props: U.shuffle(rng, CITY.propsAt(id)),
     }));
     /* deal round the city so the clues are never all in one room */
@@ -12569,7 +12850,13 @@ const SCENE = (() => {
   let cv, ctx, K = 4;            // display canvas + integer scale
   let raf = null, t0 = 0, last = 0;
   let cam = 0, camWant = 0, drag = null;
-  let me = { x: 60, v: 0, frame: 0, face: 1, walk: 0, land: 0, target: null, act: null };
+  /* THE WALKER HAS TWO AXES NOW.
+     x runs along the street; z runs INTO it, 0 at the kerb nearest the
+     camera and 1 at the far wall. A room says how deep it is with
+     depthBand (rows); a room that does not say is flat, and behaves
+     exactly the way every room did before. */
+  let me = { x: 60, v: 0, z: 0.12, vz: 0, tz: null, frame: 0, face: 1, faceZ: 0,
+    walk: 0, land: 0, target: null, act: null };
   let hover = null, near = null, busy = false;
   const keys = {};
   const puffs = [];                 // dust off his heels
@@ -12630,9 +12917,10 @@ const SCENE = (() => {
   }
 
   /* { cv, w, h } — the picture, and the room-space box it goes in */
-  function rig(d, frame, face) {
+  function rig(d, frame, face, back) {
     const down = lodFor();
-    const cv = SPR.rigLOD(d.key || SPR.defKey(d), d.def || d, frame, face, down);
+    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : ''),
+      d.def || d, frame, face, down, back);
     return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
   }
 
@@ -12711,6 +12999,8 @@ const SCENE = (() => {
     back = paintBack(d);
     rats.length = 0; drips.length = 0; mark = null;
     spawnPets();
+    spawnCrowd();
+    spawnTraffic();
     ratClock = 1.5 + Math.random() * 3;
     me.x = d.enterX === undefined ? 40 : d.enterX;
     me.face = d.enterFace || 1;
@@ -12756,6 +13046,35 @@ const SCENE = (() => {
     return cy / K - oy;
   }
 
+  /* ============================================================
+     DEPTH.
+
+     One number per room — how many world rows of walkable ground
+     there are between the kerb and the back wall — and everything
+     else falls out of it: where a walker's feet land, how big he is
+     drawn, who is in front of whom, and what a click on the road
+     actually means.
+     ============================================================ */
+  function band() { return (def && def.depthBand) || 0; }
+  function floorAt(z) {
+    return def.floorY - Math.round((z || 0) * band());
+  }
+  /* further away is smaller, but never so much that he turns into a dot */
+  function scaleAt(z) {
+    return band() ? 1 - (z || 0) * 0.24 : 1;
+  }
+  /* a click on the ground, turned back into a place on it */
+  function zFromY(y) {
+    const b = band();
+    if (!b) return 0;
+    return U.clamp((def.floorY - y) / b, 0, 1);
+  }
+  /* how far apart two things on the ground really are */
+  function dist2(ax, az, bx, bz) {
+    const dz = (az - bz) * band() * 1.6;          // a step back is worth more
+    return Math.hypot(ax - bx, dz);
+  }
+
   /* the cursor says what the click is about to do */
   function refreshCursor() {
     if (!cv) return;
@@ -12799,13 +13118,26 @@ const SCENE = (() => {
     for (const s of (def.spots || [])) if (!s.gone && !(s.when && !s.when())) out.push(s);
     /* the animals are things you can walk up to as well */
     for (const a of pets) {
+      const fy = a.y === undefined ? floorAt(a.z) : a.y;
       out.push({
-        id: 'pet:' + a.kind, x: a.x, w: 22,
-        top: a.y - (a.kind === 'dog' ? 24 : 20), bot: a.y + 2,
+        id: 'pet:' + a.kind, x: a.x, w: 22, z: a.z,
+        top: fy - (a.kind === 'dog' ? 24 : 20), bot: fy + 2,
         pet: a,
         label: a.name,
         hint: a.kind === 'dog' ? 'HE HAS BEEN WAITING ALL SHIFT' : 'IT IS NOT YOUR CAT',
         onUse: () => STORY.petIt(a),
+      });
+    }
+    /* and what one of them left on the pavement */
+    for (const m of messes) {
+      if (m.done) continue;
+      const fy = floorAt(m.z);
+      out.push({
+        id: 'mess', x: m.x, w: 20, z: m.z, top: fy - 12, bot: fy + 3,
+        mess: m,
+        label: 'SOMETHING ON THE PAVEMENT',
+        hint: 'THERE IS A SCOOP ON THE CART',
+        onUse: () => STORY.scoopIt(m),
       });
     }
     return out;
@@ -12814,8 +13146,11 @@ const SCENE = (() => {
   function pick(x, y) {
     let best = null, bd = 1e9;
     for (const o of targets()) {
-      const w = o.w || 26, top = o.top === undefined ? def.floorY - 44 : o.top;
-      const bot = o.bot === undefined ? def.floorY + 6 : o.bot;
+      const w = o.w || 26;
+      /* a thing standing back in the room has its box up there with it */
+      const fy = floorAt(o.z), dy = fy - def.floorY;
+      const top = o.top === undefined ? fy - 44 : o.top + dy;
+      const bot = o.bot === undefined ? fy + 6 : o.bot + dy;
       if (x > o.x - w / 2 - 4 && x < o.x + w / 2 + 4 && y > top - 8 && y < bot + 4) {
         const dd = Math.abs(x - o.x);
         if (dd < bd) { bd = dd; best = o; }
@@ -12868,7 +13203,7 @@ const SCENE = (() => {
       }
 
       if (hit) goUse(hit);
-      else walkTo(x);
+      else walkTo(x, zFromY(y));
     };
     onKey = (ev) => {
       if (!def) return;
@@ -12901,26 +13236,37 @@ const SCENE = (() => {
     onDown = null;
   }
 
-  function walkTo(x) {
+  function walkTo(x, z) {
     if (!def) return;
     me.target = U.clamp(x, 12, def.w - 12);
+    me.tz = band() ? U.clamp(z === undefined ? me.z : z, 0, 1) : null;
     me.act = null;
-    setMark(me.target);
+    setMark(me.target, me.tz === null ? me.z : me.tz);
   }
 
   /* walk over there and then do the thing */
   function goUse(o) {
     const stand = o.x + (o.standOff === undefined ? (me.x > o.x ? 16 : -16) : o.standOff);
     me.target = U.clamp(stand, 12, def.w - 12);
+    /* stand a little in front of whatever it is rather than inside it */
+    const oz = o.z === undefined ? (band() ? 0.2 : 0) : o.z;
+    me.tz = band() ? U.clamp(oz - 0.1, 0, 1) : null;
     me.act = o;
-    setMark(o.x);
-    if (Math.abs(me.x - me.target) < 6) { me.target = null; use(o); }
+    setMark(o.x, oz);
+    if (dist2(me.x, me.z, me.target, me.tz === null ? me.z : me.tz) < 7) {
+      me.target = null; me.tz = null; use(o);
+    }
   }
 
   async function use(o) {
     if (busy || !o || !o.onUse) return;
     busy = true;
     me.face = o.x >= me.x ? 1 : -1;
+    /* HE REACHES FOR IT. Two pixels toward the thing and a little squash,
+       held for a beat, so using something looks like doing something
+       rather than like a menu opening. */
+    me.reach = 0.42;
+    me.reachTo = Math.sign(o.x - me.x) || me.face;
     try { await o.onUse(); } finally { busy = false; }
   }
 
@@ -12949,12 +13295,37 @@ const SCENE = (() => {
       /* how much room braking needs at this speed; inside it, brake */
       const brake = (me.v * me.v) / (2 * ACCEL) + 1.5;
       want = Math.abs(d) <= brake ? 0 : Math.sign(d);
-      if (Math.abs(d) < 1.4 && Math.abs(me.v) < 8) {
+      const zDone = me.tz === null || me.tz === undefined || Math.abs(me.tz - me.z) * band() < 2;
+      if (Math.abs(d) < 1.4 && Math.abs(me.v) < 8 && zDone) {
         me.x = me.target; me.target = null; me.v = 0;
+        if (me.tz !== null && me.tz !== undefined) { me.z = me.tz; me.tz = null; }
         land(0.7);
         if (me.act) { const a = me.act; me.act = null; use(a); }
       }
     }
+    /* THE SECOND AXIS. Up and down the road with W/S or the arrows, and
+       toward whatever the last click was, at a rate that keeps a diagonal
+       walk looking like one walk rather than two. */
+    let kz = 0;
+    if (keys['w'] || keys['arrowup']) kz -= 1;
+    if (keys['s'] || keys['arrowdown']) kz += 1;
+    if (kz) { me.tz = null; me.act = null; }
+    const b = band();
+    if (b) {
+      let wz = 0;
+      if (kz) wz = -kz;                                  // up the screen is away
+      else if (me.tz !== null && me.tz !== undefined) {
+        const dz = me.tz - me.z;
+        wz = Math.abs(dz) * b > 1.6 ? Math.sign(dz) : 0;
+        if (!wz) { me.z = me.tz; me.tz = null; }
+      }
+      const tv = wz * (SPEED * 0.62) / b;                 // z is 0..1, not pixels
+      me.vz += U.clamp(tv - me.vz, -(ACCEL / b) * dt, (ACCEL / b) * dt);
+      if (!wz && Math.abs(me.vz) < 0.02) me.vz = 0;
+      me.z = U.clamp(me.z + me.vz * dt, 0, 1);
+      me.faceZ = Math.abs(me.vz) * b > 8 ? Math.sign(me.vz) : 0;
+    } else { me.vz = 0; me.faceZ = 0; }
+
     if (want || Math.abs(me.v) > 0.5) {
       const target = want * SPEED;
       const rate = want ? ACCEL : ACCEL * 1.6;     // brakes bite harder
@@ -12967,6 +13338,7 @@ const SCENE = (() => {
     } else me.v = 0;
     /* the squash from the last landing, and the dust it kicked */
     if (me.land > 0) me.land = Math.max(0, me.land - dt * 4.5);
+    if (me.reach > 0) me.reach = Math.max(0, me.reach - dt * 1.6);
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p2 = puffs[i];
       p2.t += dt; p2.x += p2.vx * dt; p2.y += p2.vy * dt; p2.vy += 26 * dt;
@@ -12975,9 +13347,11 @@ const SCENE = (() => {
     /* the walk cycle runs off ground covered, not off the clock, so the feet
        never skate: slow steps at the start of a stride, quick in the middle */
     const NF = SPR.WALK_FRAMES || 8;
+    if (band() && Math.abs(me.vz) * band() > 6) moving = true;
     if (moving) {
       const was = Math.floor(me.walk);
-      me.walk = (me.walk + Math.abs(me.v) * dt * 0.135 * (NF / 4)) % NF;
+      const ground = Math.hypot(Math.abs(me.v), Math.abs(me.vz) * band());
+      me.walk = (me.walk + ground * dt * 0.135 * (NF / 4)) % NF;
       /* a footfall lands on the two frames where a leg is planted */
       const now2 = Math.floor(me.walk);
       if (now2 !== was && now2 % (NF / 2) === 0) {
@@ -12993,10 +13367,10 @@ const SCENE = (() => {
     }
     me.frame = Math.floor(me.walk) % NF;
 
-    /* what is within arm's reach */
+    /* what is within arm's reach, measured across the ground */
     let best = null, bd = 26;
     for (const o of targets()) {
-      const d = Math.abs(o.x - me.x);
+      const d = dist2(o.x, o.z === undefined ? me.z : o.z, me.x, me.z);
       if (d < bd) { bd = d; best = o; }
     }
     near = best;
@@ -13016,6 +13390,8 @@ const SCENE = (() => {
 
     stepCritters(dt, 0);
     stepPets(dt);
+    stepCrowd(dt);
+    stepTraffic(dt);
     if (def.onTick) def.onTick(dt, me);
   }
 
@@ -13125,6 +13501,146 @@ const SCENE = (() => {
   let ratClock = 2 + Math.random() * 4;
 
   /* ============================================================
+     THE CROWD.
+
+     Paris is not empty at eleven at night. A room can ask for a
+     crowd and get one: walkers spread across the far half of the
+     depth band, drawn as silhouettes with a hat, a coat, two legs
+     and — when it is raining, which it usually is — an umbrella.
+     They are not people you can talk to. They are the reason the
+     boulevard looks like a boulevard.
+     ============================================================ */
+  const crowd = [];
+
+  function spawnCrowd() {
+    crowd.length = 0;
+    const cf = def.crowd;
+    if (!cf || !band()) return;
+    const n = cf.n || 10;
+    const rng = U.mulberry32(U.hashSeed('crowd:' + def.id));
+    const COATS = ['#2a2f3d', '#3a2f2a', '#242a33', '#332a3a', '#1f2a2a', '#3a3630'];
+    const HATS = ['#12101d', '#1c1a2c', '#2b2436', '#241d17'];
+    for (let i = 0; i < n; i++) {
+      crowd.push({
+        x: rng() * def.w,
+        z: (cf.z0 === undefined ? 0.4 : cf.z0) +
+           rng() * ((cf.z1 === undefined ? 1 : cf.z1) - (cf.z0 === undefined ? 0.4 : cf.z0)),
+        dir: rng() < 0.5 ? -1 : 1,
+        v: 9 + rng() * 13,
+        coat: COATS[Math.floor(rng() * COATS.length)],
+        hat: HATS[Math.floor(rng() * HATS.length)],
+        brolly: rng() < 0.55,
+        brollyCol: ['#2b2436', '#3a2a2a', '#20303a', '#2a2a1f'][Math.floor(rng() * 4)],
+        t: rng() * 9,
+        tall: rng() < 0.3 ? 1 : 0,
+      });
+    }
+  }
+
+  /* ============================================================
+     THE TRAFFIC.
+
+     Twelve avenues meet at the Arch and none of them stop. Cars
+     as silhouettes with two lights, crossing the far half of the
+     band, because a roundabout with nothing going round it is a
+     car park.
+     ============================================================ */
+  const cars = [];
+
+  function spawnTraffic() {
+    cars.length = 0;
+    const tf = def.traffic;
+    if (!tf || !band()) return;
+    const rng = U.mulberry32(U.hashSeed('cars:' + def.id));
+    for (let i = 0; i < (tf.n || 4); i++) {
+      cars.push({
+        x: rng() * def.w,
+        z: (tf.z0 || 0.6) + rng() * ((tf.z1 || 0.95) - (tf.z0 || 0.6)),
+        dir: rng() < 0.5 ? -1 : 1,
+        v: 44 + rng() * 40,
+        col: ['#1c1f26', '#2a1f1f', '#1f2630', '#26221c'][Math.floor(rng() * 4)],
+        len: 34 + Math.floor(rng() * 16),
+      });
+    }
+  }
+
+  function stepTraffic(dt) {
+    for (const a of cars) {
+      a.x += a.dir * a.v * dt;
+      if (a.x < -70) a.x = def.w + 60;
+      if (a.x > def.w + 70) a.x = -60;
+    }
+  }
+
+  function drawTraffic(c) {
+    for (const a of cars) {
+      const sc = scaleAt(a.z), fy = floorAt(a.z);
+      const L = Math.max(10, Math.round(a.len * sc));
+      const h = Math.max(4, Math.round(13 * sc));
+      const x = Math.round(a.x), y = fy - h;
+      ART.px(c, x, fy - 1, L, 2, 'rgba(0,0,0,.35)');
+      ART.px(c, x, y, L, h, a.col);
+      ART.px(c, x, y, L, 1, 'rgba(255,255,255,.10)');
+      /* the cabin */
+      ART.px(c, x + Math.round(L * 0.24), y - Math.round(h * 0.5), Math.round(L * 0.5),
+        Math.round(h * 0.6), a.col);
+      ART.px(c, x + Math.round(L * 0.28), y - Math.round(h * 0.4), Math.round(L * 0.42),
+        Math.max(2, Math.round(h * 0.35)), 'rgba(150,200,220,.18)');
+      /* and the two lights, going the way it is going */
+      const fx = a.dir > 0 ? x + L - 2 : x;
+      ART.px(c, fx, y + Math.round(h * 0.3), 2, 2, '#ffe7a8');
+      ART.px(c, a.dir > 0 ? x : x + L - 2, y + Math.round(h * 0.3), 2, 2, '#d13b45');
+      ART.px(c, fx + (a.dir > 0 ? 2 : -8), y + Math.round(h * 0.3), 8, 1, 'rgba(255,231,168,.16)');
+    }
+  }
+
+  function stepCrowd(dt) {
+    for (const w of crowd) {
+      w.t += dt;
+      w.x += w.dir * w.v * dt;
+      if (w.x < -14) { w.x = def.w + 12; }
+      if (w.x > def.w + 14) { w.x = -12; }
+    }
+  }
+
+  function drawCrowd(c, T) {
+    if (!crowd.length) return;
+    const wet = typeof CITY !== 'undefined' && CITY.sky && CITY.sky().drops > 0.5;
+    for (const w of crowd) {
+      const sc = scaleAt(w.z);
+      const fy = floorAt(w.z);
+      const h = Math.round(26 * sc) + w.tall;
+      const bw = Math.max(4, Math.round(9 * sc));
+      const x = Math.round(w.x), y = fy - h;
+      const step = Math.sin(w.t * 9) > 0 ? 1 : 0;
+      /* the shadow he is standing in */
+      ART.px(c, x - bw, fy, bw * 2, 1, 'rgba(0,0,0,.3)');
+      /* legs */
+      ART.px(c, x - bw + 1, y + h - 7, 2, 7 - step, '#14121c');
+      ART.px(c, x + bw - 3, y + h - 7, 2, 6 + step, '#14121c');
+      /* the coat */
+      ART.px(c, x - bw, y + 6, bw * 2, h - 12, w.coat);
+      ART.px(c, x - bw, y + 6, bw * 2, 1, 'rgba(255,255,255,.10)');
+      ART.px(c, x + bw - 2, y + 6, 2, h - 12, 'rgba(0,0,0,.28)');
+      /* the head and the hat */
+      ART.px(c, x - 2, y + 2, 5, 5, '#3f5c46');
+      ART.px(c, x - 3, y, 7, 2, w.hat);
+      ART.px(c, x - 2, y - 2, 5, 2, w.hat);
+      /* and the umbrella, because it is Paris and it is raining */
+      if (w.brolly && wet) {
+        /* SIZED TO THE FROG UNDER IT. Drawn at a fixed width it came out
+           bigger than he was and the crowd turned into a bed of mushrooms. */
+        const uw = Math.max(4, Math.round(bw * 1.25));
+        const uy = y - 4;
+        ART.px(c, x - uw, uy + 2, uw * 2, 1, w.brollyCol);
+        ART.px(c, x - uw + 1, uy, uw * 2 - 2, 2, w.brollyCol);
+        ART.px(c, x - 1, uy - 1, 3, 1, w.brollyCol);
+        ART.px(c, x, uy + 3, 1, 5, '#4a3f2e');
+      }
+    }
+  }
+
+  /* ============================================================
      THE ANIMALS THAT ARE NOT VERMIN.
 
      A cat lives at four of the five stops and a dog lives at the
@@ -13134,14 +13650,28 @@ const SCENE = (() => {
      nice. Drawn here rather than in the room art because a painted
      cat is furniture and this one moves.
      ============================================================ */
+  /* WHAT THE DOG LEAVES. Every dog in this city fouls the pavement and
+     nobody picks it up, so there is a thing on the ground with a hotspot
+     on it and a scoop on the back of the cart. */
+  const messes = [];
+
+  function dropMess(a) {
+    if (messes.filter(m => !m.done).length > 1) return;
+    messes.push({ x: a.x, z: a.z === undefined ? 0.1 : a.z, t: 0, done: false });
+  }
+
   function spawnPets() {
     pets.length = 0;
+    messes.length = 0;
     for (const p of (def.pets || [])) {
       pets.push({
         kind: p.kind || 'cat', name: p.name || (p.kind === 'dog' ? 'A DOG' : 'A CAT'),
-        home: p.x, x: p.x, y: p.y === undefined ? def.floorY : p.y,
+        home: p.x, x: p.x,
+        z: p.z === undefined ? (band() ? 0.1 : 0) : p.z,
+        y: p.y,
         dir: 1, v: 0, mood: 'sit', wait: 1 + Math.random() * 3,
         t: Math.random() * 9, pet: 0, hearts: [],
+        fouls: !!p.fouls, foulClock: 6 + Math.random() * 14,
       });
     }
   }
@@ -13149,6 +13679,10 @@ const SCENE = (() => {
   function stepPets(dt) {
     for (const a of pets) {
       a.t += dt;
+      if (a.fouls) {
+        a.foulClock -= dt;
+        if (a.foulClock <= 0) { dropMess(a); a.foulClock = 30 + Math.random() * 40; }
+      }
       if (a.pet > 0) { a.pet -= dt; a.v = 0; }
       else if (a.wait > 0) { a.wait -= dt; a.v = 0; }
       else if (a.mood === 'sit') {
@@ -13171,11 +13705,32 @@ const SCENE = (() => {
     }
   }
 
-  function drawPets(c, T) { for (const a of pets) drawPet(c, a, T); }
+  function drawPets(c, T) {
+    /* what the dog left, before anybody steps in it */
+    for (const m of messes) {
+      if (m.done) continue;
+      const x = Math.round(m.x), y = floorAt(m.z);
+      const sc = scaleAt(m.z);
+      const r = Math.max(2, Math.round(4 * sc));
+      ART.px(c, x - r - 2, y - 1, r * 2 + 5, 2, 'rgba(0,0,0,.3)');
+      PIX.disc(c, x, y - r, r + 1, '#241708');
+      PIX.disc(c, x, y - r, r, '#4a3118');
+      PIX.disc(c, x - 1, y - r - 1, Math.max(1, r - 2), '#63431f');
+      PIX.disc(c, x + 2, y - r - 3, Math.max(1, r - 3), '#4a3118');
+      /* two flies, doing their job */
+      const a2 = T * 3 + m.x;
+      ART.px(c, x + Math.round(Math.cos(a2) * 6), y - r - 7 + Math.round(Math.sin(a2 * 1.4) * 3),
+        1, 1, '#12101d');
+      ART.px(c, x + Math.round(Math.cos(a2 + 2) * 5), y - r - 5 + Math.round(Math.sin(a2) * 3),
+        1, 1, '#12101d');
+    }
+    for (const a of pets) drawPet(c, a, T);
+  }
 
   function drawPet(c, a, T) {
     {
-      const x = Math.round(a.x), y = Math.round(a.y);
+      const x = Math.round(a.x);
+      const y = Math.round(a.y === undefined ? floorAt(a.z) : a.y);
       const f = a.dir > 0 ? 1 : -1;
       const walking = a.v > 1;
       const step = walking && Math.sin(a.t * 12) > 0 ? 1 : 0;
@@ -13358,14 +13913,14 @@ const SCENE = (() => {
      ============================================================ */
   let mark = null;
 
-  function setMark(x) { mark = { x, t: 0 }; }
+  function setMark(x, z) { mark = { x, z: z === undefined ? 0 : z, t: 0 }; }
 
   function drawMark(c, T) {
     if (!mark) return;
     if (me.target === null) { mark.t += 0.06; if (mark.t > 1) { mark = null; return; } }
     else mark.t = 0;
     const a = 1 - mark.t;
-    const x = Math.round(mark.x), y = def.floorY;
+    const x = Math.round(mark.x), y = floorAt(mark.z);
     const bob = Math.round(Math.sin(T * 7) * 1.5);
     /* a stepped chevron over a ring on the floor */
     ART.px(c, x - 5, y - 2, 11, 2, 'rgba(255,215,94,' + (0.16 * a).toFixed(3) + ')');
@@ -13450,13 +14005,17 @@ const SCENE = (() => {
     }
     if (def.onPaintOver) def.onPaintOver(c, T, cam, viewW());
 
+    /* the traffic, then the crowd: both behind everybody who matters */
+    drawTraffic(c);
+    drawCrowd(c, T);
+
     /* everybody in it, back to front by x-depth then y */
     const cast = [];
     for (const a of (def.actors || [])) {
       if (a.gone) continue;
-      cast.push({ y: a.y === undefined ? def.floorY : a.y, draw: () => drawActor(c, a, T) });
+      cast.push({ y: a.y === undefined ? floorAt(a.z) : a.y, draw: () => drawActor(c, a, T) });
     }
-    cast.push({ y: def.floorY + 0.5, draw: () => drawMe(c, T) });
+    cast.push({ y: floorAt(me.z) + 0.5, draw: () => drawMe(c, T) });
     drawMark(c, T);
     drawCritters(c, T);
     cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
@@ -13474,8 +14033,17 @@ const SCENE = (() => {
       if (want) {
         /* well clear of the label plate that lands on whatever you are
            standing next to: an actor gets it over his hat, a prop over
-           the top of the thing itself */
-        const wy = (want.top === undefined ? def.floorY - 62 : want.top - 22);
+           the top of the thing itself.
+
+           A SPOT CAN BE A WALL, though. The bone wall in the catacombs
+           is sixty rows tall and its top is the lintel, so hanging the
+           chevron over the top of it put it through the lettering and
+           off the ceiling. Hang it over the top of the thing, or forty
+           rows over the foot of it, whichever sits lower — and never
+           off the top of the room. */
+        const wTop = want.top === undefined ? def.floorY - 40
+          : (want.bot === undefined ? want.top : Math.max(want.top, want.bot - 40));
+        const wy = Math.max(11, wTop - 22);
         const bob = Math.round(Math.sin(T * 3.4) * 2);
         const gx = Math.round(want.x);
         for (let i = 0; i < 7; i++) {
@@ -13613,17 +14181,21 @@ const SCENE = (() => {
 
   function drawActor(c, a, T) {
     const face = a.face === undefined ? -1 : a.face;
-    const r = rig(a, 0, face);
-    const fy = a.y === undefined ? def.floorY : a.y;
+    const r = rig(a, a.frame || 0, face, a.back);
+    const fy = a.y === undefined ? floorAt(a.z) : a.y;
     const id = a.still ? { rise: 0, lean: 0 } : idleOf(T, Math.round(a.x));
-    const h = Math.max(1, r.h - id.rise);
-    ART.px(c, Math.round(a.x - r.w / 3), fy, Math.round(r.w * 0.66), 2, 'rgba(0,0,0,.32)');
-    c.drawImage(r.cv, Math.round(a.x - r.w / 2) + id.lean, Math.round(fy - h + 1), r.w, h);
+    const sc = scaleAt(a.z);
+    const w = Math.max(1, Math.round(r.w * sc));
+    const h = Math.max(1, Math.round(r.h * sc) - id.rise);
+    ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(0,0,0,.32)');
+    c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
   }
 
   function drawMe(c, T) {
-    const r = rig(SCENE.meDef(), me.frame, me.face);
-    const fy = def.floorY;
+    /* WALKING AWAY, YOU SEE HIS BACK. The rig is the same frog; the head
+       just has nothing on the front of it. */
+    const r = rig(SCENE.meDef(), me.frame, me.face, me.faceZ < 0);
+    const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
       const a = 0.3 * (1 - p2.t / p2.life);
@@ -13635,11 +14207,15 @@ const SCENE = (() => {
     const st = Math.min(0.05, Math.abs(me.v) / SPEED * 0.05);
     /* standing about, he breathes too */
     const id = Math.abs(me.v) > 4 ? { rise: 0, lean: 0 } : idleOf(T, 3);
-    const w = Math.max(1, Math.round(r.w * (1 + sq - st * 0.5)));
-    const h = Math.max(1, Math.round(r.h * (1 - sq + st)) - id.rise);
+    const sc = scaleAt(me.z);
+    /* the reach: a lean toward whatever he is doing, and a little crouch */
+    const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
+    const lean = Math.round(rc * 3) * (me.reachTo || 1);
+    const w = Math.max(1, Math.round(r.w * sc * (1 + sq - st * 0.5 + rc * 0.04)));
+    const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
     ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
-    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
+    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean + lean, Math.round(fy - h + 1), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
@@ -13742,6 +14318,8 @@ const SCENE = (() => {
     magnify, ratAt, refreshCursor,
     rats() { return rats; },
     pets() { return pets; },
+    messes() { return messes; },
+    debugFoul() { if (pets.length) dropMess(pets[0]); },
     killRat(r) {
       r.dead = true; r.deadT = 0;
       setTimeout(() => { const i = rats.indexOf(r); if (i >= 0) rats.splice(i, 1); }, 2600);
@@ -13815,38 +14393,76 @@ const CITY = (() => {
      --------------------------------------------------------- */
   const PLACES = {
     precinct: {
-      id: 'precinct', name: 'THE PRECINCT', sub: 'HOMICIDE DIVISION - AFTER HOURS',
-      short: 'PRECINCT', x: 52, y: 62, icon: 'ic_badge', hub: true,
+      id: 'precinct', name: 'LA BRIGADE', sub: 'HOMICIDE, THIRD FLOOR, AFTER HOURS',
+      short: 'LA BRIGADE', x: 50, y: 56, icon: 'ic_badge', hub: true,
       blurb: 'YOUR DESK. THE BOARD. THE CAPTAIN.',
     },
     laundry: {
-      id: 'laundry', name: 'THE CANAL LAUNDRY', sub: 'WHERE THEY FOUND HIM',
-      short: 'LAUNDRY', x: 22, y: 30, icon: 'ic_drum', scene: true,
+      id: 'laundry', name: 'LAVERIE DU CANAL', sub: 'WHERE THEY FOUND HIM',
+      short: 'THE LAVERIE', x: 74, y: 26, icon: 'ic_drum', scene: true,
       blurb: 'THE BODY WAS IN HERE. THE MACHINES ARE STILL WARM.',
     },
     docks: {
-      id: 'docks', name: 'PIER NINETEEN', sub: 'THE CANAL GOES OUT TO THE BAY',
-      short: 'THE PIER', x: 14, y: 74, icon: 'ic_anchor', scene: true,
+      id: 'docks', name: 'QUAI DE LA RAPEE', sub: 'THE RIVER GOES OUT PAST HERE',
+      short: 'THE QUAI', x: 80, y: 70, icon: 'ic_anchor', scene: true,
       blurb: 'CRATES NOBODY SIGNED FOR AND A CRANE THAT RUNS AT NIGHT.',
     },
     pawn: {
-      id: 'pawn', name: 'MARSH ROW PAWN', sub: 'OPEN LATE, ASKS NOTHING',
-      short: 'PAWN SHOP', x: 74, y: 34, icon: 'ic_ring', scene: true,
+      id: 'pawn', name: 'MONT-DE-PIETE', sub: 'OPEN LATE, ASKS NOTHING',
+      short: 'THE PAWN', x: 62, y: 34, icon: 'ic_ring', scene: true,
       blurb: 'EVERYTHING TAKEN OFF A BODY ENDS UP BEHIND THIS GLASS.',
     },
     diner: {
-      id: 'diner', name: 'THE FLY TRAP', sub: 'COFFEE, DONUTS, NO QUESTIONS',
-      short: 'THE DINER', x: 60, y: 18, icon: 'ic_cup', scene: true,
+      id: 'diner', name: 'CAFE DU PONT', sub: 'COFFEE, PASTRY, NO QUESTIONS',
+      short: 'THE CAFE', x: 44, y: 44, icon: 'ic_cup', scene: true,
       blurb: 'THE NIGHT SHIFT EATS HERE. SO DOES EVERYBODY ELSE.',
     },
     bar: {
-      id: 'bar', name: 'THE GREEN LAMP', sub: 'THE CREW DRINKS HERE',
-      short: 'THE BAR', x: 86, y: 78, icon: 'ic_glass', scene: true,
-      blurb: 'IF HE HAS FRIENDS, THEY ARE AT THIS BAR TONIGHT.',
+      id: 'bar', name: 'LE MOULIN ROUGE', sub: 'THE CREW DRINKS UNDER THE WINDMILL',
+      short: 'THE MOULIN', x: 46, y: 12, icon: 'ic_glass', scene: true,
+      blurb: 'IF HE HAS FRIENDS, THEY ARE UNDER THAT WINDMILL TONIGHT.',
+    },
+
+    /* ---------------------------------------------------------
+       AND THE CITY ITSELF.
+
+       Five places you work and six you cross. The landmarks are
+       not decoration: they have things in them to turn over, frogs
+       in them to lean on, and they are where the crew does its
+       business, because nobody watches you in a crowd.
+       --------------------------------------------------------- */
+    tower: {
+      id: 'tower', name: 'LA TOUR', sub: 'THE CHAMP DE MARS, UNDER ALL OF IT',
+      short: 'LA TOUR', x: 20, y: 50, icon: 'ic_tower', scene: true,
+      blurb: 'EIGHT THOUSAND TONS OF IRON AND NOBODY LOOKING DOWN.',
+    },
+    arch: {
+      id: 'arch', name: "L'ARC", sub: 'TWELVE AVENUES AND A FLAME',
+      short: "L'ARC", x: 24, y: 30, icon: 'ic_arch', scene: true,
+      blurb: 'EVERY CAR IN THE CITY GOES ROUND IT AND NONE OF THEM STOP.',
+    },
+    butte: {
+      id: 'butte', name: 'LA BUTTE', sub: 'MONTMARTRE, ABOVE THE WHOLE MESS',
+      short: 'LA BUTTE', x: 56, y: 8, icon: 'ic_dome', scene: true,
+      blurb: 'PAINTERS, PICKPOCKETS AND THE WHITEST CHURCH IN FRANCE.',
+    },
+    museum: {
+      id: 'museum', name: 'LE MUSEE', sub: 'THE PALACE COURTYARD, AFTER CLOSING',
+      short: 'LE MUSEE', x: 48, y: 40, icon: 'ic_glass2', scene: true,
+      blurb: 'A GLASS PYRAMID LIT FROM UNDERNEATH AND TWO TIRED GUARDS.',
+    },
+    catacombs: {
+      id: 'catacombs', name: 'LES CATACOMBES', sub: 'SIX MILLION OF THEM, DOWN THERE',
+      short: 'THE BONES', x: 40, y: 82, icon: 'ic_skull', scene: true,
+      blurb: 'THE ONLY ROOM IN THIS CITY NOBODY HAS EVER BUGGED.',
     },
   };
 
-  const ORDER = ['laundry', 'docks', 'pawn', 'diner', 'bar'];
+  const ORDER = ['laundry', 'docks', 'pawn', 'diner', 'bar',
+    'tower', 'arch', 'butte', 'museum', 'catacombs'];
+
+  /* the five you work a case in. The landmarks are where the crew is. */
+  const WORK = ['laundry', 'docks', 'pawn', 'diner', 'bar'];
 
   /* ---------------------------------------------------------
      WHAT THERE IS TO SEARCH.
@@ -13866,6 +14482,12 @@ const CITY = (() => {
     pawn:    ['case', 'ledger', 'safe', 'shelf', 'cot', 'strongbox'],
     diner:   ['urn', 'booth', 'bin', 'hatch'],
     bar:     ['stool', 'till', 'coats'],
+    /* and the city: fewer things, but the ones worth crossing town for */
+    tower:      ['gravel', 'stand', 'brazier', 'kiosk'],
+    arch:       ['flame', 'wreath', 'cab', 'bench2', 'map'],
+    butte:      ['easel', 'steps', 'crate2', 'table'],
+    museum:     ['fountain', 'glass', 'crate3', 'door'],
+    catacombs:  ['bones', 'niche', 'plaque', 'pool'],
   };
 
   /* ---------------------------------------------------------
@@ -13875,12 +14497,14 @@ const CITY = (() => {
      when it runs out the shift is over and the captain wants you
      off the street — you keep everything you found.
      --------------------------------------------------------- */
-  const START = 20 * 60 + 40;          // 20:40
+  const START = 20 * 60;               // 20:00
   const END = 6 * 60;                  // 06:00, next morning
 
-  /* A NIGHT IS 560 MINUTES. Turning over every prop in the city would take
-     about 600, so the night is deliberately too short to search everything:
-     where you look is the game. */
+  /* A NIGHT IS 600 MINUTES. Paris has eleven stops in it and about forty-five
+     things to turn over, which is well over a thousand minutes of searching:
+     the night is deliberately far too short to do it all. The eyeglass is
+     what makes it playable — three minutes to find out whether a thing is
+     worth the eighteen — and where you look is still the whole game. */
   const COST = {
     travel: 35, search: 18, ask: 12, talk: 6, job: 45, lineup: 20,
     /* THE GLASS is the cheap move: three minutes to find out whether a
@@ -14031,7 +14655,7 @@ const CITY = (() => {
   function unsearchedAt(id) { return propsAt(id).filter(pr => !searched(id, pr)); }
 
   return {
-    PLACES, ORDER, PROPS, WEATHER, COST, START, END,
+    PLACES, ORDER, WORK, PROPS, WEATHER, COST, START, END,
     propsAt, unsearchedAt,
     reset, spend, hhmm, watch, minutesLeft, nightOver,
     rollWeather, sky, here, at, distance,
@@ -14051,6 +14675,8 @@ const CITY = (() => {
           id, place: p,
           visited: !!(G.visited && G.visited[id]),
           left: leftAt(id),
+          /* is this stop part of tonight's case at all */
+          inCase: (typeof CASE === 'undefined' ? true : CASE.stops().indexOf(id) >= 0),
           hint: (G.tips && G.tips[id]) || null,
         };
       });
@@ -14061,6 +14687,1182 @@ const CITY = (() => {
       G.visited[id] = 1;
       G.place = id;
     },
+  };
+})();
+</script>
+<script>
+/* ==== js/paris.js ==== */
+/* ============================================================
+   SHELL & DEBT — paris.js
+   THE CITY IT IS ACTUALLY SET IN.
+
+   The five working stops — the laundry, the quay, the pawn, the
+   café, the cabaret — are the case. These are the city the case
+   happens in: the Tower over the Champ de Mars, the Arch at the
+   top of the avenue, the white domes on the Butte, the glass
+   pyramid in the palace courtyard, the tunnels of bones under
+   Denfert, and the tiled platform below the Étoile.
+
+   Every one of them is a WIDE room with a walkable depth band, a
+   crowd in the far half of it, and a landmark big enough that the
+   frame cannot hold all of it. You come here to work — there are
+   things to search and frogs to lean on — but mostly you come
+   here because it is the most beautiful part of a very ugly
+   business.
+   ============================================================ */
+
+const PARIS = (() => {
+
+  const px = (c, x, y, w, h, col) => ART.px(c, x, y, w, h, col);
+  const P = () => PIX.PAL;
+
+  function seedFor(id) {
+    return U.hashSeed((G.seedStr || 'X') + ':' + (G.chapter || 1) + ':' + id);
+  }
+
+  /* ============================================================
+     THE FURNITURE OF PARIS.
+
+     None of this is a landmark and all of it is why a street in
+     this city does not look like a street in any other one.
+     ============================================================ */
+
+  /* HAUSSMANN. Cream stone, iron balconies, shutters, a zinc mansard
+     roof with dormers in it, and one window in five with a light on. */
+  function haussmann(c, x, y, w, h, seed) {
+    const rng = U.mulberry32(seed * 31 + 7);
+    const stone = '#6d6759', stoneLit = '#837c6b', stoneDk = '#4e4941';
+    const roof = '#3b4048', roofLit = '#4d535d';
+    px(c, x, y, w, h, stone);
+    px(c, x, y, w, 2, stoneLit);
+    px(c, x + w - 2, y, 2, h, stoneDk);
+    /* the mansard, on top */
+    const rh = Math.max(6, Math.round(h * 0.2));
+    for (let i = 0; i < rh; i++) {
+      px(c, x + Math.round(i * 0.55), y - rh + i, w - Math.round(i * 1.1), 1,
+        i < 2 ? roofLit : roof);
+    }
+    /* string courses: this city is made of horizontal lines */
+    for (let ly = y + 12; ly < y + h - 6; ly += 16) {
+      px(c, x, ly, w, 1, stoneLit);
+      px(c, x, ly + 1, w, 1, stoneDk);
+    }
+    /* windows, tall and thin, with balconies on the good floors */
+    for (let ly = y + 4; ly < y + h - 12; ly += 16) {
+      for (let lx = x + 4; lx < x + w - 8; lx += 13) {
+        const lit = rng() < 0.22;
+        px(c, lx, ly, 8, 11, '#181a20');
+        px(c, lx + 1, ly + 1, 6, 9, lit ? '#e8c46a' : '#22262e');
+        if (lit) {
+          px(c, lx + 1, ly + 1, 6, 3, '#f4dc9a');
+          if (rng() < 0.4) px(c, lx + 2, ly + 5, 3, 5, '#3a2f28');   // somebody at it
+        }
+        /* the shutters, folded back */
+        px(c, lx - 1, ly, 1, 11, '#4a5a48');
+        px(c, lx + 8, ly, 1, 11, '#4a5a48');
+        /* iron balcony */
+        if (((ly - y) / 16) % 2 === 1) {
+          px(c, lx - 2, ly + 10, 12, 1, '#2a2d33');
+          for (let bx = lx - 2; bx < lx + 10; bx += 2) px(c, bx, ly + 7, 1, 3, '#2a2d33');
+        }
+      }
+    }
+    /* the shopfront at the bottom, dark and shuttered */
+    px(c, x, y + h - 12, w, 12, '#262a2f');
+    px(c, x, y + h - 12, w, 2, '#3a4046');
+    for (let sx = x + 2; sx < x + w - 3; sx += 5) px(c, sx, y + h - 9, 3, 8, '#1c2024');
+  }
+
+  /* the double-globe cast iron lamp post this whole city is lit by */
+  function lamp(c, x, y, h, on) {
+    px(c, x - 3, y, 7, 2, '#20242a');
+    px(c, x - 2, y - 2, 5, 2, '#2a2f36');
+    px(c, x - 1, y - h, 3, h - 2, '#2a2f36');
+    px(c, x - 1, y - h, 1, h - 2, '#3d444d');
+    /* the arm and the two globes */
+    px(c, x - 7, y - h - 2, 15, 2, '#2a2f36');
+    [-6, 6].forEach(d => {
+      PIX.disc(c, x + d, y - h - 6, 4, '#20242a');
+      PIX.disc(c, x + d, y - h - 6, 3, on ? '#ffe7a8' : '#3a3f46');
+      if (on) PIX.disc(c, x + d, y - h - 6, 5, 'rgba(255,231,168,.10)');
+    });
+    px(c, x - 1, y - h - 8, 3, 3, '#2a2f36');
+  }
+
+  /* a pollarded plane tree: the trunk is the point, the crown is a blob */
+  function planeTree(c, x, y, h, seed) {
+    const rng = U.mulberry32(seed * 17 + 3);
+    px(c, x - 3, y - h, 7, h, '#4a4438');
+    px(c, x - 3, y - h, 2, h, '#5d5647');
+    px(c, x - 1, y - h + 4, 1, h - 6, 'rgba(0,0,0,.3)');
+    /* the mottle that gives a plane tree away */
+    for (let i = 0; i < 7; i++) {
+      px(c, x - 2 + Math.floor(rng() * 5), y - h + 4 + Math.floor(rng() * (h - 8)), 2, 3, '#7d7565');
+    }
+    /* the crown, cut back the way this city cuts them back */
+    const cy = y - h - 8;
+    PIX.disc(c, x, cy, 15, '#1d2a22');
+    PIX.disc(c, x - 7, cy + 4, 11, '#1d2a22');
+    PIX.disc(c, x + 8, cy + 3, 12, '#1d2a22');
+    PIX.disc(c, x - 4, cy - 5, 9, '#26362c');
+    PIX.disc(c, x + 6, cy - 3, 8, '#26362c');
+    for (let i = 0; i < 12; i++) {
+      px(c, x - 14 + Math.floor(rng() * 28), cy - 8 + Math.floor(rng() * 18), 2, 2, '#31463a');
+    }
+  }
+
+  /* THE WALLACE FOUNTAIN. Four bronze women holding up a dome, and
+     water nobody drinks any more. */
+  function wallace(c, x, y) {
+    const bronze = '#2f5a4a', bronzeLit = '#43705d', dk = '#1b3a2f';
+    px(c, x - 8, y - 4, 17, 4, dk);
+    px(c, x - 7, y - 6, 15, 3, bronze);
+    px(c, x - 4, y - 34, 9, 29, bronze);
+    px(c, x - 4, y - 34, 2, 29, bronzeLit);
+    /* the four caryatids, which at this size are four shoulders */
+    [-5, 5].forEach(d => {
+      px(c, x + d - 2, y - 30, 4, 18, bronze);
+      px(c, x + d - 2, y - 30, 4, 3, bronzeLit);
+      px(c, x + d - 1, y - 33, 2, 3, '#2a4f42');
+    });
+    /* the dome and its little crown */
+    px(c, x - 9, y - 38, 19, 4, dk);
+    px(c, x - 8, y - 40, 17, 3, bronze);
+    px(c, x - 6, y - 42, 13, 2, bronzeLit);
+    px(c, x - 2, y - 45, 5, 3, bronze);
+    px(c, x - 1, y - 47, 3, 2, '#e0a63c');
+    /* the water */
+    px(c, x, y - 12, 1, 8, 'rgba(160,220,235,.35)');
+    px(c, x - 3, y - 5, 7, 2, 'rgba(160,220,235,.18)');
+  }
+
+  /* a Morris column: a fat cylinder of theatre posters with a cap */
+  function morris(c, x, y, h) {
+    px(c, x - 11, y - h, 23, h, '#1f3a30');
+    px(c, x - 11, y - h, 3, h, '#2b4c40');
+    px(c, x + 7, y - h, 5, h, 'rgba(0,0,0,.3)');
+    /* the posters */
+    const cols = ['#7d2028', '#9c7430', '#2f4a70', '#63202a'];
+    for (let i = 0; i < 3; i++) {
+      const py0 = y - h + 8 + i * 22;
+      px(c, x - 9, py0, 19, 19, cols[i % cols.length]);
+      px(c, x - 8, py0 + 1, 17, 4, 'rgba(255,255,255,.5)');
+      px(c, x - 8, py0 + 8, 17, 2, 'rgba(0,0,0,.3)');
+      px(c, x - 8, py0 + 12, 12, 2, 'rgba(0,0,0,.25)');
+    }
+    /* the cap, with the little dome */
+    px(c, x - 13, y - h - 4, 27, 5, '#18302a');
+    px(c, x - 9, y - h - 8, 19, 5, '#1f3a30');
+    PIX.disc(c, x, y - h - 11, 5, '#1f3a30');
+    px(c, x - 1, y - h - 16, 3, 5, '#2b4c40');
+  }
+
+  /* a green slat bench, the kind bolted to every gravel path in the city */
+  function bench(c, x, y, w) {
+    const g = '#2f4a34', gl = '#3f603f', dk = '#1c2e20';
+    px(c, x, y - 10, w, 3, g);
+    px(c, x, y - 10, w, 1, gl);
+    px(c, x, y - 14, w, 2, g);
+    px(c, x, y - 18, w, 2, dk);
+    px(c, x + 1, y - 7, 3, 7, dk);
+    px(c, x + w - 4, y - 7, 3, 7, dk);
+    px(c, x, y - 20, 2, 12, dk);
+    px(c, x + w - 2, y - 20, 2, 12, dk);
+  }
+
+  /* the pavement: setts, worn smooth, wet more often than not */
+  function cobbles(c, x, y, w, h, seed) {
+    const rng = U.mulberry32(seed * 13 + 5);
+    px(c, x, y, w, h, '#2b2e33');
+    for (let ry = 0; ry < h; ry += 4) {
+      const off = (ry / 4) % 2 ? 3 : 0;
+      for (let rx = -off; rx < w; rx += 6) {
+        const t = rng();
+        px(c, x + rx, y + ry, 5, 3, t < 0.3 ? '#33373d' : t < 0.65 ? '#2e3238' : '#26292e');
+        px(c, x + rx, y + ry, 5, 1, 'rgba(255,255,255,.04)');
+      }
+    }
+    /* the gutter, and what is in it */
+    px(c, x, y + h - 3, w, 1, 'rgba(0,0,0,.35)');
+    px(c, x, y + h - 2, w, 2, 'rgba(90,150,160,.10)');
+  }
+
+  /* a cafe table with two chairs and somebody's cold coffee on it */
+  function cafeTable(c, x, y) {
+    px(c, x - 9, y - 16, 19, 3, '#8d8672');
+    px(c, x - 9, y - 16, 19, 1, '#b0a894');
+    px(c, x - 1, y - 13, 3, 13, '#2a2f36');
+    px(c, x - 5, y - 1, 11, 2, '#2a2f36');
+    /* the little round chairs */
+    [-15, 14].forEach(d => {
+      px(c, x + d - 4, y - 12, 9, 2, '#3a2f28');
+      px(c, x + d - 4, y - 22, 9, 10, '#4a3f36');
+      px(c, x + d - 4, y - 22, 9, 2, '#5f5245');
+      px(c, x + d - 3, y - 10, 2, 10, '#241d17');
+      px(c, x + d + 2, y - 10, 2, 10, '#241d17');
+    });
+    px(c, x + 2, y - 20, 4, 4, '#ded2b4');
+    px(c, x + 2, y - 20, 4, 1, '#f0e6c8');
+  }
+
+  /* ============================================================
+     THE LANDMARKS.
+
+     Drawn big enough that the frame cannot hold them, because
+     that is the only honest way to draw any of these.
+     ============================================================ */
+
+  /* LA TOUR EIFFEL. Four legs, two platforms, a lattice you can see the
+     sky through, and the gold light they wash it with after dark. */
+  function eiffel(c, cx, baseY, topY) {
+    const iron = '#5a4a38', ironLit = '#7d6848', ironDk = '#382c20';
+    const H2 = baseY - topY;
+    /* THE PROFILE. The real curve: an exponential taper, which is why the
+       thing does not read as a pyramid. Get this wrong and you have drawn
+       a Mayan temple with a lift in it. */
+    const halfAt = (t) => Math.round(74 * Math.pow(1 - t, 2.1) + 4);
+
+    /* the four legs, and the open air between them */
+    for (let i = 0; i <= H2; i++) {
+      const t = i / H2;
+      const hw = halfAt(t);
+      const y = baseY - i;
+      const legW = Math.max(2, Math.round(11 * (1 - t) + 2));
+      px(c, cx - hw, y, legW, 1, iron);
+      px(c, cx + hw - legW, y, legW, 1, iron);
+      px(c, cx - hw, y, 1, 1, ironLit);
+      px(c, cx + hw - 1, y, 1, 1, 'rgba(0,0,0,.3)');
+      /* the inner pair of legs, behind the outer ones */
+      const ihw = Math.round(hw * 0.42);
+      px(c, cx - ihw, y, Math.max(1, legW - 1), 1, ironDk);
+      px(c, cx + ihw - legW + 1, y, Math.max(1, legW - 1), 1, ironDk);
+    }
+
+    /* THE LATTICE. Diagonal bracing in Xs between the legs — the single
+       thing that makes iron read as iron rather than as a wall. */
+    for (let i = 0; i < H2; i += 10) {
+      const t0 = i / H2, t1 = Math.min(1, (i + 10) / H2);
+      const h0 = halfAt(t0), h1 = halfAt(t1);
+      for (let k = 0; k <= 10; k++) {
+        const f = k / 10;
+        const y = baseY - i - k;
+        const xa = Math.round(h0 + (h1 - h0) * f);
+        const xb = Math.round(h0 + (h1 - h0) * (1 - f));
+        /* left bay */
+        px(c, cx - xa, y, 1, 1, 'rgba(125,104,72,.45)');
+        px(c, cx - Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.32)');
+        /* right bay */
+        px(c, cx + xa - 1, y, 1, 1, 'rgba(125,104,72,.45)');
+        px(c, cx + Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.32)');
+      }
+      /* the horizontal girder at each stage */
+      const hh = halfAt(t0);
+      px(c, cx - hh, baseY - i, hh * 2, 1, 'rgba(125,104,72,.35)');
+    }
+
+    /* THE FIRST ARCH. It springs from the legs and hangs, and it is the
+       shape everybody actually remembers the tower by. */
+    const at = 0.30;
+    const ay = baseY - Math.round(H2 * at);
+    const ah = halfAt(at);
+    for (let k = -ah; k <= ah; k++) {
+      const f = Math.abs(k) / ah;
+      const y = ay + Math.round((1 - Math.cos(f * Math.PI / 2)) * 40);
+      px(c, cx + k, y, 1, 4, iron);
+      px(c, cx + k, y, 1, 1, ironLit);
+      /* the ironwork filling the spandrel over it */
+      if (Math.abs(k) % 7 === 0) px(c, cx + k, y, 1, ay - y + 4, 'rgba(125,104,72,.20)');
+    }
+
+    /* the two platforms, only just wider than the tower is at that height */
+    [[at, 8], [0.60, 5]].forEach(([t, over]) => {
+      const w = halfAt(t) + over;
+      const y = baseY - Math.round(H2 * t);
+      px(c, cx - w, y - 6, w * 2, 6, ironDk);
+      px(c, cx - w, y - 6, w * 2, 2, ironLit);
+      px(c, cx - w, y, w * 2, 1, 'rgba(0,0,0,.45)');
+      for (let k = -w + 3; k < w - 3; k += 6) px(c, cx + k, y - 5, 3, 3, '#ffe7a8');
+      /* the balustrade round it */
+      for (let k = -w; k < w; k += 3) px(c, cx + k, y - 9, 1, 4, 'rgba(90,74,56,.8)');
+    });
+
+    /* the top, the lantern, the beacon — if any of it is in frame */
+    if (topY > -40) {
+      px(c, cx - 6, topY + 6, 13, 8, ironDk);
+      px(c, cx - 4, topY + 2, 9, 5, iron);
+      px(c, cx - 2, topY - 6, 5, 9, iron);
+      px(c, cx - 1, topY - 12, 3, 7, '#8d9298');
+      PIX.disc(c, cx, topY - 14, 3, '#fff3c4');
+      PIX.disc(c, cx, topY - 14, 6, 'rgba(255,243,196,.16)');
+    }
+
+    /* the wash of gold light they put on it after dark */
+    for (let i = 0; i < H2; i += 3) {
+      const t = i / H2, hw = halfAt(t);
+      px(c, cx - hw, baseY - i, hw * 2, 1,
+        'rgba(224,166,60,' + (0.06 * (1 - t * 0.4)).toFixed(3) + ')');
+    }
+    /* and what it throws on the gravel underneath */
+    PIX.disc(c, cx, baseY + 6, 120, 'rgba(224,166,60,.035)');
+  }
+
+  /* L'ARC DE TRIOMPHE. One vault, two piers, the reliefs, the attic. */
+  function arc(c, cx, baseY, h) {
+    const stone = '#7a7263', lit = '#948b78', dk = '#565043';
+    const w = 106, vw = 38;
+    px(c, cx - w / 2, baseY - h, w, h, stone);
+    px(c, cx - w / 2, baseY - h, w, 3, lit);
+    px(c, cx + w / 2 - 4, baseY - h, 4, h, dk);
+    /* the vault, cut out of it */
+    const vh = Math.round(h * 0.62);
+    px(c, cx - vw / 2, baseY - vh, vw, vh, '#12141a');
+    for (let k = -vw / 2; k <= vw / 2; k++) {
+      const y = baseY - vh - Math.round(Math.cos((k / (vw / 2)) * 1.5) * 16);
+      px(c, cx + k, y, 1, baseY - vh - y, '#12141a');
+    }
+    px(c, cx - vw / 2 - 2, baseY - vh - 18, vw + 4, 2, dk);
+    /* the coffers inside the vault */
+    for (let i = 0; i < 5; i++) {
+      px(c, cx - vw / 2 + 4 + i * 8, baseY - vh - 6, 6, 4, 'rgba(255,255,255,.05)');
+    }
+    /* the four reliefs, which at this size are four crowds of stone */
+    [[-40, 0], [40, 0]].forEach(([d]) => {
+      px(c, cx + d - 13, baseY - h + 30, 26, 34, dk);
+      px(c, cx + d - 12, baseY - h + 31, 24, 32, '#6b6456');
+      for (let i = 0; i < 9; i++) {
+        px(c, cx + d - 10 + (i % 5) * 5, baseY - h + 34 + Math.floor(i / 5) * 13, 4, 11, '#8a8271');
+        px(c, cx + d - 10 + (i % 5) * 5, baseY - h + 34 + Math.floor(i / 5) * 13, 4, 3, '#a49b86');
+      }
+    });
+    /* the attic storey and its row of shields */
+    px(c, cx - w / 2, baseY - h + 12, w, 3, dk);
+    for (let k = -w / 2 + 6; k < w / 2 - 6; k += 11) {
+      px(c, cx + k, baseY - h + 5, 7, 6, '#8a8271');
+      px(c, cx + k + 1, baseY - h + 6, 5, 4, '#6b6456');
+    }
+    /* the flame under the vault, and the flag over it */
+    px(c, cx - 8, baseY - 3, 17, 3, '#3a3f46');
+    px(c, cx - 2, baseY - 8, 5, 5, '#ff9d3c');
+    px(c, cx - 1, baseY - 12, 3, 5, '#ffd75e');
+    PIX.disc(c, cx, baseY - 9, 9, 'rgba(255,157,60,.13)');
+    px(c, cx - 1, baseY - vh - 34, 2, 22, '#4a4438');
+    px(c, cx + 1, baseY - vh - 34, 7, 5, '#2f4d9c');
+    px(c, cx + 8, baseY - vh - 34, 6, 5, '#f4efe0');
+    px(c, cx + 14, baseY - vh - 34, 6, 5, '#b8232f');
+  }
+
+  /* SACRÉ-CŒUR. Three white domes at the top of a lot of steps. */
+  function basilica(c, cx, baseY) {
+    const st = '#d8d2c2', lit = '#efe9d8', dk = '#a49d8c', sh = '#8c8676';
+    /* the body of it */
+    px(c, cx - 46, baseY - 34, 92, 34, st);
+    px(c, cx - 46, baseY - 34, 92, 2, lit);
+    px(c, cx + 40, baseY - 34, 6, 34, sh);
+    /* the arcade across the front */
+    for (let i = 0; i < 5; i++) {
+      const ax = cx - 38 + i * 19;
+      px(c, ax, baseY - 16, 13, 16, '#3a3a38');
+      for (let k = 0; k < 13; k++) {
+        const y = baseY - 16 - Math.round(Math.sqrt(Math.max(0, 42 - (k - 6) * (k - 6))));
+        px(c, ax + k, y, 1, baseY - 16 - y, '#3a3a38');
+      }
+      px(c, ax - 2, baseY - 16, 2, 16, dk);
+    }
+    /* THE DOMES: one big, two small, all of them too white for this city */
+    /* A DOME IS WIDEST AT ITS BASE. Drawn off a sine it pinches at both
+       ends and you have painted a paper lantern; drawn off this it is the
+       slightly pointed cupola that is actually up there. */
+    const dome = (dx, r, up) => {
+      const dcx = cx + dx, dby = baseY - 34 - up;
+      const dh = Math.round(r * 1.45);
+      px(c, dcx - r - 3, dby, r * 2 + 7, 4, dk);
+      px(c, dcx - r - 2, dby - 3, r * 2 + 5, 3, sh);
+      for (let i = 0; i <= dh; i++) {
+        const f = i / dh;
+        const hw = Math.max(1, Math.round(r * Math.pow(1 - f * f, 0.62)));
+        px(c, dcx - hw, dby - 3 - i, hw * 2, 1, st);
+        /* the light comes from the left, the way it does on the real one */
+        px(c, dcx - hw, dby - 3 - i, Math.max(1, Math.round(hw * 0.5)), 1, lit);
+        px(c, dcx + hw - 2, dby - 3 - i, 2, 1, sh);
+      }
+      /* the ribs down it */
+      for (let k = -r + 2; k <= r - 2; k += Math.max(3, Math.round(r / 3))) {
+        const f = Math.abs(k) / r;
+        const top = Math.round(dh * Math.sqrt(Math.max(0, 1 - Math.pow(f, 1 / 0.31))));
+        px(c, dcx + k, dby - 3 - top, 1, top, 'rgba(140,134,118,.5)');
+      }
+      /* the lantern and the cross on top */
+      px(c, dcx - 4, dby - 6 - dh, 9, 6, st);
+      px(c, dcx - 3, dby - 5 - dh, 7, 4, dk);
+      px(c, dcx - 1, dby - 13 - dh, 3, 8, st);
+      px(c, dcx - 3, dby - 11 - dh, 7, 2, st);
+      px(c, dcx - 2, dby - 16 - dh, 5, 3, '#e0a63c');
+    };
+    dome(0, 22, 6);
+    dome(-38, 11, 2);
+    dome(38, 11, 2);
+    /* the bell tower off to one side */
+    px(c, cx + 58, baseY - 62, 20, 62, st);
+    px(c, cx + 58, baseY - 62, 20, 2, lit);
+    px(c, cx + 72, baseY - 62, 6, 62, sh);
+    px(c, cx + 62, baseY - 54, 5, 12, '#3a3a38');
+    px(c, cx + 69, baseY - 54, 5, 12, '#3a3a38');
+    px(c, cx + 56, baseY - 68, 24, 7, dk);
+    px(c, cx + 62, baseY - 78, 12, 11, st);
+    px(c, cx + 66, baseY - 84, 4, 7, dk);
+    /* and the floodlight on all of it */
+    px(c, cx - 50, baseY - 90, 100, 90, 'rgba(255,247,220,.045)');
+  }
+
+  /* THE PYRAMID in the palace courtyard, lit from the inside. */
+  function pyramid(c, cx, baseY, w, h) {
+    const glass = 'rgba(190,225,245,.30)', frame = '#4a525d', warm = '#ffe7a8';
+    for (let i = 0; i < h; i++) {
+      const t = i / h, hw = Math.round((w / 2) * (1 - t));
+      px(c, cx - hw, baseY - i, hw * 2, 1, glass);
+    }
+    /* the lattice: the whole point of the thing */
+    for (let i = 0; i < h; i += 5) {
+      const t = i / h, hw = Math.round((w / 2) * (1 - t));
+      px(c, cx - hw, baseY - i, hw * 2, 1, frame);
+      px(c, cx - hw, baseY - i, hw * 2, 1, 'rgba(255,231,168,.16)');
+    }
+    for (let k = -w / 2; k <= w / 2; k += 8) {
+      const top = Math.round(h * (1 - Math.abs(k) / (w / 2)));
+      for (let i = 0; i < top; i += 2) px(c, cx + k, baseY - i, 1, 1, frame);
+    }
+    /* the light coming up out of the hole in the ground */
+    px(c, cx - w / 2, baseY - 3, w, 4, warm);
+    PIX.disc(c, cx, baseY - 6, Math.round(w * 0.6), 'rgba(255,231,168,.07)');
+    px(c, cx - 2, baseY - h - 3, 5, 4, frame);
+  }
+
+  /* A WALL OF BONES. Femurs stacked like cordwood, with skulls in
+     courses through it, which is exactly how they really did it. */
+  function boneWall(c, x, y, w, h, seed) {
+    const rng = U.mulberry32(seed * 19 + 11);
+    const b1 = '#c9c1a8', b2 = '#aaa189', b3 = '#8a8372', dk = '#4f4a3e';
+    px(c, x, y, w, h, '#221f1a');
+    /* THE COURSES. Femur ends most of the way up, and a row of skulls every
+       so often, which is exactly how they stacked them. Nothing here is on
+       a grid: a grid reads as tiling and tiling reads as wallpaper. */
+    let ry = 0;
+    let row = 0;
+    while (ry < h) {
+      const skullRow = (row % 3) === 1;
+      const rh = skullRow ? 7 : 5;
+      let rx = -Math.floor(rng() * 4);
+      while (rx < w) {
+        if (skullRow) {
+          const sw = 8, sh = 6;
+          if (rx + 2 < w) {
+            /* the cranium */
+            PIX.disc(c, x + rx + 4, y + ry + 3, 4, b2);
+            PIX.disc(c, x + rx + 4, y + ry + 2, 3, b1);
+            /* two sockets and the nose */
+            px(c, x + rx + 2, y + ry + 2, 2, 2, dk);
+            px(c, x + rx + 5, y + ry + 2, 2, 2, dk);
+            px(c, x + rx + 4, y + ry + 4, 1, 2, dk);
+            /* the jaw */
+            px(c, x + rx + 3, y + ry + 5, 4, 2, b3);
+            px(c, x + rx + 3, y + ry + 6, 4, 1, dk);
+          }
+          rx += sw + Math.floor(rng() * 2);
+        } else {
+          const t = rng();
+          const bw2 = 4 + (t < 0.25 ? 1 : 0);
+          /* the sawn end of a femur: round, not square */
+          PIX.disc(c, x + rx + 2, y + ry + 2, 2, t < 0.4 ? b1 : t < 0.75 ? b2 : b3);
+          px(c, x + rx, y + ry + 1, bw2, 1, 'rgba(240,234,214,.35)');
+          px(c, x + rx + bw2 - 1, y + ry + 1, 1, 3, dk);
+          rx += bw2 + 1 + Math.floor(rng() * 2);
+        }
+      }
+      /* the shadow line under each course */
+      px(c, x, y + ry + rh - 1, w, 1, 'rgba(0,0,0,.34)');
+      ry += rh;
+      row++;
+    }
+    /* two centuries of damp coming through it, and the dark at the edges */
+    ART.dither(c, x, y, w, h, 'rgba(40,58,52,.20)', 0.14, seed % 29);
+    for (let i = 0; i < 10; i++) {
+      px(c, x, y + i, w, 1, 'rgba(0,0,0,' + (0.30 - i * 0.03).toFixed(3) + ')');
+      px(c, x, y + h - 1 - i, w, 1, 'rgba(0,0,0,' + (0.24 - i * 0.024).toFixed(3) + ')');
+    }
+  }
+
+  /* the art nouveau mouth of a metro station, from the street */
+  function metroSign(c, x, y) {
+    const iron = '#1f3a30', lit = '#2b4c40', amber = '#e0a63c';
+    /* the two whiplash standards */
+    [-24, 24].forEach(d => {
+      px(c, x + d - 2, y - 40, 4, 40, iron);
+      px(c, x + d - 2, y - 40, 1, 40, lit);
+      px(c, x + d - 5, y - 46, 11, 7, iron);
+      PIX.disc(c, x + d, y - 50, 5, iron);
+      PIX.disc(c, x + d, y - 50, 3, amber);
+      PIX.disc(c, x + d, y - 50, 6, 'rgba(224,166,60,.12)');
+    });
+    /* the sign between them */
+    px(c, x - 26, y - 40, 53, 14, iron);
+    px(c, x - 24, y - 38, 49, 10, '#12241d');
+    const t = PIXFONT.render('METRO', { scale: 1, color: amber, shadow: null });
+    c.drawImage(t, x - Math.round(t.width / 2), y - 36);
+    /* the balustrade and the steps going down into the dark */
+    px(c, x - 30, y - 12, 61, 3, iron);
+    for (let k = -28; k < 30; k += 5) px(c, x + k, y - 10, 2, 10, iron);
+    px(c, x - 22, y - 8, 45, 8, '#0b0e10');
+  }
+
+  /* ============================================================
+     1. LA TOUR — the Champ de Mars, under the whole thing
+     ============================================================ */
+  function tower() {
+    const W = 780, FY = 116, seed = seedFor('tower');
+    const BAND = 26;
+
+    const paint = (c) => {
+      const p = P();
+      /* the night over the park, and the city glow at the bottom of it */
+      px(c, 0, 0, W, FY, '#0e1220');
+      for (let i = 0; i < 46; i++) {
+        px(c, 0, FY - BAND - 46 + i, W, 1,
+          'rgba(60,74,110,' + (0.02 + i * 0.004).toFixed(3) + ')');
+      }
+      /* the far bank: rooftops, small, and the river between */
+      for (let i = 0; i < 22; i++) {
+        const bx = (i * 41 + seed % 23) % (W - 40);
+        haussmann(c, bx, FY - BAND - 30 - (i % 3) * 6, 38, 26 + (i % 3) * 6, seed + i);
+      }
+      /* THE TOWER, over everything, cut off by the top of the frame */
+      eiffel(c, 372, FY - BAND + 4, -58);
+
+      /* the gravel of the Champ de Mars, run up into the depth */
+      px(c, 0, FY - BAND, W, BAND + 20, '#3a3630');
+      for (let ry = 0; ry < BAND + 18; ry += 3) {
+        const t = 1 - ry / (BAND + 18);
+        px(c, 0, FY - BAND + ry, W, 3, ry % 6 ? '#3e3a33' : '#37332d');
+        px(c, 0, FY - BAND + ry, W, 1, 'rgba(255,255,255,' + (0.02 * t).toFixed(3) + ')');
+      }
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#332f29', '#443f37', seed % 31);
+      /* the path edging, and the puddles the rain leaves in the gravel */
+      px(c, 0, FY - BAND, W, 1, '#4d4740');
+      [[90, 26], [300, 34], [520, 22], [700, 30]].forEach(([wx, ww], i) => {
+        ART.dither(c, wx, FY - 6, ww, 7, 'rgba(130,180,210,.20)', 0.4, 11 + i * 5);
+      });
+
+      /* the trees down both sides of it */
+      [40, 128, 640, 730].forEach((tx, i) => planeTree(c, tx, FY - BAND + 6, 40, seed + i));
+      /* the lamps along the path */
+      [70, 200, 330, 470, 600, 720].forEach(lx => lamp(c, lx, FY - BAND + 8, 34, true));
+      /* the benches, the fountain, the kiosk */
+      bench(c, 168, FY - 2, 46);
+      bench(c, 556, FY - 2, 46);
+      wallace(c, 268, FY - 1);
+      morris(c, 470, FY - 2, 54);
+      /* the chestnut brazier, which is the only warm thing out here */
+      ART.box(c, 620, FY - 22, 30, 22, { fill: '#3a2f28', top: '#4a3d33', bot: '#1d1713', ink: p.K });
+      px(c, 624, FY - 26, 22, 5, '#2a231c');
+      px(c, 628, FY - 30, 14, 5, '#c96a1e');
+      px(c, 631, FY - 33, 8, 4, '#ff9d3c');
+      PIX.disc(c, 635, FY - 30, 14, 'rgba(255,157,60,.10)');
+      /* the souvenir stand: forty little towers on a trestle */
+      ART.box(c, 92, FY - 20, 54, 20, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
+      for (let i = 0; i < 9; i++) {
+        const sx = 96 + i * 6;
+        px(c, sx, FY - 26, 1, 6, '#e0a63c');
+        px(c, sx - 1, FY - 22, 3, 2, '#e0a63c');
+      }
+      px(c, 92, FY - 32, 54, 7, '#b8232f');
+      const st = PIXFONT.render('SOUVENIRS', { scale: 1, color: '#f4efe0', shadow: null });
+      c.drawImage(st, 96, FY - 30);
+    };
+
+    const spots = [
+      { id: 'gravel', x: 168, z: 0.1, w: 46, top: FY - 22, label: 'UNDER THE BENCH',
+        hint: 'WHAT THE GRAVEL KEPT' },
+      { id: 'stand', x: 119, z: 0.16, w: 54, top: FY - 34, label: 'THE SOUVENIR STAND',
+        hint: 'FORTY LITTLE TOWERS AND A CASH BOX' },
+      { id: 'brazier', x: 635, z: 0.16, w: 30, top: FY - 34, label: 'THE CHESTNUT BRAZIER',
+        hint: 'SOMEBODY BURNED SOMETHING IN HERE' },
+      { id: 'kiosk', x: 470, z: 0.4, w: 26, top: FY - 58, label: 'THE MORRIS COLUMN',
+        hint: 'BEHIND THE POSTERS' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 300, z: 0.14, y: undefined, key: 'watch',
+        def: typeof WATCH_DEF !== 'undefined' ? WATCH_DEF : null, face: -1,
+        tag: 'THE NIGHT GENDARME', tagCol: PIX.PAL.L, witness: true },
+      { id: 'busk', x: 556, z: 0.12, key: 'busk',
+        def: typeof DILL_DEF !== 'undefined' ? DILL_DEF : null, face: -1,
+        tag: 'AN ACCORDION', tagCol: PIX.PAL.P },
+    ];
+
+    const eggs = [
+      egg({ id: 'duck2', x: 268, y: FY - 8, art: 'eg_duck',
+        label: 'SOMETHING IN THE FOUNTAIN',
+        look: 'A RUBBER DUCK, GOING NOWHERE, IN WATER NOBODY DRINKS ANY MORE.' }),
+    ];
+
+    return {
+      id: 'tower', w: W, floorY: FY, paint, spots, actors, eggs, outdoor: true,
+      depthBand: BAND, crowd: { n: 18, z0: 0.45, z1: 1 },
+      pets: [{ kind: 'dog', x: 400, name: "A TOURIST'S DOG", fouls: true },
+             { kind: 'cat', x: 700, name: 'A PARK CAT' }],
+      enterX: 30, enterFace: 1,
+      lights: [{ x: 372, y: 30, r: 90, a: 0.05 }, { x: 635, y: FY - 30, r: 30, a: 0.09 }],
+    };
+  }
+
+  /* ============================================================
+     2. L'ARC — the top of the avenue, twelve roads, one flame
+     ============================================================ */
+  function arch() {
+    const W = 720, FY = 112, seed = seedFor('arch');
+    const BAND = 22;
+
+    const paint = (c) => {
+      const p = P();
+      px(c, 0, 0, W, FY, '#101426');
+      for (let i = 0; i < 40; i++) {
+        px(c, 0, FY - BAND - 40 + i, W, 1,
+          'rgba(70,84,120,' + (0.02 + i * 0.005).toFixed(3) + ')');
+      }
+      /* the twelve avenues: blocks of Haussmann running away in both
+         directions, with the gaps between them going black */
+      for (let i = 0; i < 9; i++) {
+        const bx = i * 84 + (seed % 17);
+        if (i === 4) continue;                       // the arch stands in this gap
+        haussmann(c, bx, FY - BAND - 44, 74, 44, seed + i * 3);
+      }
+      /* THE ARCH, dead centre, too big for the frame */
+      arc(c, 360, FY - BAND + 2, 88);
+
+      /* the roundabout: setts, and the white lines nobody obeys */
+      cobbles(c, 0, FY - BAND, W, BAND + 20, seed);
+      for (let k = 0; k < W; k += 26) {
+        px(c, k, FY - BAND + 6, 14, 2, 'rgba(240,235,220,.12)');
+      }
+      /* the kerb ring round the monument */
+      px(c, 240, FY - BAND + 1, 240, 2, '#4a4e55');
+      px(c, 240, FY - BAND + 3, 240, 1, 'rgba(0,0,0,.4)');
+
+      /* the lamps and the trees round the circle */
+      [60, 180, 540, 660].forEach(lx => lamp(c, lx, FY - BAND + 6, 32, true));
+      [26, 694].forEach((tx, i) => planeTree(c, tx, FY - BAND + 8, 36, seed + i * 5));
+      /* the taxi rank */
+      /* a 1930s cab: a long bonnet, a tall cabin behind it, mudguards over
+         the wheels and a light on the roof that says it is for hire */
+      const cab = (x, y) => {
+        const body = '#20242c', bodyLit = '#333944', dark = '#0e1013';
+        px(c, x + 2, y - 2, 54, 2, 'rgba(0,0,0,.4)');
+        /* the running board and the sills */
+        px(c, x + 6, y - 6, 46, 3, dark);
+        /* the bonnet */
+        px(c, x + 2, y - 15, 22, 10, body);
+        px(c, x + 2, y - 15, 22, 2, bodyLit);
+        px(c, x + 1, y - 12, 2, 7, dark);
+        px(c, x + 3, y - 13, 1, 6, 'rgba(255,255,255,.10)');
+        /* the cabin, taller than the bonnet */
+        px(c, x + 24, y - 25, 26, 20, body);
+        px(c, x + 24, y - 25, 26, 2, bodyLit);
+        px(c, x + 26, y - 22, 9, 8, 'rgba(150,200,220,.22)');
+        px(c, x + 37, y - 22, 10, 8, 'rgba(150,200,220,.16)');
+        px(c, x + 47, y - 24, 3, 19, 'rgba(0,0,0,.3)');
+        /* the mudguards, which is what makes it old */
+        [11, 44].forEach(d => {
+          for (let k = -7; k <= 7; k++) {
+            const yy = y - 8 - Math.round(Math.sqrt(Math.max(0, 49 - k * k)));
+            px(c, x + d + k, yy, 1, 3, dark);
+          }
+        });
+        /* the wheels */
+        [11, 44].forEach(d => {
+          PIX.disc(c, x + d, y - 4, 5, p.K);
+          PIX.disc(c, x + d, y - 4, 4, '#26292f');
+          PIX.disc(c, x + d, y - 4, 2, '#4d535d');
+        });
+        /* the lamp on the wing and the sign on the roof */
+        PIX.disc(c, x + 3, y - 17, 3, '#ffe7a8');
+        px(c, x + 30, y - 29, 14, 5, '#b8232f');
+        px(c, x + 31, y - 28, 12, 3, '#e0a63c');
+        px(c, x + 52, y - 14, 3, 3, '#d13b45');
+      };
+      cab(120, FY - 2);
+      cab(556, FY - 2);
+      /* the metro mouth, which is how you get downstairs */
+      metroSign(c, 470, FY - 1);
+      /* the wreaths at the foot of the flame */
+      [[344, 0], [372, 1]].forEach(([wx, i]) => {
+        PIX.disc(c, wx, FY - 8, 9, '#1d3a26');
+        PIX.disc(c, wx, FY - 8, 7, '#2c5a38');
+        PIX.disc(c, wx, FY - 8, 4, '#101a12');
+        px(c, wx - 2, FY - 12, 5, 3, i ? '#b8232f' : '#f4efe0');
+      });
+      bench(c, 250, FY - 2, 44);
+    };
+
+    const spots = [
+      { id: 'flame', x: 360, z: 0.5, w: 30, top: FY - BAND - 14, label: 'THE FLAME',
+        hint: 'IT HAS NOT GONE OUT SINCE 1923' },
+      { id: 'wreath', x: 358, z: 0.12, w: 44, top: FY - 20, label: 'THE WREATHS',
+        hint: 'SOMEBODY LEFT MORE THAN FLOWERS' },
+      { id: 'cab', x: 146, z: 0.1, w: 52, top: FY - 30, label: 'THE TAXI RANK',
+        hint: 'ASK WHAT THE DRIVER CARRIED' },
+      { id: 'bench2', x: 272, z: 0.1, w: 44, top: FY - 24, label: 'THE BENCH',
+        hint: 'UNDER THE SLATS' },
+      { id: 'map', x: 470, z: 0.16, w: 40, top: FY - 52, label: 'THE METRO MAP',
+        hint: 'SOMETHING PINNED TO IT' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 556, z: 0.1, key: 'cabbie',
+        def: typeof DILL_DEF !== 'undefined' ? DILL_DEF : null, face: -1,
+        tag: 'A NIGHT CABBIE', tagCol: PIX.PAL.G, witness: true },
+    ];
+
+    return {
+      id: 'arch', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      depthBand: BAND, crowd: { n: 14, z0: 0.5, z1: 1 },
+      traffic: { n: 5, z0: 0.62, z1: 0.95 },
+      pets: [{ kind: 'dog', x: 260, name: 'A DOG OFF ITS LEAD', fouls: true }],
+      enterX: 30, enterFace: 1,
+      stairs: { to: 'metro', x: 470, label: 'DOWN INTO THE METRO', hint: 'THE LAST TRAIN WENT' },
+      lights: [{ x: 360, y: FY - 20, r: 40, a: 0.08 },
+               { x: 470, y: FY - 46, r: 26, a: 0.07 }],
+    };
+  }
+
+  /* ============================================================
+     3. LA BUTTE — Montmartre: the domes, the steps, the painters
+     ============================================================ */
+  function butte() {
+    const W = 740, FY = 118, seed = seedFor('butte');
+    const BAND = 24;
+
+    const paint = (c) => {
+      const p = P();
+      px(c, 0, 0, W, FY, '#0f1322');
+      /* the city, a long way below and behind */
+      for (let i = 0; i < 30; i++) {
+        const bx = (i * 27 + seed % 19) % (W - 24);
+        px(c, bx, FY - BAND - 52 - (i % 4) * 3, 22, 20 + (i % 4) * 3, '#171d2c');
+        if (i % 3 === 0) px(c, bx + 4, FY - BAND - 48, 3, 3, 'rgba(255,231,168,.5)');
+      }
+      /* THE BASILICA, up the hill, floodlit and unbothered */
+      basilica(c, 402, FY - BAND - 22);
+      /* the great flight of steps up to it */
+      for (let i = 0; i < 14; i++) {
+        const sw = 224 - i * 8;
+        const sy = FY - BAND - 22 + i * 1.7;
+        px(c, 402 - sw / 2, sy, sw, 2, '#6a6459');
+        px(c, 402 - sw / 2, sy, sw, 1, '#8a8377');
+        px(c, 402 - sw / 2, sy + 2, sw, 1, 'rgba(0,0,0,.4)');
+      }
+      /* the iron handrails up the middle of them */
+      [-40, 40].forEach(d => {
+        for (let i = 0; i < 12; i += 3) {
+          px(c, 402 + d, FY - BAND - 22 + i * 1.7, 2, 8, '#2a2f36');
+        }
+        px(c, 402 + d - 1, FY - BAND - 26, 4, 22, '#2a2f36');
+      });
+      /* the funicular, off to the side, stopped for the night */
+      px(c, 596, FY - BAND - 22, 26, 24, '#2b3038');
+      px(c, 598, FY - BAND - 20, 22, 12, 'rgba(150,200,220,.18)');
+      px(c, 594, FY - BAND + 2, 30, 3, '#1c2024');
+      for (let i = 0; i < 8; i++) px(c, 600 + (i % 2) * 12, FY - BAND - 40 + i * 3, 8, 2, '#3a3f46');
+
+      /* PLACE DU TERTRE: cobbles, easels, tables, and a lot of paint */
+      cobbles(c, 0, FY - BAND, W, BAND + 20, seed);
+      [90, 250, 500, 690].forEach(lx => lamp(c, lx, FY - BAND + 8, 30, true));
+      [40, 640].forEach((tx, i) => planeTree(c, tx, FY - BAND + 10, 34, seed + i * 7));
+      /* the easels, in a row, with a half-finished city on each */
+      const easel = (x, y, col) => {
+        px(c, x - 12, y - 34, 24, 26, '#c9c0a8');
+        px(c, x - 11, y - 33, 22, 24, '#8fa8b8');
+        px(c, x - 11, y - 20, 22, 11, col);
+        px(c, x - 9, y - 30, 6, 8, '#e8dcbc');
+        px(c, x - 1, y - 27, 9, 6, '#3a4f6a');
+        px(c, x - 2, y - 8, 4, 8, '#4a3f2e');
+        px(c, x - 10, y - 2, 9, 2, '#4a3f2e');
+        px(c, x + 4, y - 2, 9, 2, '#4a3f2e');
+        px(c, x - 14, y - 36, 28, 3, '#5a4f3a');
+      };
+      easel(180, FY - 1, '#3f6a4a');
+      easel(228, FY - 1, '#6a4a3f');
+      easel(560, FY - 1, '#4a3f6a');
+      /* the scammers' folding table, three cups on it */
+      ART.box(c, 300, FY - 18, 62, 18, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
+      for (let i = 0; i < 3; i++) {
+        const cx2 = 312 + i * 19;
+        px(c, cx2, FY - 26, 11, 8, '#b8232f');
+        px(c, cx2, FY - 26, 11, 2, '#d94a52');
+        px(c, cx2 - 1, FY - 19, 13, 2, '#8c1a24');
+      }
+      /* a cafe spilling onto the square */
+      cafeTable(c, 660, FY - 1);
+      cafeTable(c, 706, FY - 1);
+      /* the artist's crate of tubes, and his loaf */
+      ART.box(c, 120, FY - 14, 26, 14, { fill: '#5e5038', top: '#7a6a4a', bot: '#2a231a', ink: p.K });
+      for (let i = 0; i < 5; i++) px(c, 123 + i * 5, FY - 18, 3, 5, ['#b8232f', '#e0a63c', '#3a5f9c', '#4fae6d', '#f4efe0'][i]);
+      px(c, 148, FY - 8, 22, 5, '#c98a4a');
+      px(c, 148, FY - 8, 22, 2, '#e0a86a');
+    };
+
+    const spots = [
+      { id: 'easel', x: 204, z: 0.12, w: 60, top: FY - 40, label: 'THE EASELS',
+        hint: 'HE PAINTS THE SAME STREET EVERY NIGHT' },
+      { id: 'steps', x: 402, z: 0.62, w: 120, top: FY - BAND - 22, label: 'THE STEPS',
+        hint: 'WHAT ROLLED DOWN THEM' },
+      { id: 'crate2', x: 133, z: 0.1, w: 26, top: FY - 22, label: 'THE PAINT CRATE',
+        hint: 'TUBES, RAGS, AND SOMETHING ELSE' },
+      { id: 'table', x: 331, z: 0.12, w: 62, top: FY - 28, label: 'THE CUP TABLE',
+        hint: 'THREE CUPS AND A CROWD' },
+    ];
+
+    const actors = [
+      { id: 'paint', x: 152, z: 0.1, key: 'artist',
+        def: typeof COOK_DEF !== 'undefined' ? COOK_DEF : null, face: 1,
+        tag: 'THE PAINTER', tagCol: PIX.PAL.O, job: 'sit' },
+      { id: 'scam', x: 331, z: 0.22, key: 'scam',
+        def: typeof PAWN_DEF !== 'undefined' ? PAWN_DEF : null, face: -1,
+        tag: 'THE CUP MAN', tagCol: PIX.PAL.R, job: 'cups' },
+      { id: 'wit', x: 600, z: 0.1, key: 'waiter',
+        def: typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null, face: -1,
+        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true },
+    ];
+
+    const eggs = [
+      egg({ id: 'ball3', x: 660, y: FY - 22, art: 'eg_ball',
+        label: 'SOMETHING ON THE TABLE',
+        look: 'A RED AND WHITE BALL SOMEBODY LEFT WITH THEIR COFFEE. STILL WARM.' }),
+      egg({ id: 'flag3', x: 228, y: FY - 40, art: 'eg_flag',
+        label: 'A FLAG ON THE EASEL',
+        look: 'A LITTLE FLAG PINNED TO THE FRAME. HE SAYS THE LIGHT IS BETTER THERE.' }),
+    ];
+
+    return {
+      id: 'butte', w: W, floorY: FY, paint, spots, actors, eggs, outdoor: true,
+      depthBand: BAND, crowd: { n: 20, z0: 0.4, z1: 1 },
+      pets: [{ kind: 'dog', x: 480, name: "A PAINTER'S DOG", fouls: true },
+             { kind: 'cat', x: 620, name: 'A ROOF CAT' }],
+      enterX: 30, enterFace: 1,
+      lights: [{ x: 402, y: FY - BAND - 40, r: 80, a: 0.05 },
+               { x: 250, y: FY - 40, r: 34, a: 0.07 },
+               { x: 680, y: FY - 40, r: 30, a: 0.07 }],
+    };
+  }
+
+  /* ============================================================
+     4. LE MUSEE — the palace courtyard after closing
+     ============================================================ */
+  function museum() {
+    const W = 700, FY = 110, seed = seedFor('museum');
+    const BAND = 20;
+
+    const paint = (c) => {
+      const p = P();
+      px(c, 0, 0, W, FY, '#0d1120');
+      /* the three wings of the palace, stone and window and stone */
+      const wing = (x, w2, h2) => {
+        px(c, x, FY - BAND - h2, w2, h2, '#6b6455');
+        px(c, x, FY - BAND - h2, w2, 3, '#877f6c');
+        px(c, x + w2 - 4, FY - BAND - h2, 4, h2, '#4c4740');
+        /* the mansard and its dormers */
+        for (let i = 0; i < 9; i++) {
+          px(c, x + Math.round(i * 0.5), FY - BAND - h2 - 9 + i, w2 - i, 1, i < 2 ? '#4d535d' : '#3b4048');
+        }
+        for (let dx = x + 8; dx < x + w2 - 12; dx += 22) {
+          px(c, dx, FY - BAND - h2 - 8, 12, 8, '#3b4048');
+          px(c, dx + 2, FY - BAND - h2 - 6, 8, 6, '#22262e');
+        }
+        /* the arcade: tall arched windows, a few of them lit */
+        for (let i = 0; i * 26 < w2 - 20; i++) {
+          const wx = x + 10 + i * 26;
+          const lit = ((i * 7 + seed) % 5) === 0;
+          px(c, wx, FY - BAND - h2 + 16, 16, h2 - 26, '#191c22');
+          px(c, wx + 1, FY - BAND - h2 + 17, 14, h2 - 28, lit ? '#e8c46a' : '#252a32');
+          for (let k = 0; k < 16; k++) {
+            const yy = FY - BAND - h2 + 16 - Math.round(Math.sqrt(Math.max(0, 64 - (k - 8) * (k - 8))));
+            px(c, wx + k, yy, 1, FY - BAND - h2 + 16 - yy, '#191c22');
+          }
+          /* the caryatid pilasters between them */
+          px(c, wx - 5, FY - BAND - h2 + 14, 4, h2 - 24, '#7a7263');
+          px(c, wx - 5, FY - BAND - h2 + 14, 1, h2 - 24, '#948b78');
+        }
+      };
+      wing(0, 240, 60);
+      wing(460, 240, 60);
+      wing(240, 220, 42);
+
+      /* THE PYRAMID, lit from underneath, in the middle of all that stone */
+      pyramid(c, 350, FY - BAND + 1, 130, 54);
+      /* the two little ones beside it */
+      pyramid(c, 250, FY - BAND + 1, 40, 17);
+      pyramid(c, 450, FY - BAND + 1, 40, 17);
+
+      /* the courtyard: pale stone, and the fountains in it */
+      px(c, 0, FY - BAND, W, BAND + 20, '#4a4740');
+      for (let ry = 0; ry < BAND + 18; ry += 6) {
+        px(c, 0, FY - BAND + ry, W, 1, 'rgba(255,255,255,.045)');
+      }
+      for (let rx = 0; rx < W; rx += 30) px(c, rx, FY - BAND, 1, BAND + 18, 'rgba(0,0,0,.14)');
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#443f39', '#524d45', seed % 37);
+      /* the reflecting pools */
+      [[120, 90], [520, 90]].forEach(([wx, ww]) => {
+        px(c, wx, FY - 16, ww, 15, '#1d3138');
+        px(c, wx, FY - 16, ww, 2, '#2d4a52');
+        px(c, wx + 2, FY - 14, ww - 4, 11, 'rgba(120,200,215,.14)');
+        for (let k = 0; k < ww; k += 9) px(c, wx + k, FY - 10 + ((k + seed) % 3), 5, 1, 'rgba(180,230,240,.16)');
+        /* the jet in the middle of it */
+        px(c, wx + ww / 2, FY - 30, 1, 15, 'rgba(190,235,245,.35)');
+        px(c, wx + ww / 2 - 3, FY - 32, 7, 3, 'rgba(190,235,245,.20)');
+      });
+      [40, 660].forEach(lx => lamp(c, lx, FY - BAND + 6, 28, true));
+      /* a crate by the loading door, which is how things really leave a museum */
+      ART.box(c, 620, FY - 24, 40, 24, { fill: '#6e4a30', top: '#8a5f3d', bot: '#3a2618', ink: p.K });
+      px(c, 624, FY - 20, 32, 2, '#4a3020');
+      px(c, 624, FY - 12, 32, 2, '#4a3020');
+      px(c, 628, FY - 30, 8, 7, '#b8232f');
+      px(c, 596, FY - 44, 20, 44, '#2b3038');
+      px(c, 598, FY - 42, 16, 40, '#171b21');
+      px(c, 610, FY - 26, 3, 4, '#e0a63c');
+    };
+
+    const spots = [
+      { id: 'fountain', x: 165, z: 0.08, w: 90, top: FY - 34, label: 'THE POOL',
+        hint: 'SOMETHING WENT IN AND NOBODY FISHED IT OUT' },
+      { id: 'glass', x: 350, z: 0.5, w: 90, top: FY - BAND - 50, label: 'THE PYRAMID',
+        hint: 'THE GLASS HAS A HANDPRINT ON IT' },
+      { id: 'crate3', x: 640, z: 0.1, w: 40, top: FY - 32, label: 'THE CRATE',
+        hint: 'STAMPED FOR SOMEWHERE ELSE' },
+      { id: 'door', x: 606, z: 0.3, w: 22, top: FY - 48, label: 'THE LOADING DOOR',
+        hint: 'THE LOCK IS NEWER THAN THE PALACE' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 480, z: 0.12, key: 'guard',
+        def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
+        tag: 'THE NIGHT GUARD', tagCol: PIX.PAL.L, witness: true },
+    ];
+
+    return {
+      id: 'museum', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      depthBand: BAND, crowd: { n: 8, z0: 0.55, z1: 0.95 },
+      pets: [{ kind: 'cat', x: 300, name: 'THE COURTYARD CAT' }],
+      enterX: 30, enterFace: 1,
+      lights: [{ x: 350, y: FY - 30, r: 60, a: 0.07 }],
+    };
+  }
+
+  /* ============================================================
+     5. LES CATACOMBES — six million of them, and one meeting
+     ============================================================ */
+  function catacombs() {
+    const W = 540, FY = 114, seed = seedFor('catacombs');
+    const BAND = 16;
+
+    const paint = (c) => {
+      const p = P();
+      px(c, 0, 0, W, FY + 20, '#120f0c');
+      /* the tunnel: a barrel vault, cut by cross passages */
+      for (let i = 0; i < 30; i++) {
+        const t = i / 30;
+        px(c, 0, i, W, 1, 'rgba(60,52,42,' + (0.5 - t * 0.4).toFixed(3) + ')');
+      }
+      /* THE WALLS, which are made of people */
+      boneWall(c, 0, 28, W, FY - BAND - 30, seed);
+      /* the arches: three of them, going back */
+      [[110, 62, 44], [270, 74, 52], [430, 62, 44]].forEach(([ax, aw, ah], i) => {
+        px(c, ax - aw / 2, FY - BAND - ah, aw, ah, '#0b0a08');
+        for (let k = -aw / 2; k <= aw / 2; k++) {
+          const y = FY - BAND - ah - Math.round(Math.cos((k / (aw / 2)) * 1.5) * 12);
+          px(c, ax + k, y, 1, FY - BAND - ah - y, '#0b0a08');
+        }
+        /* the stone ring round the mouth of it */
+        for (let k = -aw / 2 - 2; k <= aw / 2 + 2; k++) {
+          const y = FY - BAND - ah - Math.round(Math.cos((k / (aw / 2 + 2)) * 1.5) * 13);
+          px(c, ax + k, y - 2, 1, 3, '#5f5a4c');
+          px(c, ax + k, y - 2, 1, 1, '#7d7768');
+        }
+        /* and what is stacked in the mouth of the middle one */
+        if (i === 1) boneWall(c, ax - aw / 2 + 6, FY - BAND - ah + 10, aw - 12, ah - 12, seed + 3);
+      });
+      /* THE PLAQUE OVER THE MIDDLE ARCH, which says the only thing
+         anybody remembers about this place. Two lines of the 5x7 font
+         need eleven rows between them, not six: a rendered line is seven
+         dots tall with a row of padding top and bottom, so anything
+         tighter smears the descenders of one line through the caps of
+         the next and the whole thing reads as gravel. */
+      px(c, 232, FY - BAND - 96, 78, 28, '#3a3630');
+      px(c, 234, FY - BAND - 94, 74, 24, '#57524a');
+      const t2 = PIXFONT.render('ARRETE', { scale: 1, color: '#cfc7ae', shadow: null });
+      c.drawImage(t2, 234 + Math.round((74 - t2.width) / 2), FY - BAND - 92);
+      const t3 = PIXFONT.render("C'EST ICI", { scale: 1, color: '#cfc7ae', shadow: null });
+      c.drawImage(t3, 234 + Math.round((74 - t3.width) / 2), FY - BAND - 81);
+
+      /* the floor: wet limestone dust, and the water it collects in */
+      px(c, 0, FY - BAND, W, BAND + 20, '#2e2a23');
+      for (let ry = 0; ry < BAND + 18; ry += 4) {
+        px(c, 0, FY - BAND + ry, W, 2, ry % 8 ? '#3e392f' : '#363128');
+      }
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#332e26', '#454034', seed % 41);
+      px(c, 150, FY - 10, 96, 11, 'rgba(40,70,72,.5)');
+      for (let k = 0; k < 96; k += 8) px(c, 152 + k, FY - 8 + ((k + seed) % 3), 5, 1, 'rgba(140,210,215,.12)');
+      /* a niche with a candle in it, which is somebody's idea of respect */
+      px(c, 470, FY - BAND - 26, 22, 26, '#0b0a08');
+      px(c, 476, FY - BAND - 14, 5, 12, '#ded2b4');
+      px(c, 477, FY - BAND - 18, 3, 5, '#ff9d3c');
+      PIX.disc(c, 478, FY - BAND - 16, 13, 'rgba(255,157,60,.10)');
+      /* the one electric lamp somebody strung down here, hung clear of
+         the plaque so the cord does not run through the lettering */
+      px(c, 190, 0, 2, 22, '#2a2f36');
+      PIX.disc(c, 191, 24, 5, '#2a2f36');
+      PIX.disc(c, 191, 25, 3, '#ffe7a8');
+      PIX.disc(c, 191, 25, 12, 'rgba(255,231,168,.09)');
+      /* the table they meet at, and the two chairs nobody dusted */
+      ART.box(c, 236, FY - 20, 70, 8, { fill: '#4a3f2e', top: '#61533b', bot: '#241d14', ink: p.K });
+      px(c, 244, FY - 12, 4, 12, '#2a231a');
+      px(c, 294, FY - 12, 4, 12, '#2a231a');
+      px(c, 256, FY - 26, 12, 7, '#8d8672');
+      px(c, 258, FY - 24, 8, 3, '#c9c0a8');
+      /* THE DARK. Six million of them and one bulb: everything more than a
+         few feet from it goes away, which is the whole feeling of the place. */
+      for (let i = 0; i < W; i += 2) {
+        const d = Math.abs(i - 271) / (W / 2);
+        px(c, i, 0, 2, FY + 20, 'rgba(6,6,8,' + (0.12 + d * 0.55).toFixed(3) + ')');
+      }
+    };
+
+    const spots = [
+      { id: 'bones', x: 270, z: 0.62, w: 66, top: 40, bot: FY - BAND, label: 'THE WALL',
+        hint: 'ONE OF THEM IS NOT AS OLD AS THE OTHERS' },
+      { id: 'niche', x: 481, z: 0.2, w: 24, top: FY - 44, label: 'THE NICHE',
+        hint: 'SOMEBODY LIT A CANDLE FOR SOMEBODY' },
+      { id: 'plaque', x: 271, z: 0.7, w: 62, top: 12, bot: 40, label: 'THE PLAQUE',
+        hint: 'STOP. THIS IS THE EMPIRE OF THE DEAD.' },
+      { id: 'pool', x: 198, z: 0.06, w: 96, top: FY - 16, label: 'THE STANDING WATER',
+        hint: 'SOMETHING WENT IN HERE' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 400, z: 0.12, key: 'ossu',
+        def: typeof BARMAN_DEF !== 'undefined' ? BARMAN_DEF : null, face: -1,
+        tag: 'THE KEEPER', tagCol: PIX.PAL.q, witness: true },
+    ];
+
+    return {
+      id: 'catacombs', w: W, floorY: FY, paint, spots, actors,
+      depthBand: BAND,
+      pets: [{ kind: 'cat', x: 120, name: 'SOMETHING WHITE' }],
+      enterX: 26, enterFace: 1,
+      lights: [{ x: 271, y: 24, r: 40, a: 0.08, flicker: true },
+               { x: 478, y: FY - 30, r: 22, a: 0.07 }],
+    };
+  }
+
+  /* ============================================================
+     6. LE METRO — under the Etoile, after the last train
+     ============================================================ */
+  function metro() {
+    const W = 480, FY = 112, seed = seedFor('metro');
+    const BAND = 14;
+
+    const paint = (c) => {
+      const p = P();
+      /* the vault, in white bevel tile, going grey with a century of smoke */
+      px(c, 0, 0, W, FY, '#1b2024');
+      for (let ry = 4; ry < FY - BAND - 6; ry += 6) {
+        const off = ((ry / 6) % 2) ? 5 : 0;
+        for (let rx = -off; rx < W; rx += 10) {
+          px(c, rx, ry, 9, 5, ry < 20 ? '#8a8f8c' : '#a9aeaa');
+          px(c, rx, ry, 9, 1, '#c2c7c2');
+          px(c, rx, ry + 4, 9, 1, 'rgba(0,0,0,.22)');
+        }
+      }
+      ART.dither(c, 0, 0, W, FY - BAND, 'rgba(30,26,20,.22)', 0.14, seed % 31);
+      /* the curve of the vault: darker at the top */
+      for (let i = 0; i < 26; i++) {
+        px(c, 0, i, W, 1, 'rgba(10,14,16,' + (0.55 - i * 0.02).toFixed(3) + ')');
+      }
+      /* the station name in enamel, in a frame, twice */
+      [70, 330].forEach(sx => {
+        px(c, sx, 34, 96, 20, '#1f3a30');
+        px(c, sx + 2, 36, 92, 16, '#2b4c40');
+        const t = PIXFONT.render('ETOILE', { scale: 2, color: '#f4efe0', shadow: null });
+        c.drawImage(t, sx + Math.round((96 - t.width) / 2), 40);
+      });
+      /* the adverts, pasted and re-pasted */
+      px(c, 200, 30, 66, 44, '#3a3630');
+      px(c, 203, 33, 60, 38, '#b8232f');
+      px(c, 206, 38, 54, 10, '#f4efe0');
+      px(c, 206, 52, 40, 6, 'rgba(244,239,224,.6)');
+      px(c, 206, 60, 30, 5, 'rgba(244,239,224,.4)');
+      /* the platform, and the yellow line nobody stands behind */
+      px(c, 0, FY - BAND, W, BAND + 20, '#4a4740');
+      for (let rx = 0; rx < W; rx += 22) px(c, rx, FY - BAND, 1, BAND + 18, 'rgba(0,0,0,.16)');
+      px(c, 0, FY - BAND + 3, W, 2, '#e0a63c');
+      px(c, 0, FY - BAND + 5, W, 1, 'rgba(0,0,0,.3)');
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#443f39', '#565049', seed % 29);
+      /* THE TRACK, in the near foreground, below the platform edge */
+      px(c, 0, FY + 2, W, 20, '#14171a');
+      px(c, 0, FY + 4, W, 2, '#2a2f36');
+      for (let rx = 0; rx < W; rx += 12) px(c, rx, FY + 8, 8, 3, '#3a2f28');
+      px(c, 0, FY + 12, W, 2, '#5a636c');
+      px(c, 0, FY + 17, W, 2, '#5a636c');
+      /* the tunnel mouth, and one red light a long way down it */
+      px(c, W - 90, 22, 90, FY - 22, '#07090b');
+      for (let k = 0; k < 40; k++) {
+        const y = 22 + Math.round(Math.sin((k / 40) * 1.6) * 10);
+        px(c, W - 90 + k, y, 1, FY - 22 - y, '#07090b');
+      }
+      px(c, W - 26, FY - 30, 3, 3, '#ff6a5e');
+      PIX.disc(c, W - 25, FY - 29, 7, 'rgba(255,106,94,.10)');
+      /* a wooden bench and a bin nobody empties */
+      bench(c, 120, FY - 1, 50);
+      px(c, 300, FY - 18, 20, 18, '#2b3038');
+      px(c, 298, FY - 20, 24, 3, '#3d444d');
+      px(c, 304, FY - 24, 6, 5, '#8d8672');
+      /* the grate the draught comes up through */
+      px(c, 380, FY - 4, 40, 4, p.K);
+      for (let i = 0; i < 9; i++) px(c, 383 + i * 4, FY - 3, 2, 3, '#0b0e10');
+    };
+
+    const spots = [
+      { id: 'bench3', x: 145, z: 0.1, w: 50, top: FY - 26, label: 'THE BENCH',
+        hint: 'SOMEBODY SLEPT HERE AND LEFT IN A HURRY' },
+      { id: 'grate2', x: 400, z: 0.08, w: 40, top: FY - 12, label: 'THE GRATE',
+        hint: 'THE DRAUGHT BRINGS THINGS UP' },
+      { id: 'poster', x: 233, z: 0.5, w: 66, top: 26, bot: 78, label: 'THE ADVERT',
+        hint: 'SOMETHING PASTED OVER SOMETHING' },
+    ];
+
+    return {
+      id: 'metro', w: W, floorY: FY, paint, spots, actors: [],
+      depthBand: BAND, crowd: { n: 5, z0: 0.55, z1: 0.9 },
+      pets: [{ kind: 'cat', x: 330, name: 'A PLATFORM CAT' }],
+      enterX: 40, enterFace: 1,
+      stairs: { to: 'arch', x: 20, label: 'BACK UP TO THE STREET', hint: 'INTO THE TRAFFIC' },
+      lights: [{ x: 120, y: 14, r: 40, a: 0.07 }, { x: 320, y: 14, r: 40, a: 0.07, flicker: true }],
+    };
+  }
+
+  /* pulled in from places.js so the eggs work the same way out here */
+  function egg(o) {
+    const sp = {
+      id: 'egg:' + o.id, x: o.x, y: o.y, w: 18,
+      top: o.y - 11, bot: o.y + 11,
+      egg: true, art: o.art, label: o.label, hint: 'WORTH A CLOSER LOOK', look: o.look,
+    };
+    sp.onUse = () => STORY.lookClose(sp, sp.x, o.y);
+    return sp;
+  }
+
+  return {
+    BUILD: { tower, arch, butte, museum, catacombs, metro },
+    /* the helpers, so places.js and rooms.js can dress themselves in Paris */
+    haussmann, lamp, planeTree, wallace, morris, bench, cobbles, cafeTable,
+    eiffel, arc, basilica, pyramid, boneWall, metroSign, egg,
   };
 })();
 </script>
@@ -15027,7 +16829,11 @@ const PLACES = (() => {
        cellar, the room over the pawn shop — and the props there
        belong to the place you drove to, not to the floor. */
     build(id, floor) {
-      const fn = BUILD[floor || id];
+      /* the landmarks live in paris.js: looked up here rather than imported
+         so neither file has to load before the other */
+      const want = floor || id;
+      const fn = BUILD[want] ||
+        (typeof PARIS !== 'undefined' ? PARIS.BUILD[want] : null);
       if (!fn) return null;
       const room = fn();
       room.place = id;
@@ -15060,12 +16866,18 @@ const PLACES = (() => {
           onUse: () => STORY.toFloor(st.to),
         }]);
       }
-      /* the witnesses answer questions; everybody else just talks */
+      /* the witnesses answer questions; everybody else just talks — except
+         the ones with a job on them, who want something first */
       room.actors = (room.actors || []).map(a => Object.assign({}, a, {
         label: a.tag || a.label,
-        hint: a.witness ? () => (CASE.left() > 1 ? 'ASK HIM SOMETHING' : 'HE IS DONE TALKING')
-          : 'TALK',
-        onUse: a.witness ? () => STORY.askWitness(id, a.id) : () => STORY.placeTalk(id, a.id),
+        hint: a.job === 'cups' ? 'TEN ON THE BALL'
+          : a.job === 'sit' ? 'HE WANTS SOMEBODY TO SIT'
+            : a.witness ? () => (CASE.left() > 1 ? 'ASK HIM SOMETHING' : 'HE IS DONE TALKING')
+              : 'TALK',
+        onUse: a.job === 'cups' ? () => STORY.cupGame(a)
+          : a.job === 'sit' ? () => STORY.sitForPainter(a)
+            : a.witness ? () => STORY.askWitness(id, a.id)
+              : () => STORY.placeTalk(id, a.id),
       }));
       /* and the way out is the phone in your coat */
       room.spots.push({
@@ -15085,25 +16897,42 @@ const PLACES = (() => {
 <script>
 /* ==== js/phone.js ==== */
 /* ============================================================
-   THE FROGGOPHONE.
+   THE PHONE.
 
-   A brick with a green screen, and the only interface in the game.
-   There is no bar across the top of the play area any more: the
-   clock, the money, the case, the map and your pockets are all in
-   here, behind four icons.
+   It is 1937 and you are carrying a slab of glass, which is the
+   one thing in this game nobody in it remarks on. There is no bar
+   across the top of the play area: the clock, the money, the case,
+   the map, your pockets and your conscience are all in here.
 
-     FROGGOMAP   the city from above. Tap a stop, drive there.
-     CASE FILE   what you turned over, what it rules out, who fits.
-     THE KIT     what is in your coat: tools, and the evidence bags.
-     THE JOB     what you are supposed to be doing, and how far in.
+     LOCK SCREEN   the hour, the date, and what came in
+     HOME          a grid of apps, and a dock along the bottom
+     PLAN          the city from above. Tap a stop, drive there.
+     CASE          what you turned over, what it rules out, who fits.
+     COAT          what is in it: tools, cargo, evidence bags.
+     WORK          what you are supposed to be doing, and how far in.
+     KARMA         what this city thinks of you, and why.
+     JOBS          what is going on tonight that pays.
 
-   Everything is drawn: the map, the icons, the frame, the type. No
-   glyph fonts, no emoji, no rounded chrome, nothing small.
+   Everything is drawn: the device, the notch, the status bar, the
+   icons, the map and the type. No glyph fonts, no emoji, no
+   rounded chrome, nothing small.
    ============================================================ */
 
 const PHONE = (() => {
 
-  let app = 'map', tick = null;
+  /* view is 'lock', 'home', or the id of an app */
+  let view = 'lock', app = 'map', tick = null;
+
+  /* the apps, in the order they sit on the home screen. The last four are
+     also the dock, because those are the four you actually use. */
+  const APPGRID = [
+    { id: 'map', word: 'PLAN', icon: 'ic_map', dock: true },
+    { id: 'case', word: 'CASE', icon: 'ic_case', dock: true },
+    { id: 'kit', word: 'COAT', icon: 'ic_bag', dock: true },
+    { id: 'job', word: 'WORK', icon: 'ic_star', dock: true },
+    { id: 'karma', word: 'KARMA', icon: 'ic_paw' },
+    { id: 'jobs', word: 'JOBS', icon: 'ic_coin' },
+  ];
 
   function layer() {
     let r = document.getElementById('phone-root');
@@ -15188,11 +17017,15 @@ const PHONE = (() => {
     const p = entry.place;
     const here = CITY.at(p.id);
     const hot = !!(G.tips && G.tips[p.id]) && CITY.leftAt(p.id) > 0;
+    /* A CITY BIGGER THAN THE CASE. Eleven stops, and tonight's file only
+       touches seven of them: the rest are dimmed so nobody burns
+       thirty-five minutes driving to the catacombs for nothing. */
+    const inCase = typeof CASE === 'undefined' || CASE.stops().indexOf(p.id) >= 0;
     /* somebody at this stop is owed something, or owes you something */
     const errand = (typeof STORY !== 'undefined' && STORY.questsLive ? STORY.questsLive() : [])
       .find(x => x.q.place === p.id || (x.q.kind === 'carry' && x.q.to === p.id && x.state === 'taken'));
     const b = U.el('button', 'map-pin' + (here ? ' here' : '') + (hot ? ' hot' : '') +
-      (errand ? ' errand' : ''));
+      (errand ? ' errand' : '') + (inCase ? '' : ' cold'));
     b.style.left = p.x + '%';
     b.style.top = p.y + '%';
     b.appendChild(SPR.clone(ART.art(p.icon || 'ic_map', k), 1));
@@ -15219,46 +17052,217 @@ const PHONE = (() => {
   }
 
   /* ---------- the screen furniture ---------- */
+  /* ============================================================
+     THE STATUS BAR.
+
+     Carrier, signal, the hour, and a battery that is always about
+     to matter. Drawn, like everything else, one pixel at a time.
+     ============================================================ */
   function statusBar(k) {
     const bar = U.el('div', 'ph-status');
-    const s = CITY.sky();
     const left = CITY.minutesLeft();
+    const total = CITY.START ? (24 * 60 - CITY.START) + CITY.END : 560;
+    const pc = U.clamp(Math.round((left / total) * 100), 0, 100);
 
-    const t = U.el('span', 'ph-stat');
-    t.appendChild(SPR.clone(ART.art('ic_clock', k - 1), 1));
-    t.appendChild(line(CITY.hhmm(), k, left < 120 ? '#ff6a5e' : '#8ff7c8'));
-    bar.appendChild(t);
+    /* the carrier, and the signal beside it */
+    const l = U.el('span', 'ph-stat');
+    const sig = ART.cv(11, 8);
+    for (let i = 0; i < 4; i++) {
+      const h = 2 + i * 2, on = i < 3;
+      ART.px(sig.c, i * 3, 8 - h, 2, h, on ? '#eae4d0' : 'rgba(234,228,208,.28)');
+    }
+    l.appendChild(SPR.clone(sig.cv, Math.max(1, k - 1)));
+    l.appendChild(line('SURETE', Math.max(1, k - 1), '#8fb3a0', null));
+    bar.appendChild(l);
 
-    const mid = U.el('span', 'ph-stat col');
-    mid.appendChild(line(s.word, Math.max(1, k - 1), '#7fd7ff'));
-    mid.appendChild(line(Math.max(0, Math.round(left / 60)) + 'H OF SHIFT LEFT',
-      Math.max(1, k - 2), '#5f8f7f'));
+    /* the hour, in the middle, because that is where it lives */
+    const mid = U.el('span', 'ph-stat');
+    mid.appendChild(line(CITY.hhmm(), k, left < 120 ? '#ff6a5e' : '#eae4d0', null));
     bar.appendChild(mid);
 
-    const m = U.el('span', 'ph-stat');
-    m.appendChild(SPR.clone(ART.art('ic_coin', k - 1), 1));
-    m.appendChild(line(String(G.chips), k, '#ffd75e'));
-    bar.appendChild(m);
+    /* and the battery, which is the night */
+    const r = U.el('span', 'ph-stat');
+    r.appendChild(line(pc + '%', Math.max(1, k - 1), pc < 25 ? '#ff6a5e' : '#8fb3a0', null));
+    const bat = ART.cv(20, 10);
+    ART.px(bat.c, 0, 1, 17, 8, '#eae4d0');
+    ART.px(bat.c, 1, 2, 15, 6, '#0b1a12');
+    ART.px(bat.c, 17, 4, 2, 3, '#eae4d0');
+    const fill = Math.max(1, Math.round(15 * pc / 100));
+    ART.px(bat.c, 1, 2, fill, 6, pc < 25 ? '#ff6a5e' : '#8ff7c8');
+    r.appendChild(SPR.clone(bat.cv, Math.max(1, k - 1)));
+    bar.appendChild(r);
     return bar;
   }
 
-  const APPS = [
-    ['map', 'MAP', 'ic_map'],
-    ['case', 'CASE', 'ic_case'],
-    ['kit', 'KIT', 'ic_bag'],
-    ['job', 'JOB', 'ic_star'],
-  ];
+  /* ============================================================
+     THE LOCK SCREEN.
 
-  function tabs(k) {
-    const row = U.el('div', 'ph-tabs');
-    APPS.forEach(([id, word, icon]) => {
-      const b = U.el('button', 'ph-tab' + (app === id ? ' on' : ''));
-      b.appendChild(SPR.clone(ART.art(icon, k), 1));
-      b.appendChild(line(word, Math.max(1, k - 1), app === id ? '#0b1a14' : '#8ff7c8', null));
-      b.onclick = () => { app = id; SFX.tick && SFX.tick(); render(); };
+     The hour twice the size of anything else, the date under it,
+     and whatever came in while the phone was in your coat.
+     ============================================================ */
+  function lockScreen(k) {
+    const wrap = U.el('div', 'ph-lock');
+    const hour = U.el('div', 'ph-hour');
+    hour.appendChild(line(CITY.hhmm(), k + 3, '#f4efe0', '#04120c'));
+    wrap.appendChild(hour);
+    const w = CITY.watch(), sky = CITY.sky();
+    wrap.appendChild(line('NIGHT ' + (G.day || 1) + '  -  ' + w.word + '  -  ' + sky.word,
+      Math.max(1, k - 1), '#8fb3a0', null));
+
+    /* the notifications: what the night has told you so far */
+    const notes = U.el('div', 'ph-notes');
+    const ob = STORY.objective();
+    const push = (icon, head, body2) => {
+      const n = U.el('div', 'ph-note');
+      n.appendChild(SPR.clone(ART.art(icon, Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(head, Math.max(1, k - 1), '#eae4d0', null));
+      UI.wrapLines(body2, 30).forEach(t => col.appendChild(line(t, 1, '#8fb3a0', null)));
+      n.appendChild(col);
+      notes.appendChild(n);
+    };
+    push(ob.icon || 'ic_star', 'LA BRIGADE', ob.line);
+    const owed = (STORY.questsLive() || []).filter(x => x.state === 'ready');
+    if (owed.length) push('ic_bag', owed[0].q.who, 'HE OWES YOU. GO BACK FOR IT.');
+    const km = STORY.karma ? STORY.karma() : null;
+    if (km && km.last) push('ic_paw', 'KARMA ' + (km.score > 0 ? '+' : '') + km.score, km.last);
+    wrap.appendChild(notes);
+
+    const go = U.el('button', 'ph-unlock');
+    go.appendChild(line('SLIDE TO UNLOCK', k, '#0b1a14', null));
+    go.onclick = () => { view = 'home'; SFX.tick && SFX.tick(); render(); };
+    wrap.appendChild(go);
+    return wrap;
+  }
+
+  /* ============================================================
+     THE HOME SCREEN.
+
+     A grid of apps with their names under them, and a dock along
+     the bottom with the four you actually open.
+     ============================================================ */
+  function homeScreen(k) {
+    const wrap = U.el('div', 'ph-home');
+    const grid = U.el('div', 'ph-grid');
+    APPGRID.forEach(a => {
+      const b = U.el('button', 'ph-icon');
+      b.appendChild(SPR.clone(ART.art(a.icon, k + 1), 1));
+      b.appendChild(line(a.word, Math.max(1, k - 1), '#eae4d0', '#04120c'));
+      /* a badge, when the app has something waiting in it */
+      const n = badgeFor(a.id);
+      if (n) {
+        const bd = U.el('span', 'ph-badge');
+        bd.appendChild(line(String(n), Math.max(1, k - 1), '#f4efe0', null));
+        b.appendChild(bd);
+      }
+      b.onclick = () => { view = a.id; app = a.id; SFX.tick && SFX.tick(); render(); };
+      grid.appendChild(b);
+    });
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  /* how many things are waiting in each app */
+  function badgeFor(id) {
+    if (id === 'map') return (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
+    if (id === 'case') return CITY.found().length;
+    if (id === 'kit') return Object.keys(G.cargo || {}).length;
+    if (id === 'jobs') return (STORY.jobsOpen ? STORY.jobsOpen().length : 0);
+    return 0;
+  }
+
+  /* the dock: the same four apps, always there */
+  function dock(k) {
+    const row = U.el('div', 'ph-dock');
+    APPGRID.filter(a => a.dock).forEach(a => {
+      const b = U.el('button', 'ph-tab' + (view === a.id ? ' on' : ''));
+      b.appendChild(SPR.clone(ART.art(a.icon, k), 1));
+      b.appendChild(line(a.word, Math.max(1, k - 1), view === a.id ? '#0b1a14' : '#8ff7c8', null));
+      b.onclick = () => { view = a.id; app = a.id; SFX.tick && SFX.tick(); render(); };
       row.appendChild(b);
     });
     return row;
+  }
+
+  /* the bar at the top of an open app: back to the home screen, and a name */
+  function navBar(k, title) {
+    const bar = U.el('div', 'ph-nav');
+    const back = U.el('button', 'ph-back');
+    back.appendChild(line('<', k, '#8ff7c8', null));
+    back.onclick = () => { view = 'home'; SFX.tick && SFX.tick(); render(); };
+    bar.appendChild(back);
+    bar.appendChild(line(title, k, '#eae4d0', null));
+    const pad = U.el('span'); pad.style.minWidth = '28px';
+    bar.appendChild(pad);
+    return bar;
+  }
+
+  /* ============================================================
+     KARMA — what this city thinks of you, and why
+     ============================================================ */
+  function karmaApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const km = STORY.karma();
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line(km.word, k + 1, km.score >= 0 ? '#8ff7c8' : '#ff6a5e'));
+    head.appendChild(line((km.score > 0 ? '+' : '') + km.score + '  KARMA',
+      k, '#eae4d0', null));
+    UI.wrapLines(km.blurb, 30).forEach(t => head.appendChild(line(t, Math.max(1, k - 1), '#8fb3a0', null)));
+    wrap.appendChild(head);
+
+    /* the bar, from bad to good, with you on it */
+    const bar = ART.cv(120, 12);
+    ART.px(bar.c, 0, 3, 120, 6, '#123');
+    ART.px(bar.c, 0, 3, 60, 6, 'rgba(209,59,69,.35)');
+    ART.px(bar.c, 60, 3, 60, 6, 'rgba(46,196,169,.35)');
+    ART.px(bar.c, 59, 1, 2, 10, 'rgba(244,239,224,.5)');
+    const px2 = U.clamp(60 + Math.round(km.score * 2.2), 2, 117);
+    ART.px(bar.c, px2 - 2, 0, 5, 12, '#12101d');
+    ART.px(bar.c, px2 - 1, 1, 3, 10, km.score >= 0 ? '#8ff7c8' : '#ff6a5e');
+    wrap.appendChild(SPR.clone(bar.cv, Math.max(1, k - 1)));
+
+    const log = U.el('div', 'ph-clues');
+    const deeds = (G.karmaLog || []).slice(-7).reverse();
+    if (!deeds.length) {
+      const row = U.el('div', 'ph-clue');
+      row.appendChild(line('NOTHING EITHER WAY, YET.', Math.max(1, k - 1), '#5f8f7f', null));
+      log.appendChild(row);
+    }
+    deeds.forEach(d => {
+      const row = U.el('div', 'ph-clue' + (d.n > 0 ? ' got' : ''));
+      row.appendChild(SPR.clone(ART.art(d.n > 0 ? 'ic_paw' : 'ic_iron', Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      UI.wrapLines(d.what, 30).forEach(t => col.appendChild(line(t, Math.max(1, k - 1), '#eae4d0', null)));
+      col.appendChild(line((d.n > 0 ? '+' : '') + d.n, 1, d.n > 0 ? '#6ff7d8' : '#ff6a5e', null));
+      row.appendChild(col);
+      log.appendChild(row);
+    });
+    wrap.appendChild(log);
+    return wrap;
+  }
+
+  /* ============================================================
+     JOBS — what is going on tonight that pays
+     ============================================================ */
+  function jobsApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('WORK GOING SPARE', k, '#eae4d0'));
+    head.appendChild(line('NOBODY LIVES ON THIS SALARY', Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const list = U.el('div', 'ph-clues');
+    (STORY.jobsBoard ? STORY.jobsBoard() : []).forEach(j => {
+      const row = U.el('div', 'ph-clue' + (j.done ? '' : ' got'));
+      row.appendChild(SPR.clone(ART.art(j.icon || 'ic_coin', Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(j.name, Math.max(1, k - 1), j.done ? '#5f8f7f' : '#eae4d0', null));
+      UI.wrapLines(j.done ? 'DONE TONIGHT' : j.where, 32)
+        .forEach(t => col.appendChild(line(t, 1, j.done ? '#3f6f5f' : '#8fb3a0', null)));
+      row.appendChild(col);
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+    return wrap;
   }
 
   /* ---------- FROGGOMAP ---------- */
@@ -15475,21 +17479,43 @@ const PHONE = (() => {
     root.innerHTML = '';
 
     const body = U.el('div', 'ph-body');
-    body.appendChild(U.el('i', 'ph-aerial'));
-    /* the earpiece grille, so the brick reads as a phone */
-    const top = U.el('div', 'ph-grille');
-    for (let i = 0; i < 7; i++) top.appendChild(U.el('i'));
-    body.appendChild(top);
+    /* THE NOTCH. A slab of glass with a bite out of the top of it, the
+       earpiece and the camera in the bite, because that is what a phone
+       looks like and nobody in 1937 is going to ask. */
+    const notch = U.el('div', 'ph-notch');
+    const grille = U.el('i', 'ph-ear');
+    notch.appendChild(grille);
+    notch.appendChild(U.el('i', 'ph-lens'));
+    body.appendChild(notch);
 
     const screen = U.el('div', 'ph-screen');
     screen.appendChild(statusBar(k));
-    screen.appendChild(tabs(k));
-    screen.appendChild(app === 'case' ? caseApp(k)
-      : app === 'kit' ? kitApp(k)
-        : app === 'job' ? jobApp(k) : mapApp(k));
+
+    if (view === 'lock') {
+      screen.appendChild(lockScreen(k));
+    } else if (view === 'home') {
+      screen.appendChild(homeScreen(k));
+      screen.appendChild(dock(k));
+    } else {
+      const a = APPGRID.find(x => x.id === view) || APPGRID[0];
+      screen.appendChild(navBar(k, a.word));
+      screen.appendChild(view === 'case' ? caseApp(k)
+        : view === 'kit' ? kitApp(k)
+          : view === 'job' ? jobApp(k)
+            : view === 'karma' ? karmaApp(k)
+              : view === 'jobs' ? jobsApp(k) : mapApp(k));
+      screen.appendChild(dock(k));
+    }
     body.appendChild(screen);
 
+    /* the home bar, which is how you get out of anything */
     const keys = U.el('div', 'ph-keys');
+    const homeBtn = U.el('button', 'ph-home-bar');
+    homeBtn.onclick = () => {
+      if (view === 'home' || view === 'lock') PHONE.close();
+      else { view = 'home'; SFX.tick && SFX.tick(); render(); }
+    };
+    keys.appendChild(homeBtn);
     const shut = U.el('button', 'big-btn ph-shut');
     shut.appendChild(line('POCKET IT', k, '#0b1a14', null));
     shut.onclick = () => PHONE.close();
@@ -15504,7 +17530,10 @@ const PHONE = (() => {
     open(which) {
       if (typeof CINE !== 'undefined' && CINE.busy) return;
       if (typeof UI !== 'undefined' && !UI.isScene(G.phase)) return;
-      app = which || app || 'map';
+      /* asked for an app, go straight to it; asked for nothing, the lock
+         screen, because that is what taking a phone out looks like */
+      if (which) { app = which; view = which; }
+      else if (view === 'lock' || !view) view = 'lock';
       render();
       SFX.tick && SFX.tick();
       if (tick) clearInterval(tick);
@@ -15528,7 +17557,9 @@ const PHONE = (() => {
       return !!(r && r.className === 'phone-on');
     },
     toggle(which) { PHONE.isOpen() ? PHONE.close() : PHONE.open(which); },
-    app() { return app; },
+    app() { return view === 'lock' || view === 'home' ? view : app; },
+    /* the lock screen next time it comes out of the coat */
+    lock() { view = 'lock'; },
   };
 })();
 </script>
@@ -15545,6 +17576,10 @@ const PHONE = (() => {
      THE DRUMS    put a lid on three rats
      THE LOCK     three pins on a shed nobody wants opened
      THE PRINTS   lift three clean ones off what you brought back
+     THE SCOOP    what the dog left, off the pavement, before
+                  somebody steps in it
+     THE CUPS     three cups, one ball, and a frog who does this
+                  for a living
 
    Both are the same shape — a moving thing you have to stop in
    the right place, three times — and both pay in the two things
@@ -15960,6 +17995,118 @@ const JOBS = (() => {
     if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.2).toFixed(3) + ')');
   }
 
+  /* ---------------------------------------------------------
+     THE PAVEMENT. A dog has been here. The scoop is on a stick and
+     the bag is in your other hand and the whole city is watching.
+     --------------------------------------------------------- */
+  function drawScoop(c, W, H, s) {
+    const P = PIX.PAL;
+    /* the pavement, close up, wet */
+    ART.px(c, 0, 0, W, H, '#2b2e33');
+    for (let ry = 0; ry < H; ry += 7) {
+      const off = ((ry / 7) % 2) ? 6 : 0;
+      for (let rx = -off; rx < W; rx += 12) {
+        ART.px(c, rx, ry, 11, 6, (rx + ry) % 5 ? '#31353b' : '#2a2d33');
+        ART.px(c, rx, ry, 11, 1, 'rgba(255,255,255,.05)');
+      }
+    }
+    ART.dither(c, 0, 0, W, H, 'rgba(90,150,160,.08)', 0.12, 17);
+    /* WHAT THE DOG LEFT, in the middle, drawn with as much dignity as
+       the situation allows: three coils and a shine on them */
+    const tx = 8 + Math.round((W - 16) * s.centre);
+    if (s.hits < 3) {
+      for (let i = 2; i >= s.hits; i--) {
+        const cy = H - 22 + i * 4;
+        const r = 9 - i * 2;
+        PIX.disc(c, tx, cy, r + 1, '#2a1c10');
+        PIX.disc(c, tx, cy, r, '#4a3118');
+        PIX.disc(c, tx - 2, cy - 2, Math.max(1, r - 4), '#63431f');
+      }
+      /* the flies, because of course */
+      for (let i = 0; i < 3; i++) {
+        const a = s.x * 6 + i * 2.1;
+        ART.px(c, tx + Math.round(Math.cos(a) * 13), H - 28 + Math.round(Math.sin(a * 1.3) * 6),
+          1, 1, '#12101d');
+      }
+    } else {
+      /* a clean flag of pavement where it used to be */
+      ART.px(c, tx - 12, H - 18, 25, 12, '#3a4046');
+      ART.px(c, tx - 12, H - 18, 25, 2, '#4d545c');
+    }
+    /* THE SCOOP, swinging, and the band that is over the thing itself */
+    const half = Math.max(5, Math.round((W - 16) * s.band / 2));
+    ART.px(c, tx - half, H - 34, half * 2, 30, 'rgba(111,247,216,.10)');
+    ART.px(c, tx - half, H - 34, 1, 30, 'rgba(111,247,216,.35)');
+    ART.px(c, tx + half - 1, H - 34, 1, 30, 'rgba(111,247,216,.35)');
+    const sx = 8 + Math.round((W - 16) * s.x);
+    ART.px(c, sx - 1, 4, 3, H - 40, '#6e4a30');           // the handle
+    ART.px(c, sx - 1, 4, 1, H - 40, '#8a5f3d');
+    ART.px(c, sx - 9, H - 38, 19, 5, P.K);                // the pan
+    ART.px(c, sx - 8, H - 37, 17, 3, '#9aa3b8');
+    ART.px(c, sx - 8, H - 34, 17, 2, '#646d84');
+    /* the bag in your other hand, filling up */
+    ART.px(c, W - 22, H - 26, 16, 24, '#20242a');
+    ART.px(c, W - 22, H - 26, 16, 2, '#333944');
+    for (let i = 0; i < s.hits; i++) ART.px(c, W - 19 + i * 4, H - 10, 3, 6, '#4a3118');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(200,255,220,' + (s.flash * 0.14).toFixed(3) + ')');
+  }
+
+  /* ---------------------------------------------------------
+     THE CUPS. Three of them, one ball, and a frog who does this
+     for a living. The band is the cup it is under; the marker is
+     your eye, and his hands are faster than it.
+     --------------------------------------------------------- */
+  function drawCups(c, W, H, s) {
+    const P = PIX.PAL;
+    ART.px(c, 0, 0, W, H, '#181a20');
+    ART.dither(c, 0, 0, W, H, 'rgba(0,0,0,.3)', 0.1, 13);
+    /* the folding table, and the crowd behind it */
+    for (let i = 0; i < 7; i++) {
+      const bx = 6 + i * 19;
+      ART.px(c, bx, 8, 11, 16, '#22262e');
+      ART.px(c, bx + 2, 4, 7, 6, '#2f4436');
+      ART.px(c, bx + 1, 2, 9, 3, '#12101d');
+    }
+    ART.px(c, 0, 26, W, 4, '#12101d');
+    ART.box(c, 8, 30, W - 16, 16, { fill: '#4a3f2e', top: '#61533b', bot: '#241d14', ink: P.K });
+    ART.px(c, 8, 46, W - 16, H - 46, '#1c1f24');
+    /* THE THREE CUPS. The one over the ball is the band. */
+    for (let i = 0; i < 3; i++) {
+      const cx2 = 26 + i * 40;
+      const lifted = s.flash > 0.3 && Math.abs((s.centre * W) - cx2) < 20;
+      const cy = 30 - (lifted ? 12 : 0);
+      /* the ball, if this cup is up and it was under it */
+      if (lifted) {
+        PIX.disc(c, cx2 + 8, 26, 4, P.K);
+        PIX.disc(c, cx2 + 8, 26, 3, '#f4efe0');
+      }
+      ART.px(c, cx2, cy - 16, 17, 17, P.K);
+      ART.px(c, cx2 + 1, cy - 15, 15, 15, '#b8232f');
+      ART.px(c, cx2 + 1, cy - 15, 15, 3, '#d94a52');
+      ART.px(c, cx2 + 1, cy - 4, 15, 3, '#8c1a24');
+      ART.px(c, cx2 - 1, cy - 1, 19, 2, P.K);
+      ART.px(c, cx2, cy - 1, 17, 1, '#8c1a24');
+    }
+    /* his hands, moving, which is the whole trick */
+    const hx = 12 + Math.round((W - 24) * ((s.x * 1.7) % 1));
+    ART.px(c, hx - 7, 14, 15, 9, '#2f5a3a');
+    ART.px(c, hx - 6, 15, 13, 6, '#4f8a55');
+    ART.px(c, hx - 6, 15, 13, 2, '#6fae70');
+    /* YOUR EYE: the marker you are stopping */
+    const ex = 8 + Math.round((W - 16) * s.x);
+    ART.px(c, ex - 1, H - 20, 3, 14, '#ffd75e');
+    ART.px(c, ex - 5, H - 8, 11, 3, '#ffd75e');
+    ART.px(c, ex - 3, H - 24, 7, 4, '#12101d');
+    ART.px(c, ex - 2, H - 23, 5, 2, '#ffe7a8');
+    /* the band: where the ball actually is */
+    const half = Math.max(6, Math.round((W - 16) * s.band / 2));
+    const bx2 = 8 + Math.round((W - 16) * s.centre);
+    ART.px(c, bx2 - half, H - 6, half * 2, 3, 'rgba(111,247,216,.22)');
+    /* the pot, and the tally */
+    for (let i = 0; i < s.hits; i++) ART.px(c, W - 14 - i * 6, 34, 4, 4, '#ffd75e');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.16).toFixed(3) + ')');
+  }
+
   return {
     meter,
 
@@ -16013,6 +18160,30 @@ const JOBS = (() => {
         draw: drawPrints,
       });
       return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, clean: r.hits >= 3 };
+    },
+
+    /* the pavement. Nobody pays you for this. You do it anyway. */
+    async scoop() {
+      const r = await meter({
+        head: 'THE PAVEMENT',
+        sub: 'THREE PASSES. GET THE SCOOP OVER IT.',
+        key: 'TAP TO SCOOP',
+        rounds: 3, band: 0.2, speed: 1.1,
+        draw: drawScoop,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, clean: r.hits >= 3 };
+    },
+
+    /* three cups, one ball, and a frog who does this for a living */
+    async cups(hard) {
+      const r = await meter({
+        head: 'THE THREE CUPS',
+        sub: 'FOLLOW THE BALL. STOP ON THE CUP IT IS UNDER.',
+        key: 'TAP TO CALL IT',
+        rounds: 3, band: hard ? 0.12 : 0.17, speed: hard ? 1.9 : 1.5,
+        draw: drawCups,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, won: r.hits >= 2 };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */
@@ -17183,6 +19354,7 @@ const STORY = {
     }
     CITY.spend('job', 0.5);
     STORY.note('DID ' + q.who + ' A FAVOUR.');
+    STORY.karmaHit('errand');
     if (cl) {
       cl.seen = true;
       cl.foundAt = q.place + ':favour';
@@ -17272,6 +19444,7 @@ const STORY = {
       ], you);
       if (pick === 1) {
         STORY.note('OPENED ' + q.who + "'S PARCEL. HE WILL HEAR ABOUT IT.");
+        STORY.karmaHit('parcel');
         await STORY.questPay(q, {
           noCash: true, voice: you,
           line: 'STRING, PAPER, AND SOMETHING HE DID NOT WANT A COP HOLDING.',
@@ -17789,6 +19962,254 @@ const STORY = {
   },
 
   /* ============================================================
+     THE PAVEMENT.
+
+     Every dog in this city fouls it and nobody in this city picks
+     it up. There is a scoop and a bag on the back of the sanitation
+     cart at every stop, and three minutes of your night, and the
+     only thing you get for it is that somebody does not step in it.
+     ============================================================ */
+  async scoopIt(mess) {
+    if (CINE.busy) return;
+    const r = await JOBS.scoop();
+    CITY.spend('talk', 0.5);
+    (G.jobsDone = G.jobsDone || {}).scoop = 1;
+    if (!r.clean) {
+      await TUTOR.say(r.hits ? "MOST OF IT. THE REST IS SOMEBODY ELSE'S PROBLEM NOW."
+        : 'YOU HAVE MADE IT WORSE AND YOU HAVE IT ON YOUR SHOE.',
+      { name: 'THE PAVEMENT', nameCol: PIX.PAL.q, rim: PIX.PAL.t });
+      if (mess) mess.done = r.hits > 0;
+      return;
+    }
+    if (mess) mess.done = true;
+    STORY.karmaHit('clean');
+    G.chips += 4;
+    UI.syncChips && UI.syncChips();
+    STORY.note('CLEANED THE PAVEMENT AT ' + ((CITY.PLACES[G.place] || {}).short || 'A STOP') + '.');
+    await TUTOR.say(U.pick(Math.random, [
+      'CLEAN PAVEMENT. IN THIS CITY THAT IS PRACTICALLY A MIRACLE.',
+      'A FROG IN A GOOD COAT WITH A BAG OF THAT. THE STREET SAW IT.',
+      'NOBODY IS GOING TO STEP IN IT NOW. THAT IS THE WHOLE REWARD.',
+    ]), { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t, hold: 2400, top: true });
+  },
+
+  /* ============================================================
+     THE THREE CUPS.
+
+     A frog with a folding table and a crowd of his own friends in
+     it. You can play — and he will let you win the first one — or
+     you can run the table yourself, which pays better and costs
+     you something you cannot buy back.
+     ============================================================ */
+  async cupGame(o) {
+    if (CINE.busy) return;
+    const art = o && o.key ? SPR.frogCustom(o.key, o.def) : null;
+    const who = { name: 'THE CUP MAN', nameCol: PIX.PAL.R, rim: PIX.PAL.r, art };
+    if (G.jobsDone && G.jobsDone.cups) {
+      await TUTOR.say('WE ARE DONE, YOU AND ME.', Object.assign({ hold: 2000, top: true }, who));
+      return;
+    }
+    const pick = await TUTOR.ask(
+      'TEN ON THE BALL, DETECTIVE. THE HAND IS SLOWER THAN THE EYE, THEY SAY.', [
+        { label: 'PUT TEN ON IT', note: 'IF YOU CAN FOLLOW IT' },
+        { label: 'WARN THE MARK OFF', note: 'HE HAS RENT IN THAT HAND' },
+        { label: 'RUN THE TABLE YOURSELF', note: 'IT PAYS. IT COSTS.' },
+        { label: 'WALK ON', dim: true },
+      ], who);
+
+    if (pick === 1) {
+      (G.jobsDone = G.jobsDone || {}).cups = 1;
+      STORY.karmaHit('warn');
+      CITY.spend('talk');
+      await TUTOR.say('THE MARK PUTS HIS MONEY AWAY AND GOES HOME. THE CUP MAN LOOKS AT YOU.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+      await TUTOR.say('THAT WAS MY RENT. I HOPE YOU FEEL WONDERFUL.', who);
+      return;
+    }
+    if (pick === 2) {
+      (G.jobsDone = G.jobsDone || {}).cups = 1;
+      const r = await JOBS.cups(false);
+      CITY.spend('job', 0.6);
+      STORY.karmaHit('scam');
+      const take = 18 + r.hits * 9;
+      G.chips += take;
+      UI.syncChips && UI.syncChips();
+      UI.chipTick && UI.chipTick(take);
+      STORY.note('RAN THE CUPS ON THE BUTTE FOR ' + take + '.');
+      await TUTOR.say('THEY NEVER SEE IT. ' + take + ' AND A BAD TASTE.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+      return;
+    }
+    if (pick !== 0) return;
+
+    /* playing it straight: he is quicker than you are */
+    const r = await JOBS.cups(true);
+    (G.jobsDone = G.jobsDone || {}).cups = 1;
+    CITY.spend('job', 0.5);
+    if (r.won) {
+      const win = 22;
+      G.chips += win;
+      UI.syncChips && UI.syncChips();
+      UI.chipTick && UI.chipTick(win);
+      STORY.note('BEAT THE CUPS ON THE BUTTE.');
+      await TUTOR.say('NOBODY BEATS THAT TABLE. ' + win + ', AND GET OFF MY SQUARE.', who);
+      /* and a frog who has just lost money tells you things */
+      if (G.case) {
+        G.case.quiz = (G.case.quiz || 0) + 1;
+        await TUTOR.say('ASK ME YOUR QUESTION. QUICKLY.', who);
+      }
+    } else {
+      const lost = Math.min(10, G.chips);
+      G.chips -= lost;
+      UI.syncChips && UI.syncChips();
+      await TUTOR.say('IT WAS NEVER UNDER THAT ONE. IT IS NEVER UNDER ANY OF THEM.', who);
+    }
+  },
+
+  /* ============================================================
+     THE PAINTER ON THE BUTTE.
+
+     He has been painting the same street for eleven years, he has
+     a baguette in his coat and nobody to sit for him. Sitting
+     costs you twenty minutes of a night you cannot spare, and he
+     talks the entire time — which is the point, because he watches
+     this square all day.
+     ============================================================ */
+  async sitForPainter(o) {
+    if (CINE.busy) return;
+    const art = o && o.key ? SPR.frogCustom(o.key, o.def) : null;
+    const who = { name: 'THE PAINTER', nameCol: PIX.PAL.O, rim: PIX.PAL.o, art };
+    if (G.jobsDone && G.jobsDone.sit) {
+      await TUTOR.say('I HAVE YOUR FACE. GO AND USE IT SOMEWHERE.',
+        Object.assign({ hold: 2000, top: true }, who));
+      return;
+    }
+    const pick = await TUTOR.ask(
+      'SIT FOR ME. TWENTY MINUTES. I HAVE HALF A LOAF AND NOBODY TO LOOK AT.', [
+        { label: 'I WILL SIT', note: 'HE WATCHES THIS SQUARE ALL DAY' },
+        { label: 'NOT TONIGHT', dim: true },
+      ], who);
+    if (pick !== 0) return;
+
+    (G.jobsDone = G.jobsDone || {}).sit = 1;
+    CITY.spend('ask', 1.7);
+    STORY.karmaHit('sit');
+    await TUTOR.say('HOLD THE HAT. NO — HOLD IT LIKE YOU MEAN IT.', who);
+    await TUTOR.say(U.pick(Math.random, [
+      'I PAINT THIS STREET EVERY NIGHT AND EVERY NIGHT IT IS DIFFERENT PEOPLE.',
+      "THE BREAD IS YESTERDAY'S. THE LIGHT IS THE SAME AS IT ALWAYS IS.",
+      'YOU HAVE A FACE LIKE A MAN WHO HAS READ THE FILE. THAT IS NOT A COMPLIMENT.',
+    ]), who);
+    /* and what he saw, which is the actual pay */
+    const clues = (G.case && G.case.clues) || [];
+    const cl = clues.find(c2 => !c2.seen && c2.at === G.place) || clues.find(c2 => !c2.seen);
+    if (cl) {
+      cl.seen = true;
+      cl.foundAt = 'butte:painter';
+      STORY.note('THE PAINTER SAW IT: ' + cl.text);
+      await TUTOR.say('AND WHILE YOU SAT THERE I REMEMBERED SOMETHING.', who);
+      await CINE.pickUp(cl, CASE.left(), 'FROM A PAINTER WHO NEVER LOOKS AWAY');
+    } else {
+      G.chips += 8;
+      UI.syncChips && UI.syncChips();
+      await TUTOR.say('TAKE THE BREAD. IT IS ALL I HAVE AND YOU SAT STILL.', who);
+    }
+    if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* ============================================================
+     KARMA.
+
+     Nobody in this city keeps a ledger of what you do, so the game
+     does. Every deed moves one number: cleaning up after somebody
+     else's dog, tipping a busker, letting a scammer keep his cups,
+     putting a gun in a witness's face, taking money off a frog who
+     had none. It shows on the phone, it changes what the street
+     says to you, and at the end it decides which of the two
+     endings you have actually earned.
+     ============================================================ */
+  KARMA: {
+    pet: { n: 1, what: 'PUT A HAND OUT TO AN ANIMAL' },
+    clean: { n: 3, what: "CLEANED UP AFTER SOMEBODY ELSE'S DOG" },
+    tip: { n: 2, what: 'TIPPED A BUSKER WHO NEEDED IT' },
+    sit: { n: 2, what: 'SAT FOR A PAINTER WHO HAD NOBODY' },
+    warn: { n: 2, what: 'WARNED A MARK OFF THE CUPS' },
+    donut: { n: 1, what: 'FED THE NIGHT SHIFT' },
+    errand: { n: 1, what: 'DID SOMEBODY A FAVOUR AND MEANT IT' },
+    rat: { n: 0, what: 'SHOT A RAT. THE CITY IS INDIFFERENT.' },
+    scam: { n: -3, what: 'RAN THE CUPS ON A TOURIST' },
+    wide: { n: -1, what: 'FIRED A GUN IN THE STREET' },
+    lean: { n: -6, what: "PUT A GUN IN A WITNESS'S FACE" },
+    parcel: { n: -2, what: 'OPENED A PARCEL YOU WERE TRUSTED WITH' },
+    wrong: { n: -4, what: 'NAMED A FROG WHO HAD DONE NOTHING' },
+    steal: { n: -2, what: 'TOOK MONEY OFF SOMEBODY WHO HAD NONE' },
+  },
+
+  /* move it, remember why, and say so */
+  karmaHit(id, mult) {
+    const k = STORY.KARMA[id];
+    if (!k) return 0;
+    const n = Math.round(k.n * (mult === undefined ? 1 : mult));
+    if (!n) return 0;
+    G.karmaScore = (G.karmaScore || 0) + n;
+    G.karmaLog = G.karmaLog || [];
+    G.karmaLog.push({ id, n, what: k.what });
+    if (G.karmaLog.length > 24) G.karmaLog.shift();
+    /* it follows you between cases, because a reputation does */
+    const d = META.load();
+    d.karma = (d.karma || 0) + n; META.save();
+    if (UI.stampSmall) UI.stampSmall('KARMA ' + (n > 0 ? '+' : '') + n);
+    return n;
+  },
+
+  /* where you stand, in a word */
+  karma() {
+    const score = G.karmaScore || 0;
+    const last = (G.karmaLog || []).length
+      ? G.karmaLog[G.karmaLog.length - 1].what : null;
+    const band = score >= 14 ? 0 : score >= 5 ? 1 : score > -5 ? 2 : score > -14 ? 3 : 4;
+    const WORD = ['A GOOD COP', 'STILL DECENT', 'A COP', 'GETTING UGLY', 'A BAD COP'];
+    const BLURB = [
+      'PEOPLE TELL YOU THINGS THEY DO NOT HAVE TO. IT ADDS UP.',
+      'NOBODY IS FRIGHTENED OF YOU YET, WHICH HELPS.',
+      'YOU HAVE NOT DONE ANYTHING THE CITY WILL REMEMBER EITHER WAY.',
+      'WORD IS GETTING ROUND. WITNESSES ARE GETTING SHORTER.',
+      'THEY TALK TO YOU BECAUSE THEY ARE AFRAID. IT SHOWS IN THE FILE.',
+    ];
+    return { score, band, word: WORD[band], blurb: BLURB[band], last };
+  },
+
+  /* what a witness thinks of you before you open your mouth */
+  karmaMood() {
+    const b = STORY.karma().band;
+    return b <= 1 ? 1 : b === 2 ? 0 : -1;
+  },
+
+  /* ============================================================
+     THE JOBS BOARD.
+
+     A detective on this salary works the room. This is every bit
+     of paying work the night has in it, where it is, and whether
+     you have already done it.
+     ============================================================ */
+  JOBS_BOARD: [
+    { id: 'pour', name: 'WORK THE TAPS', where: 'LE MOULIN ROUGE', icon: 'ic_glass' },
+    { id: 'donuts', name: 'MAKE A BATCH', where: 'CAFE DU PONT', icon: 'ic_cup' },
+    { id: 'rats', name: 'CLEAR THE DRUMS', where: 'LAVERIE DU CANAL', icon: 'ic_rat' },
+    { id: 'scoop', name: 'THE PAVEMENT', where: 'ANYWHERE A DOG HAS BEEN', icon: 'ic_paw' },
+    { id: 'sit', name: 'SIT FOR THE PAINTER', where: 'LA BUTTE', icon: 'ic_star' },
+    { id: 'cups', name: 'THE THREE CUPS', where: 'LA BUTTE', icon: 'ic_coin' },
+    { id: 'kit', name: 'DUST FOR PRINTS', where: 'LA BRIGADE', icon: 'ic_case' },
+  ],
+
+  jobsBoard() {
+    return STORY.JOBS_BOARD.map(j => Object.assign({}, j, {
+      done: !!(G.jobsDone && G.jobsDone[j.id]),
+    }));
+  },
+  jobsOpen() { return STORY.jobsBoard().filter(j => !j.done); },
+
+  /* ============================================================
      THE ONE NICE THING IN THE GAME.
 
      There is a cat at four of the five stops and a dog at the
@@ -17806,6 +20227,7 @@ const STORY = {
     const d = META.load();
     d.pets = (d.pets || 0) + 1; META.save();
     G.petted = (G.petted || 0) + 1;
+    STORY.karmaHit('pet');
     const line = a.kind === 'dog'
       ? U.pick(Math.random, [
         'HE PUTS HIS WHOLE HEAD IN YOUR HAND. HE DOES THIS TO EVERYBODY.',
@@ -17894,6 +20316,7 @@ const STORY = {
     FX.screen.flash(PIX.PAL.W, 0.22, 0.14);
     FX.screen.shake(6);
     G.ratsShot = (G.ratsShot || 0) + 1;
+    STORY.karmaHit('rat');
     const pay = 5;
     G.chips += pay;
     UI.syncChips && UI.syncChips();
@@ -17912,6 +20335,7 @@ const STORY = {
     FX.screen.flash(PIX.PAL.W, 0.18, 0.16);
     FX.screen.shake(5);
     G.heat = (G.heat || 0) + 1;
+    STORY.karmaHit('wide');
     await TUTOR.say(U.pick(Math.random, [
       "A HOLE IN SOMEBODY ELSE'S WALL. VERY GOOD, DETECTIVE.",
       'THAT WAS LOUD AND IT WAS NOTHING.',
@@ -17943,6 +20367,7 @@ const STORY = {
 
     /* THREATENING A WITNESS WORKS. That is the problem with it. */
     G.heat = (G.heat || 0) + 2;
+    STORY.karmaHit('lean');
     STORY.note('PULLED A GUN ON ' + ((typeof o.label === 'function' ? o.label() : o.label) || 'A WITNESS') + '.');
     const place = G.place;
     const clues = (G.case && G.case.clues) || [];

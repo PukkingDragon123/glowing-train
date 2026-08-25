@@ -375,18 +375,34 @@ const CASE = {
 
      A clue is not a card you turn over at a table any more: it is
      a thing in a place. Every unseen clue gets buried in one prop
-     in one of the five stops, spread so that no single trip solves
-     the case and no stop is a dead end. The order the props come
-     back in is seeded, so the same case is the same hunt.
+     in one of the stops, spread so that no single trip solves the
+     case and no stop is a dead end. The order the props come back
+     in is seeded, so the same case is the same hunt.
+
+     THE CITY IS BIGGER THAN THE CASE. There are eleven stops on
+     the map now and only a handful of clues: burying them across
+     all eleven would make every night a driving job. So a case
+     picks the five working stops plus two of the landmarks, and
+     the rest of Paris is somewhere you go for other reasons.
      ------------------------------------------------------------ */
+  /* the stops this case is actually in, for the map and the harness */
+  stops() {
+    const c = G.case;
+    if (c && c.stops) return c.stops.slice();
+    return (typeof CITY !== 'undefined' ? (CITY.WORK || CITY.ORDER) : []).slice();
+  },
+
   plant() {
     const c = G.case;
     if (!c || typeof CITY === 'undefined') return;
     const rng = G.rng || Math.random;
-    /* every searchable prop in the city, place by place. This comes off
-       CITY.PROPS rather than off the rooms: planting a case must not have
-       to paint five canvases, and the balance harness has no canvas at all. */
-    const slots = CITY.ORDER.map(id => ({
+    /* every searchable prop in the case's stops, place by place. This comes
+       off CITY.PROPS rather than off the rooms: planting a case must not
+       have to paint a canvas, and the balance harness has none at all. */
+    const work = (CITY.WORK || CITY.ORDER).slice();
+    const extra = U.shuffle(rng, CITY.ORDER.filter(id => work.indexOf(id) < 0)).slice(0, 2);
+    c.stops = work.concat(extra);
+    const slots = c.stops.map(id => ({
       place: id, props: U.shuffle(rng, CITY.propsAt(id)),
     }));
     /* deal round the city so the clues are never all in one room */

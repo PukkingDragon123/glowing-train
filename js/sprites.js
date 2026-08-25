@@ -4273,10 +4273,52 @@ SPR.walkPhase = function (frame) {
   return Math.sin(((frame % n) / n) * Math.PI * 2);
 };
 
+/* ============================================================
+   THE CARTOON PASS.
+
+   Every part of the rig is drawn with its own ink line, which is
+   right up close and disappears the moment he stands in front of
+   a busy room: the coat is dark, the wall is dark, and the
+   silhouette goes with it. This walks the alpha channel once and
+   lays a hard black line all the way round the outside of him,
+   then puts a rim light down the side the lamps are on — which is
+   the whole difference between a drawing and a smudge.
+   ============================================================ */
+SPR.inkEdge = function (cv, rim) {
+  const c = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const im = c.getImageData(0, 0, W, H);
+  const d = im.data;
+  const out = new Uint8ClampedArray(d);
+  const A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (d[i + 3] > 24) {
+        /* a solid pixel with nothing above-left of it catches the lamp */
+        if (rim && A(x - 1, y) < 24 && A(x, y - 1) < 24) {
+          out[i] = Math.min(255, d[i] + 46);
+          out[i + 1] = Math.min(255, d[i + 1] + 46);
+          out[i + 2] = Math.min(255, d[i + 2] + 46);
+        }
+        continue;
+      }
+      /* a hole with something next to it becomes the outline */
+      if (A(x - 1, y) > 128 || A(x + 1, y) > 128 || A(x, y - 1) > 128 || A(x, y + 1) > 128) {
+        out[i] = 12; out[i + 1] = 10; out[i + 2] = 24; out[i + 3] = 255;
+      }
+    }
+  }
+  im.data.set(out);
+  c.putImageData(im, 0, 0);
+  return cv;
+};
+
 SPR.frogWhole = function (key, def, opts) {
   opts = opts || {};
   const frame = ((opts.frame | 0) % SPR.WALK_FRAMES + SPR.WALK_FRAMES) % SPR.WALK_FRAMES;
-  return SPR.cached('whole_' + key + ':' + frame, () => {
+  const back = !!opts.back;
+  return SPR.cached('whole_' + key + ':' + frame + (back ? ':b' : ''), () => {
     const P = PIX.PAL;
     const ph = SPR.walkPhase(frame);
     const head = SPR.frogCustom('fb:' + key, def);
@@ -4361,6 +4403,52 @@ SPR.frogWhole = function (key, def, opts) {
     }
 
     c.drawImage(head, Math.round((W - hw) / 2), bob, hw, hh);
+
+    /* ------------------------------------------------------------
+       WALKING AWAY FROM YOU.
+
+       Same frog, same hat, same coat — and nothing on the front of
+       his head, because you are behind him. The face is painted out
+       in his own skin with the nape shadow under the hat band and
+       the shoulders read the rest. Cheaper than a second rig and at
+       room scale you cannot tell the difference.
+       ------------------------------------------------------------ */
+    if (back) {
+      /* the coat has no lapels and no tie on the back of it: one panel of
+         cloth between the sleeves, a yoke seam across the shoulders and a
+         vent down the middle */
+      const bx2 = Math.round((W - bw) / 2);
+      const px0 = bx2 + Math.round(bw * 0.24), pw = Math.round(bw * 0.52);
+      const py0 = bodyTop + Math.round(bh * 0.16), ph = Math.round(bh * 0.80);
+      PIX.rect(c, px0, py0, pw, ph, coatC);
+      PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.07)');
+      PIX.rect(c, px0, py0 + 6, pw, 1, 'rgba(0,0,0,.34)');          // the yoke
+      PIX.rect(c, px0 + Math.round(pw / 2), py0 + 7, 1, ph - 7, 'rgba(0,0,0,.30)');
+      PIX.rect(c, px0 + pw - 3, py0 + 2, 3, ph - 2, 'rgba(0,0,0,.20)');
+      const hx = Math.round((W - hw) / 2);
+      const sk = P[def.skin[0]] || P.F;
+      const sh = P[def.skin[1]] || P.f;
+      const dk = P[def.skin[2]] || P.e;
+      /* the skull, from behind: a dome of skin inside the existing outline */
+      const cx2 = hx + Math.round(hw / 2);
+      const ey = bob + Math.round(hh * 0.46);
+      SPR.ellipse(c, cx2, ey, Math.round(hw * 0.40), Math.round(hh * 0.30), sk);
+      SPR.ellipse(c, cx2, ey + Math.round(hh * 0.06), Math.round(hw * 0.36),
+        Math.round(hh * 0.22), sh);
+      /* the two humps a frog's eyes make, seen from behind */
+      const eo = Math.round(hw * 0.19);
+      SPR.ellipse(c, cx2 - eo, ey - Math.round(hh * 0.16), 7, 5, sk);
+      SPR.ellipse(c, cx2 + eo, ey - Math.round(hh * 0.16), 7, 5, sk);
+      PIX.rect(c, cx2 - eo - 7, ey - Math.round(hh * 0.16), 14, 1, sh);
+      PIX.rect(c, cx2 + eo - 7, ey - Math.round(hh * 0.16), 14, 1, sh);
+      /* the nape, and the collar under it */
+      PIX.rect(c, cx2 - Math.round(hw * 0.30), ey + Math.round(hh * 0.22),
+        Math.round(hw * 0.60), 3, dk);
+      PIX.rect(c, cx2 - Math.round(hw * 0.22), ey + Math.round(hh * 0.28),
+        Math.round(hw * 0.44), 2, 'rgba(0,0,0,.35)');
+    }
+    /* and one hard line all the way round him, with a rim light on it */
+    SPR.inkEdge(cv, true);
     return cv;
   });
 };
@@ -4397,12 +4485,15 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    the frame sizes where that does not come out even, plus mugshots
    and pins.
    ============================================================ */
-SPR.rigLOD = function (key, def, frame, face, down) {
+SPR.rigLOD = function (key, def, frame, face, down, back) {
   down = down || 3;
-  const f = ((frame | 0) % 4 + 4) % 4;
+  /* EIGHT FRAMES, NOT FOUR. This used to fold the frame number modulo four,
+     which quietly threw away half of the walk cycle the rig had drawn. */
+  const NF = SPR.WALK_FRAMES;
+  const f = (((frame | 0) % NF) + NF) % NF;
   const fc = face < 0 ? -1 : 1;
-  return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down, () => {
-    const src = SPR.frogWhole(key, def, { frame: f });
+  return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down + (back ? ':b' : ''), () => {
+    const src = SPR.frogWhole(key, def, { frame: f, back: !!back });
     if (down === 1 && fc > 0) return src;
     const w = Math.max(1, Math.round(src.width / down));
     const h = Math.max(1, Math.round(src.height / down));
