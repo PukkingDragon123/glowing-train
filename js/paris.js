@@ -62,6 +62,28 @@ const PARIS = (() => {
   }
 
   /* ============================================================
+     WHY THINGS FLOAT, AND THE ONE-LINE CURE.
+
+     A bench drawn on a pavement at the same brightness as the
+     pavement is a bench-shaped hole. The eye reads CONTACT from a
+     shadow, not from a coordinate — and half the furniture in this
+     city had none, so it all looked like it was hovering an inch
+     off the ground even though every one of them was placed
+     exactly right.
+
+     `foot` puts the shadow down: darkest and tightest where the
+     legs meet the stone, softer and wider as it spreads, and
+     always off to the shaded side. Called at the END of a prop, so
+     nothing is drawn on top of it.
+     ============================================================ */
+  function foot(c, x, y, w, spread) {
+    const sp = spread === undefined ? 3 : spread;
+    px(c, x, y, w, 1, 'rgba(52,44,32,.42)');
+    px(c, x + 1, y + 1, w + sp, 1, 'rgba(52,44,32,.26)');
+    px(c, x + 2, y + 2, w + sp * 2, 1, 'rgba(52,44,32,.14)');
+  }
+
+  /* ============================================================
      THE FURNITURE OF PARIS.
 
      None of this is a landmark and all of it is why a street in
@@ -189,6 +211,7 @@ const PARIS = (() => {
     });
     px(c, x - 1, y - h - 9, 3, 4, L.iron);
     px(c, x - 1, y - h - 10, 3, 1, L.brass);
+    foot(c, x - 5, y + 2, 11, 4);
   }
 
   /* a pollarded plane tree: the trunk is the point, the crown is a blob */
@@ -222,8 +245,9 @@ const PARIS = (() => {
       px(c, lx, ly, 3, 2, rng() < 0.4 ? L.leafLit : L.leaf);
     }
     /* and the shade it throws, which is why anybody planted it */
-    px(c, x - 14, y - 1, 29, 2, 'rgba(58,52,36,.22)');
-    px(c, x - 9, y + 1, 19, 1, 'rgba(58,52,36,.14)');
+    foot(c, x - 6, y, 13, 8);
+    px(c, x - 16, y + 2, 33, 2, 'rgba(58,52,36,.20)');
+    px(c, x - 11, y + 4, 23, 1, 'rgba(58,52,36,.12)');
   }
 
   /* THE WALLACE FOUNTAIN. Four bronze women holding up a dome, and
@@ -249,6 +273,7 @@ const PARIS = (() => {
     /* the water */
     px(c, x, y - 12, 1, 8, 'rgba(160,220,235,.35)');
     px(c, x - 3, y - 5, 7, 2, 'rgba(160,220,235,.18)');
+    foot(c, x - 9, y, 19, 5);
   }
 
   /* a Morris column: a fat cylinder of theatre posters with a cap */
@@ -270,6 +295,7 @@ const PARIS = (() => {
     px(c, x - 9, y - h - 8, 19, 5, L.iron);
     PIX.disc(c, x, y - h - 11, 5, L.iron);
     px(c, x - 1, y - h - 16, 3, 5, L.brass);
+    foot(c, x - 12, y, 25, 6);
   }
 
   /* a green slat bench, the kind bolted to every gravel path in the city */
@@ -283,6 +309,7 @@ const PARIS = (() => {
     px(c, x + w - 4, y - 7, 3, 7, dk);
     px(c, x, y - 20, 2, 12, dk);
     px(c, x + w - 2, y - 20, 2, 12, dk);
+    foot(c, x, y, w, 4);
   }
 
   /* the pavement: setts, worn smooth, wet more often than not */
@@ -326,6 +353,10 @@ const PARIS = (() => {
     px(c, x + 2, y - 20, 3, 2, '#5a3a22');
     px(c, x + 6, y - 20, 3, 4, 'rgba(210,235,245,.75)');
     px(c, x - 7, y - 19, 4, 3, L.cream);          // the saucer with the bill on it
+    /* three shadows, because a table and two chairs are three things */
+    foot(c, x - 6, y, 13, 3);
+    foot(c, x - 20, y, 10, 2);
+    foot(c, x + 9, y, 10, 2);
   }
 
   /* ============================================================
@@ -703,6 +734,7 @@ const PARIS = (() => {
       morris(c, 470, FY - 2, 54);
       /* the chestnut cart, under a striped parasol, doing no trade at all
          because it is twenty degrees out */
+      foot(c, 620, FY, 30, 4);
       ART.box(c, 620, FY - 22, 30, 22, { fill: '#8a5a3a', top: '#a87a52', bot: '#4e3220', ink: p.K });
       px(c, 624, FY - 26, 22, 5, '#6b4630');
       px(c, 628, FY - 30, 14, 5, '#c96a1e');
@@ -715,6 +747,7 @@ const PARIS = (() => {
       }
       px(c, 616, FY - 51, 38, 2, L.cream);
       /* the souvenir stand: forty little towers on a trestle */
+      foot(c, 92, FY, 54, 4);
       ART.box(c, 92, FY - 20, 54, 20, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
       for (let i = 0; i < 9; i++) {
         const sx = 96 + i * 6;
@@ -951,12 +984,38 @@ const PARIS = (() => {
         px(c, x - 10, y - 2, 9, 2, '#4a3f2e');
         px(c, x + 4, y - 2, 9, 2, '#4a3f2e');
         px(c, x - 14, y - 36, 28, 3, '#5a4f3a');
+        foot(c, x - 11, y, 23, 4);
       };
       easel(180, FY - 1, '#3f6a4a');
       easel(228, FY - 1, '#6a4a3f');
       easel(560, FY - 1, '#4a3f6a');
+      /* THE FRONT ROW IS NOT PAINTED HERE.
+
+         Everything standing at the near kerb used to go into the backdrop,
+         which put it BEHIND a crowd walking about forty feet further away:
+         a frog at the back of the square appeared to be standing on the
+         near table. Front-row furniture is drawn per frame, after the
+         cast, by `front` below. */
+      /* the artist's crate of tubes, and his loaf — also front row */
+      const _crateSkip = 1;
+      if (!_crateSkip) ART.box(c, 120, FY - 14, 26, 14,
+        { fill: '#5e5038', top: '#7a6a4a', bot: '#2a231a', ink: p.K });
+      for (let i = 0; i < 5; i++) px(c, 123 + i * 5, FY - 18, 3, 5, ['#b8232f', '#e0a63c', '#3a5f9c', '#4fae6d', '#f4efe0'][i]);
+      px(c, 148, FY - 8, 22, 5, '#c98a4a');
+      px(c, 148, FY - 8, 22, 2, '#e0a86a');
+    };
+
+    /* ============================================================
+       THE NEAR KERB.
+
+       Drawn every frame, after everybody, so a table three feet from
+       the camera is in front of a frog forty feet away instead of
+       behind him. Everything in here stands at z 0.
+       ============================================================ */
+    const front = (c) => {
       /* the scammers' folding table, three cups on it */
-      ART.box(c, 300, FY - 18, 62, 18, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
+      foot(c, 300, FY, 62, 4);
+      ART.box(c, 300, FY - 18, 62, 18, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: P().K });
       for (let i = 0; i < 3; i++) {
         const cx2 = 312 + i * 19;
         px(c, cx2, FY - 26, 11, 8, '#b8232f');
@@ -967,10 +1026,13 @@ const PARIS = (() => {
       cafeTable(c, 660, FY - 1);
       cafeTable(c, 706, FY - 1);
       /* the artist's crate of tubes, and his loaf */
-      ART.box(c, 120, FY - 14, 26, 14, { fill: '#5e5038', top: '#7a6a4a', bot: '#2a231a', ink: p.K });
-      for (let i = 0; i < 5; i++) px(c, 123 + i * 5, FY - 18, 3, 5, ['#b8232f', '#e0a63c', '#3a5f9c', '#4fae6d', '#f4efe0'][i]);
-      px(c, 148, FY - 8, 22, 5, '#c98a4a');
-      px(c, 148, FY - 8, 22, 2, '#e0a86a');
+      foot(c, 120, FY, 26, 3);
+      ART.box(c, 120, FY - 14, 26, 14, { fill: '#5e5038', top: '#7a6a4a', bot: '#2a231a', ink: P().K });
+      px(c, 124, FY - 18, 6, 5, '#c96a1e');
+      px(c, 132, FY - 18, 5, 5, '#3f6a4a');
+      px(c, 139, FY - 17, 5, 4, '#2f4a70');
+      px(c, 150, FY - 8, 16, 6, '#d9a45c');
+      px(c, 150, FY - 8, 16, 2, '#f0c98a');
     };
 
     const spots = [
@@ -1006,7 +1068,8 @@ const PARIS = (() => {
     ];
 
     return {
-      id: 'butte', w: W, floorY: FY, paint, spots, actors, eggs, outdoor: true,
+      id: 'butte', w: W, floorY: FY, paint, onPaintFront: front,
+      spots, actors, eggs, outdoor: true,
       skyTo: FY - BAND,
       depthBand: BAND, crowd: { n: 20, z0: 0.4, z1: 1 },
       pets: [{ kind: 'dog', x: 480, name: "A PAINTER'S DOG", fouls: true },
@@ -1200,6 +1263,7 @@ const PARIS = (() => {
       PIX.disc(c, 191, 25, 3, '#ffe7a8');
       PIX.disc(c, 191, 25, 12, 'rgba(255,231,168,.09)');
       /* the table they meet at, and the two chairs nobody dusted */
+      foot(c, 236, FY, 70, 4);
       ART.box(c, 236, FY - 20, 70, 8, { fill: '#4a3f2e', top: '#61533b', bot: '#241d14', ink: p.K });
       px(c, 244, FY - 12, 4, 12, '#2a231a');
       px(c, 294, FY - 12, 4, 12, '#2a231a');

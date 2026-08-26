@@ -1841,6 +1841,175 @@ SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
    are rolled as TRAITS and drawn right on the frog.
    ============================================================ */
 
+/* ============================================================
+   THE HEAD, IN PROFILE.
+
+   Drawn from nothing on its own canvas rather than repainted over
+   the front-facing one — that was the first attempt and it never
+   read, because the outline underneath still said "front": a snout
+   painted inside a head-on silhouette is a head-on head with a
+   snout painted on it.
+
+   A frog turned sideways is mostly muzzle. So the silhouette here
+   is the whole point: the skull is a dome set well back, the jaw
+   runs out a long way in front of it and comes to a blunt tip, and
+   the single eye sits high and forward where the two bulges meet
+   the brow. Everything else — hat, collar, expression — hangs off
+   those three shapes.
+
+   Same canvas size as the front head so the rig can swap one for
+   the other without moving anything.
+   ============================================================ */
+SPR.profileHead = function (d, expr) {
+  expr = expr || 'neutral';
+  const P = PIX.PAL;
+  const skin = P[d.skin[0]], shade = P[d.skin[1]], dark = P[d.skin[2]];
+  const W = 46, H = 42;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  const fat = !!d.fat;
+  /* he faces RIGHT; the rig flips the whole sprite when he faces left */
+  const bx = fat ? 12 : 14;              // back of the skull
+  const ty = 24;                         // the jaw line
+  const sk = fat ? 16 : 14;              // skull radius
+  const jaw = fat ? 30 : 28;             // how far the muzzle runs out
+
+  /* ---- THE SILHOUETTE, in ink, one pixel bigger all round ---- */
+  const ink = (col) => {
+    /* the skull */
+    SPR.ellipse(c, bx + 4, ty - 5, sk, sk - 3, col);
+    /* the jaw: a long wedge from under the skull out to the tip */
+    for (let i = 0; i < jaw; i++) {
+      const t = i / jaw;
+      const top = ty - 6 + Math.round(t * t * 5);
+      const bot = ty + 5 - Math.round(t * t * 3);
+      PIX.rect(c, bx + 2 + i, top, 1, bot - top, col);
+    }
+    /* the throat, hanging under the back of the jaw */
+    SPR.ellipse(c, bx + 10, ty + 5, 12, 4, col);
+  };
+  ink(P.K);
+  /* and the skin inside it, inset by one */
+  c.save();
+  c.translate(0, 0);
+  SPR.ellipse(c, bx + 4, ty - 5, sk - 1, sk - 4, skin);
+  for (let i = 1; i < jaw - 1; i++) {
+    const t = i / jaw;
+    const top = ty - 5 + Math.round(t * t * 5);
+    const bot = ty + 4 - Math.round(t * t * 3);
+    PIX.rect(c, bx + 2 + i, top, 1, bot - top, skin);
+  }
+  SPR.ellipse(c, bx + 10, ty + 4, 11, 3, shade);
+  c.restore();
+  /* the shading: the underside of the jaw and the back of the skull */
+  for (let i = 2; i < jaw - 2; i++) {
+    const t = i / jaw;
+    const bot = ty + 4 - Math.round(t * t * 3);
+    PIX.rect(c, bx + 2 + i, bot - 2, 1, 2, shade);
+  }
+  SPR.ellipse(c, bx - 1, ty - 4, 6, 9, shade);
+  /* the mottle a frog has, if this one has it */
+  if (d.spots) {
+    [[8, -10], [16, -4], [24, 0], [12, 2]].forEach(o =>
+      PIX.disc(c, bx + o[0], ty + o[1], 2, shade));
+  }
+  if (d.warts) {
+    [[6, -12], [18, -6], [26, -1]].forEach(o => {
+      PIX.disc(c, bx + o[0], ty + o[1], 2, shade);
+      PIX.disc(c, bx + o[0], ty + o[1] - 1, 1, skin);
+    });
+  }
+
+  /* ---- THE MOUTH, the whole length of the jaw ---- */
+  const EX = {
+    neutral: 0, talk: -3, talk2: -1, happy: 2, joy: 3, laugh: 4, grin: 2,
+    smug: 1, sad: -2, angry: -1, worry: 0, wince: -1, blink: 0, bored: 0,
+    squint: 0, think: -1, doubt: 0, sniff: 0, alarm: -4, blush: 1,
+    pain: -2, dead: -4, wink: 2, thinkb: 0,
+  };
+  const open = EX[expr] === undefined ? 0 : EX[expr];
+  const lipY = ty + 1;
+  if (open < 0) {
+    /* the jaw is down: the mouth is a wedge of dark with a tongue in it */
+    for (let i = 4; i < jaw - 2; i++) {
+      const t = i / jaw;
+      const drop = Math.round(-open * (1 - t) * 1.2);
+      PIX.rect(c, bx + 2 + i, lipY - drop, 1, drop + 2, P.K);
+    }
+    PIX.rect(c, bx + 8, lipY - 1, 12, 2, P.r);
+  } else {
+    for (let i = 3; i < jaw - 1; i++) {
+      const t = i / jaw;
+      const up = Math.round(open * (1 - Math.abs(t - 0.75) * 2) * 0.9);
+      PIX.rect(c, bx + 2 + i, lipY - Math.round(t * t * 2) - up, 1, 2, P.K);
+    }
+  }
+  /* the corner of it, tucked under the eye */
+  PIX.rect(c, bx + 3, lipY - 1, 2, 3, P.K);
+  /* the nostril, near the tip */
+  PIX.rect(c, bx + jaw - 6, ty - 4, 2, 2, dark);
+
+  /* ---- ONE EYE, high and forward ---- */
+  const exx = bx + (fat ? 14 : 12), eyy = ty - 12;
+  const shut = expr === 'blink' || expr === 'joy' || expr === 'laugh' || expr === 'dead';
+  const lid = expr === 'squint' || expr === 'bored' ? 3
+    : expr === 'smug' || expr === 'wince' ? 2 : 0;
+  SPR.ellipse(c, exx, eyy + 1, 8, 7, P.K);
+  SPR.ellipse(c, exx, eyy + 1, 7, 6, skin);
+  if (shut) {
+    PIX.rect(c, exx - 5, eyy + 1, 11, 2, P.K);
+    PIX.rect(c, exx - 4, eyy + 3, 9, 1, dark);
+  } else if (expr === 'dead') {
+    PIX.rect(c, exx - 3, eyy - 1, 7, 1, P.K);
+  } else {
+    const iris = d.goldEyes ? P.G : d.spiral ? P.N : P.g;
+    SPR.ellipse(c, exx + 1, eyy + 1, 5, 4, P.W);
+    SPR.ellipse(c, exx + 1, eyy + 1, 4, 3, iris);
+    PIX.rect(c, exx, eyy + 1, 4, 2, P.K);            // the slot pupil
+    PIX.rect(c, exx - 1, eyy, 1, 1, P.W);            // the catchlight
+    if (lid) PIX.rect(c, exx - 6, eyy - 3, 13, lid, skin);
+  }
+  /* the brow, which is where the expression lives */
+  const brow = expr === 'angry' || expr === 'doubt' ? 2
+    : expr === 'sad' || expr === 'worry' || expr === 'alarm' ? -2 : 0;
+  for (let i = 0; i < 13; i++) {
+    PIX.rect(c, exx - 6 + i, eyy - 5 + Math.round(i * 0.18) + brow, 1, 2, P.K);
+  }
+
+  /* ---- THE HAT ---- */
+  const C = SPR.costumeOf(d);
+  if (d.flatcap || (C && C.cap)) {
+    const hc = P[d.hatCol] || P.t;
+    PIX.rect(c, bx - 4, eyy - 8, 26, 4, P.K);
+    PIX.rect(c, bx - 3, eyy - 7, 24, 3, hc);
+    PIX.rect(c, bx - 3, eyy - 7, 24, 1, 'rgba(255,255,255,.14)');
+    /* the peak, out over the eye */
+    PIX.rect(c, bx + 16, eyy - 5, 12, 3, P.K);
+    PIX.rect(c, bx + 16, eyy - 5, 11, 2, hc);
+  } else if (d.hat) {
+    const hc = P[d.hatCol] || P.T, hb = P[d.band] || P.d;
+    PIX.rect(c, bx - 6, eyy - 7, 34, 4, P.K);          // the brim
+    PIX.rect(c, bx - 5, eyy - 6, 32, 2, hc);
+    PIX.rect(c, bx - 5, eyy - 6, 32, 1, 'rgba(255,255,255,.14)');
+    PIX.rect(c, bx - 1, eyy - 18, 20, 12, P.K);        // the crown
+    PIX.rect(c, bx, eyy - 17, 18, 11, hc);
+    PIX.rect(c, bx, eyy - 17, 3, 11, 'rgba(255,255,255,.10)');
+    PIX.rect(c, bx, eyy - 9, 18, 3, hb);               // the band
+    PIX.rect(c, bx + 2, eyy - 17, 12, 2, 'rgba(0,0,0,.30)');  // the pinch
+  }
+
+  /* ---- THE COLLAR, edge on ---- */
+  const CO = C && (C.overcoat || C.jacket);
+  const cc = P[(CO && CO.col) || d.suit] || P.T;
+  const shirt = P[(C && C.shirt && C.shirt.col) || d.shirt] || P.W;
+  PIX.rect(c, bx + 2, ty + 7, 20, 4, P.K);
+  PIX.rect(c, bx + 3, ty + 7, 18, 3, cc);
+  PIX.rect(c, bx + 12, ty + 7, 7, 3, shirt);
+  if (d.tie) PIX.rect(c, bx + 15, ty + 9, 4, 2, P[d.tie] || P.r);
+  return cv;
+};
+
 SPR.buildFrog = function (d, expr) {
   expr = expr || 'neutral';
   const P = PIX.PAL;
@@ -4530,10 +4699,21 @@ SPR.frogWhole = function (key, def, opts) {
      only ever reached by the portraits in a conversation. Now a frog
      standing at a counter can be bored, pleased, or watching you. */
   const ex = opts.expr || 'neutral';
-  return SPR.cached('whole_' + key + ':' + frame + ':' + ex + (back ? ':b' : ''), () => {
+  /* AND WHICH WAY HE IS TURNED. Front, back, or — new — in profile,
+     which is what he actually is for most of the time he is on screen:
+     walking along a street is walking sideways. */
+  const side = !!opts.side && !back;
+  return SPR.cached('whole_' + key + ':' + frame + ':' + ex
+    + (back ? ':b' : '') + (side ? ':s' : ''), () => {
     const P = PIX.PAL;
     const ph = SPR.walkPhase(frame);
-    const head = SPR.frogCustom('fb:' + key + ':' + ex, def, ex);
+    /* THE HEAD. Front-on and back-on share one canvas — the back view
+       repaints the face out. Side-on is its own drawing, because a
+       profile needs its own silhouette and no amount of repainting
+       inside a head-on outline will give it one. */
+    const head = side
+      ? SPR.cached('fbp:' + key + ':' + ex, () => SPR.profileHead(def, ex))
+      : SPR.frogCustom('fb:' + key + ':' + ex, def, ex);
     const body = SPR.bodyStanding('fb:' + key, def, ph);
     /* PROPORTION. The portrait head and the duel bust were both drawn for a
        frog sitting at a table, where you never see him below the chest. Used
@@ -4565,7 +4745,11 @@ SPR.frogWhole = function (key, def, opts) {
     const O = C.overcoat || C.jacket || null;
     const legC = P[(O && O.dark) || 'k'] || P.k;
     const hipY = bodyTop + bh - 6;
-    const spread = def.fat ? 10 : 8;      // hips, not a pair of stilts
+    /* TURNED, HIS LEGS ARE IN LINE, not side by side. A profile with the
+       feet spread apart across the frame is a frog standing front-on with
+       a side-on head stuck on it, which is the single thing that stops
+       the turn reading. */
+    const spread = side ? 3 : (def.fat ? 10 : 8);
     [-1, 1].forEach(sgn => {
       /* the leading leg is the one the swing is carrying toward */
       const lead = sgn * swing > 0;
@@ -4591,7 +4775,7 @@ SPR.frogWhole = function (key, def, opts) {
     const coatC = P[(O && O.col) || 'T'] || P.T;
     const coatD = P[(O && O.dark) || 'k'] || P.k;
     const skirtY = bodyTop + bh - 4;
-    const skW = Math.round(bw * 0.27);
+    const skW = Math.round(bw * (side ? 0.19 : 0.27));
     const kick = Math.round(swing * 0.35);
     PIX.rect(c, cx - skW - 1 + kick, skirtY, skW * 2 + 2, 14, P.K);
     PIX.rect(c, cx - skW + kick, skirtY, skW * 2, 12, coatC);
@@ -4600,21 +4784,28 @@ SPR.frogWhole = function (key, def, opts) {
     PIX.rect(c, cx + skW - 3 + kick, skirtY, 3, 12, 'rgba(0,0,0,.26)');
     PIX.rect(c, cx + kick, skirtY + 5, 1, 9, 'rgba(0,0,0,.34)');   // the vent
 
-    c.drawImage(body, Math.round((W - bw) / 2), bodyTop, bw, bh);
+    /* SHOULDERS TURN. A torso seen edge-on is about two thirds the width
+       it is head-on, and drawing it at full width is what made the first
+       profile read as a front view with a snout drawn on it. */
+    const sbw = side ? Math.round(bw * 0.66) : bw;
+    const shw = side ? Math.round(hw * 0.90) : hw;
+    c.drawImage(body, Math.round((W - sbw) / 2), bodyTop, sbw, bh);
 
     /* HANDS. The bust stops at a shirt cuff because the duel paints the
        hands onto the felt itself. Standing up he needs his own, hung on the
-       wrist the body reports, swinging against the leg on the same beat. */
+       wrist the body reports, swinging against the leg on the same beat.
+       Turned, only the near one is in front of him — the other arm is on
+       the far side of his body and is drawn with the profile below. */
     const wr = body.wristAt;
-    if (wr) {
-      const bx = Math.round((W - bw) / 2);
+    if (wr && !side) {
+      const bx = Math.round((W - sbw) / 2);
       wr.forEach(w => {
         SPR.frogHand(c, bx + Math.round(w.x * BS), bodyTop + Math.round(w.y * BS),
           def, w.sgn, { noCuff: true, grip: true });
       });
     }
 
-    c.drawImage(head, Math.round((W - hw) / 2), bob, hw, hh);
+    c.drawImage(head, Math.round((W - shw) / 2), bob, shw, hh);
 
     /* ------------------------------------------------------------
        WALKING AWAY FROM YOU.
@@ -4659,6 +4850,78 @@ SPR.frogWhole = function (key, def, opts) {
       PIX.rect(c, cx2 - Math.round(hw * 0.22), ey + Math.round(hh * 0.28),
         Math.round(hw * 0.44), 2, 'rgba(0,0,0,.35)');
     }
+    /* ------------------------------------------------------------
+       IN PROFILE.
+
+       A frog's head is nearly all muzzle, which is the one thing
+       that makes a side view of one worth drawing: front-on he is
+       two eye bulges and a very wide mouth, and turned he is a
+       snout. So the face gets painted out in his own skin and
+       redrawn as a profile — the dome set back, the muzzle pushed
+       forward, ONE eye near the front of it, the mouth running the
+       length of the jaw, and a nostril at the tip.
+
+       The torso turns with him: the tie and the far lapel go under
+       one panel of coat, the far shoulder drops into shadow, and
+       the far arm goes behind the body instead of beside it.
+
+       Everything is drawn inside the head and body boxes the front
+       rig already laid down, so the silhouette, the hat and the
+       outline all still belong to the same frog.
+       ------------------------------------------------------------ */
+    if (side) {
+      const bw2 = sbw, hw2 = shw;
+      const bx2 = Math.round((W - bw2) / 2);
+      const hx = Math.round((W - hw2) / 2);
+      const cx2 = hx + Math.round(hw2 / 2);
+      const ey = bob + Math.round(hh * 0.46);
+      const sk = P[def.skin[0]] || P.F;
+      const sh = P[def.skin[1]] || P.f;
+      const dk = P[def.skin[2]] || P.e;
+
+      /* ---- the torso, turned ---- */
+      const px0 = bx2 + Math.round(bw2 * 0.28), pw = Math.round(bw2 * 0.44);
+      const py0 = bodyTop + Math.round(bh * 0.14), ph = Math.round(bh * 0.82);
+      PIX.rect(c, px0, py0, pw, ph, coatC);
+      PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.06)');
+      /* the one lapel you can see, edge-on */
+      PIX.rect(c, px0 + pw - 4, py0 + 2, 4, Math.round(ph * 0.42), 'rgba(255,255,255,.10)');
+      PIX.rect(c, px0 + pw - 1, py0 + 2, 1, Math.round(ph * 0.42), 'rgba(0,0,0,.30)');
+      /* a sliver of collar at the throat, and a tie only if he wears one —
+         the fallback used to paint a red bar down the shirt of every frog
+         in the game who does not own a tie */
+      PIX.rect(c, px0 + pw - 5, py0 + 1, 4, 3, P.W);
+      if (def.tie) {
+        PIX.rect(c, px0 + pw - 4, py0 + 3, 2, Math.round(ph * 0.26), P[def.tie] || P.r);
+      }
+      /* the far shoulder, dropped into shadow behind the near one */
+      PIX.rect(c, bx2 + Math.round(bw2 * 0.16), py0 + 3,
+        Math.round(bw2 * 0.14), Math.round(ph * 0.6), 'rgba(0,0,0,.30)');
+
+      /* the head is its own drawing now; nothing to repaint */
+
+      /* ---- ONE ARM IN FRONT, ONE BEHIND ----
+         The far arm is a sliver of sleeve showing past the back of him;
+         the near one swings across his front with the hand on the end. */
+      const wr2 = body.wristAt;
+      if (wr2 && wr2.length) {
+        const near = wr2.reduce((a, b) => (b.x > a.x ? b : a), wr2[0]);
+        const far = wr2.reduce((a, b) => (b.x < a.x ? b : a), wr2[0]);
+        /* the far sleeve, behind the torso */
+        PIX.rect(c, px0 - 3, py0 + 6, 4, Math.round(ph * 0.62), coatD);
+        PIX.rect(c, px0 - 3, py0 + 6, 1, Math.round(ph * 0.62), 'rgba(0,0,0,.30)');
+        SPR.frogHand(c, px0 - 4, bodyTop + Math.round(far.y * BS), def, -1,
+          { noCuff: true, grip: true });
+        /* the near sleeve, across the front */
+        const nx = px0 + Math.round(pw * 0.62);
+        PIX.rect(c, nx, py0 + 5, 7, Math.round(ph * 0.60), coatC);
+        PIX.rect(c, nx, py0 + 5, 7, 1, 'rgba(255,255,255,.10)');
+        PIX.rect(c, nx + 5, py0 + 5, 2, Math.round(ph * 0.60), 'rgba(0,0,0,.24)');
+        SPR.frogHand(c, nx + 1, bodyTop + Math.round(near.y * BS), def, 1,
+          { noCuff: true, grip: true });
+      }
+    }
+
     /* and one hard line all the way round him, with a rim light on it */
     SPR.inkEdge(cv, true);
     return cv;
@@ -4697,7 +4960,7 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    the frame sizes where that does not come out even, plus mugshots
    and pins.
    ============================================================ */
-SPR.rigLOD = function (key, def, frame, face, down, back, expr) {
+SPR.rigLOD = function (key, def, frame, face, down, back, expr, side) {
   down = down || 3;
   /* EIGHT FRAMES, NOT FOUR. This used to fold the frame number modulo four,
      which quietly threw away half of the walk cycle the rig had drawn. */
@@ -4706,8 +4969,8 @@ SPR.rigLOD = function (key, def, frame, face, down, back, expr) {
   const fc = face < 0 ? -1 : 1;
   const ex = expr || 'neutral';
   return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down + ':' + ex
-    + (back ? ':b' : ''), () => {
-    const src = SPR.frogWhole(key, def, { frame: f, back: !!back, expr: ex });
+    + (back ? ':b' : '') + (side ? ':s' : ''), () => {
+    const src = SPR.frogWhole(key, def, { frame: f, back: !!back, expr: ex, side: !!side });
     if (down === 1 && fc > 0) return src;
     const w = Math.max(1, Math.round(src.width / down));
     const h = Math.max(1, Math.round(src.height / down));

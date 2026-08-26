@@ -91,10 +91,10 @@ const SCENE = (() => {
   }
 
   /* { cv, w, h } — the picture, and the room-space box it goes in */
-  function rig(d, frame, face, back, expr) {
+  function rig(d, frame, face, back, expr, side) {
     const down = lodFor();
-    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : ''),
-      d.def || d, frame, face, down, back, expr);
+    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : '') + (side ? ':s' : ''),
+      d.def || d, frame, face, down, back, expr, side);
     return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
   }
 
@@ -1730,7 +1730,11 @@ const SCENE = (() => {
     /* an actor mid-line wears the talking face; the rest of the time he
        wears whatever his mood does when it is left alone */
     const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
-    const r = rig(a, a.frame || 0, face, a.back, ex);
+    /* HE TURNS TO YOU WHEN YOU ARE CLOSE, and stands in profile the rest
+       of the time — which is what somebody minding their own business at a
+       counter looks like from across a room. */
+    const aside = !a.back && !close && a.profile !== false;
+    const r = rig(a, a.frame || 0, face, a.back, ex, aside);
     const fy = a.y === undefined ? floorAt(a.z) : a.y;
     const id = a.still ? { rise: 0, lean: 0, roll: 0 } : idleOf(T, Math.round(a.x));
     const sc = scaleAt(a.z);
@@ -1770,9 +1774,15 @@ const SCENE = (() => {
   }
 
   function drawMe(c, T) {
-    /* WALKING AWAY, YOU SEE HIS BACK. The rig is the same frog; the head
-       just has nothing on the front of it. */
-    const r = rig(SCENE.meDef(), me.frame, me.face, me.faceZ < 0, myFace(T));
+    /* WHICH WAY HE IS TURNED.
+
+       Walking away you see his back. Walking INTO or OUT OF the depth you
+       see him front or back on. And walking along the street — which is
+       what he is doing most of the time he is moving at all — you see him
+       in profile, because that is what walking sideways looks like. */
+    const back = me.faceZ < 0;
+    const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
+    const r = rig(SCENE.meDef(), me.frame, me.face, back, myFace(T), side);
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
