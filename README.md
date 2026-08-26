@@ -262,9 +262,11 @@ right for four seconds, a red number appears on the phone in your belt, and
 the whole run of them is kept on the lock screen and in **ALERTS** so you can
 go back and read what you were too busy to read the first time.
 
-Four things ring it, and they are the four things worth interrupting you for:
-a quarter of the city opening, a door about to shut on a witness you still
-need, a story coming apart, and finding something nobody put there.
+Five things ring it, and they are the five things worth interrupting you
+for: a quarter of the city opening, a door about to shut on a witness you
+still need, a story coming apart, an errand paying off, and finding
+something nobody put there. Nothing else does — a notification you learn to
+ignore is worse than no notification at all.
 
 ![What you missed](docs/screen-alertlist.png)
 
@@ -407,6 +409,20 @@ few loose notes, and sometimes somebody watching you do it.
 Witnesses fill the gaps: the launderer, the watchman, the broker, the
 waitress, the barman. *Was he wearing a hat? Both eyes? Any gold in his
 mouth?* They answer honestly — and the weather decides how much they saw.
+
+### The belt is your hands. Everything else is the phone.
+
+There are two places the interface lives and the rule is simple: **the belt
+along the bottom holds only what is in your hands** — the hand, the eyeglass,
+the iron, with the number key that picks each one printed on it — and
+**everything else is an app**. The plan, the case file with its alibi board,
+the coat with what you are carrying, tonight's work, the karma ledger, the
+jobs going spare and the alerts: seven apps, a dock, a lock screen, and a red
+number on the phone when something is waiting in one of them.
+
+What is left in the corner is not a panel: the objective you are on, the
+money, the clock, and the two switches every game has. Nothing you have to
+open.
 
 ### What is in your hands
 

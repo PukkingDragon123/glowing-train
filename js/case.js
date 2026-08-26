@@ -518,6 +518,13 @@ const CASE = {
     }
     sus.alibi.broken = true;
     const cl = c.clues.find(x => x.id === sus.alibi.lever);
+    /* THE BEST BEAT IN THE GAME DESERVES A LINE ON THE PHONE, so it is
+       still on the record an hour later when you are picking a name */
+    if (typeof PHONE !== 'undefined' && PHONE.notify) {
+      PHONE.notify({ app: 'case', tone: 'good',
+        head: sus.name + "'S STORY IS IN PIECES",
+        body: cl ? cl.text : 'HE WAS NOT WHERE HE SAID HE WAS.' });
+    }
     return { name: sus.name, held: false, broken: true, why: cl ? cl.text : null };
   },
 

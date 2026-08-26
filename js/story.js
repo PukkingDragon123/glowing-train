@@ -534,6 +534,11 @@ const STORY = {
       G.quests[id] = 'ready';
       STORY.note('ERRAND DONE. GO BACK TO ' + q.who + '.');
       UI.stampSmall('ERRAND DONE: SEE ' + q.who);
+      if (typeof PHONE !== 'undefined' && PHONE.notify) {
+        PHONE.notify({ app: 'map', tone: 'good',
+          head: q.who + ' OWES YOU NOW',
+          body: 'THE ERRAND IS DONE. GO BACK FOR WHAT IT PAYS.' });
+      }
       SFX.chak && SFX.chak();
       out.push(q);
     });
