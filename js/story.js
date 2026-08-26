@@ -326,7 +326,7 @@ const STORY = {
       } else if (STORY.canFinish()) {
         const go = await TUTOR.ask('THE BOARD IS FULL, DETECTIVE. THAT IS A CASE.', [
           { label: 'I AM TAKING THE STAIRS TONIGHT', note: 'GO AND FINISH IT' },
-          { label: 'GIVE ME ONE MORE NIGHT ON IT', dim: true },
+          { label: 'GIVE ME ONE MORE DAY ON IT', dim: true },
         ], cap);
         await TUTOR.say(go === 0
           ? 'TAKE IT UP THOSE STAIRS AND DO NOT GIVE HIM A REASON TO WALK.'
@@ -335,7 +335,7 @@ const STORY = {
       } else {
         await STORY.capQuestions(cap, ch, U.pick(Math.random, [
           'THE FILE IS THIN AND THE CITY IS NOT PATIENT.',
-          'I SIGNED NOTHING TONIGHT. REMEMBER THAT IF IT GOES WRONG.',
+          'I SIGNED NOTHING TODAY. REMEMBER THAT IF IT GOES WRONG.',
           'SIX YEARS. I KNOW. GO AND GET THE NEXT PIECE.',
         ]));
       }
@@ -358,7 +358,7 @@ const STORY = {
     const k = (id) => ch.id + ':' + (G.day || 1) + ':' + id;
     const done = (id) => !!G.capAsked[k(id)];
     const mark = (id) => { G.capAsked[k(id)] = 1; };
-    let line = opener || 'ANYTHING ELSE, DETECTIVE? THE NIGHT IS GOING.';
+    let line = opener || 'ANYTHING ELSE, DETECTIVE? THE DAY IS GOING.';
 
     for (let turn = 0; turn < 6; turn++) {
       const menu = [];
@@ -678,12 +678,12 @@ const STORY = {
           G.mayLook = true;
           if (G.case && !G.case.done && !G.case.known) G.case.looks++;
           await TUTOR.say('I PULLED THE FILE BEFORE THE SHIFT CHANGE. ONE MORE LOOK IS IN THERE.', may);
-          UI.stampSmall('MAYBELLE: +1 LOOK, ALL NIGHT');
+          UI.stampSmall('MAYBELLE: +1 LOOK, ALL DAY');
         } else {
           G.mayHeart = true; G.hearts = E.maxHP();
           await TUTOR.say('WHATEVER HAPPENS UP THERE... COME HOME AFTER. YOU HEAR ME?', may);
           await TUTOR.say('...I MEAN IT.', may);
-          UI.stampSmall('MAYBELLE: +1 HEART, ALL NIGHT');
+          UI.stampSmall('MAYBELLE: +1 HEART, ALL DAY');
           SFX.bank();
         }
       };
@@ -1291,7 +1291,7 @@ const STORY = {
     STORY.karmaHit('sit');
     await TUTOR.say('HOLD THE HAT. NO — HOLD IT LIKE YOU MEAN IT.', who);
     await TUTOR.say(U.pick(Math.random, [
-      'I PAINT THIS STREET EVERY NIGHT AND EVERY NIGHT IT IS DIFFERENT PEOPLE.',
+      'I PAINT THIS STREET EVERY DAY AND EVERY DAY IT IS DIFFERENT PEOPLE.',
       "THE BREAD IS YESTERDAY'S. THE LIGHT IS THE SAME AS IT ALWAYS IS.",
       'YOU HAVE A FACE LIKE A MAN WHO HAS READ THE FILE. THAT IS NOT A COMPLIMENT.',
     ]), who);
@@ -1727,12 +1727,12 @@ const STORY = {
     SCENE.close();
     G.place = 'precinct';
     G.phase = 'precinct';
-    G.clock = CITY.START;                 // the next night starts fresh
+    G.clock = CITY.START;                 // nine in the morning, again
     G.dawnDone = false;
     G.weather = CITY.rollWeather();
     UI.render();
     await STORY.arrive('precinct');
-    await TUTOR.say('YOU LOST THE NIGHT. THE CASE IS STILL OPEN AND SO IS THE DOOR.',
+    await TUTOR.say('YOU LOST THE DAY. THE CASE IS STILL OPEN AND SO IS THE DOOR.',
       { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
   },
 

@@ -78,13 +78,36 @@
   --brass: #d99a6c;        /* PAL.B */
   --brass-dk: #6e4a30;     /* PAL.u */
 
-  /* ---- derived surfaces ---- */
-  --line: rgba(244, 239, 224, .22);
-  --line-soft: rgba(244, 239, 224, .12);
-  --glass: rgba(10, 31, 22, .86);
-  --glass-thin: rgba(10, 31, 22, .55);
-  --scrim: rgba(4, 8, 6, .68);
-  --scrim-deep: rgba(4, 8, 6, .82);
+  /* ---- derived surfaces ----
+     THE CHROME IS LEATHER AND BRASS NOW, not green glass.
+
+     The world outside it is a bright afternoon in Paris; a cold
+     green-black panel over the top of that reads as two games
+     stapled together. These are the colours of the things a
+     detective actually carries — a document wallet, a brass
+     watch case, a card index — so the furniture belongs to the
+     frog holding it rather than to a night that no longer
+     happens.
+
+     Text stays bone: the panels are still dark, so everything
+     written on them stays readable and nothing downstream has to
+     change. What changes is the temperature. */
+  --line: rgba(244, 239, 224, .26);
+  --line-soft: rgba(244, 239, 224, .14);
+  --glass: rgba(38, 28, 18, .88);
+  --glass-thin: rgba(38, 28, 18, .58);
+  --scrim: rgba(20, 14, 8, .68);
+  --scrim-deep: rgba(14, 9, 5, .84);
+  /* the leather the panels are cut from, and the brass on the edges */
+  --hide: #33261a;
+  --hide-hi: #4a3826;
+  --hide-lo: #201710;
+  --hide-ink: #120c07;
+  --trim: #c98a2a;
+  --trim-hi: #ffd77e;
+  --trim-lo: #7d5210;
+  --paper: #e9dcbc;
+  --paper-lo: #c9b795;
   --btn-felt-top: #26684c;   /* between PAL.f and PAL.e — the machine button */
   --btn-felt-bot: #16452f;
   --btn-red-top: #a32836;    /* between PAL.r and PAL.d — DANGER / FIRE */
@@ -2610,7 +2633,7 @@ body.in-scene #app { overflow: hidden; }
 #phone-root {
   position: fixed; inset: 0; z-index: 152;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(4, 8, 10, .78);
+  background: rgba(24, 16, 8, .72);
   pointer-events: auto;
   padding: 8px;
 }
@@ -2620,10 +2643,10 @@ body.in-scene #app { overflow: hidden; }
 .ph-body {
   position: relative;
   display: flex; flex-direction: column; align-items: stretch; gap: 8px;
-  background: linear-gradient(180deg, #2f3640, #171c22 70%, #101418);
-  border: var(--bd-thick) solid #05070a;
-  box-shadow: inset 0 0 0 3px rgba(255,255,255,.07), inset 0 -6px 0 rgba(0,0,0,.4),
-              0 12px 0 rgba(0,0,0,.55);
+  background: linear-gradient(180deg, #4b4640, #2b2620 68%, #1d1913);
+  border: var(--bd-thick) solid #100c08;
+  box-shadow: inset 0 0 0 3px rgba(255,240,210,.10), inset 0 -6px 0 rgba(0,0,0,.38),
+              0 12px 0 rgba(14,9,5,.55);
   padding: 12px;
   max-width: min(97vw, 660px); max-height: 96vh;
   overflow: hidden;
@@ -2641,16 +2664,16 @@ body.in-scene #app { overflow: hidden; }
 .ph-grille i { width: 10px; height: 4px; background: #0a0d11; box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 
 .ph-screen {
-  background: #08150f;
-  border: 4px solid #05070a;
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.12), inset 0 0 30px rgba(0,0,0,.75);
+  background: #141017;
+  border: 4px solid #100c08;
+  box-shadow: inset 0 0 0 2px rgba(201,138,42,.28), inset 0 0 30px rgba(0,0,0,.70);
   padding: 8px;
   display: flex; flex-direction: column; gap: 8px;
   min-height: 0;
 }
 .ph-status {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  border-bottom: 3px solid rgba(111,247,216,.2); padding-bottom: 6px;
+  border-bottom: 3px solid rgba(201,138,42,.34); padding-bottom: 6px;
 }
 .ph-stat { display: flex; align-items: center; gap: 6px; }
 .ph-stat.col { flex-direction: column; gap: 2px; align-items: center; }
@@ -2658,10 +2681,16 @@ body.in-scene #app { overflow: hidden; }
 .ph-tabs { display: flex; gap: 6px; }
 .ph-tab {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  background: #10241c; border: 3px solid #1d4c3a; border-radius: 0;
+  background: linear-gradient(180deg, #332a20, #221b13);
+  border: 3px solid #4a3826; border-radius: 0;
+  box-shadow: inset 0 2px 0 rgba(255,236,196,.08);
   padding: 7px 4px; cursor: pointer; min-height: 56px;
 }
-.ph-tab.on { background: #6ff7d8; border-color: #8ff7c8; }
+.ph-tab.on {
+  background: linear-gradient(180deg, var(--trim-hi), var(--trim));
+  border-color: #ffe9a8;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.4);
+}
 .ph-tab:active { transform: translateY(2px); }
 
 .ph-app { display: flex; flex-direction: column; gap: 8px; align-items: center; min-height: 0; }
@@ -2671,40 +2700,86 @@ body.in-scene #app { overflow: hidden; }
 
 /* the map and the stops on it */
 .map-holder { position: relative; }
+/* ============================================================
+   THE PINS ON THE PLAN.
+
+   ELEVEN NAME PLATES ON A MAP THIS SIZE IS NOT A MAP. Every stop
+   used to carry its name on a dark plate the whole time, and with
+   eleven of them the plates covered the city they were labelling
+   and overlapped each other into an unreadable stack — which is
+   most of what made the plan the ugliest screen in the game.
+
+   So: the glyph is always there, and the NAME is only there when
+   it is answering a question — the stop you are standing at, a
+   stop with something in it, one somebody is owed a favour at, or
+   the one under your finger. Everything else is a marker on a map
+   until you reach for it.
+   ============================================================ */
 .map-pin {
   position: absolute; transform: translate(-50%, -100%);
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-  background: none; border: 0; padding: 4px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  background: none; border: 0; padding: 2px; cursor: pointer;
+  z-index: 1;
 }
-.map-pin canvas { filter: drop-shadow(0 2px 0 rgba(0,0,0,.7)); }
+.map-pin canvas { filter: drop-shadow(0 1px 0 rgba(60,44,20,.55)); }
+/* the pin sits on a pale disc so a dark glyph reads on dark paper */
+.map-pin::before {
+  content: ''; position: absolute; left: 50%; top: 1px;
+  width: 22px; height: 22px; margin-left: -11px;
+  background: rgba(244,236,214,.86);
+  box-shadow: 0 0 0 2px rgba(74,61,40,.55);
+  z-index: -1;
+}
+.map-pin.hot::before { background: #ffe9a8; box-shadow: 0 0 0 2px #8a5a10; }
+.map-pin.here::before { background: #b6f0e0; box-shadow: 0 0 0 2px #1d6a56; }
+.map-pin.errand::before { background: #f4d79a; box-shadow: 0 0 0 2px #8a6a20; }
 .map-pin.hot canvas:first-child { animation: pin-throb .8s infinite steps(2); }
-@keyframes pin-throb { 50% { filter: drop-shadow(0 0 6px #ffd75e) drop-shadow(0 2px 0 rgba(0,0,0,.7)); } }
+@keyframes pin-throb { 50% { filter: drop-shadow(0 0 5px #c98a2a) drop-shadow(0 1px 0 rgba(60,44,20,.55)); } }
+
+/* THE PLATE HANGS OFF THE PIN, not out of the flow.
+
+   Laid out as a flex child it pushed past the edge of the screen and the
+   phone body clipped the front of the word off — "E LAVERIE". Absolutely
+   positioned against the pin it can be told which corner to grow from,
+   so a stop out at the wall grows its name back over the city. */
 .pin-tag {
-  background: rgba(6,12,10,.9); padding: 1px 4px;
-  border: 2px solid rgba(111,247,216,.35);
+  display: none; align-items: center; gap: 3px;
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  background: rgba(28,22,12,.92); padding: 1px 4px;
+  border: 2px solid rgba(233,220,188,.55);
+  margin-top: 2px; white-space: nowrap;
 }
+/* the four reasons a name earns its place on the paper */
+.map-pin.here .pin-tag,
+.map-pin.hot .pin-tag,
+.map-pin.errand .pin-tag,
+.map-pin:hover .pin-tag,
+.map-pin:focus-visible .pin-tag { display: inline-flex; }
+.map-pin:hover, .map-pin:focus-visible { z-index: 3; }
+/* a stop out at the wall grows its name back toward the middle */
+.map-pin.tag-left .pin-tag { left: auto; right: 0; transform: none; }
+.map-pin.tag-right .pin-tag { left: 0; right: auto; transform: none; }
 .map-pin.here .pin-tag { border-color: #6ff7d8; }
-.pin-bang { position: absolute; top: -6px; right: -4px; }
-/* somebody at this stop wants something, or is holding something for you */
-.pin-tag { display: inline-flex; align-items: center; gap: 3px; }
+.map-pin.hot .pin-tag { border-color: #ffd75e; }
 .map-pin.errand .pin-tag { border-color: #e0a63c; }
+.pin-bang { position: absolute; top: -7px; right: -5px; z-index: 2; }
 /* a stop tonight's file does not touch: still there, still drivable, dim */
-.map-pin.cold { opacity: .5; }
-.map-pin.cold .pin-tag { border-color: rgba(111,247,216,.16); }
+.map-pin.cold { opacity: .55; }
+.map-pin.cold::before { background: rgba(226,216,192,.55); box-shadow: 0 0 0 2px rgba(74,61,40,.30); }
 .map-pin:active { transform: translate(-50%, -100%) translateY(2px); }
 
 /* the case file and the kit */
 .ph-clues { display: flex; flex-direction: column; gap: 6px; align-self: stretch; }
 .ph-clue {
   display: flex; align-items: flex-start; gap: 8px;
-  border-left: 4px solid #1d4c3a; padding: 4px 0 4px 8px;
-  background: rgba(111,247,216,.03);
+  border-left: 4px solid #4a3826; padding: 4px 0 4px 8px;
+  background: rgba(233,220,188,.04);
 }
-.ph-clue.got { border-left-color: #6ff7d8; background: rgba(111,247,216,.07); }
+.ph-clue.got { border-left-color: var(--trim); background: rgba(201,138,42,.10); }
 .ph-cluecol { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
 .ph-faces { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .ph-face { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.ph-face canvas { border: 3px solid #1d4c3a; }
+.ph-face canvas { border: 3px solid #4a3826; }
 .ph-face.out { opacity: .38; }
 .ph-face.out canvas { filter: grayscale(1); border-color: #333; }
 
@@ -2798,13 +2873,24 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .obj-plate {
   pointer-events: auto; cursor: pointer;
   display: flex; align-items: center; gap: 10px;
-  max-width: min(60vw, 560px);
-  padding: 8px 12px 8px 10px;
-  background: linear-gradient(180deg, rgba(14,26,20,.93), rgba(8,16,12,.93));
-  border: var(--bd-thick) solid #0a0d11;
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.16), 0 5px 0 rgba(0,0,0,.5);
+  max-width: min(56vw, 520px);
+  padding: 7px 14px 8px 10px;
+  background: linear-gradient(180deg, var(--hide-hi), var(--hide) 45%, var(--hide-lo));
+  border: var(--bd-thick) solid var(--hide-ink);
+  /* a brass rule down the left edge, which is what says "this is the job" */
+  box-shadow:
+    inset 3px 0 0 var(--trim),
+    inset 0 0 0 2px rgba(255,215,126,.14),
+    inset 0 2px 0 rgba(255,236,196,.10),
+    0 5px 0 rgba(14,9,5,.55);
 }
-.obj-plate:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(111,247,216,.16), 0 3px 0 rgba(0,0,0,.5); }
+.obj-plate:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 3px 0 0 var(--trim),
+    inset 0 0 0 2px rgba(255,215,126,.14),
+    0 3px 0 rgba(14,9,5,.55);
+}
 .obj-col { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 .obj-col .txt-lines { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .obj-plate.bump { animation: obj-bump .32s cubic-bezier(.2,1.7,.4,1); }
@@ -2821,16 +2907,25 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .tool-belt { display: flex; gap: 6px; }
 .tool-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  background: linear-gradient(180deg, #2a3038, #171c22);
-  border: var(--bd-thick) solid #0a0d11; border-radius: 0;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), 0 5px 0 rgba(0,0,0,.5);
+  background: linear-gradient(180deg, var(--hide-hi), var(--hide-lo));
+  border: var(--bd-thick) solid var(--hide-ink); border-radius: 0;
+  box-shadow: inset 0 0 0 2px rgba(255,236,196,.07),
+              inset 0 2px 0 rgba(255,236,196,.10),
+              0 5px 0 rgba(14,9,5,.55);
   padding: 6px 10px; cursor: pointer; min-height: 44px;
 }
+/* WHAT IS IN YOUR HAND IS BRASS. The old on-state was a slab of mint
+   green, which was the single loudest thing on a screen full of Paris. */
 .tool-btn.on {
-  background: linear-gradient(180deg, #8ff7c8, #2ec4a9);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.2), 0 5px 0 rgba(0,0,0,.5);
+  background: linear-gradient(180deg, var(--trim-hi), var(--trim) 55%, var(--trim-lo));
+  box-shadow: inset 0 0 0 2px rgba(60,36,4,.28),
+              inset 0 2px 0 rgba(255,255,255,.35),
+              0 5px 0 rgba(14,9,5,.55);
 }
-.tool-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), 0 3px 0 rgba(0,0,0,.5); }
+.tool-btn:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 2px rgba(255,236,196,.07), 0 3px 0 rgba(14,9,5,.55);
+}
 .tool-col { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 @media (max-width: 620px) {
   .tool-btn { padding: 5px 7px; gap: 5px; min-height: 40px; }
@@ -2848,13 +2943,18 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 
 .big-btn {
   display: inline-flex; align-items: center; gap: 8px;
-  background: linear-gradient(180deg, #2a3038, #171c22);
-  border: var(--bd-thick) solid #0a0d11; border-radius: 0;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), 0 5px 0 rgba(0,0,0,.5);
+  background: linear-gradient(180deg, var(--hide-hi), var(--hide-lo));
+  border: var(--bd-thick) solid var(--hide-ink); border-radius: 0;
+  box-shadow: inset 0 0 0 2px rgba(255,236,196,.07),
+              inset 0 2px 0 rgba(255,236,196,.10),
+              0 5px 0 rgba(14,9,5,.55);
   padding: 8px 12px; cursor: pointer;
   min-height: 48px;
 }
-.big-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), 0 3px 0 rgba(0,0,0,.5); }
+.big-btn:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 2px rgba(255,236,196,.07), 0 3px 0 rgba(14,9,5,.55);
+}
 .big-btn.sq { min-width: 48px; justify-content: center; padding: 8px; }
 .phone-btn { padding: 8px 14px 8px 10px; }
 .phone-btn canvas:first-child { filter: drop-shadow(0 2px 0 rgba(0,0,0,.5)); }
@@ -3018,23 +3118,35 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 
 .ph-dock {
   display: flex; gap: 4px; align-self: stretch; margin-top: auto;
-  padding: 5px 4px; background: rgba(8,22,17,.8);
-  box-shadow: inset 0 2px 0 rgba(111,247,216,.14);
+  padding: 5px 4px; background: rgba(30,22,14,.82);
+  box-shadow: inset 0 2px 0 rgba(201,138,42,.22);
 }
 .ph-nav {
   display: flex; align-items: center; justify-content: space-between;
   align-self: stretch; padding: 3px 4px 5px;
-  box-shadow: inset 0 -2px 0 rgba(111,247,216,.14);
+  box-shadow: inset 0 -2px 0 rgba(201,138,42,.22);
 }
 .ph-back {
-  background: rgba(111,247,216,.12); border: 0; cursor: pointer;
+  background: rgba(201,138,42,.16); border: 0; cursor: pointer;
   min-width: 30px; min-height: 26px; display: flex; align-items: center; justify-content: center;
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.3);
+  box-shadow: inset 0 0 0 2px rgba(201,138,42,.45);
 }
 .ph-back:active { transform: translateY(2px); }
 .ph-home-bar {
   width: 108px; height: 8px; margin: 0 auto 4px;
-  background: #cfe6dc; border: 0; border-radius: 0; cursor: pointer;
+  background: #e6dcc4; border: 0; border-radius: 0; cursor: pointer;
   box-shadow: 0 2px 0 rgba(0,0,0,.5);
 }
 .ph-home-bar:active { transform: translateY(2px); }
+
+/* ============================================================
+   THE ROUTE LAYER on the plan. The paper underneath is cached for
+   the whole shift; this sits exactly on top of it and is redrawn
+   every time the file changes, so it has to be positioned rather
+   than laid out.
+   ============================================================ */
+.map-holder { position: relative; }
+.map-holder > canvas { display: block; }
+.map-holder > canvas.map-route {
+  position: absolute; left: 0; top: 0; pointer-events: none;
+}

@@ -57,61 +57,328 @@ const PHONE = (() => {
       shadow: sh === undefined ? '#0a1a12' : sh });
   }
 
-  /* ---------- the drawn city ---------- */
-  const MW = 148, MH = 104;
+  /* ============================================================
+     THE PLAN.
+
+     A folded paper map of Paris, kept in a coat pocket. It used to
+     be a hundred and thirty random rectangles with a sine wave
+     through them, which is what a city looks like if you have
+     never been to one.
+
+     What is on it now is the actual shape of the place: the Seine
+     making its long westward arc with the two islands in the
+     middle of it, the twenty arrondissements spiralling out from
+     them, the star of twelve avenues at the Etoile, the grands
+     boulevards, the parks, the hill at Montmartre with contours
+     on it, and the wall round the whole thing.
+
+     Drawn as paper — buff, grained, creased where it folds — with
+     sepia ink on it, because that is what you would actually be
+     holding.
+     ============================================================ */
+  const MW = 220, MH = 140;
+
+  /* the paper, the ink, and the water */
+  const M = {
+    paper: '#e9dcbc', paperLit: '#f4ead0', paperDk: '#d8c8a4',
+    grain: '#dfd0ae', crease: '#c9b795',
+    ink: '#6b5a3c', inkLo: '#8a7754', inkHi: '#4a3d28',
+    block: '#ddceac', blockDk: '#cdbc98', roof: '#c2ae88',
+    water: '#8fb6c8', waterLo: '#6f9aae', waterHi: '#b3d2df',
+    park: '#9aac72', parkDk: '#7d9058', parkLit: '#b4c489',
+    road: '#f2e8ce', roadEdge: '#c4b28c',
+    rail: '#9a8a6a', red: '#b8384a', gold: '#c98a2a',
+  };
+
+  /* THE SEINE. Sampled off the real thing: in from the south-east,
+     the big westward arc through the middle, out to the west. x,y in
+     map units, and the width of the river at that point. */
+  const SEINE = [
+    [222, 118], [204, 112], [188, 104], [172, 96], [158, 88],
+    [146, 82], [134, 78], [122, 76], [110, 76], [100, 77],
+    [92, 79], [84, 80], [76, 80], [68, 78], [60, 74],
+    [52, 70], [44, 67], [36, 66], [26, 67], [14, 70], [-4, 74],
+  ];
+
+  function polyBand(c, pts, w, col, edge) {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+      const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0)));
+      for (let k = 0; k <= n; k++) {
+        const t = k / n;
+        const x = Math.round(x0 + (x1 - x0) * t);
+        const y = Math.round(y0 + (y1 - y0) * t);
+        ART.px(c, x, y - Math.floor(w / 2), 1, w, col);
+        if (edge) {
+          ART.px(c, x, y - Math.floor(w / 2), 1, 1, edge);
+          ART.px(c, x, y + Math.ceil(w / 2) - 1, 1, 1, edge);
+        }
+      }
+    }
+  }
 
   function drawMap() {
-    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x');
+    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v3';
     return ART.cached(key, () => {
       const o = ART.cv(MW, MH), c = o.c;
       const rng = U.mulberry32(U.hashSeed((G.seedStr || 'CITY') + ':map'));
 
-      /* the ground: a city of blocks seen from above, wet */
-      ART.px(c, 0, 0, MW, MH, '#0a0f14');
-      for (let i = 0; i < 130; i++) {
-        const bw = 5 + Math.floor(rng() * 15), bh = 4 + Math.floor(rng() * 13);
+      /* ---------- THE PAPER ---------- */
+      ART.px(c, 0, 0, MW, MH, M.paper);
+      for (let i = 0; i < 900; i++) {
+        ART.px(c, Math.floor(rng() * MW), Math.floor(rng() * MH), 1, 1,
+          rng() < 0.5 ? M.grain : M.paperLit);
+      }
+      /* the foxing round the edges of anything kept in a pocket */
+      for (let i = 0; i < 120; i++) {
+        const e = Math.floor(rng() * 4);
+        const x = e === 0 ? Math.floor(rng() * MW) : e === 1 ? MW - 1 - Math.floor(rng() * 9)
+          : e === 2 ? Math.floor(rng() * MW) : Math.floor(rng() * 9);
+        const y = e === 0 ? Math.floor(rng() * 9) : e === 1 ? Math.floor(rng() * MH)
+          : e === 2 ? MH - 1 - Math.floor(rng() * 9) : Math.floor(rng() * MH);
+        ART.px(c, x, y, 1 + Math.floor(rng() * 2), 1, M.paperDk);
+      }
+
+      /* ---------- THE BUILT CITY ----------
+         Blocks, denser toward the middle, with the grain of the street
+         running through them. Nothing random about the density: a plan
+         of Paris is solid in the centre and breaks up at the wall. */
+      const cx0 = 106, cy0 = 74;
+      for (let i = 0; i < 520; i++) {
+        const bw = 3 + Math.floor(rng() * 9), bh = 3 + Math.floor(rng() * 7);
         const bx = Math.floor(rng() * (MW - bw)), by = Math.floor(rng() * (MH - bh));
-        ART.px(c, bx, by, bw, bh, rng() < 0.35 ? '#16202a' : '#111922');
-        ART.px(c, bx, by, bw, 1, 'rgba(255,255,255,.05)');
-        ART.px(c, bx, by + bh - 1, bw, 1, 'rgba(0,0,0,.4)');
+        /* how far out of town this is, 0 at the islands and 1 at the wall */
+        const d = Math.hypot((bx - cx0) / (MW * 0.52), (by - cy0) / (MH * 0.52));
+        if (rng() < d * 0.95) continue;
+        ART.px(c, bx, by, bw, bh, rng() < 0.34 ? M.roof : M.block);
+        ART.px(c, bx, by, bw, 1, M.paperLit);
+        ART.px(c, bx, by + bh - 1, bw, 1, M.blockDk);
       }
-      /* THE SEWER CANAL, which is what this city is built on */
-      for (let x = 0; x < MW; x++) {
-        const y = Math.round(30 + Math.sin(x * 0.055) * 11 + x * 0.26);
-        ART.px(c, x, y, 1, 9, '#123a34');
-        ART.px(c, x, y, 1, 1, '#1e5f52');
-        ART.px(c, x, y + 8, 1, 1, '#0a201d');
-        if ((x + Math.round(rng() * 3)) % 17 === 0) ART.px(c, x, y + 3, 1, 2, '#2e8f78');
-      }
-      /* the roads, and the lamps down them */
-      const road = (x, y, w, h) => {
-        ART.px(c, x, y, w, h, '#242d35');
-        ART.px(c, x, y, w, 1, '#333e49');
+
+      /* ---------- THE PARKS ---------- */
+      const park = (x, y, w, h, wild) => {
+        ART.px(c, x, y, w, h, M.park);
+        ART.px(c, x, y, w, 1, M.parkLit);
+        ART.px(c, x, y + h - 1, w, 1, M.parkDk);
+        for (let i = 0; i < w * h / 7; i++) {
+          ART.px(c, x + Math.floor(rng() * w), y + Math.floor(rng() * h), 1, 1,
+            rng() < 0.5 ? M.parkDk : M.parkLit);
+        }
+        if (wild) {                     /* the two woods get real canopy */
+          for (let i = 0; i < w * h / 14; i++) {
+            PIX.disc(c, x + Math.floor(rng() * w), y + Math.floor(rng() * h), 2, M.parkDk);
+          }
+        }
       };
-      road(0, 48, MW, 4); road(0, 80, MW, 4);
-      road(34, 0, 4, MH); road(82, 0, 4, MH); road(116, 0, 4, MH);
-      for (let x = 3; x < MW; x += 8) ART.px(c, x, 49, 1, 1, 'rgba(255,220,140,.55)');
-      for (let y = 4; y < MH; y += 9) ART.px(c, 35, y, 1, 1, 'rgba(255,220,140,.4)');
-      /* the weather over all of it */
-      const s = CITY.sky();
-      if (s.haze) {
-        for (let i = 0; i < MH; i += 2) ART.px(c, 0, i, MW, 1, 'rgba(200,212,222,.05)');
+      park(2, 46, 26, 34, true);          // the Bois, off west
+      park(196, 58, 24, 30, true);        // and the other one, off east
+      park(88, 62, 20, 8);                // the Tuileries, along the river
+      park(84, 96, 16, 14);               // the Luxembourg
+      park(172, 40, 18, 12);              // Buttes-Chaumont
+      park(180, 74, 16, 12);              // Pere Lachaise
+      /* the Champ de Mars, which is where the tower is */
+      park(38, 62, 12, 16);
+
+      /* ---------- THE RIVER ----------
+         Quays first, then the water inside them, so the water has banks. */
+      polyBand(c, SEINE, 9, M.waterLo, M.roadEdge);
+      polyBand(c, SEINE, 7, M.water, M.waterHi);
+      polyBand(c, SEINE, 3, M.waterHi, null);
+      /* THE TWO ISLANDS, which is where this city started */
+      [[104, 76, 18, 5], [126, 77, 11, 4]].forEach(([ix, iy, iw, ih]) => {
+        ART.px(c, ix, iy, iw, ih, M.block);
+        ART.px(c, ix, iy, iw, 1, M.paperLit);
+        ART.px(c, ix, iy + ih - 1, iw, 1, M.blockDk);
+        ART.px(c, ix - 1, iy + 1, 1, ih - 2, M.waterHi);
+        ART.px(c, ix + iw, iy + 1, 1, ih - 2, M.waterHi);
+      });
+      /* the bridges: a lot of them, and all of them short */
+      for (let i = 0; i < SEINE.length - 1; i += 2) {
+        const [bx, by] = SEINE[i];
+        if (bx < 4 || bx > MW - 6) continue;
+        ART.px(c, bx, by - 6, 2, 13, M.rail);
+        ART.px(c, bx, by - 6, 2, 1, M.paperLit);
       }
-      if (s.drops > 0.6) {
-        for (let i = 0; i < 70 * s.drops; i++) {
-          ART.px(c, Math.floor(rng() * MW), Math.floor(rng() * MH), 1, 2, 'rgba(150,195,225,.16)');
+
+      /* ---------- THE STREETS ----------
+         A road here is PALE: on a printed plan the streets are the paper
+         showing through and the blocks are the ink, not the other way
+         round. Drawing them dark is what made the old map read as a
+         circuit board. */
+      const road = (x, y, w, h) => {
+        ART.px(c, x, y, w, h, M.road);
+        ART.px(c, x, y, w, 1, '#ffffff');
+        if (h > 1) ART.px(c, x, y + h - 1, w, 1, M.roadEdge);
+        else ART.px(c, x, y + 1, w, 1, M.roadEdge);
+      };
+      /* Rivoli and Saint-Germain, either side of the water */
+      road(60, 66, 120, 2);
+      road(52, 88, 130, 2);
+      /* the grands boulevards, in a shallow arc across the right bank */
+      for (let x = 56; x < 190; x++) {
+        const y = Math.round(52 + Math.sin((x - 56) / 134 * Math.PI) * -9);
+        ART.px(c, x, y, 1, 2, M.road);
+        ART.px(c, x, y, 1, 1, '#ffffff');
+      }
+      /* the long verticals */
+      [72, 118, 158].forEach(x => road(x, 8, 2, MH - 16));
+      [96, 140].forEach(x => road(x, 78, 2, MH - 86));
+
+      /* ---------- THE ETOILE ----------
+         Twelve avenues out of one point, which is the single most
+         recognisable piece of street plan in the world. */
+      const ex = 54, ey = 40;
+      for (let a = 0; a < 12; a++) {
+        const th = (a / 12) * Math.PI * 2 + 0.26;
+        for (let r = 3; r < 34; r++) {
+          const x = Math.round(ex + Math.cos(th) * r);
+          const y = Math.round(ey + Math.sin(th) * r * 0.8);
+          if (x < 0 || x >= MW || y < 0 || y >= MH) break;
+          ART.px(c, x, y, 1, 1, r < 26 ? M.road : M.roadEdge);
         }
       }
-      /* the screen's own edge */
-      for (let i = 0; i < 3; i++) {
-        const a = (0.5 - i * 0.15).toFixed(2);
-        ART.px(c, 0, i, MW, 1, 'rgba(0,0,0,' + a + ')');
-        ART.px(c, 0, MH - 1 - i, MW, 1, 'rgba(0,0,0,' + a + ')');
-        ART.px(c, i, 0, 1, MH, 'rgba(0,0,0,' + a + ')');
-        ART.px(c, MW - 1 - i, 0, 1, MH, 'rgba(0,0,0,' + a + ')');
+      PIX.disc(c, ex, ey, 4, M.road);
+      PIX.disc(c, ex, ey, 3, M.paperLit);
+      PIX.disc(c, ex, ey, 1, M.ink);
+      /* the Champs-Elysees, from the star down to the gardens */
+      for (let i = 0; i < 40; i++) {
+        ART.px(c, ex + 4 + i, 40 + Math.round(i * 0.52), 1, 3, M.road);
+        ART.px(c, ex + 4 + i, 40 + Math.round(i * 0.52), 1, 1, '#ffffff');
+      }
+
+      /* ---------- MONTMARTRE ----------
+         The one piece of relief in the city, so it gets contours. */
+      for (let r = 16; r > 3; r -= 4) {
+        for (let a = 0; a < 64; a++) {
+          const th = (a / 64) * Math.PI * 2;
+          ART.px(c, Math.round(122 + Math.cos(th) * r),
+            Math.round(20 + Math.sin(th) * r * 0.62), 1, 1, M.inkLo);
+        }
+      }
+      ART.px(c, 120, 17, 5, 2, M.paperLit);
+      ART.px(c, 121, 15, 3, 2, M.paperLit);
+
+      /* ---------- THE WALL ----------
+         The old fortifications, coming down all through the thirties and
+         still what everybody means by the edge of Paris. */
+      for (let a = 0; a < 260; a++) {
+        const th = (a / 260) * Math.PI * 2;
+        const x = Math.round(cx0 + Math.cos(th) * (MW * 0.47));
+        const y = Math.round(cy0 + Math.sin(th) * (MH * 0.44));
+        if (x < 1 || x >= MW - 1 || y < 1 || y >= MH - 1) continue;
+        ART.px(c, x, y, 1, 1, a % 6 < 4 ? M.inkLo : M.paperDk);
+      }
+
+      /* ---------- WHAT THE WEATHER IS DOING TO THE PAPER ---------- */
+      const sk = CITY.sky();
+      if (sk.drops > 0.6) {
+        for (let i = 0; i < 40 * sk.drops; i++) {
+          const x = Math.floor(rng() * MW), y = Math.floor(rng() * MH);
+          PIX.disc(c, x, y, 1 + Math.floor(rng() * 2), 'rgba(150,140,110,.16)');
+        }
+      }
+      if (sk.haze) {
+        for (let i = 0; i < MH; i += 3) ART.px(c, 0, i, MW, 1, 'rgba(240,232,208,.14)');
+      }
+
+      /* ---------- THE FOLDS ----------
+         Two verticals and one horizontal, which is how a map this size
+         goes into a coat. */
+      [Math.round(MW / 3), Math.round(MW * 2 / 3)].forEach(fx => {
+        ART.px(c, fx, 0, 1, MH, 'rgba(160,146,112,.34)');
+        ART.px(c, fx + 1, 0, 1, MH, 'rgba(255,250,232,.30)');
+      });
+      ART.px(c, 0, Math.round(MH / 2), MW, 1, 'rgba(160,146,112,.30)');
+      ART.px(c, 0, Math.round(MH / 2) + 1, MW, 1, 'rgba(255,250,232,.26)');
+
+      /* ---------- THE CARTOUCHE, THE ROSE AND THE SCALE ---------- */
+      /* the title, bottom left, on its own panel */
+      ART.px(c, 4, MH - 27, 62, 18, M.paperLit);
+      ART.px(c, 4, MH - 27, 62, 1, '#ffffff');
+      ART.px(c, 4, MH - 10, 62, 1, M.inkLo);
+      ART.px(c, 4, MH - 27, 1, 18, M.inkLo);
+      ART.px(c, 65, MH - 27, 1, 18, M.inkLo);
+      const t1 = PIXFONT.render('PLAN DE PARIS', { scale: 1, color: M.inkHi, shadow: null });
+      c.drawImage(t1, 7, MH - 24);
+      const t2 = PIXFONT.render('JUDICIAIRE', { scale: 1, color: M.inkLo, shadow: null });
+      c.drawImage(t2, 7, MH - 16);
+      /* the scale bar, over on the other side so it is not sharing rows
+         with the title — the first pass had them printed on top of
+         each other and it read as a smudge */
+      const sbx = MW - 54;
+      for (let i = 0; i < 5; i++) {
+        ART.px(c, sbx + i * 6, MH - 14, 6, 3, i % 2 ? M.paperLit : M.inkHi);
+      }
+      ART.px(c, sbx, MH - 15, 30, 1, M.inkHi);
+      ART.px(c, sbx, MH - 11, 30, 1, M.inkHi);
+      const t3 = PIXFONT.render('1 KM', { scale: 1, color: M.inkHi, shadow: null });
+      c.drawImage(t3, sbx + 33, MH - 15);
+      /* the compass rose, top right */
+      const rx = MW - 16, ry = 15;
+      PIX.disc(c, rx, ry, 10, M.paperLit);
+      for (let a = 0; a < 48; a++) {
+        const th = (a / 48) * Math.PI * 2;
+        ART.px(c, Math.round(rx + Math.cos(th) * 9), Math.round(ry + Math.sin(th) * 9), 1, 1, M.inkLo);
+      }
+      [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(([dx, dy], i) => {
+        for (let r = 0; r < 8; r++) {
+          const wdt = Math.max(1, 3 - Math.floor(r / 3));
+          ART.px(c, rx + dx * r - (dx ? 0 : Math.floor(wdt / 2)),
+            ry + dy * r - (dy ? 0 : Math.floor(wdt / 2)),
+            dx ? 1 : wdt, dy ? 1 : wdt, i === 0 ? M.red : M.inkHi);
+        }
+      });
+      const tn = PIXFONT.render('N', { scale: 1, color: M.red, shadow: null });
+      c.drawImage(tn, rx - 2, ry - 19);
+
+      /* ---------- THE EDGE OF THE SHEET ---------- */
+      for (let i = 0; i < 2; i++) {
+        const a = (0.22 - i * 0.10).toFixed(2);
+        ART.px(c, 0, i, MW, 1, 'rgba(90,78,54,' + a + ')');
+        ART.px(c, 0, MH - 1 - i, MW, 1, 'rgba(90,78,54,' + a + ')');
+        ART.px(c, i, 0, 1, MH, 'rgba(90,78,54,' + a + ')');
+        ART.px(c, MW - 1 - i, 0, 1, MH, 'rgba(90,78,54,' + a + ')');
       }
       return o.cv;
     });
+  }
+
+  /* ============================================================
+     THE ROUTES.
+
+     Not cached: it changes every time you find something. A dashed
+     line from where you are to every stop the file still wants,
+     with the drive time on the longest one, so the plan answers
+     "where next" and not just "where is everything".
+     ============================================================ */
+  function drawRoutes() {
+    const o = ART.cv(MW, MH), c = o.c;
+    const from = CITY.PLACES[G.place || 'precinct'];
+    if (!from) return o.cv;
+    const fx = Math.round(from.x / 100 * MW), fy = Math.round(from.y / 100 * MH);
+    const want = (typeof CASE !== 'undefined' && CASE.stops) ? CASE.stops() : [];
+    want.forEach((id) => {
+      const to = CITY.PLACES[id];
+      if (!to || id === from.id) return;
+      const hot = !!(G.tips && G.tips[id]) && CITY.leftAt(id) > 0;
+      const tx = Math.round(to.x / 100 * MW), ty = Math.round(to.y / 100 * MH);
+      const n = Math.max(1, Math.round(Math.hypot(tx - fx, ty - fy)));
+      for (let k = 0; k <= n; k++) {
+        if ((k >> 1) % 2) continue;                 /* dashed */
+        const t = k / n;
+        const x = Math.round(fx + (tx - fx) * t);
+        const y = Math.round(fy + (ty - fy) * t);
+        ART.px(c, x, y, 1, 1, hot ? M.red : 'rgba(107,90,60,.55)');
+        if (hot) ART.px(c, x, y + 1, 1, 1, 'rgba(255,255,255,.35)');
+      }
+    });
+    /* and a ring round where you are standing */
+    for (let a = 0; a < 30; a++) {
+      const th = (a / 30) * Math.PI * 2;
+      ART.px(c, Math.round(fx + Math.cos(th) * 6), Math.round(fy + Math.sin(th) * 6), 1, 1,
+        a % 4 < 3 ? '#2f7f6a' : 'rgba(0,0,0,0)');
+    }
+    return o.cv;
   }
 
   /* one stop on the map: its own icon, its name, and whether it is hot */
@@ -126,8 +393,12 @@ const PHONE = (() => {
     /* somebody at this stop is owed something, or owes you something */
     const errand = (typeof STORY !== 'undefined' && STORY.questsLive ? STORY.questsLive() : [])
       .find(x => x.q.place === p.id || (x.q.kind === 'carry' && x.q.to === p.id && x.state === 'taken'));
+    /* A NAME PLATE ON A PIN NEAR THE EDGE HANGS OFF THE PAPER. Anchor it
+       inwards instead: the plate is wider than the pin, so a stop out at
+       the wall has to grow its label back toward the middle. */
+    const edge = p.x >= 68 ? ' tag-left' : p.x <= 30 ? ' tag-right' : '';
     const b = U.el('button', 'map-pin' + (here ? ' here' : '') + (hot ? ' hot' : '') +
-      (errand ? ' errand' : '') + (inCase ? '' : ' cold'));
+      (errand ? ' errand' : '') + (inCase ? '' : ' cold') + edge);
     b.style.left = p.x + '%';
     b.style.top = p.y + '%';
     b.appendChild(SPR.clone(ART.art(p.icon || 'ic_map', k), 1));
@@ -163,7 +434,11 @@ const PHONE = (() => {
   function statusBar(k) {
     const bar = U.el('div', 'ph-status');
     const left = CITY.minutesLeft();
-    const total = CITY.START ? (24 * 60 - CITY.START) + CITY.END : 560;
+    /* HOW MUCH SHIFT IS LEFT, as a percentage. This used to add the wrap
+       round midnight into the total, which was right for a night shift and
+       is nonsense for a day one: it made a full battery read as twelve
+       percent. The shift is simply END minus START now. */
+    const total = Math.max(1, (CITY.END || 0) - (CITY.START || 0));
     const pc = U.clamp(Math.round((left / total) * 100), 0, 100);
 
     /* the carrier, and the signal beside it */
@@ -370,10 +645,16 @@ const PHONE = (() => {
   /* ---------- FROGGOMAP ---------- */
   function mapApp(k) {
     const wrap = U.el('div', 'ph-app');
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.82 / MW,
-      window.innerHeight * 0.42 / MH)), 2, 6);
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.86 / MW,
+      window.innerHeight * 0.50 / MH)), 1, 6);
     const holder = U.el('div', 'map-holder');
     holder.appendChild(SPR.clone(drawMap(), K));
+    /* the routes ride on their own layer over the paper: the paper is
+       cached for the whole night and the routes change every time you
+       turn something over */
+    const rt = SPR.clone(drawRoutes(), K);
+    rt.className = 'map-route';
+    holder.appendChild(rt);
     holder.style.width = (MW * K) + 'px';
     holder.style.height = (MH * K) + 'px';
     CITY.board().forEach(e => holder.appendChild(pin(e, Math.max(2, k))));
@@ -383,7 +664,7 @@ const PHONE = (() => {
     const foot = U.el('div', 'ph-foot');
     const p = CITY.here();
     foot.appendChild(line(p ? p.blurb : '', Math.max(1, k - 1), '#8fb3a0', null));
-    foot.appendChild(line('A DRIVE COSTS ' + CITY.COST.travel + ' MINUTES OF THE NIGHT',
+    foot.appendChild(line('A DRIVE COSTS ' + CITY.COST.travel + ' MINUTES OF DAYLIGHT',
       Math.max(1, k - 1), '#5f8f7f', null));
     wrap.appendChild(foot);
     return wrap;

@@ -90,11 +90,45 @@ const SCENE = (() => {
   }
 
   /* { cv, w, h } — the picture, and the room-space box it goes in */
-  function rig(d, frame, face, back) {
+  function rig(d, frame, face, back, expr) {
     const down = lodFor();
     const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : ''),
-      d.def || d, frame, face, down, back);
+      d.def || d, frame, face, down, back, expr);
     return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
+  }
+
+  /* ============================================================
+     WHAT EVERYBODY'S FACE IS DOING WHILE YOU ARE IN THE ROOM.
+
+     Not random. Every actor carries a `mood` — the barman is
+     bored, a witness who likes you is pleased, a suspect watches
+     you — and on top of that mood there is a slow loop of the
+     small things a face does when nobody is talking to it: a
+     blink, a glance away, a moment of thinking about something
+     else. The loop is seeded off the actor's own x, so two frogs
+     in the same room are never in step.
+     ============================================================ */
+  const MOOD_IDLE = {
+    /* mood            what it does when it drifts */
+    bored:   ['bored', 'bored', 'blink', 'sniff'],
+    happy:   ['happy', 'happy', 'blink', 'joy'],
+    pleased: ['happy', 'neutral', 'blink', 'wink'],
+    watch:   ['neutral', 'doubt', 'blink', 'squint'],
+    shifty:  ['worry', 'neutral', 'blink', 'think'],
+    hard:    ['angry', 'neutral', 'blink', 'squint'],
+    sad:     ['sad', 'sad', 'blink', 'worry'],
+    neutral: ['neutral', 'neutral', 'blink', 'think'],
+  };
+
+  function faceOf(mood, T, seed) {
+    const set = MOOD_IDLE[mood] || MOOD_IDLE.neutral;
+    /* one step every 2.2s, with the seed pushing each frog off the others */
+    const step = Math.floor(T / 2.2 + (seed % 13) * 0.77);
+    /* the blink is quick: it only lands in the first fifth of its slot */
+    const into = (T / 2.2 + (seed % 13) * 0.77) % 1;
+    const pick = set[((step % set.length) + set.length) % set.length];
+    if (pick === 'blink' && into > 0.22) return set[0];
+    return pick;
   }
 
   /* how tall a person is in this room, for placing hotspots */
@@ -637,6 +671,44 @@ const SCENE = (() => {
       const w = Math.max(vw + 60, Math.ceil(d.w * 1.3) + 40);
       const o = ART.cv(w, H + 40), c = o.c;
       const rng = U.mulberry32(U.hashSeed('fore:' + d.id));
+      if (d.outdoor) {
+        /* OUTDOORS THE FOREGROUND IS A TREE, NOT A PIPE.
+
+           This layer used to lay a fat black pipe across the very top of
+           every room, which is exactly right for a cellar and exactly
+           wrong for the Champ de Mars at noon: it read as a black bar
+           nailed over the sky. Out here you get what actually hangs into
+           frame in Paris — the underside of a plane tree, in and out at
+           the corners, and pollen on the lens instead of grime. */
+        const leaf = (typeof DAY !== 'undefined') ? DAY.band().leaf : '#4e7c4a';
+        const dark = (typeof DAY !== 'undefined')
+          ? DAY.rgb(DAY.mix(leaf, '#101a12', 0.45)) : '#2c4630';
+        for (let x = 0; x < w; x += 210) {
+          const span = 60 + Math.floor(rng() * 50);
+          /* the bough, stepping down out of the corner */
+          for (let i = 0; i < span; i += 3) {
+            const dy = Math.round(Math.pow(i / span, 2.1) * 16);
+            ART.px(c, x + i, dy, 3, 3, dark);
+          }
+          /* and the canopy hanging off it */
+          for (let i = 0; i < 34; i++) {
+            const lx = x + Math.floor(rng() * span);
+            const ly = Math.round(Math.pow((lx - x) / span, 2.1) * 16) + 2
+              + Math.floor(rng() * 9);
+            const lw = 3 + Math.floor(rng() * 4);
+            ART.px(c, lx, ly, lw, 3, rng() < 0.4 ? dark : leaf);
+            if (rng() < 0.3) ART.px(c, lx + 1, ly, lw - 1, 1, '#ffffff22');
+          }
+        }
+        /* pollen and dust, catching the light at the edges of the lens */
+        for (let i = 0; i < 70; i++) {
+          const gx = Math.floor(rng() * w), gy = Math.floor(rng() * (H + 30));
+          const edge = Math.min(gx % vw, vw - (gx % vw));
+          if (edge > vw * 0.2) continue;
+          ART.px(c, gx, gy, 1, 1, 'rgba(255,248,220,.30)');
+        }
+        return o.cv;
+      }
       /* a fat pipe across the very top, close enough to be out of focus */
       ART.px(c, 0, 0, w, 9, '#05070c');
       ART.px(c, 0, 9, w, 2, 'rgba(120,150,180,.05)');
@@ -685,27 +757,51 @@ const SCENE = (() => {
      ============================================================ */
   const crowd = [];
 
+  /* WHAT PARIS WEARS IN THE AFTERNOON.
+
+     These were six shades of near-black, which is what a crowd looks
+     like at eleven at night and nothing like what it looks like at
+     noon: on a bright pavement a black coat is a hole. So: navy, wine,
+     camel, dove, olive, plum, cream, mustard, and every one of them
+     gets a lit edge on the sunward side. */
+  const COATS = [
+    '#3a4a6e', '#7a3244', '#b08a52', '#8e94a0', '#5a6b42', '#6a4a72',
+    '#d8cbb0', '#c08a30', '#4a5f7a', '#9c4f3a', '#5f7f78', '#a8a08c',
+  ];
+  const HATS = ['#2a2438', '#4a3a2a', '#6a6252', '#8a3244', '#3a4a5a', '#d8cbb0'];
+  /* what a frog's head is, in the sun */
+  const SKINS = ['#5e9a56', '#4f8a4a', '#6fa85e', '#3f7a44', '#7fb268', '#8a9a52'];
+  /* what somebody in this city is carrying */
+  const CARRY = [null, null, null, 'bread', 'bread', 'case', 'net', 'folio', 'dog'];
+
   function spawnCrowd() {
     crowd.length = 0;
     const cf = def.crowd;
     if (!cf || !band()) return;
     const n = cf.n || 10;
     const rng = U.mulberry32(U.hashSeed('crowd:' + def.id));
-    const COATS = ['#2a2f3d', '#3a2f2a', '#242a33', '#332a3a', '#1f2a2a', '#3a3630'];
-    const HATS = ['#12101d', '#1c1a2c', '#2b2436', '#241d17'];
     for (let i = 0; i < n; i++) {
+      const coat = COATS[Math.floor(rng() * COATS.length)];
       crowd.push({
         x: rng() * def.w,
         z: (cf.z0 === undefined ? 0.4 : cf.z0) +
            rng() * ((cf.z1 === undefined ? 1 : cf.z1) - (cf.z0 === undefined ? 0.4 : cf.z0)),
         dir: rng() < 0.5 ? -1 : 1,
         v: 9 + rng() * 13,
-        coat: COATS[Math.floor(rng() * COATS.length)],
-        hat: HATS[Math.floor(rng() * HATS.length)],
+        coat,
+        hat: rng() < 0.72 ? HATS[Math.floor(rng() * HATS.length)] : null,
+        skin: SKINS[Math.floor(rng() * SKINS.length)],
+        carry: CARRY[Math.floor(rng() * CARRY.length)],
         brolly: rng() < 0.55,
+        /* a parasol is a bright thing and an umbrella is a dark one, and
+           which you are holding depends on the weather, so carry both */
         brollyCol: ['#2b2436', '#3a2a2a', '#20303a', '#2a2a1f'][Math.floor(rng() * 4)],
+        parasolCol: ['#f0e2d0', '#e8b0b8', '#d8d0e8', '#f4d89a'][Math.floor(rng() * 4)],
         t: rng() * 9,
         tall: rng() < 0.3 ? 1 : 0,
+        /* one in six stops for a moment, which is what makes a crowd a
+           crowd rather than a conveyor belt */
+        dwell: rng() < 0.17 ? 1 : 0,
       });
     }
   }
@@ -731,7 +827,12 @@ const SCENE = (() => {
         z: (tf.z0 || 0.6) + rng() * ((tf.z1 || 0.95) - (tf.z0 || 0.6)),
         dir: rng() < 0.5 ? -1 : 1,
         v: 44 + rng() * 40,
-        col: ['#1c1f26', '#2a1f1f', '#1f2630', '#26221c'][Math.floor(rng() * 4)],
+        /* A 1937 CAR IS BLACK, and four blacks on a sunlit avenue is four
+           holes in it. These are the colours they actually came in: black,
+           yes, but also maroon, bottle green, cream and municipal blue. */
+        col: ['#22242c', '#6a2a30', '#2a4a34', '#d8cbb0', '#2f4a70', '#8a7a52',
+              '#5a2a2a', '#3a4a5a'][Math.floor(rng() * 8)],
+        roof: rng() < 0.4,
         len: 34 + Math.floor(rng() * 16),
       });
     }
@@ -751,19 +852,37 @@ const SCENE = (() => {
       const L = Math.max(10, Math.round(a.len * sc));
       const h = Math.max(4, Math.round(13 * sc));
       const x = Math.round(a.x), y = fy - h;
-      ART.px(c, x, fy - 1, L, 2, 'rgba(0,0,0,.35)');
+      ART.px(c, x, fy - 1, L, 2, 'rgba(52,44,32,.32)');
       ART.px(c, x, y, L, h, a.col);
-      ART.px(c, x, y, L, 1, 'rgba(255,255,255,.10)');
-      /* the cabin */
+      ART.px(c, x, y, L, 1, 'rgba(255,255,255,.26)');       // the sun along the wing
+      ART.px(c, x, y + h - 2, L, 2, 'rgba(30,24,18,.28)');
+      /* the running board and the wheels */
+      ART.px(c, x + 2, fy - 3, L - 4, 1, 'rgba(30,24,18,.40)');
+      [Math.round(L * 0.18), Math.round(L * 0.78)].forEach(wx => {
+        ART.px(c, x + wx - 2, fy - 4, 5, 4, '#22242c');
+        ART.px(c, x + wx - 1, fy - 3, 3, 2, '#8a8272');
+      });
+      /* the cabin, with the sky in the glass */
       ART.px(c, x + Math.round(L * 0.24), y - Math.round(h * 0.5), Math.round(L * 0.5),
         Math.round(h * 0.6), a.col);
+      ART.px(c, x + Math.round(L * 0.24), y - Math.round(h * 0.5), Math.round(L * 0.5), 1,
+        'rgba(255,255,255,.30)');
       ART.px(c, x + Math.round(L * 0.28), y - Math.round(h * 0.4), Math.round(L * 0.42),
-        Math.max(2, Math.round(h * 0.35)), 'rgba(150,200,220,.18)');
-      /* and the two lights, going the way it is going */
+        Math.max(2, Math.round(h * 0.35)), 'rgba(160,205,230,.55)');
+      ART.px(c, x + Math.round(L * 0.28), y - Math.round(h * 0.4), Math.round(L * 0.42), 1,
+        'rgba(230,245,255,.75)');
+      /* THE LIGHTS, and only if anybody would have them on. A headlamp
+         burning at noon is the single clearest way to say "this art was
+         drawn for a night that no longer exists". */
+      const lit = typeof DAY === 'undefined' || DAY.lamps()
+        || (typeof CITY !== 'undefined' && CITY.sky().drops > 1);
       const fx = a.dir > 0 ? x + L - 2 : x;
-      ART.px(c, fx, y + Math.round(h * 0.3), 2, 2, '#ffe7a8');
+      ART.px(c, fx, y + Math.round(h * 0.3), 2, 2, lit ? '#ffe7a8' : '#cdd6dc');
       ART.px(c, a.dir > 0 ? x : x + L - 2, y + Math.round(h * 0.3), 2, 2, '#d13b45');
-      ART.px(c, fx + (a.dir > 0 ? 2 : -8), y + Math.round(h * 0.3), 8, 1, 'rgba(255,231,168,.16)');
+      if (lit) {
+        ART.px(c, fx + (a.dir > 0 ? 2 : -8), y + Math.round(h * 0.3), 8, 1,
+          'rgba(255,231,168,.16)');
+      }
     }
   }
 
@@ -779,35 +898,66 @@ const SCENE = (() => {
   function drawCrowd(c, T) {
     if (!crowd.length) return;
     const wet = typeof CITY !== 'undefined' && CITY.sky && CITY.sky().drops > 0.5;
+    const hot = typeof DAY !== 'undefined' && !wet && !DAY.lamps();
     for (const w of crowd) {
       const sc = scaleAt(w.z);
       const fy = floorAt(w.z);
       const h = Math.round(26 * sc) + w.tall;
       const bw = Math.max(4, Math.round(9 * sc));
       const x = Math.round(w.x), y = fy - h;
-      const step = Math.sin(w.t * 9) > 0 ? 1 : 0;
-      /* the shadow he is standing in */
-      ART.px(c, x - bw, fy, bw * 2, 1, 'rgba(0,0,0,.3)');
+      /* somebody who has stopped for a moment stops walking, too */
+      const moving = !(w.dwell && Math.sin(w.t * 0.31) > 0.72);
+      const step = moving && Math.sin(w.t * 9) > 0 ? 1 : 0;
+      /* THE SHADOW HE STANDS IN. On a sunlit pavement it goes to the
+         side the sun is not, which is what tells you there is a sun. */
+      ART.px(c, x - bw, fy, bw * 2, 1, 'rgba(52,44,32,.30)');
+      ART.px(c, x + 1, fy, bw * 2, 1, 'rgba(52,44,32,.16)');
       /* legs */
-      ART.px(c, x - bw + 1, y + h - 7, 2, 7 - step, '#14121c');
-      ART.px(c, x + bw - 3, y + h - 7, 2, 6 + step, '#14121c');
-      /* the coat */
+      ART.px(c, x - bw + 1, y + h - 7, 2, 7 - step, '#2c2836');
+      ART.px(c, x + bw - 3, y + h - 7, 2, 6 + step, '#2c2836');
+      /* THE COAT, with the sun down one side of it and the shade on the
+         other: without that a coat at this size is a coloured brick */
       ART.px(c, x - bw, y + 6, bw * 2, h - 12, w.coat);
-      ART.px(c, x - bw, y + 6, bw * 2, 1, 'rgba(255,255,255,.10)');
-      ART.px(c, x + bw - 2, y + 6, 2, h - 12, 'rgba(0,0,0,.28)');
-      /* the head and the hat */
-      ART.px(c, x - 2, y + 2, 5, 5, '#3f5c46');
-      ART.px(c, x - 3, y, 7, 2, w.hat);
-      ART.px(c, x - 2, y - 2, 5, 2, w.hat);
-      /* and the umbrella, because it is Paris and it is raining */
-      if (w.brolly && wet) {
-        /* SIZED TO THE FROG UNDER IT. Drawn at a fixed width it came out
-           bigger than he was and the crowd turned into a bed of mushrooms. */
+      ART.px(c, x - bw, y + 6, bw * 2, 1, 'rgba(255,255,255,.24)');
+      ART.px(c, x - bw, y + 6, 1, h - 12, 'rgba(255,255,255,.18)');
+      ART.px(c, x + bw - 2, y + 6, 2, h - 12, 'rgba(40,32,24,.30)');
+      /* the head, and a hat only if this one is wearing one */
+      ART.px(c, x - 2, y + 2, 5, 5, w.skin);
+      ART.px(c, x - 2, y + 2, 5, 1, 'rgba(255,255,255,.22)');
+      if (w.hat) {
+        ART.px(c, x - 3, y, 7, 2, w.hat);
+        ART.px(c, x - 2, y - 2, 5, 2, w.hat);
+        ART.px(c, x - 3, y, 7, 1, 'rgba(255,255,255,.18)');
+      }
+      /* WHAT THEY ARE CARRYING. Half of Paris is carrying a baguette at
+         any given moment and it is the cheapest way to say where you are. */
+      const cx2 = x + (w.dir > 0 ? bw - 1 : -bw - 1);
+      if (w.carry === 'bread') {
+        ART.px(c, cx2 - 1, y + 4, 3, 9, '#d9a45c');
+        ART.px(c, cx2 - 1, y + 4, 3, 2, '#f0c98a');
+        ART.px(c, cx2, y + 6, 1, 5, '#b8823c');
+      } else if (w.carry === 'case') {
+        ART.px(c, cx2 - 2, y + 13, 5, 5, '#5d4728');
+        ART.px(c, cx2 - 2, y + 13, 5, 1, '#8a6a44');
+      } else if (w.carry === 'net') {
+        ART.px(c, cx2 - 2, y + 13, 5, 5, '#7a8a52');
+        ART.px(c, cx2 - 1, y + 14, 2, 2, '#c8384a');
+      } else if (w.carry === 'folio') {
+        ART.px(c, cx2 - 3, y + 8, 6, 8, '#d8cbb0');
+        ART.px(c, cx2 - 3, y + 8, 6, 1, '#ffffff');
+      }
+      /* AND WHAT IS OVER THEIR HEAD. An umbrella when it rains, a
+         parasol when it does not and the sun is high — sized to the frog
+         under it, because drawn at a fixed width the crowd came out as a
+         bed of mushrooms. */
+      const shade = wet ? w.brollyCol : (hot && w.brolly ? w.parasolCol : null);
+      if (shade && (wet || w.brolly)) {
         const uw = Math.max(4, Math.round(bw * 1.25));
         const uy = y - 4;
-        ART.px(c, x - uw, uy + 2, uw * 2, 1, w.brollyCol);
-        ART.px(c, x - uw + 1, uy, uw * 2 - 2, 2, w.brollyCol);
-        ART.px(c, x - 1, uy - 1, 3, 1, w.brollyCol);
+        ART.px(c, x - uw, uy + 2, uw * 2, 1, shade);
+        ART.px(c, x - uw + 1, uy, uw * 2 - 2, 2, shade);
+        ART.px(c, x - uw + 1, uy, uw * 2 - 2, 1, 'rgba(255,255,255,.30)');
+        ART.px(c, x - 1, uy - 1, 3, 1, shade);
         ART.px(c, x, uy + 3, 1, 5, '#4a3f2e');
       }
     }
@@ -1107,6 +1257,15 @@ const SCENE = (() => {
     ART.px(c, x - 1, y - 20 - bob, 2, 6, 'rgba(255,215,94,' + (a * 0.6).toFixed(2) + ')');
   }
 
+  /* a stable number per room, so the clouds and the birds in a place are
+     always the same clouds and birds and never re-roll on a redraw */
+  function seedOf(d) {
+    let n = 0;
+    const id = (d && d.id) || '';
+    for (let i = 0; i < id.length; i++) n = (n * 31 + id.charCodeAt(i)) % 9973;
+    return n;
+  }
+
   function draw(now) {
     const T = (now - t0) / 1000;
     const c = ctx;
@@ -1119,7 +1278,23 @@ const SCENE = (() => {
        real ceiling in it: joists, the cords the lamps hang off, and the
        dark these places keep up there. */
     const vw2 = viewW();
-    if (oy > 0) {
+    /* ============================================================
+       WHAT IS OVER YOUR HEAD.
+
+       Indoors that is a ceiling: joists, lamp cords, and the dark
+       these places keep up there. Outdoors it is the sky, and the
+       sky is the loudest clock in this game — so an outdoor room
+       hands its whole headroom, plus whatever open band it declares
+       with `skyTo`, straight to DAY.
+
+       Drawn BEFORE the camera translate, because the sky is at
+       infinity and must not scroll with the room. The room canvas
+       leaves that band transparent, so this shows through it.
+       ============================================================ */
+    if (def.outdoor && typeof DAY !== 'undefined') {
+      const sh = oy + (def.skyTo === undefined ? 0 : def.skyTo);
+      if (sh > 0) DAY.sky(c, 0, 0, vw2, sh, T, seedOf(def));
+    } else if (oy > 0) {
       ART.px(c, 0, 0, vw2, oy + 2, '#0b0d14');
       ART.px(c, 0, 0, vw2, Math.max(1, Math.round(oy * 0.35)), '#080a10');
       /* joists across, in perspective: closer together toward the top */
@@ -1143,8 +1318,9 @@ const SCENE = (() => {
       }
       ART.px(c, 0, oy, vw2, 2, '#05060a');
     }
-    /* THE VAULT, over the room, going by at less than half the rate */
-    if (oy > 2) {
+    /* THE VAULT, over the room, going by at less than half the rate.
+       Indoors only: outdoors that headroom is sky. */
+    if (oy > 2 && !def.outdoor) {
       const vau = vaultCv(def, oy, vw2);
       c.drawImage(vau, -Math.round(cam * 0.4) % Math.max(1, vau.width - vw2), 0);
     }
@@ -1158,6 +1334,34 @@ const SCENE = (() => {
        openings it has — an arch, a doorway, a window onto the canal — and
        the vault behind them slides past at a third of the rate. */
     for (const dp of (def.depth || [])) {
+      /* A HOLE IN A WALL IS ONLY A VAULT IF THERE IS A WALL.
+
+         The quay declared its entire sky band as a depth hole and got the
+         brick vault painted into it, which under the new daylight meant a
+         black brick ceiling nailed over the Seine. Outdoors there is no
+         wall to have a hole in, so there is nothing to do here; and a
+         window that says `sky: true` gets the actual sky behind it, which
+         is what a window is for. */
+      if (def.outdoor) continue;
+      if (dp.sky && typeof DAY !== 'undefined') {
+        c.save();
+        c.beginPath();
+        c.rect(dp.x, dp.y, dp.w, dp.h);
+        c.clip();
+        /* screen space, undoing the camera, because the sky does not scroll */
+        /* THE SKY BEHIND A WINDOW IS THE WHOLE SKY, not a sky cropped to
+           the window. Sized to the opening it showed the top of the ramp
+           and nothing else, and read as a rectangle of flat blue paint;
+           sized to the room it shows whatever slice of cloud and ramp
+           happens to be at that height, which is what a window does. */
+        DAY.sky(c, Math.round(cam), -oy, viewW(), oy + def.floorY, T, seedOf(def));
+        /* the reveal of the opening, and the dirt in the corners of it */
+        ART.px(c, dp.x, dp.y, dp.w, 1, 'rgba(0,0,0,.30)');
+        ART.px(c, dp.x, dp.y, 1, dp.h, 'rgba(0,0,0,.22)');
+        ART.px(c, dp.x + dp.w - 1, dp.y, 1, dp.h, 'rgba(0,0,0,.22)');
+        c.restore();
+        continue;
+      }
       const vau = vaultCv(def, Math.max(10, dp.h), viewW());
       c.save();
       c.beginPath();
@@ -1177,6 +1381,15 @@ const SCENE = (() => {
       c.restore();
     }
     if (def.onPaintOver) def.onPaintOver(c, T, cam, viewW());
+
+    /* WHAT THE WINDOWS THROW. Drawn after the room and its furniture and
+       before the cast, so a frog standing in the light is standing in it
+       rather than under it. */
+    if (!def.outdoor && typeof DAY !== 'undefined') {
+      for (const dp of (def.depth || [])) {
+        if (dp.sky) DAY.shaft(c, dp, def.floorY, T, seedOf(def));
+      }
+    }
 
     /* the traffic, then the crowd: both behind everybody who matters */
     drawTraffic(c);
@@ -1275,16 +1488,16 @@ const SCENE = (() => {
     }
 
     /* ============================================================
-       THE NIGHT ITSELF.
+       THE HOUR ITSELF.
 
-       Every room belongs to the same night: the hour tints it, and
+       Every room belongs to the same day: the light grades it, and
        if you are outdoors the weather falls through it. Without this
-       the city is five unrelated rooms with a clock in the corner.
+       the city is eleven unrelated rooms with a clock in the corner.
        ============================================================ */
     if (typeof CITY !== 'undefined' && G.phase !== 'title') {
       const w = viewW();
-      const hour = CITY.watch(), sky = CITY.sky();
-      if (hour.tint) ART.px(c, cam, -oy, w, H + oy, hour.tint);
+      const sky = CITY.sky();
+      if (typeof DAY !== 'undefined') DAY.wash(c, cam, -oy, w, H + oy, !def.outdoor);
       if (def.outdoor) {
         /* RAIN. Real drops with their own x, or a linear sequence folds
            them into a handful of columns and it reads as prison bars. */
@@ -1317,13 +1530,18 @@ const SCENE = (() => {
       }
     }
 
-    /* the edges of the frame, so a room has corners */
+    /* THE EDGES OF THE FRAME, so a room has corners. Indoors that is the
+       dark in the corners of a cellar; outdoors a black vignette on a blue
+       sky reads as a bruise, so out there it is half the strength and the
+       sky end of it goes warm instead of black. */
     const vw = viewW();
+    const out = !!def.outdoor;
     for (let i = 0; i < 16; i++) {
-      const a = 0.42 * (1 - i / 16);
-      ART.px(c, cam, H - 1 - i, vw, 1, 'rgba(0,0,0,' + (a * 0.5) + ')');
-      ART.px(c, cam + i, -oy, 1, H + oy, 'rgba(0,0,0,' + (a * 0.7) + ')');
-      ART.px(c, cam + vw - 1 - i, -oy, 1, H + oy, 'rgba(0,0,0,' + (a * 0.7) + ')');
+      const a = (out ? 0.20 : 0.42) * (1 - i / 16);
+      const col = out ? 'rgba(60,44,30,' : 'rgba(0,0,0,';
+      ART.px(c, cam, H - 1 - i, vw, 1, col + (a * 0.5) + ')');
+      ART.px(c, cam + i, -oy, 1, H + oy, col + (a * 0.7) + ')');
+      ART.px(c, cam + vw - 1 - i, -oy, 1, H + oy, col + (a * 0.7) + ')');
     }
     c.restore();
 
@@ -1354,7 +1572,10 @@ const SCENE = (() => {
 
   function drawActor(c, a, T) {
     const face = a.face === undefined ? -1 : a.face;
-    const r = rig(a, a.frame || 0, face, a.back);
+    /* an actor mid-line wears the talking face; the rest of the time he
+       wears whatever his mood does when it is left alone */
+    const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
+    const r = rig(a, a.frame || 0, face, a.back, ex);
     const fy = a.y === undefined ? floorAt(a.z) : a.y;
     const id = a.still ? { rise: 0, lean: 0 } : idleOf(T, Math.round(a.x));
     const sc = scaleAt(a.z);
@@ -1364,10 +1585,30 @@ const SCENE = (() => {
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
   }
 
+  /* ============================================================
+     AND WHAT THE DETECTIVE'S OWN FACE IS DOING.
+
+     Read off the state of the shift, not off a timer: he squints
+     when he is working something out, winces when he is nearly
+     out of hearts, looks pleased when the city thinks well of
+     him, and goes bored when there is nothing left to do here.
+     ============================================================ */
+  function myFace(T) {
+    if (me.reach > 0) return 'squint';                 // hand in something
+    if (typeof G === 'undefined') return 'neutral';
+    if ((G.hearts || 6) <= 2) return 'wince';
+    const k = (typeof STORY !== 'undefined' && STORY.karma) ? STORY.karma() : null;
+    const mood = !k ? 'neutral'
+      : k.band >= 2 ? 'happy'
+      : k.band <= -2 ? 'hard'
+      : Math.abs(me.v) > 4 ? 'neutral' : 'watch';
+    return faceOf(mood, T, 3);
+  }
+
   function drawMe(c, T) {
     /* WALKING AWAY, YOU SEE HIS BACK. The rig is the same frog; the head
        just has nothing on the front of it. */
-    const r = rig(SCENE.meDef(), me.frame, me.face, me.faceZ < 0);
+    const r = rig(SCENE.meDef(), me.frame, me.face, me.faceZ < 0, myFace(T));
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {

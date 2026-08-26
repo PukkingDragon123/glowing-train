@@ -1620,7 +1620,12 @@ const CINE = {
     CINE.letterbox(false);
   },
 
-  /* the night ran out on you */
+  /* THE DAY RAN OUT ON YOU.
+
+     Still called dawnCard because everything in the game calls it that,
+     but what it shows is the other end of the shift: the sun going down
+     behind the rooftops, the sky going from gold to violet, and the
+     windows coming on one at a time as the city stops being yours. */
   async dawnCard() {
     const root = CINE.stage();
     root.className = 'anim-cut';
@@ -1638,20 +1643,32 @@ const CINE = {
     await new Promise(res => {
       const draw = () => {
         const t = Math.min(1, (performance.now() - t0) / 2600);
-        const up = U.ease.inOutQuad(t);
-        c.fillStyle = '#0a0e14'; c.fillRect(0, 0, 180, 108);
-        for (let y = 0; y < 70; y++) {
-          const a = Math.max(0, up - y / 90);
-          ART.px(c, 0, 70 - y, 180, 1, 'rgba(150,160,180,' + (a * 0.5).toFixed(3) + ')');
-        }
+        const dn = U.ease.inOutQuad(t);
+        /* the sky walks from gold down through rose into violet */
+        const top = DAY.mix('#3f6fae', '#141a3a', dn);
+        const mid = DAY.mix('#e0a070', '#4c3a68', dn);
+        const low = DAY.mix('#ffd08a', '#8a4a6a', dn);
+        DAY.ramp(c, 0, 0, 180, 40, top, mid, 6);
+        DAY.ramp(c, 0, 40, 180, 30, mid, low, 7);
+        /* the sun going down behind the roofs */
+        const sy = Math.round(34 + dn * 30);
+        PIX.disc(c, 132, sy, 9, 'rgba(255,190,120,' + (0.30 * (1 - dn * 0.7)).toFixed(2) + ')');
+        PIX.disc(c, 132, sy, 5, DAY.rgb(DAY.mix('#ffcf72', '#c9603c', dn)));
+        /* THE ROOFLINE, and the windows coming on one at a time as the
+           city stops being yours */
         for (let i = 0; i < 180; i += 6) {
           const h = 16 + ((i * 17) % 30);
-          ART.px(c, i, 70 - h, 6, h, '#0c1017');
-          if ((i % 18) === 0) ART.px(c, i + 2, 70 - h + 4, 2, 2, 'rgba(255,220,140,' + (0.5 - up * 0.5) + ')');
+          const roof = DAY.rgb(DAY.mix('#6a5f52', '#1a1622', 0.30 + dn * 0.7));
+          ART.px(c, i, 70 - h, 6, h, roof);
+          ART.px(c, i, 70 - h, 6, 1, DAY.rgb(DAY.mix('#a89880', '#2a2436', dn)));
+          if ((i % 18) === 0) {
+            const on = Math.max(0, dn - ((i / 18) % 5) * 0.14);
+            ART.px(c, i + 2, 70 - h + 4, 2, 2, 'rgba(255,220,140,' + Math.min(0.85, on * 2).toFixed(2) + ')');
+          }
         }
-        ART.px(c, 0, 70, 180, 38, '#090c11');
-        const w1 = PIXFONT.render('06:00', { scale: 3, color: '#eae4d0', shadow: '#12101d' });
-        const w2 = PIXFONT.render('THE SHIFT IS OVER', { scale: 2, color: '#8fb3a0', shadow: '#12101d' });
+        ART.px(c, 0, 70, 180, 38, DAY.rgb(DAY.mix('#3a3026', '#0f0c14', dn)));
+        const w1 = PIXFONT.render('19:00', { scale: 3, color: '#eae4d0', shadow: '#12101d' });
+        const w2 = PIXFONT.render('THE SHIFT IS OVER', { scale: 2, color: '#d8b088', shadow: '#12101d' });
         c.drawImage(w1, Math.round(90 - w1.width / 2), 80);
         c.drawImage(w2, Math.round(90 - w2.width / 2), 94);
         if (t < 1) requestAnimationFrame(draw); else setTimeout(res, 900);

@@ -130,14 +130,20 @@ const CITY = (() => {
      when it runs out the shift is over and the captain wants you
      off the street — you keep everything you found.
      --------------------------------------------------------- */
-  const START = 20 * 60;               // 20:00
-  const END = 6 * 60;                  // 06:00, next morning
+  const START = 9 * 60;                // 09:00
+  const END = 19 * 60;                 // 19:00, same day
 
-  /* A NIGHT IS 600 MINUTES. Paris has eleven stops in it and about forty-five
-     things to turn over, which is well over a thousand minutes of searching:
-     the night is deliberately far too short to do it all. The eyeglass is
-     what makes it playable — three minutes to find out whether a thing is
-     worth the eighteen — and where you look is still the whole game. */
+  /* A SHIFT IS 600 MINUTES OF DAYLIGHT. It opens at nine in the morning
+     and the captain wants you off the street at seven, and in between the
+     sky walks from morning through noon into gold and then into dusk — so
+     the light is the clock, and the light going orange is the game telling
+     you that you are nearly out of afternoon.
+
+     Paris has eleven stops in it and about forty-five things to turn over,
+     which is well over a thousand minutes of searching: the day is
+     deliberately far too short to do it all. The eyeglass is what makes it
+     playable — three minutes to find out whether a thing is worth the
+     eighteen — and where you look is still the whole game. */
   const COST = {
     travel: 35, search: 18, ask: 12, talk: 6, job: 45, lineup: 20,
     /* THE GLASS is the cheap move: three minutes to find out whether a
@@ -161,10 +167,21 @@ const CITY = (() => {
     G.burned = {};
   }
 
-  /* minutes past midnight, wrapped, so 20:40 -> 02:10 counts up */
+  /* HOW MUCH DAY IS LEFT.
+
+     The shift used to run over midnight, so this wrapped. It does not any
+     more, and the wrap was actively dangerous: overshooting seven in the
+     evening rolled the clock the long way round and told the player they
+     had twenty-three hours of afternoon in hand. Clamp instead. */
   function minutesLeft() {
     const now = G.clock === undefined ? START : G.clock;
-    return (now >= END ? (24 * 60 - now) + END : END - now);
+    return Math.max(0, END - now);
+  }
+
+  /* minutes past midnight, for anything that wants the raw hour — the
+     light, mostly, which is the loudest clock in the game */
+  function minutes() {
+    return ((G.clock === undefined ? START : G.clock) % (24 * 60) + 24 * 60) % (24 * 60);
   }
 
   function hhmm() {
@@ -173,14 +190,10 @@ const CITY = (() => {
     return (h < 10 ? '0' : '') + h + ':' + (mm < 10 ? '0' : '') + mm;
   }
 
-  /* the hour reads differently at 3am than at 9pm, and the rooms tint with it */
-  function watch() {
-    const m = ((G.clock === undefined ? START : G.clock) % (24 * 60) + 24 * 60) % (24 * 60);
-    if (m >= 20 * 60 || m < 1 * 60) return { id: 'night', word: 'NIGHT', tint: 'rgba(30,40,70,.10)' };
-    if (m < 3 * 60) return { id: 'small', word: 'SMALL HOURS', tint: 'rgba(20,26,54,.16)' };
-    if (m < 5 * 60) return { id: 'dead', word: 'DEAD HOURS', tint: 'rgba(16,20,44,.20)' };
-    return { id: 'grey', word: 'FIRST LIGHT', tint: 'rgba(120,130,160,.10)' };
-  }
+  /* THE HOUR. One source of truth for it, and it is DAY: the six bands
+     carry the whole palette, so anybody who wants to know what colour it
+     is out there asks the light and not the clock. */
+  function watch() { return DAY.bandAt(minutes()); }
 
   function spend(kind, mult) {
     /* ROUNDED, ALWAYS. A half-cost action (a favour, a flight of stairs) used
@@ -192,6 +205,8 @@ const CITY = (() => {
     return c;
   }
 
+  /* the shift is over. Still called nightOver everywhere because
+     everything in the game calls it that, and renaming it buys nothing. */
   function nightOver() { return minutesLeft() <= 0; }
 
   /* ---------------------------------------------------------
@@ -202,23 +217,28 @@ const CITY = (() => {
      uniforms. It rolls every time you drive.
      --------------------------------------------------------- */
   const WEATHER = {
-    rain:  { id: 'rain',  word: 'RAIN',        drops: 1.0, wit: 0, heat: -1 },
-    pour:  { id: 'pour',  word: 'HARD RAIN',   drops: 1.9, wit: -1, heat: -2 },
-    storm: { id: 'storm', word: 'STORM',       drops: 2.4, wit: -1, heat: -2, flash: true },
-    fog:   { id: 'fog',   word: 'FOG',         drops: 0.2, wit: -1, heat: -1, haze: true },
-    clear: { id: 'clear', word: 'CLEAR, COLD', drops: 0,   wit: 1,  heat: 1 },
+    fine:  { id: 'fine',  word: 'FINE',          drops: 0,   wit: 1,  heat: 1 },
+    high:  { id: 'high',  word: 'HIGH CLOUD',    drops: 0,   wit: 1,  heat: 0 },
+    haze:  { id: 'haze',  word: 'HEAT HAZE',     drops: 0.1, wit: -1, heat: 1, haze: true },
+    show:  { id: 'show',  word: 'SHOWERS',       drops: 0.9, wit: 0,  heat: -1 },
+    warm:  { id: 'warm',  word: 'WARM RAIN',     drops: 1.6, wit: -1, heat: -2 },
+    thund: { id: 'thund', word: 'THUNDER',       drops: 2.2, wit: -1, heat: -2, flash: true },
   };
 
+  /* A DAY SHIFT IS MOSTLY DRY. The old roll was two-thirds rain because a
+     night detective wants his streets wet; an afternoon in Paris does not,
+     and the whole point of the daylight is being able to see it. */
   function rollWeather() {
     const r = (G.rng || Math.random)();
-    if (r < 0.34) return 'rain';
-    if (r < 0.56) return 'pour';
-    if (r < 0.7) return 'storm';
-    if (r < 0.86) return 'fog';
-    return 'clear';
+    if (r < 0.34) return 'fine';
+    if (r < 0.56) return 'high';
+    if (r < 0.68) return 'haze';
+    if (r < 0.84) return 'show';
+    if (r < 0.94) return 'warm';
+    return 'thund';
   }
 
-  function sky() { return WEATHER[G.weather] || WEATHER.rain; }
+  function sky() { return WEATHER[G.weather] || WEATHER.fine; }
 
   /* ---------------------------------------------------------
      WHERE YOU ARE
@@ -290,7 +310,7 @@ const CITY = (() => {
   return {
     PLACES, ORDER, WORK, PROPS, WEATHER, COST, START, END,
     propsAt, unsearchedAt,
-    reset, spend, hhmm, watch, minutesLeft, nightOver,
+    reset, spend, hhmm, watch, minutes, minutesLeft, nightOver,
     rollWeather, sky, here, at, distance,
     searchKey, searched, plantedAt, leftAt, totalLeft, found, NOTHING,
 

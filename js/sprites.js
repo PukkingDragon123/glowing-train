@@ -1975,7 +1975,7 @@ SPR.buildFrog = function (d, expr) {
      Every expression here is one or two pixels off deadpan; what changes
      is the LID and the pupil, not the whole face. */
   const EX = {
-    /*            lid   pupil  brow-in  brow-out  brow-y */
+    /*            lid   pupil  brow-in  brow-out  brow-y   extras */
     neutral: { lid: 2, pup: 3, bi: 0, bo: 0, by: 0 },
     smug:    { lid: 3, pup: 3, bi: 1, bo: 0, by: 0 },
     worry:   { lid: 0, pup: 2, bi: -1, bo: 0, by: -1 },
@@ -1986,6 +1986,35 @@ SPR.buildFrog = function (d, expr) {
     blink:   { lid: 7, pup: 3, bi: 0, bo: 0, by: 0 },   // the whole idle tell
     talk:    { lid: 2, pup: 3, bi: 0, bo: -1, by: 0 },  // brows up, mid-sentence
     talk2:   { lid: 2, pup: 3, bi: 0, bo: 0, by: 0 },
+
+    /* ============================================================
+       THE REST OF WHAT A FACE DOES.
+
+       The old set was seven deadpans, which suited a game where
+       every scene was a man with a gun at eleven at night. It is
+       an afternoon in Paris now and people are pleased, bored,
+       suspicious, embarrassed and delighted, so:
+
+         arc      the eye closes into a happy upward curve
+         low      a lower lid comes UP, which is what a real smile
+                  does to an eye and what nothing here did before
+         roll     the pupil goes off to one side (thinking, sniffing)
+         one      the expression is asymmetric — one eye only
+         cheek    a blush, drawn under the eye
+       ============================================================ */
+    happy:   { lid: 1, pup: 3, bi: 0, bo: -1, by: -1, low: 2, cheek: 1 },
+    joy:     { lid: 0, pup: 3, bi: 0, bo: -2, by: -1, arc: 1, cheek: 1 },
+    laugh:   { lid: 0, pup: 3, bi: 0, bo: -2, by: -1, arc: 1, cheek: 1 },
+    sad:     { lid: 1, pup: 2, bi: -2, bo: 1, by: 0, low: 1 },
+    wince:   { lid: 4, pup: 2, bi: 1, bo: 0, by: 1, one: 1 },
+    squint:  { lid: 5, pup: 2, bi: 1, bo: 1, by: 1 },
+    wink:    { lid: 1, pup: 3, bi: 0, bo: -1, by: 0, one: 2, low: 2 },
+    think:   { lid: 3, pup: 3, bi: -1, bo: -2, by: -1, roll: -1 },
+    sniff:   { lid: 2, pup: 2, bi: 0, bo: -1, by: 0, roll: 1 },
+    alarm:   { lid: 0, pup: 5, bi: -1, bo: -2, by: -2 },
+    doubt:   { lid: 3, pup: 3, bi: 0, bo: 0, by: 0, tilt: 2 },
+    blush:   { lid: 2, pup: 3, bi: 0, bo: -1, by: 0, cheek: 2, low: 1 },
+    bored:   { lid: 4, pup: 3, bi: 0, bo: 1, by: 1, roll: -1 },
   };
   const X = EX[expr] || EX.neutral;
 
@@ -2017,6 +2046,34 @@ SPR.buildFrog = function (d, expr) {
       }
       return;
     }
+    /* AN EYE SHUT IN A SMILE. Not a blink — a blink is a flat lid coming
+       straight down and reads as asleep. This is an upward arc with the
+       skin above it, which is the whole difference between a frog who is
+       delighted and a frog who has nodded off. */
+    const solo = X.one && side > 0 ? false : X.one ? true : false;
+    if (X.arc && (!X.one || solo)) {
+      PIX.disc(ctx, cx + off, EY, er - 1, skin);
+      for (let i = 0; i < er * 2 - 1; i++) {
+        const t = (i - (er - 1)) / (er - 1);
+        const yy = EY + 1 + Math.round(Math.abs(t) * 2) - 1;
+        PIX.rect(ctx, cx + off - er + 1 + i, yy, 1, 2, P.K);
+        PIX.rect(ctx, cx + off - er + 1 + i, yy + 2, 1, 1, dark);
+      }
+      /* the crease at the outer corner that a real smile puts there */
+      PIX.rect(ctx, cx + off + side * (er - 1), EY - 2, 2, 1, dark);
+      PIX.rect(ctx, cx + off + side * (er - 1), EY + 3, 2, 1, dark);
+      return;
+    }
+    /* A WINK, or a wince: one eye does something the other does not. */
+    if (X.one === 2 && side < 0) {
+      PIX.disc(ctx, cx + off, EY, er - 1, skin);
+      PIX.rect(ctx, cx + off - er + 1, EY, er * 2 - 1, 2, P.K);
+      PIX.rect(ctx, cx + off - er + 2, EY + 2, er * 2 - 3, 1, dark);
+      for (let i = 0; i < er * 2 + 1; i++) {
+        PIX.rect(ctx, cx + off - er + i, EY - er + 1, 1, 3, P.K);
+      }
+      return;
+    }
     /* sclera, iris, pupil, catchlight */
     PIX.disc(ctx, cx + off, EY + 1, er - 2, P.W);
     const iris = d.goldEyes ? P.G : d.spiral ? P.N : P.g;
@@ -2026,9 +2083,11 @@ SPR.buildFrog = function (d, expr) {
       ctx.fillRect(cx + off - 1, EY, 3, 1); ctx.fillRect(cx + off + 1, EY + 1, 1, 1);
       ctx.fillRect(cx + off - 1, EY + 2, 2, 1);
     } else {
-      /* a frog pupil is a horizontal slot; a scared one shrinks to a dot */
+      /* a frog pupil is a horizontal slot; a scared one shrinks to a dot,
+         and one that is thinking about something is not looking at you */
       const pw = Math.max(1, X.pup), ph = expr === 'worry' ? 2 : 3;
-      const px = cx + off + (expr === 'smug' ? -side * 2 : 0);
+      const px = cx + off + (expr === 'smug' ? -side * 2 : 0)
+        + (X.roll ? X.roll * 2 : 0);
       PIX.rect(ctx, px - (pw >> 1), EY - (ph >> 1) + 1, pw, ph, P.K);
       PIX.rect(ctx, px - (pw >> 1) - 1, EY + 1, 1, 1, P.K);
       PIX.rect(ctx, px + (pw >> 1), EY + 1, 1, 1, P.K);
@@ -2039,8 +2098,17 @@ SPR.buildFrog = function (d, expr) {
       PIX.disc(ctx, cx + off, EY - er + X.lid - 1, er, skin);
       PIX.rect(ctx, cx + off - er + 1, EY - er + X.lid + 1, er * 2 - 1, 1, shade);
     }
-    /* and the brow, which is where the whole expression actually lives */
-    const bi = X.bi, bo = X.bo;
+    /* THE LOWER LID, coming UP. Nothing in here did this before, and it
+       is the single cheapest way to make a face look pleased rather than
+       merely not-unhappy: a smile pushes the cheek into the eye. */
+    if (X.low > 0) {
+      PIX.disc(ctx, cx + off, EY + er - X.low + 1, er, skin);
+      PIX.rect(ctx, cx + off - er + 2, EY + er - X.low - 1, er * 2 - 3, 1, shade);
+    }
+    /* and the brow, which is where the whole expression actually lives.
+       A tilt makes the two brows disagree, which is what scepticism is. */
+    const bi = X.bi + (X.tilt ? (side > 0 ? X.tilt : -X.tilt) : 0);
+    const bo = X.bo + (X.tilt ? (side > 0 ? -X.tilt : X.tilt) : 0);
     for (let i = 0; i < er * 2 + 1; i++) {
       const t = i / (er * 2);
       const inner = side < 0 ? 1 - t : t;
@@ -2055,6 +2123,24 @@ SPR.buildFrog = function (d, expr) {
     }
   };
   drawEye(-ex, -1); drawEye(ex, 1);
+
+  /* THE CHEEKS. A blush, or the flush of somebody enjoying themselves —
+     stippled rather than solid, so it reads as skin and not as make-up. */
+  if (X.cheek) {
+    /* A PINK FROG CANNOT BLUSH PINK. Maybelle is rose-coloured and the
+       first pass drew her blush in P.p, which vanished into her face.
+       A flush is redder than the skin it is on, whatever the skin is. */
+    const blush = X.cheek > 1 ? P.r : P.R;
+    [-1, 1].forEach(sg => {
+      const bx = cx + sg * (ex + 2), by = EY + er + 1;
+      for (let i = 0; i < 7; i++) {
+        const ox = (i % 3) - 1, oy = (i / 3) | 0;
+        if ((i + (sg > 0 ? 0 : 1)) % 2) continue;
+        PIX.rect(ctx, bx + ox * 2, by + oy, 2, 1, blush);
+      }
+      if (X.cheek > 1) PIX.rect(ctx, bx - 2, by + 1, 5, 1, blush);
+    });
+  }
 
   if (d.patch) {                                 // eye patch, left eye
     PIX.disc(ctx, cx - ex, ey, er - 1, P.K);
@@ -2234,6 +2320,127 @@ SPR.buildFrog = function (d, expr) {
       /* slack, hanging open, and the tongue is out of it for good */
       maw(3, true);
       line(-1, -2, P.K, 2, -3);
+      break;
+    }
+
+    /* ============================================================
+       THE REST OF THE MOUTH.
+
+       A frog's mouth is a very wide line, which means it can carry
+       an enormous amount of expression for very few pixels: two at
+       the corners is the difference between content and delighted.
+       ============================================================ */
+    case 'happy': {
+      /* pleased with himself and not hiding it: up three at the ends,
+         with the fold under the corner that a real smile makes */
+      line(3, 0);
+      line(3, 0, shade, 1, 2);
+      PIX.rect(ctx, cx - mw - 1, my - 4, 2, 4, P.K);
+      PIX.rect(ctx, cx + mw, my - 4, 2, 4, P.K);
+      PIX.rect(ctx, cx - mw - 2, my - 1, 2, 1, dark);
+      PIX.rect(ctx, cx + mw + 1, my - 1, 2, 1, dark);
+      goldStud(cx + mw - 6, my - 1);
+      break;
+    }
+    case 'joy': {
+      /* open. The corners go up past the ends of the line, the jaw is
+         down, and you can see the whole roof of his mouth. */
+      maw(2, false);
+      for (let i = -mw - 1; i <= mw + 1; i++) {
+        const t = Math.abs(i) / (mw + 1);
+        PIX.rect(ctx, cx + i, my - Math.round(t * t * 5), 1, 2, P.K);
+      }
+      PIX.rect(ctx, cx - mw - 2, my - 5, 2, 3, P.K);
+      PIX.rect(ctx, cx + mw + 1, my - 5, 2, 3, P.K);
+      break;
+    }
+    case 'laugh': {
+      /* wide open, head back, tongue up out of the way */
+      maw(4, false);
+      for (let i = -mw - 1; i <= mw + 1; i++) {
+        const t = Math.abs(i) / (mw + 1);
+        PIX.rect(ctx, cx + i, my - Math.round(t * t * 6), 1, 2, P.K);
+      }
+      PIX.rect(ctx, cx - 3, my + 1, 7, 2, P.r);          // the tongue, up
+      break;
+    }
+    case 'sad': {
+      /* down four at the ends, and the lower lip pushed out under it */
+      line(-4, 0);
+      line(-4, 0, shade, 1, 2);
+      PIX.rect(ctx, cx - mw - 1, my + 1, 2, 4, P.K);
+      PIX.rect(ctx, cx + mw, my + 1, 2, 4, P.K);
+      PIX.rect(ctx, cx - 4, my + 4, 9, 2, shade);
+      PIX.rect(ctx, cx - 3, my + 5, 7, 1, skin);
+      break;
+    }
+    case 'wince': {
+      /* crooked: one corner up, the other tucked, teeth nearly shut */
+      ctx.fillStyle = P.K;
+      for (let i = -mw; i <= mw; i++) {
+        const t = (i + mw) / (2 * mw);
+        ctx.fillRect(cx + i, my - Math.round(Math.sin(t * Math.PI) * 3) + 1, 1, 2);
+      }
+      PIX.rect(ctx, cx + mw - 2, my - 3, 3, 2, P.W);      // one tooth showing
+      break;
+    }
+    case 'squint':
+    case 'bored': {
+      /* a flat line and nothing else. He is waiting for you to finish. */
+      line(0, 0);
+      line(0, 0, shade, 1, 2);
+      break;
+    }
+    case 'wink': {
+      /* the wink is in the eye; the mouth just has to agree with it */
+      line(2, 0);
+      line(2, 0, shade, 1, 2);
+      PIX.rect(ctx, cx + mw, my - 3, 2, 3, P.K);
+      goldStud(cx + mw - 6, my - 1);
+      break;
+    }
+    case 'think': {
+      /* pursed, and pushed over to one side of his face */
+      ctx.fillStyle = P.K;
+      for (let i = -mw + 2; i <= mw - 4; i++) ctx.fillRect(cx + i - 2, my, 1, 2);
+      PIX.rect(ctx, cx - mw, my - 1, 2, 4, P.K);
+      PIX.rect(ctx, cx + mw - 5, my - 2, 3, 5, shade);    // the cheek, bunched
+      break;
+    }
+    case 'sniff': {
+      /* a small o, and the nostrils working */
+      SPR.ellipse(ctx, cx, my + 1, 4, 3, P.K);
+      SPR.ellipse(ctx, cx, my + 1, 3, 2, gum);
+      PIX.rect(ctx, cx - 4, headY - 2, 3, 3, dark);
+      PIX.rect(ctx, cx + 2, headY - 2, 3, 3, dark);
+      break;
+    }
+    case 'alarm': {
+      /* the jaw has dropped and he has not decided what to do about it */
+      maw(3, false);
+      line(-1, -3, P.K, 2, -3);
+      PIX.rect(ctx, cx - mw - 1, my - 3, 2, 5, P.K);
+      PIX.rect(ctx, cx + mw, my - 3, 2, 5, P.K);
+      break;
+    }
+    case 'doubt': {
+      /* flat, and shoved half a face to the left, which is what somebody
+         does with their mouth when they do not believe you */
+      ctx.fillStyle = P.K;
+      for (let i = -mw; i <= mw - 3; i++) ctx.fillRect(cx + i - 1, my, 1, 2);
+      ctx.fillStyle = shade;
+      for (let i = -mw + 1; i <= mw - 4; i++) ctx.fillRect(cx + i - 1, my + 2, 1, 1);
+      PIX.rect(ctx, cx - mw - 2, my - 1, 2, 4, P.K);
+      break;
+    }
+    case 'blush': {
+      /* a small closed smile from somebody who would rather you had not
+         said that in front of everybody */
+      ctx.fillStyle = P.K;
+      for (let i = -mw + 3; i <= mw - 3; i++) {
+        const t = Math.abs(i) / (mw - 3);
+        ctx.fillRect(cx + i, my - Math.round((1 - t * t) * 2), 1, 2);
+      }
       break;
     }
     default: {                                    // neutral: a wide frog frown
@@ -4318,10 +4525,15 @@ SPR.frogWhole = function (key, def, opts) {
   opts = opts || {};
   const frame = ((opts.frame | 0) % SPR.WALK_FRAMES + SPR.WALK_FRAMES) % SPR.WALK_FRAMES;
   const back = !!opts.back;
-  return SPR.cached('whole_' + key + ':' + frame + (back ? ':b' : ''), () => {
+  /* WHAT HIS FACE IS DOING, in the room, at full size. Everybody in a
+     room used to wear the same deadpan all day: the expression set was
+     only ever reached by the portraits in a conversation. Now a frog
+     standing at a counter can be bored, pleased, or watching you. */
+  const ex = opts.expr || 'neutral';
+  return SPR.cached('whole_' + key + ':' + frame + ':' + ex + (back ? ':b' : ''), () => {
     const P = PIX.PAL;
     const ph = SPR.walkPhase(frame);
-    const head = SPR.frogCustom('fb:' + key, def);
+    const head = SPR.frogCustom('fb:' + key + ':' + ex, def, ex);
     const body = SPR.bodyStanding('fb:' + key, def, ph);
     /* PROPORTION. The portrait head and the duel bust were both drawn for a
        frog sitting at a table, where you never see him below the chest. Used
@@ -4485,15 +4697,17 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    the frame sizes where that does not come out even, plus mugshots
    and pins.
    ============================================================ */
-SPR.rigLOD = function (key, def, frame, face, down, back) {
+SPR.rigLOD = function (key, def, frame, face, down, back, expr) {
   down = down || 3;
   /* EIGHT FRAMES, NOT FOUR. This used to fold the frame number modulo four,
      which quietly threw away half of the walk cycle the rig had drawn. */
   const NF = SPR.WALK_FRAMES;
   const f = (((frame | 0) % NF) + NF) % NF;
   const fc = face < 0 ? -1 : 1;
-  return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down + (back ? ':b' : ''), () => {
-    const src = SPR.frogWhole(key, def, { frame: f, back: !!back });
+  const ex = expr || 'neutral';
+  return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down + ':' + ex
+    + (back ? ':b' : ''), () => {
+    const src = SPR.frogWhole(key, def, { frame: f, back: !!back, expr: ex });
     if (down === 1 && fc > 0) return src;
     const w = Math.max(1, Math.round(src.width / down));
     const h = Math.max(1, Math.round(src.height / down));

@@ -20,6 +20,35 @@ const src = ['util.js', 'pix.js', 'data.js', 'meta.js', 'sprites.js', 'city.js',
    the screen is a set of no-ops — every rule the bot exercises is in
    engine.js and story.js, and none of it needs a canvas. */
 const STUBS = `
+  /* THE LIGHT, headless.
+
+     CITY.watch() asks DAY which band of the day it is, and the bands are
+     pure data, so the real thing would work here — but day.js also draws,
+     and drawing wants a canvas. This is the data half of it, so the bot
+     runs against the same six bands the player sees and a stray call to
+     watch() cannot take the whole run down. */
+  const DAY = {
+    BANDS: [{ id: 'morning', word: 'MORNING', from: 8 * 60 },
+            { id: 'midday', word: 'MIDDAY', from: 11 * 60 },
+            { id: 'after', word: 'AFTERNOON', from: 14 * 60 },
+            { id: 'gold', word: 'GOLDEN HOUR', from: 16 * 60 + 30 },
+            { id: 'dusk', word: 'DUSK', from: 18 * 60 + 30 }],
+    bandAt(m) {
+      const mm = ((m | 0) % 1440 + 1440) % 1440;
+      for (let i = DAY.BANDS.length - 1; i >= 0; i--) {
+        if (mm >= DAY.BANDS[i].from) return DAY.BANDS[i];
+      }
+      return DAY.BANDS[0];
+    },
+    band() { return DAY.bandAt(CITY.minutes ? CITY.minutes() : 12 * 60); },
+    word() { return DAY.band().word; },
+    is(id) { return DAY.band().id === id; },
+    lamps() { return DAY.band().id === 'dusk'; },
+    sky(){}, wash(){}, shaft(){}, ramp(){}, cloud(){},
+    mix(){ return [0, 0, 0]; }, hex(){ return [0, 0, 0]; }, rgb(){ return '#000'; },
+    pal() { return DAY.band(); }, nextBand() { return DAY.band(); }, through() { return 0; },
+    side() { return 1; }, stone() { return {}; },
+  };
   const UI = { render(){}, stampSmall(){}, stampBig(){}, syncChips(){}, chipTick(){},
     shake(){}, syncDuel(){}, wrap(){}, txt(){}, goto(fn){ if (fn) fn(); return Promise.resolve(); } };
   const TUTOR = { say: async () => {}, skipAll(){}, armed(){ return false; }, check(){} };

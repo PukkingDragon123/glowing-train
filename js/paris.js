@@ -22,6 +22,41 @@ const PARIS = (() => {
   const px = (c, x, y, w, h, col) => ART.px(c, x, y, w, h, col);
   const P = () => PIX.PAL;
 
+  /* ============================================================
+     THE PALETTE OF A PARIS AFTERNOON.
+
+     Every room in here is painted ONCE, at this one reference
+     light: a bright afternoon, sun from the left. The hour is not
+     baked in — DAY.wash() grades the whole frame per frame, so the
+     same painted stone is cream at noon and apricot at six.
+
+     That is why nothing below is allowed to be a night colour. A
+     room painted navy cannot be graded back to daylight; a room
+     painted in daylight grades to dusk beautifully.
+     ============================================================ */
+  const L = {
+    /* limestone, which is what this city is made of */
+    stone: '#e8dfc6', stoneLit: '#f6efd9', stoneMid: '#cfc4a8',
+    stoneDk: '#ab9f86', stoneDeep: '#8a7e68',
+    /* zinc roofs and the grey they go */
+    zinc: '#98a1ac', zincLit: '#b5bec8', zincDk: '#6f7883',
+    /* the green this city paints its ironwork */
+    iron: '#3f6b45', ironLit: '#578a57', ironDk: '#26482d',
+    /* window glass in daylight: it reflects the sky, it does not glow */
+    glass: '#67788a', glassLit: '#9dbcd2', glassDk: '#3f4e5c',
+    /* shutters, and the pale mottled bark of a plane tree */
+    shut: '#5f7f56', shutDk: '#3d5a3a',
+    bark: '#b3a893', barkLit: '#cdc3ac', barkDk: '#8b8270', barkMot: '#93a081',
+    /* leaves */
+    leaf: '#5f8f45', leafLit: '#7fae57', leafDk: '#3c6130',
+    /* pavement */
+    sett: '#9a9287', settLit: '#aca496', settDk: '#807869', joint: '#6f6759',
+    /* awnings and terrace furniture */
+    red: '#b8384a', redDk: '#8a2434', cream: '#efe4cc',
+    marble: '#eae2ce', rattan: '#c9a15e', rattanDk: '#96703c',
+    brass: '#e0a63c', wood: '#8a6a44', woodDk: '#5d4728',
+  };
+
   function seedFor(id) {
     return U.hashSeed((G.seedStr || 'X') + ':' + (G.chapter || 1) + ':' + id);
   }
@@ -37,11 +72,12 @@ const PARIS = (() => {
      roof with dormers in it, and one window in five with a light on. */
   function haussmann(c, x, y, w, h, seed) {
     const rng = U.mulberry32(seed * 31 + 7);
-    const stone = '#6d6759', stoneLit = '#837c6b', stoneDk = '#4e4941';
-    const roof = '#3b4048', roofLit = '#4d535d';
+    const stone = L.stone, stoneLit = L.stoneLit, stoneDk = L.stoneDk;
+    const roof = L.zinc, roofLit = L.zincLit;
     px(c, x, y, w, h, stone);
     px(c, x, y, w, 2, stoneLit);
-    px(c, x + w - 2, y, 2, h, stoneDk);
+    px(c, x, y, 2, h, stoneLit);            // the sunny return, on the left
+    px(c, x + w - 3, y, 3, h, stoneDk);
     /* the mansard, on top */
     const rh = Math.max(6, Math.round(h * 0.2));
     for (let i = 0; i < rh; i++) {
@@ -53,74 +89,115 @@ const PARIS = (() => {
       px(c, x, ly, w, 1, stoneLit);
       px(c, x, ly + 1, w, 1, stoneDk);
     }
-    /* windows, tall and thin, with balconies on the good floors */
+    /* WINDOWS, tall and thin, with balconies on the good floors. In
+       daylight a window is not a lit yellow square — it is a dark pane
+       with the sky in the top of it, and the ones standing open are the
+       only ones you can see into. */
     for (let ly = y + 4; ly < y + h - 12; ly += 16) {
       for (let lx = x + 4; lx < x + w - 8; lx += 13) {
-        const lit = rng() < 0.22;
-        px(c, lx, ly, 8, 11, '#181a20');
-        px(c, lx + 1, ly + 1, 6, 9, lit ? '#e8c46a' : '#22262e');
-        if (lit) {
-          px(c, lx + 1, ly + 1, 6, 3, '#f4dc9a');
-          if (rng() < 0.4) px(c, lx + 2, ly + 5, 3, 5, '#3a2f28');   // somebody at it
+        const open = rng() < 0.22;
+        px(c, lx - 1, ly - 1, 10, 13, L.stoneDk);      // the reveal
+        px(c, lx, ly, 8, 11, L.glassDk);
+        px(c, lx + 1, ly + 1, 6, 9, L.glass);
+        px(c, lx + 1, ly + 1, 6, 3, L.glassLit);       // the sky, in the top of it
+        px(c, lx + 4, ly + 1, 1, 9, L.glassDk);        // the mullion
+        if (open) {
+          px(c, lx + 1, ly + 4, 6, 6, '#4a3b2e');      // the room behind it
+          px(c, lx + 5, ly + 4, 2, 6, L.glassLit);     // the leaf, swung in
+          if (rng() < 0.45) px(c, lx + 2, ly + 6, 3, 4, '#8a6a44');   // somebody at it
         }
-        /* the shutters, folded back */
-        px(c, lx - 1, ly, 1, 11, '#4a5a48');
-        px(c, lx + 8, ly, 1, 11, '#4a5a48');
+        /* the shutters, folded back against the stone */
+        px(c, lx - 2, ly, 2, 11, L.shut);
+        px(c, lx - 2, ly, 1, 11, L.shutDk);
+        px(c, lx + 8, ly, 2, 11, L.shut);
+        px(c, lx + 9, ly, 1, 11, L.shutDk);
         /* iron balcony */
         if (((ly - y) / 16) % 2 === 1) {
-          px(c, lx - 2, ly + 10, 12, 1, '#2a2d33');
-          for (let bx = lx - 2; bx < lx + 10; bx += 2) px(c, bx, ly + 7, 1, 3, '#2a2d33');
+          px(c, lx - 3, ly + 10, 14, 1, L.ironDk);
+          for (let bx = lx - 3; bx < lx + 11; bx += 2) px(c, bx, ly + 7, 1, 3, L.iron);
+          px(c, lx - 3, ly + 7, 14, 1, L.ironLit);
         }
       }
     }
-    /* the shopfront at the bottom, dark and shuttered */
-    px(c, x, y + h - 12, w, 12, '#262a2f');
-    px(c, x, y + h - 12, w, 2, '#3a4046');
-    for (let sx = x + 2; sx < x + w - 3; sx += 5) px(c, sx, y + h - 9, 3, 8, '#1c2024');
+    /* THE SHOPFRONT at the bottom: an awning, a fascia and a window with
+       something in it, because a shuttered black slot is a night street */
+    const aw = ['#b8384a', '#3f6b45', '#2f4a70', '#8a6a44'][seed % 4];
+    px(c, x, y + h - 13, w, 13, L.woodDk);
+    px(c, x + 1, y + h - 12, w - 2, 5, L.cream);       // the fascia
+    px(c, x + 1, y + h - 12, w - 2, 1, '#ffffff');
+    px(c, x + 2, y + h - 10, w - 6, 2, L.woodDk);      // the lettering, unreadable
+    /* the awning, scalloped along the bottom edge */
+    px(c, x - 2, y + h - 7, w + 4, 4, aw);
+    px(c, x - 2, y + h - 7, w + 4, 1, 'rgba(255,255,255,.35)');
+    for (let sx = x - 2; sx < x + w + 2; sx += 4) px(c, sx, y + h - 3, 2, 2, aw);
+    /* and the glass under it */
+    px(c, x + 2, y + h - 3, w - 4, 3, L.glassDk);
   }
 
   /* the double-globe cast iron lamp post this whole city is lit by */
   function lamp(c, x, y, h, on) {
-    px(c, x - 3, y, 7, 2, '#20242a');
-    px(c, x - 2, y - 2, 5, 2, '#2a2f36');
-    px(c, x - 1, y - h, 3, h - 2, '#2a2f36');
-    px(c, x - 1, y - h, 1, h - 2, '#3d444d');
+    /* A LAMP POST IN DAYLIGHT IS A DARK GREEN POST. Whether the globes
+       are burning is not the paint's business any more — the room is
+       painted once and the hour moves, so the light in a lamp is drawn
+       live by the scene off `def.lights` and gated on DAY.lamps(). What
+       is baked here is cold glass. */
+    px(c, x - 4, y, 9, 2, L.ironDk);
+    px(c, x - 3, y - 3, 7, 3, L.iron);
+    px(c, x - 3, y - 3, 1, 3, L.ironLit);
+    px(c, x - 1, y - h, 3, h - 2, L.iron);
+    px(c, x - 1, y - h, 1, h - 2, L.ironLit);
     /* the arm and the two globes */
-    px(c, x - 7, y - h - 2, 15, 2, '#2a2f36');
+    px(c, x - 7, y - h - 2, 15, 2, L.iron);
+    px(c, x - 7, y - h - 2, 15, 1, L.ironLit);
     [-6, 6].forEach(d => {
-      PIX.disc(c, x + d, y - h - 6, 4, '#20242a');
-      PIX.disc(c, x + d, y - h - 6, 3, on ? '#ffe7a8' : '#3a3f46');
+      PIX.disc(c, x + d, y - h - 6, 4, L.ironDk);
+      PIX.disc(c, x + d, y - h - 6, 3, on ? '#ffe7a8' : '#cdd6dc');
+      PIX.disc(c, x + d - 1, y - h - 7, 1, '#ffffff');       // the highlight on it
       if (on) PIX.disc(c, x + d, y - h - 6, 5, 'rgba(255,231,168,.10)');
     });
-    px(c, x - 1, y - h - 8, 3, 3, '#2a2f36');
+    px(c, x - 1, y - h - 9, 3, 4, L.iron);
+    px(c, x - 1, y - h - 10, 3, 1, L.brass);
   }
 
   /* a pollarded plane tree: the trunk is the point, the crown is a blob */
   function planeTree(c, x, y, h, seed) {
     const rng = U.mulberry32(seed * 17 + 3);
-    px(c, x - 3, y - h, 7, h, '#4a4438');
-    px(c, x - 3, y - h, 2, h, '#5d5647');
-    px(c, x - 1, y - h + 4, 1, h - 6, 'rgba(0,0,0,.3)');
-    /* the mottle that gives a plane tree away */
-    for (let i = 0; i < 7; i++) {
-      px(c, x - 2 + Math.floor(rng() * 5), y - h + 4 + Math.floor(rng() * (h - 8)), 2, 3, '#7d7565');
+    /* THE BARK IS THE POINT. A plane tree is not a brown trunk: it is
+       pale grey-cream that flakes off in patches and leaves olive
+       underneath, which is the one thing that makes it read as this
+       city's tree and not any other one. */
+    px(c, x - 4, y - h, 9, h, L.bark);
+    px(c, x - 4, y - h, 3, h, L.barkLit);
+    px(c, x + 3, y - h, 2, h, L.barkDk);
+    for (let i = 0; i < 11; i++) {
+      const mx = x - 3 + Math.floor(rng() * 7);
+      const my = y - h + 3 + Math.floor(rng() * (h - 6));
+      px(c, mx, my, 2 + Math.floor(rng() * 2), 3, rng() < 0.5 ? L.barkMot : L.barkDk);
     }
     /* the crown, cut back the way this city cuts them back */
     const cy = y - h - 8;
-    PIX.disc(c, x, cy, 15, '#1d2a22');
-    PIX.disc(c, x - 7, cy + 4, 11, '#1d2a22');
-    PIX.disc(c, x + 8, cy + 3, 12, '#1d2a22');
-    PIX.disc(c, x - 4, cy - 5, 9, '#26362c');
-    PIX.disc(c, x + 6, cy - 3, 8, '#26362c');
-    for (let i = 0; i < 12; i++) {
-      px(c, x - 14 + Math.floor(rng() * 28), cy - 8 + Math.floor(rng() * 18), 2, 2, '#31463a');
+    PIX.disc(c, x, cy, 16, L.leafDk);
+    PIX.disc(c, x - 8, cy + 4, 12, L.leafDk);
+    PIX.disc(c, x + 9, cy + 3, 13, L.leafDk);
+    PIX.disc(c, x - 3, cy - 2, 12, L.leaf);
+    PIX.disc(c, x + 7, cy - 1, 10, L.leaf);
+    PIX.disc(c, x - 5, cy - 6, 8, L.leafLit);
+    PIX.disc(c, x + 4, cy - 6, 7, L.leafLit);
+    /* the individual leaves that break the silhouette up */
+    for (let i = 0; i < 20; i++) {
+      const lx = x - 16 + Math.floor(rng() * 33);
+      const ly = cy - 10 + Math.floor(rng() * 22);
+      px(c, lx, ly, 3, 2, rng() < 0.4 ? L.leafLit : L.leaf);
     }
+    /* and the shade it throws, which is why anybody planted it */
+    px(c, x - 14, y - 1, 29, 2, 'rgba(58,52,36,.22)');
+    px(c, x - 9, y + 1, 19, 1, 'rgba(58,52,36,.14)');
   }
 
   /* THE WALLACE FOUNTAIN. Four bronze women holding up a dome, and
      water nobody drinks any more. */
   function wallace(c, x, y) {
-    const bronze = '#2f5a4a', bronzeLit = '#43705d', dk = '#1b3a2f';
+    const bronze = L.iron, bronzeLit = L.ironLit, dk = L.ironDk;
     px(c, x - 8, y - 4, 17, 4, dk);
     px(c, x - 7, y - 6, 15, 3, bronze);
     px(c, x - 4, y - 34, 9, 29, bronze);
@@ -129,7 +206,7 @@ const PARIS = (() => {
     [-5, 5].forEach(d => {
       px(c, x + d - 2, y - 30, 4, 18, bronze);
       px(c, x + d - 2, y - 30, 4, 3, bronzeLit);
-      px(c, x + d - 1, y - 33, 2, 3, '#2a4f42');
+      px(c, x + d - 1, y - 33, 2, 3, L.ironLit);
     });
     /* the dome and its little crown */
     px(c, x - 9, y - 38, 19, 4, dk);
@@ -144,11 +221,11 @@ const PARIS = (() => {
 
   /* a Morris column: a fat cylinder of theatre posters with a cap */
   function morris(c, x, y, h) {
-    px(c, x - 11, y - h, 23, h, '#1f3a30');
-    px(c, x - 11, y - h, 3, h, '#2b4c40');
-    px(c, x + 7, y - h, 5, h, 'rgba(0,0,0,.3)');
-    /* the posters */
-    const cols = ['#7d2028', '#9c7430', '#2f4a70', '#63202a'];
+    px(c, x - 11, y - h, 23, h, L.iron);
+    px(c, x - 11, y - h, 3, h, L.ironLit);
+    px(c, x + 7, y - h, 5, h, 'rgba(0,0,0,.22)');
+    /* the posters, which in daylight are the brightest thing on the street */
+    const cols = ['#c8384a', '#e0a63c', '#3f6ba8', '#b8506a'];
     for (let i = 0; i < 3; i++) {
       const py0 = y - h + 8 + i * 22;
       px(c, x - 9, py0, 19, 19, cols[i % cols.length]);
@@ -157,15 +234,15 @@ const PARIS = (() => {
       px(c, x - 8, py0 + 12, 12, 2, 'rgba(0,0,0,.25)');
     }
     /* the cap, with the little dome */
-    px(c, x - 13, y - h - 4, 27, 5, '#18302a');
-    px(c, x - 9, y - h - 8, 19, 5, '#1f3a30');
-    PIX.disc(c, x, y - h - 11, 5, '#1f3a30');
-    px(c, x - 1, y - h - 16, 3, 5, '#2b4c40');
+    px(c, x - 13, y - h - 4, 27, 5, L.ironDk);
+    px(c, x - 9, y - h - 8, 19, 5, L.iron);
+    PIX.disc(c, x, y - h - 11, 5, L.iron);
+    px(c, x - 1, y - h - 16, 3, 5, L.brass);
   }
 
   /* a green slat bench, the kind bolted to every gravel path in the city */
   function bench(c, x, y, w) {
-    const g = '#2f4a34', gl = '#3f603f', dk = '#1c2e20';
+    const g = L.iron, gl = L.ironLit, dk = L.ironDk;
     px(c, x, y - 10, w, 3, g);
     px(c, x, y - 10, w, 1, gl);
     px(c, x, y - 14, w, 2, g);
@@ -179,36 +256,44 @@ const PARIS = (() => {
   /* the pavement: setts, worn smooth, wet more often than not */
   function cobbles(c, x, y, w, h, seed) {
     const rng = U.mulberry32(seed * 13 + 5);
-    px(c, x, y, w, h, '#2b2e33');
+    px(c, x, y, w, h, L.joint);
     for (let ry = 0; ry < h; ry += 4) {
       const off = (ry / 4) % 2 ? 3 : 0;
       for (let rx = -off; rx < w; rx += 6) {
         const t = rng();
-        px(c, x + rx, y + ry, 5, 3, t < 0.3 ? '#33373d' : t < 0.65 ? '#2e3238' : '#26292e');
-        px(c, x + rx, y + ry, 5, 1, 'rgba(255,255,255,.04)');
+        px(c, x + rx, y + ry, 5, 3, t < 0.3 ? L.settLit : t < 0.68 ? L.sett : L.settDk);
+        px(c, x + rx, y + ry, 5, 1, 'rgba(255,255,255,.16)');    // the sun on the crown
+        px(c, x + rx, y + ry + 2, 5, 1, 'rgba(70,62,50,.18)');   // and the shade behind
       }
     }
-    /* the gutter, and what is in it */
-    px(c, x, y + h - 3, w, 1, 'rgba(0,0,0,.35)');
-    px(c, x, y + h - 2, w, 2, 'rgba(90,150,160,.10)');
+    /* the gutter, and the water somebody sluiced down it this morning */
+    px(c, x, y + h - 3, w, 1, 'rgba(80,72,58,.35)');
+    px(c, x, y + h - 2, w, 2, 'rgba(150,200,210,.18)');
+    for (let k = 0; k < w; k += 7) px(c, x + k, y + h - 2, 3, 1, 'rgba(230,250,255,.20)');
   }
 
   /* a cafe table with two chairs and somebody's cold coffee on it */
   function cafeTable(c, x, y) {
-    px(c, x - 9, y - 16, 19, 3, '#8d8672');
-    px(c, x - 9, y - 16, 19, 1, '#b0a894');
-    px(c, x - 1, y - 13, 3, 13, '#2a2f36');
-    px(c, x - 5, y - 1, 11, 2, '#2a2f36');
-    /* the little round chairs */
+    /* marble round, cast iron pedestal */
+    px(c, x - 9, y - 16, 19, 3, L.marble);
+    px(c, x - 9, y - 16, 19, 1, '#ffffff');
+    px(c, x - 9, y - 14, 19, 1, 'rgba(90,80,62,.35)');
+    px(c, x - 1, y - 13, 3, 13, L.iron);
+    px(c, x - 5, y - 1, 11, 2, L.ironDk);
+    /* the rattan chairs, which is what a Paris terrace is made of */
     [-15, 14].forEach(d => {
-      px(c, x + d - 4, y - 12, 9, 2, '#3a2f28');
-      px(c, x + d - 4, y - 22, 9, 10, '#4a3f36');
-      px(c, x + d - 4, y - 22, 9, 2, '#5f5245');
-      px(c, x + d - 3, y - 10, 2, 10, '#241d17');
-      px(c, x + d + 2, y - 10, 2, 10, '#241d17');
+      px(c, x + d - 4, y - 12, 9, 2, L.rattanDk);
+      px(c, x + d - 4, y - 22, 9, 10, L.rattan);
+      px(c, x + d - 4, y - 22, 9, 2, '#e0bd7c');
+      for (let k = 0; k < 9; k += 3) px(c, x + d - 4 + k, y - 21, 1, 9, L.rattanDk);
+      px(c, x + d - 3, y - 10, 2, 10, L.ironDk);
+      px(c, x + d + 2, y - 10, 2, 10, L.ironDk);
     });
-    px(c, x + 2, y - 20, 4, 4, '#ded2b4');
-    px(c, x + 2, y - 20, 4, 1, '#f0e6c8');
+    /* and the coffee, and the little glass of water beside it */
+    px(c, x + 1, y - 21, 5, 5, '#ffffff');
+    px(c, x + 2, y - 20, 3, 2, '#5a3a22');
+    px(c, x + 6, y - 20, 3, 4, 'rgba(210,235,245,.75)');
+    px(c, x - 7, y - 19, 4, 3, L.cream);          // the saucer with the bill on it
   }
 
   /* ============================================================
@@ -221,7 +306,7 @@ const PARIS = (() => {
   /* LA TOUR EIFFEL. Four legs, two platforms, a lattice you can see the
      sky through, and the gold light they wash it with after dark. */
   function eiffel(c, cx, baseY, topY) {
-    const iron = '#5a4a38', ironLit = '#7d6848', ironDk = '#382c20';
+    const iron = '#7d6647', ironLit = '#a68d63', ironDk = '#513f2b';
     const H2 = baseY - topY;
     /* THE PROFILE. The real curve: an exponential taper, which is why the
        thing does not read as a pyramid. Get this wrong and you have drawn
@@ -255,15 +340,15 @@ const PARIS = (() => {
         const xa = Math.round(h0 + (h1 - h0) * f);
         const xb = Math.round(h0 + (h1 - h0) * (1 - f));
         /* left bay */
-        px(c, cx - xa, y, 1, 1, 'rgba(125,104,72,.45)');
-        px(c, cx - Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.32)');
+        px(c, cx - xa, y, 1, 1, 'rgba(166,141,99,.55)');
+        px(c, cx - Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.40)');
         /* right bay */
-        px(c, cx + xa - 1, y, 1, 1, 'rgba(125,104,72,.45)');
-        px(c, cx + Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.32)');
+        px(c, cx + xa - 1, y, 1, 1, 'rgba(166,141,99,.55)');
+        px(c, cx + Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.40)');
       }
       /* the horizontal girder at each stage */
       const hh = halfAt(t0);
-      px(c, cx - hh, baseY - i, hh * 2, 1, 'rgba(125,104,72,.35)');
+      px(c, cx - hh, baseY - i, hh * 2, 1, 'rgba(166,141,99,.42)');
     }
 
     /* THE FIRST ARCH. It springs from the legs and hangs, and it is the
@@ -314,17 +399,17 @@ const PARIS = (() => {
 
   /* L'ARC DE TRIOMPHE. One vault, two piers, the reliefs, the attic. */
   function arc(c, cx, baseY, h) {
-    const stone = '#7a7263', lit = '#948b78', dk = '#565043';
+    const stone = L.stone, lit = L.stoneLit, dk = L.stoneDk;
     const w = 106, vw = 38;
     px(c, cx - w / 2, baseY - h, w, h, stone);
     px(c, cx - w / 2, baseY - h, w, 3, lit);
     px(c, cx + w / 2 - 4, baseY - h, 4, h, dk);
     /* the vault, cut out of it */
     const vh = Math.round(h * 0.62);
-    px(c, cx - vw / 2, baseY - vh, vw, vh, '#12141a');
+    px(c, cx - vw / 2, baseY - vh, vw, vh, '#4b4335');
     for (let k = -vw / 2; k <= vw / 2; k++) {
       const y = baseY - vh - Math.round(Math.cos((k / (vw / 2)) * 1.5) * 16);
-      px(c, cx + k, y, 1, baseY - vh - y, '#12141a');
+      px(c, cx + k, y, 1, baseY - vh - y, '#4b4335');
     }
     px(c, cx - vw / 2 - 2, baseY - vh - 18, vw + 4, 2, dk);
     /* the coffers inside the vault */
@@ -334,24 +419,24 @@ const PARIS = (() => {
     /* the four reliefs, which at this size are four crowds of stone */
     [[-40, 0], [40, 0]].forEach(([d]) => {
       px(c, cx + d - 13, baseY - h + 30, 26, 34, dk);
-      px(c, cx + d - 12, baseY - h + 31, 24, 32, '#6b6456');
+      px(c, cx + d - 12, baseY - h + 31, 24, 32, L.stoneMid);
       for (let i = 0; i < 9; i++) {
-        px(c, cx + d - 10 + (i % 5) * 5, baseY - h + 34 + Math.floor(i / 5) * 13, 4, 11, '#8a8271');
-        px(c, cx + d - 10 + (i % 5) * 5, baseY - h + 34 + Math.floor(i / 5) * 13, 4, 3, '#a49b86');
+        px(c, cx + d - 10 + (i % 5) * 5, baseY - h + 34 + Math.floor(i / 5) * 13, 4, 11, L.stoneDk);
+        px(c, cx + d - 10 + (i % 5) * 5, baseY - h + 34 + Math.floor(i / 5) * 13, 4, 3, L.stoneLit);
       }
     });
     /* the attic storey and its row of shields */
     px(c, cx - w / 2, baseY - h + 12, w, 3, dk);
     for (let k = -w / 2 + 6; k < w / 2 - 6; k += 11) {
-      px(c, cx + k, baseY - h + 5, 7, 6, '#8a8271');
-      px(c, cx + k + 1, baseY - h + 6, 5, 4, '#6b6456');
+      px(c, cx + k, baseY - h + 5, 7, 6, L.stoneMid);
+      px(c, cx + k + 1, baseY - h + 6, 5, 4, L.stoneDk);
     }
     /* the flame under the vault, and the flag over it */
-    px(c, cx - 8, baseY - 3, 17, 3, '#3a3f46');
+    px(c, cx - 8, baseY - 3, 17, 3, '#6b6151');
     px(c, cx - 2, baseY - 8, 5, 5, '#ff9d3c');
     px(c, cx - 1, baseY - 12, 3, 5, '#ffd75e');
     PIX.disc(c, cx, baseY - 9, 9, 'rgba(255,157,60,.13)');
-    px(c, cx - 1, baseY - vh - 34, 2, 22, '#4a4438');
+    px(c, cx - 1, baseY - vh - 34, 2, 22, L.stoneDeep);
     px(c, cx + 1, baseY - vh - 34, 7, 5, '#2f4d9c');
     px(c, cx + 8, baseY - vh - 34, 6, 5, '#f4efe0');
     px(c, cx + 14, baseY - vh - 34, 6, 5, '#b8232f');
@@ -359,7 +444,7 @@ const PARIS = (() => {
 
   /* SACRÉ-CŒUR. Three white domes at the top of a lot of steps. */
   function basilica(c, cx, baseY) {
-    const st = '#d8d2c2', lit = '#efe9d8', dk = '#a49d8c', sh = '#8c8676';
+    const st = '#f4f0e4', lit = '#ffffff', dk = '#cfc8b6', sh = '#ada695';
     /* the body of it */
     px(c, cx - 46, baseY - 34, 92, 34, st);
     px(c, cx - 46, baseY - 34, 92, 2, lit);
@@ -422,7 +507,7 @@ const PARIS = (() => {
 
   /* THE PYRAMID in the palace courtyard, lit from the inside. */
   function pyramid(c, cx, baseY, w, h) {
-    const glass = 'rgba(190,225,245,.30)', frame = '#4a525d', warm = '#ffe7a8';
+    const glass = 'rgba(150,200,235,.42)', frame = '#8c96a2', warm = '#ffe7a8';
     for (let i = 0; i < h; i++) {
       const t = i / h, hw = Math.round((w / 2) * (1 - t));
       px(c, cx - hw, baseY - i, hw * 2, 1, glass);
@@ -499,7 +584,7 @@ const PARIS = (() => {
 
   /* the art nouveau mouth of a metro station, from the street */
   function metroSign(c, x, y) {
-    const iron = '#1f3a30', lit = '#2b4c40', amber = '#e0a63c';
+    const iron = L.iron, lit = L.ironLit, amber = '#e0a63c';
     /* the two whiplash standards */
     [-24, 24].forEach(d => {
       px(c, x + d - 2, y - 40, 4, 40, iron);
@@ -511,13 +596,13 @@ const PARIS = (() => {
     });
     /* the sign between them */
     px(c, x - 26, y - 40, 53, 14, iron);
-    px(c, x - 24, y - 38, 49, 10, '#12241d');
+    px(c, x - 24, y - 38, 49, 10, L.ironDk);
     const t = PIXFONT.render('METRO', { scale: 1, color: amber, shadow: null });
     c.drawImage(t, x - Math.round(t.width / 2), y - 36);
     /* the balustrade and the steps going down into the dark */
     px(c, x - 30, y - 12, 61, 3, iron);
     for (let k = -28; k < 30; k += 5) px(c, x + k, y - 10, 2, 10, iron);
-    px(c, x - 22, y - 8, 45, 8, '#0b0e10');
+    px(c, x - 22, y - 8, 45, 8, '#2b2620');
   }
 
   /* ============================================================
@@ -529,11 +614,15 @@ const PARIS = (() => {
 
     const paint = (c) => {
       const p = P();
-      /* the night over the park, and the city glow at the bottom of it */
-      px(c, 0, 0, W, FY, '#0e1220');
-      for (let i = 0; i < 46; i++) {
-        px(c, 0, FY - BAND - 46 + i, W, 1,
-          'rgba(60,74,110,' + (0.02 + i * 0.004).toFixed(3) + ')');
+      /* THE SKY IS NOT PAINTED HERE. Everything above the horizon is left
+         transparent and `skyTo` tells the scene how far down to hand the
+         frame to DAY, which paints the hour into it live — so this park
+         is blue at eleven and gold at six without the room being rebuilt.
+         What IS painted here is the haze that sits on a horizon: warm,
+         pale, and thicker the closer to the ground it gets. */
+      for (let i = 0; i < 30; i++) {
+        px(c, 0, FY - BAND - 30 + i, W, 1,
+          'rgba(238,230,208,' + (0.02 + i * 0.011).toFixed(3) + ')');
       }
       /* the far bank: rooftops, small, and the river between */
       for (let i = 0; i < 22; i++) {
@@ -543,35 +632,49 @@ const PARIS = (() => {
       /* THE TOWER, over everything, cut off by the top of the frame */
       eiffel(c, 372, FY - BAND + 4, -58);
 
-      /* the gravel of the Champ de Mars, run up into the depth */
-      px(c, 0, FY - BAND, W, BAND + 20, '#3a3630');
+      /* THE GRAVEL of the Champ de Mars, run up into the depth. Dry buff
+         sand in the sun, with the darker damp of the morning still under
+         the trees, and a lawn either side of the walk. */
+      px(c, 0, FY - BAND, W, BAND + 20, '#c2b28c');
       for (let ry = 0; ry < BAND + 18; ry += 3) {
         const t = 1 - ry / (BAND + 18);
-        px(c, 0, FY - BAND + ry, W, 3, ry % 6 ? '#3e3a33' : '#37332d');
-        px(c, 0, FY - BAND + ry, W, 1, 'rgba(255,255,255,' + (0.02 * t).toFixed(3) + ')');
+        px(c, 0, FY - BAND + ry, W, 3, ry % 6 ? '#c8b892' : '#bcac86');
+        px(c, 0, FY - BAND + ry, W, 1, 'rgba(255,250,225,' + (0.10 * t + 0.05).toFixed(3) + ')');
       }
-      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#332f29', '#443f37', seed % 31);
-      /* the path edging, and the puddles the rain leaves in the gravel */
-      px(c, 0, FY - BAND, W, 1, '#4d4740');
-      [[90, 26], [300, 34], [520, 22], [700, 30]].forEach(([wx, ww], i) => {
-        ART.dither(c, wx, FY - 6, ww, 7, 'rgba(130,180,210,.20)', 0.4, 11 + i * 5);
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#b6a680', '#d2c49c', seed % 31);
+      /* the lawns, kept the way this city keeps a lawn */
+      px(c, 0, FY - BAND, W, 7, '#6f9450');
+      px(c, 0, FY - BAND, W, 2, '#87ab5e');
+      px(c, 0, FY - BAND + 6, W, 1, '#4d6c38');
+      for (let k = 0; k < W; k += 5) px(c, k, FY - BAND + 1, 2, 4, '#7ea256');
+      /* the path edging, and the last of last night's puddles */
+      px(c, 0, FY - BAND + 7, W, 1, '#8d7e5e');
+      [[300, 34], [700, 30]].forEach(([wx, ww], i) => {
+        ART.dither(c, wx, FY - 6, ww, 7, 'rgba(150,200,220,.22)', 0.35, 11 + i * 5);
       });
 
       /* the trees down both sides of it */
       [40, 128, 640, 730].forEach((tx, i) => planeTree(c, tx, FY - BAND + 6, 40, seed + i));
       /* the lamps along the path */
-      [70, 200, 330, 470, 600, 720].forEach(lx => lamp(c, lx, FY - BAND + 8, 34, true));
+      [70, 200, 330, 470, 600, 720].forEach(lx => lamp(c, lx, FY - BAND + 8, 34, false));
       /* the benches, the fountain, the kiosk */
       bench(c, 168, FY - 2, 46);
       bench(c, 556, FY - 2, 46);
       wallace(c, 268, FY - 1);
       morris(c, 470, FY - 2, 54);
-      /* the chestnut brazier, which is the only warm thing out here */
-      ART.box(c, 620, FY - 22, 30, 22, { fill: '#3a2f28', top: '#4a3d33', bot: '#1d1713', ink: p.K });
-      px(c, 624, FY - 26, 22, 5, '#2a231c');
+      /* the chestnut cart, under a striped parasol, doing no trade at all
+         because it is twenty degrees out */
+      ART.box(c, 620, FY - 22, 30, 22, { fill: '#8a5a3a', top: '#a87a52', bot: '#4e3220', ink: p.K });
+      px(c, 624, FY - 26, 22, 5, '#6b4630');
       px(c, 628, FY - 30, 14, 5, '#c96a1e');
       px(c, 631, FY - 33, 8, 4, '#ff9d3c');
-      PIX.disc(c, 635, FY - 30, 14, 'rgba(255,157,60,.10)');
+      PIX.disc(c, 635, FY - 30, 14, 'rgba(255,157,60,.08)');
+      px(c, 634, FY - 52, 2, 22, L.woodDk);
+      for (let k = 0; k < 34; k += 6) {
+        px(c, 618 + k, FY - 56, 3, 5, '#b8384a');
+        px(c, 621 + k, FY - 56, 3, 5, L.cream);
+      }
+      px(c, 616, FY - 51, 38, 2, L.cream);
       /* the souvenir stand: forty little towers on a trestle */
       ART.box(c, 92, FY - 20, 54, 20, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
       for (let i = 0; i < 9; i++) {
@@ -598,7 +701,7 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 300, z: 0.14, y: undefined, key: 'watch',
         def: typeof WATCH_DEF !== 'undefined' ? WATCH_DEF : null, face: -1,
-        tag: 'THE NIGHT GENDARME', tagCol: PIX.PAL.L, witness: true },
+        tag: 'A GENDARME ON POINT', tagCol: PIX.PAL.L, witness: true, mood: 'bored' },
       { id: 'busk', x: 556, z: 0.12, key: 'busk',
         def: typeof DILL_DEF !== 'undefined' ? DILL_DEF : null, face: -1,
         tag: 'AN ACCORDION', tagCol: PIX.PAL.P },
@@ -612,6 +715,7 @@ const PARIS = (() => {
 
     return {
       id: 'tower', w: W, floorY: FY, paint, spots, actors, eggs, outdoor: true,
+      skyTo: FY - BAND,
       depthBand: BAND, crowd: { n: 18, z0: 0.45, z1: 1 },
       pets: [{ kind: 'dog', x: 400, name: "A TOURIST'S DOG", fouls: true },
              { kind: 'cat', x: 700, name: 'A PARK CAT' }],
@@ -629,10 +733,10 @@ const PARIS = (() => {
 
     const paint = (c) => {
       const p = P();
-      px(c, 0, 0, W, FY, '#101426');
-      for (let i = 0; i < 40; i++) {
-        px(c, 0, FY - BAND - 40 + i, W, 1,
-          'rgba(70,84,120,' + (0.02 + i * 0.005).toFixed(3) + ')');
+      /* the sky is DAY's; what is painted here is the haze on the horizon */
+      for (let i = 0; i < 34; i++) {
+        px(c, 0, FY - BAND - 34 + i, W, 1,
+          'rgba(240,232,212,' + (0.02 + i * 0.010).toFixed(3) + ')');
       }
       /* the twelve avenues: blocks of Haussmann running away in both
          directions, with the gaps between them going black */
@@ -647,20 +751,20 @@ const PARIS = (() => {
       /* the roundabout: setts, and the white lines nobody obeys */
       cobbles(c, 0, FY - BAND, W, BAND + 20, seed);
       for (let k = 0; k < W; k += 26) {
-        px(c, k, FY - BAND + 6, 14, 2, 'rgba(240,235,220,.12)');
+        px(c, k, FY - BAND + 6, 14, 2, 'rgba(255,252,244,.45)');
       }
       /* the kerb ring round the monument */
-      px(c, 240, FY - BAND + 1, 240, 2, '#4a4e55');
-      px(c, 240, FY - BAND + 3, 240, 1, 'rgba(0,0,0,.4)');
+      px(c, 240, FY - BAND + 1, 240, 2, '#b8b0a0');
+      px(c, 240, FY - BAND + 3, 240, 1, 'rgba(70,62,50,.40)');
 
       /* the lamps and the trees round the circle */
-      [60, 180, 540, 660].forEach(lx => lamp(c, lx, FY - BAND + 6, 32, true));
+      [60, 180, 540, 660].forEach(lx => lamp(c, lx, FY - BAND + 6, 32, false));
       [26, 694].forEach((tx, i) => planeTree(c, tx, FY - BAND + 8, 36, seed + i * 5));
       /* the taxi rank */
       /* a 1930s cab: a long bonnet, a tall cabin behind it, mudguards over
          the wheels and a light on the roof that says it is for hire */
       const cab = (x, y) => {
-        const body = '#20242c', bodyLit = '#333944', dark = '#0e1013';
+        const body = '#2a2f3a', bodyLit = '#4d5563', dark = '#171a20';
         px(c, x + 2, y - 2, 54, 2, 'rgba(0,0,0,.4)');
         /* the running board and the sills */
         px(c, x + 6, y - 6, 46, 3, dark);
@@ -724,11 +828,12 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 556, z: 0.1, key: 'cabbie',
         def: typeof DILL_DEF !== 'undefined' ? DILL_DEF : null, face: -1,
-        tag: 'A NIGHT CABBIE', tagCol: PIX.PAL.G, witness: true },
+        tag: 'A CABBIE ON THE RANK', tagCol: PIX.PAL.G, witness: true, mood: 'happy' },
     ];
 
     return {
       id: 'arch', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      skyTo: FY - BAND,
       depthBand: BAND, crowd: { n: 14, z0: 0.5, z1: 1 },
       traffic: { n: 5, z0: 0.62, z1: 0.95 },
       pets: [{ kind: 'dog', x: 260, name: 'A DOG OFF ITS LEAD', fouls: true }],
@@ -748,12 +853,23 @@ const PARIS = (() => {
 
     const paint = (c) => {
       const p = P();
-      px(c, 0, 0, W, FY, '#0f1322');
-      /* the city, a long way below and behind */
+      /* THE CITY, A LONG WAY BELOW AND BEHIND. From the top of the Butte
+         you are looking over the whole of it, and in daylight that is not
+         a row of black boxes with lit windows in them: it is grey-blue
+         haze with roofs coming out of it, paler the further off it goes. */
       for (let i = 0; i < 30; i++) {
         const bx = (i * 27 + seed % 19) % (W - 24);
-        px(c, bx, FY - BAND - 52 - (i % 4) * 3, 22, 20 + (i % 4) * 3, '#171d2c');
-        if (i % 3 === 0) px(c, bx + 4, FY - BAND - 48, 3, 3, 'rgba(255,231,168,.5)');
+        const far = (i % 4);
+        const tone = ['#9fb0bd', '#93a5b4', '#a8b7c2', '#8b9dad'][far];
+        px(c, bx, FY - BAND - 52 - far * 3, 22, 20 + far * 3, tone);
+        px(c, bx, FY - BAND - 52 - far * 3, 22, 1, '#c2ceD6'.toLowerCase());
+        px(c, bx + 18, FY - BAND - 52 - far * 3, 4, 20 + far * 3, 'rgba(80,92,104,.25)');
+        if (i % 3 === 0) px(c, bx + 4, FY - BAND - 48, 3, 3, 'rgba(255,255,255,.45)');
+      }
+      /* and the haze the distance sits in */
+      for (let i = 0; i < 30; i++) {
+        px(c, 0, FY - BAND - 30 + i, W, 1,
+          'rgba(226,232,238,' + (0.03 + i * 0.012).toFixed(3) + ')');
       }
       /* THE BASILICA, up the hill, floodlit and unbothered */
       basilica(c, 402, FY - BAND - 22);
@@ -761,26 +877,28 @@ const PARIS = (() => {
       for (let i = 0; i < 14; i++) {
         const sw = 224 - i * 8;
         const sy = FY - BAND - 22 + i * 1.7;
-        px(c, 402 - sw / 2, sy, sw, 2, '#6a6459');
-        px(c, 402 - sw / 2, sy, sw, 1, '#8a8377');
-        px(c, 402 - sw / 2, sy + 2, sw, 1, 'rgba(0,0,0,.4)');
+        px(c, 402 - sw / 2, sy, sw, 2, L.stoneMid);
+        px(c, 402 - sw / 2, sy, sw, 1, L.stoneLit);
+        px(c, 402 - sw / 2, sy + 2, sw, 1, 'rgba(88,78,62,.40)');
       }
       /* the iron handrails up the middle of them */
       [-40, 40].forEach(d => {
         for (let i = 0; i < 12; i += 3) {
-          px(c, 402 + d, FY - BAND - 22 + i * 1.7, 2, 8, '#2a2f36');
+          px(c, 402 + d, FY - BAND - 22 + i * 1.7, 2, 8, L.iron);
         }
-        px(c, 402 + d - 1, FY - BAND - 26, 4, 22, '#2a2f36');
+        px(c, 402 + d - 1, FY - BAND - 26, 4, 22, L.iron);
       });
       /* the funicular, off to the side, stopped for the night */
-      px(c, 596, FY - BAND - 22, 26, 24, '#2b3038');
-      px(c, 598, FY - BAND - 20, 22, 12, 'rgba(150,200,220,.18)');
-      px(c, 594, FY - BAND + 2, 30, 3, '#1c2024');
-      for (let i = 0; i < 8; i++) px(c, 600 + (i % 2) * 12, FY - BAND - 40 + i * 3, 8, 2, '#3a3f46');
+      px(c, 596, FY - BAND - 22, 26, 24, '#8a4a3a');
+      px(c, 596, FY - BAND - 22, 26, 2, '#b06a52');
+      px(c, 598, FY - BAND - 20, 22, 12, 'rgba(170,210,235,.55)');
+      px(c, 598, FY - BAND - 20, 22, 2, 'rgba(240,250,255,.70)');
+      px(c, 594, FY - BAND + 2, 30, 3, '#4a4238');
+      for (let i = 0; i < 8; i++) px(c, 600 + (i % 2) * 12, FY - BAND - 40 + i * 3, 8, 2, L.zincDk);
 
       /* PLACE DU TERTRE: cobbles, easels, tables, and a lot of paint */
       cobbles(c, 0, FY - BAND, W, BAND + 20, seed);
-      [90, 250, 500, 690].forEach(lx => lamp(c, lx, FY - BAND + 8, 30, true));
+      [90, 250, 500, 690].forEach(lx => lamp(c, lx, FY - BAND + 8, 30, false));
       [40, 640].forEach((tx, i) => planeTree(c, tx, FY - BAND + 10, 34, seed + i * 7));
       /* the easels, in a row, with a half-finished city on each */
       const easel = (x, y, col) => {
@@ -835,7 +953,7 @@ const PARIS = (() => {
         tag: 'THE CUP MAN', tagCol: PIX.PAL.R, job: 'cups' },
       { id: 'wit', x: 600, z: 0.1, key: 'waiter',
         def: typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null, face: -1,
-        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true },
+        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased' },
     ];
 
     const eggs = [
@@ -849,6 +967,7 @@ const PARIS = (() => {
 
     return {
       id: 'butte', w: W, floorY: FY, paint, spots, actors, eggs, outdoor: true,
+      skyTo: FY - BAND,
       depthBand: BAND, crowd: { n: 20, z0: 0.4, z1: 1 },
       pets: [{ kind: 'dog', x: 480, name: "A PAINTER'S DOG", fouls: true },
              { kind: 'cat', x: 620, name: 'A ROOF CAT' }],
@@ -868,33 +987,45 @@ const PARIS = (() => {
 
     const paint = (c) => {
       const p = P();
-      px(c, 0, 0, W, FY, '#0d1120');
+      /* the sky is DAY's; the haze on the far side of the courtyard is not */
+      for (let i = 0; i < 24; i++) {
+        px(c, 0, FY - BAND - 24 + i, W, 1,
+          'rgba(240,234,216,' + (0.02 + i * 0.010).toFixed(3) + ')');
+      }
       /* the three wings of the palace, stone and window and stone */
       const wing = (x, w2, h2) => {
-        px(c, x, FY - BAND - h2, w2, h2, '#6b6455');
-        px(c, x, FY - BAND - h2, w2, 3, '#877f6c');
-        px(c, x + w2 - 4, FY - BAND - h2, 4, h2, '#4c4740');
+        px(c, x, FY - BAND - h2, w2, h2, L.stone);
+        px(c, x, FY - BAND - h2, w2, 3, L.stoneLit);
+        px(c, x, FY - BAND - h2, 2, h2, L.stoneLit);
+        px(c, x + w2 - 4, FY - BAND - h2, 4, h2, L.stoneDk);
         /* the mansard and its dormers */
         for (let i = 0; i < 9; i++) {
-          px(c, x + Math.round(i * 0.5), FY - BAND - h2 - 9 + i, w2 - i, 1, i < 2 ? '#4d535d' : '#3b4048');
+          px(c, x + Math.round(i * 0.5), FY - BAND - h2 - 9 + i, w2 - i, 1,
+            i < 2 ? L.zincLit : L.zinc);
         }
         for (let dx = x + 8; dx < x + w2 - 12; dx += 22) {
-          px(c, dx, FY - BAND - h2 - 8, 12, 8, '#3b4048');
-          px(c, dx + 2, FY - BAND - h2 - 6, 8, 6, '#22262e');
+          px(c, dx, FY - BAND - h2 - 8, 12, 8, L.zinc);
+          px(c, dx, FY - BAND - h2 - 8, 12, 1, L.zincLit);
+          px(c, dx + 2, FY - BAND - h2 - 6, 8, 6, L.glass);
+          px(c, dx + 2, FY - BAND - h2 - 6, 8, 2, L.glassLit);
         }
-        /* the arcade: tall arched windows, a few of them lit */
+        /* THE ARCADE: tall arched windows. Shut, because the place shut at
+           six — so what is in them is the courtyard reflected back at you,
+           not a light somebody left on. */
         for (let i = 0; i * 26 < w2 - 20; i++) {
           const wx = x + 10 + i * 26;
-          const lit = ((i * 7 + seed) % 5) === 0;
-          px(c, wx, FY - BAND - h2 + 16, 16, h2 - 26, '#191c22');
-          px(c, wx + 1, FY - BAND - h2 + 17, 14, h2 - 28, lit ? '#e8c46a' : '#252a32');
+          px(c, wx, FY - BAND - h2 + 16, 16, h2 - 26, L.glassDk);
+          px(c, wx + 1, FY - BAND - h2 + 17, 14, h2 - 28, L.glass);
+          px(c, wx + 1, FY - BAND - h2 + 17, 14, 5, L.glassLit);
+          px(c, wx + 8, FY - BAND - h2 + 17, 1, h2 - 28, L.glassDk);
           for (let k = 0; k < 16; k++) {
             const yy = FY - BAND - h2 + 16 - Math.round(Math.sqrt(Math.max(0, 64 - (k - 8) * (k - 8))));
-            px(c, wx + k, yy, 1, FY - BAND - h2 + 16 - yy, '#191c22');
+            px(c, wx + k, yy, 1, FY - BAND - h2 + 16 - yy, L.glassDk);
+            px(c, wx + k, yy, 1, 2, L.stoneDk);
           }
           /* the caryatid pilasters between them */
-          px(c, wx - 5, FY - BAND - h2 + 14, 4, h2 - 24, '#7a7263');
-          px(c, wx - 5, FY - BAND - h2 + 14, 1, h2 - 24, '#948b78');
+          px(c, wx - 5, FY - BAND - h2 + 14, 4, h2 - 24, L.stoneMid);
+          px(c, wx - 5, FY - BAND - h2 + 14, 1, h2 - 24, L.stoneLit);
         }
       };
       wing(0, 240, 60);
@@ -907,19 +1038,20 @@ const PARIS = (() => {
       pyramid(c, 250, FY - BAND + 1, 40, 17);
       pyramid(c, 450, FY - BAND + 1, 40, 17);
 
-      /* the courtyard: pale stone, and the fountains in it */
-      px(c, 0, FY - BAND, W, BAND + 20, '#4a4740');
+      /* the courtyard: pale stone flags, and the fountains in it */
+      px(c, 0, FY - BAND, W, BAND + 20, '#cbc2ac');
       for (let ry = 0; ry < BAND + 18; ry += 6) {
-        px(c, 0, FY - BAND + ry, W, 1, 'rgba(255,255,255,.045)');
+        px(c, 0, FY - BAND + ry, W, 1, 'rgba(255,252,240,.30)');
+        px(c, 0, FY - BAND + ry + 5, W, 1, 'rgba(90,82,66,.16)');
       }
-      for (let rx = 0; rx < W; rx += 30) px(c, rx, FY - BAND, 1, BAND + 18, 'rgba(0,0,0,.14)');
-      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#443f39', '#524d45', seed % 37);
-      /* the reflecting pools */
+      for (let rx = 0; rx < W; rx += 30) px(c, rx, FY - BAND, 1, BAND + 18, 'rgba(90,82,66,.18)');
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#c2b9a3', '#d8cfb8', seed % 37);
+      /* the reflecting pools, with the sky in them */
       [[120, 90], [520, 90]].forEach(([wx, ww]) => {
-        px(c, wx, FY - 16, ww, 15, '#1d3138');
-        px(c, wx, FY - 16, ww, 2, '#2d4a52');
-        px(c, wx + 2, FY - 14, ww - 4, 11, 'rgba(120,200,215,.14)');
-        for (let k = 0; k < ww; k += 9) px(c, wx + k, FY - 10 + ((k + seed) % 3), 5, 1, 'rgba(180,230,240,.16)');
+        px(c, wx, FY - 16, ww, 15, '#5f93a8');
+        px(c, wx, FY - 16, ww, 2, '#8fc0d0');
+        px(c, wx + 2, FY - 14, ww - 4, 11, 'rgba(190,230,245,.35)');
+        for (let k = 0; k < ww; k += 9) px(c, wx + k, FY - 10 + ((k + seed) % 3), 5, 1, 'rgba(255,255,255,.45)');
         /* the jet in the middle of it */
         px(c, wx + ww / 2, FY - 30, 1, 15, 'rgba(190,235,245,.35)');
         px(c, wx + ww / 2 - 3, FY - 32, 7, 3, 'rgba(190,235,245,.20)');
@@ -949,11 +1081,12 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 480, z: 0.12, key: 'guard',
         def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
-        tag: 'THE NIGHT GUARD', tagCol: PIX.PAL.L, witness: true },
+        tag: 'THE GALLERY GUARD', tagCol: PIX.PAL.L, witness: true, mood: 'watch' },
     ];
 
     return {
       id: 'museum', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      skyTo: FY - BAND,
       depthBand: BAND, crowd: { n: 8, z0: 0.55, z1: 0.95 },
       pets: [{ kind: 'cat', x: 300, name: 'THE COURTYARD CAT' }],
       enterX: 30, enterFace: 1,
@@ -1054,7 +1187,7 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 400, z: 0.12, key: 'ossu',
         def: typeof BARMAN_DEF !== 'undefined' ? BARMAN_DEF : null, face: -1,
-        tag: 'THE KEEPER', tagCol: PIX.PAL.q, witness: true },
+        tag: 'THE KEEPER', tagCol: PIX.PAL.q, witness: true, mood: 'sad' },
     ];
 
     return {

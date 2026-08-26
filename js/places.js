@@ -300,7 +300,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 402, y: FY, key: 'launder', def: LAUNDER_DEF, face: -1, still: true,
-        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true },
+        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty' },
     ];
 
     const eggs = [
@@ -311,7 +311,7 @@ const PLACES = (() => {
 
     return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 300, name: 'THE LAUNDRY CAT' }],
-      depth: [{ x: 232, y: 24, w: 84, h: 44 }],
+      depth: [{ x: 232, y: 24, w: 84, h: 44 , sky: true }],
       enterX: 34, enterFace: 1,
       stairs: { to: 'cellar', x: 214, label: 'THE CELLAR STEPS', hint: 'DOWN INTO THE WET' },
       lights: [{ x: 110, y: 14, r: 40 }, { x: 210, y: 14, r: 42, flicker: true },
@@ -326,42 +326,104 @@ const PLACES = (() => {
 
     const paint = (c) => {
       const p = P();
-      /* no wall: the bay, the far bank and the sky */
-      px(c, 0, 0, W, FY + 4, '#0a0f16');
-      for (let i = 0; i < W; i += 7) {
-        const h = 10 + ((i * 13 + seed) % 26);
-        px(c, i, 44 - h, 7, h, '#0d141c');
-        if ((i + seed) % 3 === 0) px(c, i + 2, 44 - h + 4, 2, 2, '#3f5568');
-        if ((i + seed) % 11 === 0) px(c, i + 4, 44 - h + 9, 2, 2, '#e0c23a');
+      /* NO WALL: the water, the far bank, and the sky, which is DAY's.
+         Rows 0..43 are left transparent and `skyTo` hands them over. */
+      /* THE FAR BANK. Blocks of real width with roofs on them, not a
+         column of fixed-width posts — the first pass at this stepped
+         across in sevens and came out as a picket fence. */
+      const rb = U.mulberry32(seed * 7 + 3);
+      let bx2 = -6;
+      while (bx2 < W + 6) {
+        const bw = 16 + Math.floor(rb() * 20);
+        const h = 14 + Math.floor(rb() * 20);
+        const far = rb();
+        /* the haze of the river takes the contrast out of it */
+        const tone = far < 0.34 ? '#c6c2ae' : far < 0.68 ? '#b8b4a2' : '#d0ccba';
+        px(c, bx2, 40 - h, bw, h, tone);
+        px(c, bx2, 40 - h, bw, 1, '#e2ddc9');
+        px(c, bx2 + bw - 2, 40 - h, 2, h, 'rgba(110,104,86,.22)');
+        /* the mansard */
+        const rh = 3 + Math.floor(rb() * 3);
+        for (let i = 0; i < rh; i++) {
+          px(c, bx2 + i, 40 - h - rh + i, bw - i * 2, 1, i ? '#a6adb6' : '#c0c7ce');
+        }
+        /* windows: three rows of them, dark against the stone */
+        for (let wy = 40 - h + 4; wy < 38; wy += 6) {
+          for (let wx = bx2 + 3; wx < bx2 + bw - 3; wx += 6) {
+            px(c, wx, wy, 3, 4, '#8d94a0');
+            px(c, wx, wy, 3, 1, '#b6c4d0');
+          }
+        }
+        bx2 += bw + 1;
       }
-      px(c, 0, 44, W, 3, '#0b1118');
-      /* THE WATER. Flat black, banded, with the city broken up on it in a
-         few long smears. Anything busier than this reads as television
-         static rather than a canal. */
-      px(c, 0, 47, W, FY - 47, '#0a1219');
-      for (let y = 48; y < FY; y += 2) {
-        const t = (y - 48) / (FY - 48);
-        px(c, 0, y, W, 1, 'rgba(16,40,56,' + (0.55 - t * 0.35).toFixed(3) + ')');
+      /* the quay wall on the far side, and the trees along the top of it */
+      px(c, 0, 40, W, 5, '#c0b69c');
+      px(c, 0, 40, W, 1, '#dcd2b6');
+      px(c, 0, 44, W, 3, '#9a9080');
+      for (let tx = 6; tx < W; tx += 27) {
+        PIX.disc(c, tx, 36, 6, '#4a6f3c');
+        PIX.disc(c, tx - 2, 34, 4, '#5f8c48');
+        px(c, tx, 38, 1, 4, '#8a7f68');
       }
-      /* the lit windows, pulled down into the water under themselves */
-      const rw = U.mulberry32(seed * 13 + 5);
-      for (let n = 0; n < 5; n++) {
-        const rx = 10 + Math.floor(rw() * (W - 20));
-        for (let y = 50; y < FY - 4; y += 4) {
-          const w2 = 2 + ((y + rx) % 3);
-          px(c, rx + ((y >> 2) % 2), y, w2, 1,
-            'rgba(224,194,58,' + (0.16 - (y - 50) * 0.0018).toFixed(3) + ')');
+      /* THE WATER. Green-brown river, banded, with the sky broken up on it
+         in a few long smears. Anything busier than this reads as
+         television static rather than a river. */
+      px(c, 0, 47, W, FY - 47, '#5e7d6a');
+      /* THE BANDS GET TALLER AS THE WATER COMES AT YOU. Flat stripes of a
+         constant height read as a painted wall; a band that doubles in
+         height from the far bank to your boots reads as a surface going
+         away from you, which is the only thing that sells water. */
+      {
+        let y = 48, k = 0;
+        while (y < FY) {
+          const t = (y - 48) / (FY - 48);
+          const bh = 1 + Math.round(t * 3);
+          px(c, 0, y, W, bh, 'rgba(122,170,166,' + (0.44 - t * 0.30).toFixed(3) + ')');
+          px(c, 0, y, W, 1, 'rgba(196,226,214,' + (0.20 - t * 0.13).toFixed(3) + ')');
+          /* and the darker trough under each band */
+          px(c, 0, y + bh, W, 1, 'rgba(48,74,64,' + (0.16 + t * 0.12).toFixed(3) + ')');
+          y += bh + 1 + (k++ % 2);
         }
       }
-      /* a dozen long flat streaks, and nothing else */
-      for (let n = 0; n < 14; n++) {
-        const sy = 52 + Math.floor(rw() * (FY - 60));
-        const sx = Math.floor(rw() * (W - 60)), sw = 24 + Math.floor(rw() * 44);
-        px(c, sx, sy, sw, 1, 'rgba(140,190,220,.07)');
+      const rw = U.mulberry32(seed * 13 + 5);
+      /* the far bank, pulled down into the water under itself */
+      for (let n = 0; n < 6; n++) {
+        const rx = 10 + Math.floor(rw() * (W - 20));
+        for (let y = 50; y < FY - 4; y += 4) {
+          const w2 = 3 + ((y + rx) % 4);
+          px(c, rx + ((y >> 2) % 2), y, w2, 1,
+            'rgba(220,214,196,' + (0.22 - (y - 50) * 0.0026).toFixed(3) + ')');
+        }
       }
+      /* AND THE SUN ON IT, which is the whole reason to draw a river. The
+         glitter is not scattered evenly: it runs in a lane from the sun to
+         your feet, widening as it comes, and that lane is what makes the
+         flat green read as something wet. */
+      const lane = Math.round(W * 0.62);
+      for (let n = 0; n < 150; n++) {
+        const t = rw();
+        const gy = 50 + Math.round(t * (FY - 56));
+        const spread = 8 + Math.round(t * 46);
+        const gx = lane + Math.round((rw() - 0.5) * 2 * spread);
+        if (gx < 0 || gx > W) continue;
+        px(c, gx, gy, 1 + Math.floor(rw() * 3), 1,
+          'rgba(255,252,228,' + (0.20 + rw() * 0.55).toFixed(2) + ')');
+      }
+      /* a barge going down, and one tied up, because a river has traffic */
+      [[60, 0.30], [300, 0.62]].forEach(([bgx, bt], i) => {
+        const by = 50 + Math.round(bt * (FY - 56));
+        const bl = 54 - i * 12;
+        px(c, bgx, by, bl, 5, '#4a4034');
+        px(c, bgx, by, bl, 1, '#6f6250');
+        px(c, bgx + 4, by - 4, 12, 4, '#8a3a34');
+        px(c, bgx + 4, by - 4, 12, 1, '#b05a4c');
+        px(c, bgx + bl - 14, by - 3, 8, 3, '#5f7f78');
+        px(c, bgx, by + 5, bl, 2, 'rgba(40,60,54,.45)');
+        for (let k = 0; k < bl; k += 5) px(c, bgx + k, by + 7, 3, 1, 'rgba(230,250,240,.30)');
+      });
       /* the chop right under the boards */
       for (let i = 0; i < W; i += 4) {
-        px(c, i, FY - 6 + ((i * 5 + seed) % 3), 3, 1, 'rgba(150,200,230,.12)');
+        px(c, i, FY - 6 + ((i * 5 + seed) % 3), 3, 1, 'rgba(235,250,240,.28)');
       }
 
       /* the boards you stand on */
@@ -378,9 +440,9 @@ const PLACES = (() => {
       px(c, W - 120, 18, 2, 26, p.S);
       px(c, W - 126, 44, 14, 10, p.K);
       px(c, W - 124, 46, 10, 6, '#7a6a2a');
-      /* the lamp on it */
+      /* the lamp on it, which nobody has needed since sunrise */
       px(c, W - 144, 16, 6, 5, p.K);
-      px(c, W - 143, 17, 4, 3, '#ffe7a3');
+      px(c, W - 143, 17, 4, 3, '#cdd6dc');
 
       /* CRATES, stacked wrong */
       const stack = [[70, 3], [118, 2], [166, 1], [250, 2], [300, 1]];
@@ -443,7 +505,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 322, y: FY, key: 'watch', def: WATCH_DEF, face: -1,
-        tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true },
+        tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true, mood: 'bored' },
     ];
 
     const eggs = [
@@ -453,8 +515,9 @@ const PLACES = (() => {
     ];
 
     return { id: 'docks', w: W, floorY: FY, paint, actors, spots, outdoor: true, eggs,
+      skyTo: 44,
       pets: [{ kind: 'cat', x: 250, name: 'A PIER CAT' }],
-      depth: [{ x: 0, y: 0, w: W, h: 44 }],
+      depth: [{ x: 0, y: 0, w: W, h: 44 , sky: true }],
       enterX: 26, enterFace: 1,
       lights: [{ x: 206, y: 60, r: 40, a: 0.1 }, { x: W - 144, y: 18, r: 46, flicker: true }] };
   }
@@ -535,7 +598,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 288, y: FY, key: 'pawn', def: PAWN_DEF, face: -1, still: true,
-        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true },
+        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch' },
     ];
 
     /* the glass case and its counter are painted over him, so he is behind
@@ -568,7 +631,7 @@ const PLACES = (() => {
     return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 120, name: 'THE SHOP CAT' }],
       stairs: { to: 'above', x: 336, label: 'THE STAIRS UP', hint: 'HE LIVES OVER THE SHOP' },
-      depth: [{ x: 60, y: 34, w: 40, h: 66 }],
+      depth: [{ x: 60, y: 34, w: 40, h: 66 , sky: true }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 120, y: 20, r: 34 }, { x: 279, y: 28, r: 44 }] };
   }
@@ -651,7 +714,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 246, y: FY, key: 'waitress', def: WAITRESS_DEF, face: -1, still: true,
-        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true },
+        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased' },
       { id: 'cook', x: 300, y: FY, key: 'cook', def: COOK_DEF, face: -1, still: true,
         tag: 'THE COOK', tagCol: PIX.PAL.N },
     ];
@@ -690,7 +753,7 @@ const PLACES = (() => {
 
     return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 400, name: 'THE DINER CAT' }],
-      depth: [{ x: 10, y: 20, w: 92, h: 40 }],
+      depth: [{ x: 10, y: 20, w: 92, h: 40 , sky: true }],
       enterX: 30, enterFace: 1,
       lights: [{ x: 90, y: 14, r: 38 }, { x: 200, y: 14, r: 40 }, { x: 320, y: 14, r: 38, flicker: true }] };
   }
@@ -795,7 +858,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 168, y: FY, key: 'barman', def: BARMAN_DEF, face: 1, still: true,
-        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true },
+        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard' },
       { id: 'drunk', x: 300, y: FY, key: 'drunk', def: DRUNK_DEF, face: -1, still: true,
         tag: 'A REGULAR', tagCol: PIX.PAL.d },
     ];
@@ -808,7 +871,7 @@ const PLACES = (() => {
 
     return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 300, name: 'THE BAR CAT' }],
-      depth: [{ x: 250, y: 26, w: 66, h: 32 }],
+      depth: [{ x: 250, y: 26, w: 66, h: 32 , sky: true }],
       enterX: 34, enterFace: 1,
       lights: [{ x: 142, y: 26, r: 44 }, { x: 300, y: 16, r: 40, a: 0.06 },
                { x: W - 47, y: 20, r: 34, flicker: true }] };

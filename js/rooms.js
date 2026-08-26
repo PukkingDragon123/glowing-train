@@ -286,7 +286,7 @@ const ROOMS = (() => {
       id: 'precinct', w: W, floorY: FY, paint, onPaintFront: front, actors, spots,
       /* SERGEANT, WHO IS A DOG. Nobody signed him in either. */
       pets: [{ kind: 'dog', x: 452, name: 'SERGEANT' }],
-      depth: [{ x: 176, y: 31, w: 70, h: 44 }],
+      depth: [{ x: 176, y: 31, w: 70, h: 44 , sky: true }],
       enterX: 46, enterFace: 1,
       lights: [{ x: 120, y: 14, r: 40 }, { x: 240, y: 14, r: 40 },
                { x: 360, y: 14, r: 40, flicker: true }, { x: 480, y: 14, r: 40 }],
