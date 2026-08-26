@@ -1,25 +1,41 @@
 # SHELL & DEBT
 
-**A murder-mystery in the swamp city, in hand-drawn pixel art. No build, no
-assets, no network — every pixel is drawn by the game at boot.**
+**A murder-mystery in Paris, in hand-drawn pixel art. No build, no assets,
+no network — every pixel is drawn by the game at boot.**
 
 You were the good cop. You picked the Bullfrog out of a line-up and his
-lawyers had him out by noon. At seven that night the door came in. It rained
+lawyers had him out by noon. At seven that evening the door came in. It rained
 at the funeral and he sent flowers. You kept the badge, and the gun.
 
-Six years later there is a board in the back of the precinct with five holes
+Six years later there is a board in the back of the Brigade with five holes
 in it, and nobody's name on the case but yours. Fill the board and the man
 goes down in a courtroom. Turn up at his door without it and the only thing
 you can do to him is the thing he did to you.
 
-Every night of it is the same shape: **the captain gives you a lead, the city
-hides the evidence, and the clock runs out at six.** Drive out to five places,
-put your hand in the drains and the fire barrels and the pawnbroker's case,
-work out which of the frogs standing in the line-up downstairs is the one who
-did it, say his name, and then sit down across a table from him with one
+Every day of it is the same shape: **the captain gives you a lead at nine in
+the morning, the city hides the evidence, and he wants you off the street at
+seven.** Drive out across Paris, put your hand in the drains and the wine
+crates and the pawnbroker's case, find out where each of the frogs on that
+wall says he was and break the one story that is a lie, name him in the
+line-up downstairs, and then sit down across a table from him with one
 revolver between you.
 
 That is the whole game, and it is the two endings.
+
+### The light is the clock
+
+Nothing in here tells you the time as insistently as the sky does. The shift
+opens in a cold blue morning, goes white at noon, turns the limestone apricot
+at half past four, and ends with the sun going down behind the rooftops — and
+when the shadows go long you are nearly out of afternoon. Interiors get it
+through their windows: a slab of warm air leaning across a laundry with the
+dust turning over inside it, and a bright patch of floor at the end of it.
+
+The frogs who know things go home. The launderer locks up at five, the
+catacombs at five, the pawn at six; the man on the quay works late and the
+cabaret does not open until the evening. **The order the city closes in is
+the order the day has to be worked**, and the plan on your phone counts down
+the doors.
 
 ![The murder board](docs/screen-title.png)
 
@@ -30,8 +46,11 @@ That is the whole game, and it is the two endings.
 python3 -m http.server 8080   # then visit http://localhost:8080
 ```
 
-Plain HTML/CSS/JS. Every sprite, prop, room, letter and cutscene is drawn by
-the game from code — there is not one image file in the repository. Works on
+Plain HTML/CSS/JS. Every sprite, prop, room, letter, cloud and cutscene is
+drawn by the game from code — there is not one image file in the repository.
+The sky is a stepped gradient with two banks of cloud in it and a sun that
+blooms in rings; the Eiffel Tower is a profile curve and an X-brace lattice;
+the plan of Paris is printed on paper that creases where it folds. Works on
 phones. Sounds are synthesized with WebAudio. Cases are seeded. What the
 department remembers about you persists in localStorage.
 
@@ -58,10 +77,10 @@ ceiling, and the board at the far end. People stand *behind* the furniture,
 the lamps put light on the floor, and the ceiling has joists in the dark.
 
 - **Captain Rook** hands you the next chapter of the case.
-- **Officer Maybelle** works the front desk. Talk to her once a night.
+- **Officer Maybelle** works the front desk. Talk to her once a day.
 - **Patrolman Dill** has nothing to report. The **drunk tank** has a lot.
 - **Your desk** holds the lead. **The lockers** hold your iron and your belt.
-  **The cooler** is worth one heart a night.
+  **The cooler** is worth one heart a day.
 - **The street door** gets the car, which means **the phone** (`P`).
 - **The stairs** go down to the line-up room, when you have something on
   somebody.
@@ -89,8 +108,8 @@ lieutenant carries one piece of the board.**
 
 Maybelle's trust is slow and it is real: it starts as talk, becomes coffee
 money in your coat, then a file pulled before the shift change (**+1 look at
-the evidence, all night**), and one night, *"whatever happens up there — come
-home after"* — **+1 heart, all night**. It carries between cases.
+the evidence, all day**), and one evening, *"whatever happens up there — come
+home after"* — **+1 heart, all day**. It carries between cases.
 
 ## The city is Paris
 
@@ -114,6 +133,8 @@ Paris, and they are why you took this job:
 
 ![La Tour](docs/screen-tower.png)
 
+![The drive out](docs/screen-drive.png)
+
 ![La Butte](docs/screen-butte.png)
 
 ![Les Catacombes](docs/screen-catacombs.png)
@@ -123,7 +144,7 @@ lattice, the basilica is three domes that are widest where they meet the
 roof, the ossuary is a wall of skulls generated a row at a time — all of it
 drawn by the same code that draws the frog, at boot, from nothing.
 
-Tonight's file only touches seven of the eleven, and the plan dims the ones
+Today's file only touches seven of the eleven, and the plan dims the ones
 it does not — nobody should burn thirty-five minutes driving to the
 catacombs for nothing. The rest of Paris is still there, with work in it.
 
@@ -139,7 +160,7 @@ the traffic at the Étoile does not stop for any of them.
 **The phone** (tap `PHONE`, or `P`) is the only menu in the game, and it is a
 slab of glass with a bite out of the top of it, which is the one thing in
 1937 nobody in this game remarks on. It has a lock screen with the hour, the
-night's weather and what came in; a home screen of apps with badges on them;
+day's weather and what came in; a home screen of apps with badges on them;
 and a dock:
 
 ![The lock screen](docs/screen-lock.png)
@@ -149,18 +170,18 @@ and a dock:
 - **PLAN** — the city drawn from above, the river cutting through it, eleven
   stops and the Brigade. Tap one and you drive there. A stop with something
   in it wears a gold `!`; a stop where somebody is owed a favour wears the
-  errand bag; a stop tonight's file does not touch is dimmed.
+  errand bag; a stop today's file does not touch is dimmed.
 - **CASE FILE** — what you have turned over, what each piece rules out, and
   which faces still fit.
 - **THE KIT** — your coat, laid out: the iron, the belt, every evidence bag
   you are carrying, and anything you agreed to run across town for somebody
   else.
-- **WORK** — what you are supposed to be doing *right now*, tonight's
+- **WORK** — what you are supposed to be doing *right now*, today's
   chapter, the Bullfrog board, every errand you are in the middle of, and the
   last few lines of the file.
 - **KARMA** — what this city thinks of you, and every deed that got you
   there.
-- **JOBS** — everything going on tonight that pays, and where it is.
+- **JOBS** — everything going on today that pays, and where it is.
 
 ![The kit](docs/screen-kit.png)
 
@@ -207,14 +228,14 @@ duck going round in a drum with somebody's shirts. They are painted into the
 rooms at their real size, which at room scale is a smudge — the only way to
 know what any of them is is to hold the eyeglass up to it.
 
-### The night is the clock
+### The day is the budget
 
 Every place you drive to costs **35 minutes**, every prop you put your hand
 in costs **18**, a look through the eyeglass costs **3**, a question costs
 **12**. The shift runs **20:00 to 06:00** — **600 minutes** against a city
 with about **forty-five things** in it to turn over, which is well over a
 thousand minutes of searching. It is deliberately impossible, so *where you
-look* is the whole game. Run the night out and the captain pulls you off the
+look* is the whole game. Run the day out and the captain pulls you off the
 street; you keep what you found.
 
 The sky is not decoration either. It rolls every time you drive: **rain**,
@@ -261,7 +282,7 @@ The eyeglass is not a gimmick: the rooms are painted at a pixel detail nobody
 can see at room scale, and the glass blows the **actual painted room** up five
 times inside a brass rim. Everything hidden in the art is really in there.
 
-The city has twenty-five things in it and the night has 560 minutes. Turning
+The city has twenty-five things in it and the day has 600 minutes. Turning
 everything over is not on the table — so the glass is how you decide, and a
 prop the glass called hot wears a gold chevron until you get to it.
 
@@ -294,7 +315,7 @@ miss and it drops back.
 
 **Dust it for prints.** There is a print bench at the station. Powder, tape, a
 card and a steady hand will lift a name off what you carried back — worth a
-face off the wall, for half an hour of a night that has none, once a case.
+face off the wall, for half an hour of a day that has none, once a case.
 
 ### Karma
 
@@ -325,15 +346,15 @@ at the quay, **dust for prints** at the Brigade — and, this being Paris:
   he is faster than your eye. Warn the mark off and he loses his rent. Or run
   the table yourself, which pays and costs.
 - **THE PAINTER.** Eleven years painting the same street, half a loaf in his
-  coat and nobody to sit for him. Twenty minutes of a night you cannot spare
+  coat and nobody to sit for him. Twenty minutes of a day you cannot spare
   — and he watches that square all day, so he has seen things.
 
 ### Errands, which pay in evidence
 
 Everybody in this city wants something, and none of them take money. Ask a
 witness a question and he will ask you for a favour first — **and the favour
-pays in a piece of evidence he has been sitting on all night.** One per
-stop, one night each:
+pays in a piece of evidence he has been sitting on all week.** One per
+stop, one a day each:
 
 ![An errand](docs/screen-errand.png)
 
@@ -351,9 +372,42 @@ The evidence comes out of *his own place first*, so a favour where you are
 standing is worth more than one across town. Refuse and nothing is lost —
 he still answers your questions. And the parcel is the interesting one:
 carry it to the pier and you can drop it and drive back for the full payoff,
-**or open it there** and keep what is inside tonight — which costs you his
+**or open it there** and keep what is inside today — which costs you his
 money and every answer he had, because he will not talk to you again before
 morning.
+
+## Where they say they were
+
+Crossing faces off a wall is deduction. It is not police work.
+
+**Every suspect states an alibi** — a stop in the city and an afternoon spent
+at it — and one of those stories is a lie, because the innocent have nothing
+to invent. The file on your phone lists all of them and which have been
+settled.
+
+![The alibi board](docs/screen-alibis.png)
+
+Breaking one takes two things in the same room:
+
+1. **the frog who would have vouched for him** — so you have to go to the
+   stop his story is set at, and get there before it shuts, and
+2. **one specific piece of evidence** to put on the counter — so the thing
+   you pulled out of a floor drain has a second use, and a stop you had no
+   reason to visit suddenly has one.
+
+Ask without it and he tells you what he told everybody: *"He was here. That
+is what I said to the other one."* You know he is lying and you cannot prove
+it. Ask with it, and:
+
+![The contradiction](docs/screen-contradiction.png)
+
+The plan marks it for you: a stop with a story you can already take apart
+wears a red query, and a stop about to lock up wears its countdown.
+
+| At the table | |
+|---|---|
+| **you broke his story** | he sits down **a heart short** and knows it |
+| **his story still stands** | he has an answer ready and **plays it harder** |
 
 ## The line-up
 
@@ -377,6 +431,31 @@ Then you say one name out loud.
 A frog you already know — a lieutenant, the Bullfrog himself — needs no
 line-up. You have had his face on your own wall for six years. They wave you
 straight through.
+
+## Faces
+
+Twenty expressions, and none of them are decoration: a frog's mouth is very
+wide, which means two pixels at the corners is the whole difference between
+content and delighted.
+
+![Every face](docs/screen-faces.png)
+
+The machinery behind them is what makes them read at room scale — eyes that
+close into upward arcs rather than flat blinks, a **lower** lid that comes up
+the way a real smile pushes the cheek into the eye, pupils that roll off you
+when somebody is thinking, brows that disagree with each other, stippled
+cheeks.
+
+And they reach the rooms, not just the conversation portraits. Everybody
+behind a counter has a temperament — the barman is hard, the cabbie is
+pleased to see anybody, the keeper of the catacombs is sad — and drifts
+through a small loop of blinks and glances **seeded off their own position**,
+so two frogs in the same room are never in step. They look up when you get
+close. The ones at work keep working.
+
+Your own face reads the day back to you: squinting with a hand in something,
+wincing on your last two hearts, and — if the city has decided it likes you —
+a hop in the middle of your stride.
 
 ## The table
 
@@ -410,7 +489,7 @@ Faster and tighter every chapter. Against your own head there is no check.
 ![The cut-in](docs/screen-cutin.png)
 
 The moment a live round commits, somebody's face crosses the frame on a
-skewed banner. It runs black most nights. **When the round is going to end
+skewed banner. It runs black most days. **When the round is going to end
 somebody, it runs red.** Down to one heart, the lens closes in and you can
 hear your own pulse.
 
@@ -592,7 +671,7 @@ dev/smoke.js      full browser smoke test (node dev/smoke.js)
 - Bounties, heat, bribes — `BLIND_PURSE` / `HEAT_COST` / `LOOT_TUNING`
 - The chapters and the five pieces — `CHAPTERS` / `INTEL_CARDS` in `js/story.js`
 - What a room is furnished with — the scene definitions in `js/rooms.js`
-- The night, the sky and what a search costs — `COST` / `WEATHER` in `js/city.js`
+- The day, the sky and what a search costs — `COST` / `WEATHER` in `js/city.js`
 - Which props exist to be searched — `CITY.PROPS` in `js/city.js`
 
 ### Dev checks
@@ -610,7 +689,7 @@ and names whoever is left standing.
 - **39%** reach the Bullfrog at all
 - **17%** could still take the good ending when they get there
 - **4.1** trips to the ward per run
-- **~10** props searched per case, and **3 nights in 16 run out** before it
+- **~10** props searched per case, and **4 days in 16 run out** before it
   has enough to say a name
 
 A player who follows the captain's tip, reads what the evidence actually

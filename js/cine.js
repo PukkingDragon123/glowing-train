@@ -425,68 +425,95 @@ const CINE = {
     window.addEventListener('keydown', bail);
     const P = PIX.PAL;
     const rng = U.mulberry32(99);
+    /* THE DRIVE HAPPENS IN WHATEVER LIGHT IT IS.
+
+       This used to be a night drive with stars over it, which was the
+       right shot when the shift ran to six in the morning. Now the sky
+       behind the windscreen is DAY's, so a drive at eleven is blue and
+       a drive at six is on fire — and the hour on the clock and the
+       hour out of the window are the same hour. */
     const stars = [];
     for (let i = 0; i < 26; i++) stars.push([rng() * 180, rng() * 40]);
+    const lamps = typeof DAY === 'undefined' || DAY.lamps();
 
     const draw = (t) => {
       c.clearRect(0, 0, 180, 108);
-      PIX.rect(c, 0, 0, 180, 108, '#070a12');
-      stars.forEach(([sx, sy]) => PIX.rect(c, Math.round(sx), Math.round(sy), 1, 1, 'rgba(200,220,255,.35)'));
+      if (typeof DAY !== 'undefined') DAY.sky(c, 0, 0, 180, 56, t, 99);
+      else PIX.rect(c, 0, 0, 180, 108, '#070a12');
+      if (lamps) {
+        stars.forEach(([sx, sy]) =>
+          PIX.rect(c, Math.round(sx), Math.round(sy), 1, 1, 'rgba(200,220,255,.35)'));
+      }
       /* far skyline, slow */
       const off1 = Math.round(t * 26) % 90;
       for (let i = -1; i < 4; i++) {
         const bx = i * 90 - off1;
-        PIX.rect(c, bx, 34, 34, 46, '#10141f');
-        PIX.rect(c, bx + 40, 24, 26, 56, '#0e1220');
-        PIX.rect(c, bx + 70, 42, 16, 38, '#111627');
+        PIX.rect(c, bx, 34, 34, 46, lamps ? '#10141f' : '#b4ac96');
+        PIX.rect(c, bx, 34, 34, 1, lamps ? '#1c2230' : '#d0c8b0');
+        PIX.rect(c, bx + 40, 24, 26, 56, lamps ? '#0e1220' : '#a8a08a');
+        PIX.rect(c, bx + 40, 24, 26, 1, lamps ? '#1c2230' : '#cac2aa');
+        PIX.rect(c, bx + 70, 42, 16, 38, lamps ? '#111627' : '#bdb49c');
         for (let w = 0; w < 8; w++) {
           PIX.rect(c, bx + 4 + (w % 4) * 8, 40 + Math.floor(w / 4) * 12, 3, 4,
-            (w + i) % 3 ? '#3a3520' : '#a5741f');
+            lamps ? ((w + i) % 3 ? '#3a3520' : '#a5741f') : '#6b7684');
         }
       }
       /* near buildings, fast */
       const off2 = Math.round(t * 78) % 140;
       for (let i = -1; i < 3; i++) {
         const bx = i * 140 - off2;
-        PIX.rect(c, bx, 52, 60, 30, '#151a28');
-        PIX.rect(c, bx + 12, 56, 8, 10, '#e0a63c');
-        PIX.rect(c, bx + 80, 46, 40, 36, '#121624');
-        PIX.rect(c, bx + 88, 52, 7, 9, '#6e4c12');
-        /* a streetlight */
-        PIX.rect(c, bx + 66, 44, 2, 38, '#0b0e14');
-        PIX.rect(c, bx + 62, 42, 10, 3, '#0b0e14');
-        PIX.disc(c, bx + 67, 47, 3, '#fff3b0');
+        PIX.rect(c, bx, 52, 60, 30, lamps ? '#151a28' : '#e2d8bc');
+        PIX.rect(c, bx, 52, 60, 2, lamps ? '#232a3c' : '#f4ecd2');
+        PIX.rect(c, bx, 78, 60, 4, lamps ? '#0d1016' : '#b8384a');   // the awning
+        PIX.rect(c, bx + 12, 56, 8, 10, lamps ? '#e0a63c' : '#67788a');
+        PIX.rect(c, bx + 80, 46, 40, 36, lamps ? '#121624' : '#d4c9ab');
+        PIX.rect(c, bx + 80, 46, 40, 2, lamps ? '#1e2436' : '#eee2c4');
+        PIX.rect(c, bx + 88, 52, 7, 9, lamps ? '#6e4c12' : '#67788a');
+        /* a lamp post, lit only if anybody would have it lit */
+        PIX.rect(c, bx + 66, 44, 2, 38, lamps ? '#0b0e14' : '#3f6b45');
+        PIX.rect(c, bx + 62, 42, 10, 3, lamps ? '#0b0e14' : '#3f6b45');
+        PIX.disc(c, bx + 67, 47, 3, lamps ? '#fff3b0' : '#cdd6dc');
       }
       /* the road */
-      PIX.rect(c, 0, 82, 180, 26, '#0d1016');
-      PIX.rect(c, 0, 82, 180, 2, '#1c2230');
+      PIX.rect(c, 0, 82, 180, 26, lamps ? '#0d1016' : '#8f8779');
+      PIX.rect(c, 0, 82, 180, 2, lamps ? '#1c2230' : '#a8a094');
       const dash = Math.round(t * 120) % 24;
-      for (let i = -1; i < 9; i++) PIX.rect(c, i * 24 - dash, 94, 12, 2, 'rgba(200,200,210,.35)');
+      for (let i = -1; i < 9; i++) {
+        PIX.rect(c, i * 24 - dash, 94, 12, 2, lamps ? 'rgba(200,200,210,.35)' : 'rgba(255,252,244,.65)');
+      }
       /* the car, bobbing */
       const bob = Math.round(Math.sin(t * 9) * 1);
       const carY = 70 + bob;
       PIX.rect(c, 56, carY + 2, 52, 12, P.K);
       PIX.rect(c, 58, carY + 3, 48, 10, '#2b3346');
+      if (!lamps) PIX.rect(c, 58, carY + 3, 48, 2, '#5d6a84');
       PIX.rect(c, 66, carY - 6, 30, 10, P.K);
       PIX.rect(c, 68, carY - 5, 26, 8, '#2b3346');
+      if (!lamps) PIX.rect(c, 68, carY - 5, 26, 2, '#5d6a84');
       PIX.rect(c, 70, carY - 3, 10, 5, '#7fd7ff');       // glass
       PIX.rect(c, 84, carY - 3, 8, 5, '#7fd7ff');
       PIX.disc(c, 66, carY + 14, 5, P.K); PIX.disc(c, 66, carY + 14, 3, '#3f465c');
       PIX.disc(c, 98, carY + 14, 5, P.K); PIX.disc(c, 98, carY + 14, 3, '#3f465c');
-      /* headlight */
-      c.globalAlpha = 0.2; c.fillStyle = '#fff3b0';
-      c.beginPath(); c.moveTo(108, carY + 4); c.lineTo(150, carY - 2); c.lineTo(150, carY + 14); c.closePath(); c.fill();
-      c.globalAlpha = 1;
-      /* rain, driving sideways */
-      for (let i = 0; i < 60; i++) {
-        const rx = (i * 37 + Math.round(t * 220)) % 190 - 5;
-        const ry = (i * 53) % 100;
-        PIX.rect(c, 180 - rx, ry, 2, 1, 'rgba(127,215,255,.22)');
+      /* headlight, if anybody would have it on */
+      if (lamps) {
+        c.globalAlpha = 0.2; c.fillStyle = '#fff3b0';
+        c.beginPath(); c.moveTo(108, carY + 4); c.lineTo(150, carY - 2);
+        c.lineTo(150, carY + 14); c.closePath(); c.fill();
+        c.globalAlpha = 1;
       }
-      const lab = PIXFONT.render('TO ' + dest, { scale: 1, color: P.q, shadow: null });
+      /* rain, driving sideways — and only when it is actually raining */
+      const drops = (typeof CITY !== 'undefined' && CITY.sky) ? CITY.sky().drops : 1;
+      if (drops > 0.3) {
+        for (let i = 0; i < Math.round(40 * drops); i++) {
+          const rx = (i * 37 + Math.round(t * 220)) % 190 - 5;
+          const ry = (i * 53) % 100;
+          PIX.rect(c, 180 - rx, ry, 2, 1, 'rgba(127,215,255,.22)');
+        }
+      }
+      const lab = PIXFONT.render('TO ' + dest, { scale: 1, color: P.W, shadow: P.K });
       c.drawImage(lab, Math.round(90 - lab.width / 2), 99);
       const dots = '.'.repeat(1 + (Math.floor(t * 2) % 3));
-      const d2 = PIXFONT.render(dots, { scale: 1, color: P.q, shadow: null });
+      const d2 = PIXFONT.render(dots, { scale: 1, color: P.W, shadow: P.K });
       c.drawImage(d2, Math.round(90 + lab.width / 2 + 2), 99);
     };
 
@@ -1585,6 +1612,82 @@ const CINE = {
   },
 
   /* you said a name out loud */
+  /* ============================================================
+     THE CONTRADICTION.
+
+     The best moment in this kind of game is the one where a story
+     comes apart, so it gets its own beat: the frame snaps to a
+     letterbox, a red rule sweeps across it, and the name lands on
+     top of the words the witness just said.
+
+     Deliberately short — a second and a half, no tap needed. This
+     fires in the middle of a conversation and a card that waits
+     for a click would stop the conversation dead.
+     ============================================================ */
+  async contradiction(name) {
+    const root = CINE.stage();
+    CINE.letterbox(true);
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const W = 240, H2 = 76;
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / (W + 12),
+      window.innerHeight / (H2 + 8))), 2, 8);
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H2 * K;
+    cv.className = 'pix anim-frame';
+    root.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    /* A NAME CAN BE ANY LENGTH. Rendered at a fixed scale, BAPTISTE LE GROS
+       came out half again as wide as the plate and the front and back of it
+       simply were not on screen. Step the scale down until it fits. */
+    const fit = (str, want, maxW, col) => {
+      for (let k = want; k > 1; k--) {
+        const cvv = PIXFONT.render(str, { scale: k, color: col, shadow: '#12101d' });
+        if (cvv.width <= maxW) return cvv;
+      }
+      return PIXFONT.render(str, { scale: 1, color: col, shadow: '#12101d' });
+    };
+    SFX.backfire && SFX.backfire();
+    const t0 = performance.now();
+    await new Promise(res => {
+      const draw = () => {
+        const t = Math.min(1, (performance.now() - t0) / 1500);
+        const sw = U.ease.outCubic ? U.ease.outCubic(Math.min(1, t * 2.2)) : Math.min(1, t * 2.2);
+        c.fillStyle = '#1a1218'; c.fillRect(0, 0, W, H2);
+        /* the hatching behind it, so the plate is not a flat rectangle */
+        for (let i = -H2; i < W; i += 6) {
+          ART.px(c, i + 40, 0, 2, H2, 'rgba(180,56,74,.10)');
+        }
+        /* THE RULE, sweeping across */
+        const w = Math.round(W * sw);
+        ART.px(c, 0, 34, w, 3, '#b8384a');
+        ART.px(c, 0, 34, w, 1, '#ff6a5e');
+        if (w < W) ART.px(c, w - 2, 30, 3, 11, '#ffd75e');
+        /* and the words, once it has got past them */
+        if (t > 0.30) {
+          const a = Math.min(1, (t - 0.30) / 0.22);
+          const w1 = fit('THAT IS NOT WHERE HE WAS', 2, W - 12, '#f4efe0');
+          c.globalAlpha = a;
+          c.drawImage(w1, Math.round(W / 2 - w1.width / 2), 14);
+          c.globalAlpha = 1;
+        }
+        if (t > 0.52) {
+          const a = Math.min(1, (t - 0.52) / 0.22);
+          const w2 = fit(name, 4, W - 12, '#ff6a5e');
+          c.globalAlpha = a;
+          c.drawImage(w2, Math.round(W / 2 - w2.width / 2), 46);
+          c.globalAlpha = 1;
+        }
+        if (t < 1) requestAnimationFrame(draw); else setTimeout(res, 320);
+      };
+      draw();
+    });
+    root.innerHTML = ''; root.className = 'hidden';
+    CINE.letterbox(false);
+  },
+
   async namedCard(sus, right) {
     const root = CINE.stage();
     CINE.letterbox(true);

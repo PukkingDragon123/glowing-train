@@ -191,7 +191,51 @@ const CASE_TUNING = {
   missHearts: 1,         // he is ready for you: one more heart on him
   missAggro: 0.12,
   missChips: 6,          // and the room charges you for the noise
+
+  /* ============================================================
+     ALIBIS.
+
+     Crossing faces off a wall is deduction; it is not police
+     work. Every suspect now says where he was, and one of them
+     is lying — and it is always the one you want, because the
+     innocent have nothing to invent.
+
+     Naming a frog whose story still stands works, but he has an
+     answer ready and the room hears it: he sits down with an
+     extra heart and the iron. Break the story first and he sits
+     down with nothing, and you go first.
+
+     Breaking one takes two things in the same place: the frog who
+     would have vouched for him, and one specific piece of
+     evidence to put on the counter in front of them.
+     ============================================================ */
+  /* THE PENALTY IS THE FIRST SHOT, NOT A HEART.
+
+     The first pass gave a frog with an intact story an extra heart AND
+     the opening move, and it took the good ending from one run in seven
+     to one in thirteen: in a game where a heart is one of six, an extra
+     one is not a cost, it is a different fight. Losing the initiative is
+     plenty — it says "he was ready for you" without rewriting the duel. */
+  alibiBonusHearts: 1,   // broken story: he comes to the table short
+  alibiHoldAggro: 0.10,  // story stands: he plays it harder
+  alibiPressCost: 10,    // minutes, to lean on a witness about a name
 };
+
+/* WHERE THEY SAY THEY WERE. One line each, and every one of them is
+   the sort of thing that is either trivially true or a whole day's
+   work to disprove. */
+const ALIBI_LINES = [
+  { at: 'laundry',   say: 'DROPPING OFF A SHIRT AT THE LAVERIE' },
+  { at: 'docks',     say: 'SIGNING FOR CARGO ON THE QUAI' },
+  { at: 'pawn',      say: 'IN THE QUEUE AT THE MONT-DE-PIETE' },
+  { at: 'diner',     say: 'AT THE CAFE DU PONT ALL AFTERNOON' },
+  { at: 'bar',       say: 'ASLEEP UPSTAIRS AT THE MOULIN' },
+  { at: 'tower',     say: 'WALKING THE CHAMP DE MARS' },
+  { at: 'arch',      say: 'IN A CAB AT THE ETOILE RANK' },
+  { at: 'butte',     say: 'HAVING HIS PORTRAIT DONE ON THE BUTTE' },
+  { at: 'museum',    say: 'IN THE COURTYARD OF THE MUSEE' },
+  { at: 'catacombs', say: 'DOWN IN THE CATACOMBES WITH THE KEEPER' },
+];
 
 /* ------------------------------------------------------------
    THE QUESTIONS you can put to the room. Each one is a feature

@@ -555,7 +555,64 @@ fs.mkdirSync(SHOTS, { recursive: true });
       } else errors.push('[pets] no animal in this room');
     }
 
-    /* the phone, with the night's work on it */
+    /* ---------- THE ALIBIS: press one, and break one ----------
+       Every suspect says where he was and one of them is lying. Both
+       halves have to work: a story that holds tells you it was not him,
+       and a story that comes apart is the best beat in the game. */
+    {
+      const set = await page.evaluate(() => {
+        if (!G2().case) CASE.build();
+        const c = G2().case;
+        const withAl = c.suspects.filter(s2 => s2.alibi).length;
+        /* AN ERRAND OUTRANKS A QUESTION, and rightly so — but it means the
+           first reply in the rack would be "yes I'll run your parcel"
+           rather than the story question, and the harness would answer
+           the wrong one. Settle anything owed here first. */
+        const q = STORY.questAt(G2().place);
+        if (q) G2().quests[q.id] = 'paid';
+        /* stage it: move the guilty frog's story to the room we are in,
+           and make sure the piece of evidence that breaks it is in hand */
+        const ri = c.realIdx;
+        c.suspects[ri].alibi.at = G2().place;
+        const lev = c.suspects[ri].alibi.lever;
+        const cl = c.clues.find(x => x.id === lev);
+        if (cl) cl.seen = true;
+        return { withAl, here: CASE.alibiAt(G2().place).length, armed: CASE.hasLever(ri), ri };
+      });
+      console.log('  alibis: ' + set.withAl + ' stated, ' + set.here
+        + ' checkable here, lever in hand: ' + set.armed);
+      if (!set.withAl) errors.push('[alibi] nobody stated where they were');
+      if (!set.armed) errors.push('[alibi] the lever never reached the coat');
+      /* the phone has to show them */
+      await page.evaluate(() => { PHONE.open('case'); });
+      await page.waitForTimeout(500);
+      await shot('14d-alibis');
+      await page.evaluate(() => { PHONE.close(); });
+      await page.waitForTimeout(300);
+      /* NEVER AWAIT DIALOGUE FROM IN HERE: the press talks, and a plate
+         waits for a tap only the harness can give it. */
+      await page.evaluate(() => { STORY.askWitness(G2().place, 'wit'); });
+      await page.waitForSelector('#tutor-root.asking .reply-btn', { timeout: 9000 })
+        .catch(() => errors.push('[alibi] nobody offered to talk about a name'));
+      await page.waitForTimeout(400);
+      await shot('14e-press');
+      await reply(0);                                    // the story question is first
+      await page.waitForTimeout(1200);
+      await clearPlates(12);
+      await page.waitForTimeout(600);
+      await clearPlates(10);
+      /* G2() LIVES IN THE PAGE. Reading it out here is a Node reference to
+         a browser global, which throws — and threw only once the press
+         actually worked and there was a name to look up. */
+      const broke = await page.evaluate(() => {
+        const i2 = CASE.broken();
+        return { i: i2, name: i2 >= 0 ? G2().case.suspects[i2].name : null };
+      });
+      console.log('  story broken: ' + (broke.name || 'none'));
+      if (broke.i < 0) errors.push('[alibi] the story never came apart');
+    }
+
+    /* the phone, with the day's work on it */
     await page.evaluate(() => { PHONE.open('job'); });
     await page.waitForTimeout(500);
     await shot('14b-phone-job');

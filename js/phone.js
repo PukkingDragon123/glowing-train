@@ -393,12 +393,25 @@ const PHONE = (() => {
     /* somebody at this stop is owed something, or owes you something */
     const errand = (typeof STORY !== 'undefined' && STORY.questsLive ? STORY.questsLive() : [])
       .find(x => x.q.place === p.id || (x.q.kind === 'carry' && x.q.to === p.id && x.state === 'taken'));
+    /* ============================================================
+       A STORY YOU CAN BREAK, AND WHETHER THE DOOR IS STILL OPEN.
+
+       These two together are the whole shape of the afternoon: a
+       name you are holding something against, the stop his story
+       is set at, and how long you have got before the frog who
+       could contradict him goes home.
+       ============================================================ */
+    const stories = (typeof CASE !== 'undefined' && CASE.alibiAt) ? CASE.alibiAt(p.id) : [];
+    const provable = stories.some(o => CASE.hasLever(o.i));
+    const shut = (typeof CITY.open === 'function') && !CITY.open(p.id);
+    const closing = !shut && CITY.untilShut && CITY.untilShut(p.id) <= 75;
     /* A NAME PLATE ON A PIN NEAR THE EDGE HANGS OFF THE PAPER. Anchor it
        inwards instead: the plate is wider than the pin, so a stop out at
        the wall has to grow its label back toward the middle. */
     const edge = p.x >= 68 ? ' tag-left' : p.x <= 30 ? ' tag-right' : '';
     const b = U.el('button', 'map-pin' + (here ? ' here' : '') + (hot ? ' hot' : '') +
-      (errand ? ' errand' : '') + (inCase ? '' : ' cold') + edge);
+      (errand ? ' errand' : '') + (inCase ? '' : ' cold') + edge +
+      (provable ? ' story' : '') + (shut ? ' shut' : closing ? ' closing' : ''));
     b.style.left = p.x + '%';
     b.style.top = p.y + '%';
     b.appendChild(SPR.clone(ART.art(p.icon || 'ic_map', k), 1));
@@ -415,6 +428,19 @@ const PHONE = (() => {
       const bang = U.el('span', 'pin-bang');
       bang.appendChild(line('!', k, '#ffd75e'));
       b.appendChild(bang);
+    }
+    /* a story here you can take apart */
+    if (provable) {
+      const st = U.el('span', 'pin-story');
+      st.appendChild(line('?', k, '#ff6a5e'));
+      b.appendChild(st);
+    }
+    /* and what the clock is doing to the door */
+    if (shut || closing) {
+      const cl = U.el('span', 'pin-shut');
+      cl.appendChild(line(shut ? 'SHUT' : CITY.untilShut(p.id) + 'M',
+        Math.max(1, k - 1), shut ? '#8d8672' : '#ff9a6e', null));
+      b.appendChild(cl);
     }
     b.onclick = () => {
       if (here) { SFX.tick && SFX.tick(); return; }
@@ -664,6 +690,18 @@ const PHONE = (() => {
     const foot = U.el('div', 'ph-foot');
     const p = CITY.here();
     foot.appendChild(line(p ? p.blurb : '', Math.max(1, k - 1), '#8fb3a0', null));
+    /* WHAT IS ABOUT TO SHUT. The single most useful line on the phone:
+       the frogs who know things go home, and the order the city closes in
+       is the order you have to work it. */
+    const soon = CITY.closingSoon ? CITY.closingSoon(120) : [];
+    if (soon.length) {
+      const id = soon[0], h = CITY.hours(id);
+      const mins = CITY.untilShut(id);
+      foot.appendChild(line((CITY.PLACES[id] ? CITY.PLACES[id].short : id)
+        + ' SHUTS AT ' + Math.floor(h.shut / 60) + ':00'
+        + '  -  ' + mins + ' MINUTES',
+        Math.max(1, k - 1), mins < 45 ? '#ff9a6e' : '#e0c07a', null));
+    }
     foot.appendChild(line('A DRIVE COSTS ' + CITY.COST.travel + ' MINUTES OF DAYLIGHT',
       Math.max(1, k - 1), '#5f8f7f', null));
     wrap.appendChild(foot);
@@ -716,6 +754,45 @@ const PHONE = (() => {
       list.appendChild(row);
     });
     wrap.appendChild(list);
+
+    /* ============================================================
+       WHERE THEY SAY THEY WERE.
+
+       The other half of the file. Every face on that wall told
+       somebody where he was this afternoon, and the only way to
+       settle it is to go to that stop and ask the frog who would
+       have seen him — with something in your hand, if he is lying.
+
+       Three states, and the phone says which: not checked yet,
+       checked and it held, or checked and it came apart.
+       ============================================================ */
+    if (c0.suspects.some(s2 => s2.alibi)) {
+      const ah = U.el('div', 'ph-head');
+      ah.appendChild(line('WHERE THEY SAY THEY WERE', k, '#eae4d0'));
+      wrap.appendChild(ah);
+      const al = U.el('div', 'ph-clues');
+      c0.suspects.forEach((s2, i) => {
+        const a = s2.alibi;
+        if (!a) return;
+        const st = a.broken ? ' broke' : a.checked ? ' got' : '';
+        const row = U.el('div', 'ph-alibi' + st + (stand[i] ? '' : ' out'));
+        row.appendChild(SPR.clone(ART.art(a.broken ? 'ic_star'
+          : a.checked ? 'ic_case' : 'ic_map', Math.max(1, k - 1)), 1));
+        const col = U.el('div', 'ph-cluecol');
+        col.appendChild(line(s2.name, Math.max(1, k - 1),
+          a.broken ? '#ff6a5e' : stand[i] ? '#eae4d0' : '#57585c', null));
+        col.appendChild(line(a.say, 1,
+          a.broken ? '#ff9a6e' : a.checked ? '#8fb3a0' : '#a8977a', null));
+        col.appendChild(line(
+          a.broken ? 'THAT IS A LIE AND YOU CAN PROVE IT'
+            : a.checked ? 'CHECKED OUT. IT WAS NOT HIM.'
+            : (CASE.hasLever(i) ? 'GO AND ASK. YOU HAVE SOMETHING.'
+              : 'NOBODY HAS CHECKED IT'),
+          1, a.broken ? '#ffd75e' : '#6f6252', null));
+        al.appendChild(row);
+      });
+      wrap.appendChild(al);
+    }
     return wrap;
   }
 

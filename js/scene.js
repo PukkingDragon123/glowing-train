@@ -1562,27 +1562,87 @@ const SCENE = (() => {
      free. Standing on the walk frame and twitching to the next one
      (which is what this used to do) reads as a flinch, not a breath.
      ============================================================ */
+  /* ============================================================
+     STANDING ABOUT.
+
+     Breathing, a weight shift every nine seconds, and — new — a
+     slow sway, a shoulder roll, and the small settle somebody
+     does when they have been on their feet a while. Everything is
+     seeded off the actor's own position so a room full of frogs
+     never moves as one animal.
+     ============================================================ */
   function idleOf(T, seed) {
     const t = T * 0.85 + (seed % 17) * 0.7;
     const rise = Math.sin(t) > 0.35 ? 1 : 0;              // the chest, 1px
     const ph = (t * 0.11) % 1;                            // a shift every ~9s
     const sway = ph < 0.1 ? Math.sin((ph / 0.1) * Math.PI) : 0;
-    return { rise, lean: Math.round(sway * 1.6) };
+    /* the long sway: a pixel out and back over about six seconds, which is
+       what standing still actually looks like */
+    const drift = Math.sin(t * 0.31 + seed) * 0.9;
+    /* and the shoulder roll, once in a while */
+    const rl = (t * 0.047 + (seed % 7) / 7) % 1;
+    const roll = rl < 0.06 ? Math.sin((rl / 0.06) * Math.PI) : 0;
+    return {
+      rise: rise + (roll > 0.5 ? 1 : 0),
+      lean: Math.round(sway * 1.6 + drift),
+      roll,
+    };
+  }
+
+  /* ============================================================
+     HOW HE IS WALKING.
+
+     One walk cycle is a machine. A gait is a mood: a frog the
+     city likes has a hop in the middle of his stride, and a frog
+     on his last two hearts drags one foot and rides low. Both are
+     read off the game state, not off a timer, so the way he
+     crosses a room tells you how the day is going before you look
+     at anything else.
+     ============================================================ */
+  function gaitOf(T) {
+    const speed = Math.hypot(Math.abs(me.v), Math.abs(me.vz) * (band() || 1));
+    if (speed < 8) return { hop: 0, drop: 0, tip: 0 };
+    /* where in the stride he is: the walk counter, not the clock */
+    const ph = (me.walk % 1);
+    const k = (typeof STORY !== 'undefined' && STORY.karma) ? STORY.karma() : null;
+    const hurt = (typeof G !== 'undefined' && (G.hearts || 6) <= 2);
+    const glad = k && k.band >= 2;
+    /* THE HOP: up on the pass of the stride, and only if he is pleased */
+    const hop = glad ? Math.max(0, Math.sin(ph * Math.PI * 2)) * 2 : 0;
+    /* THE DRAG: down on one foot of the two, and only if he is hurt */
+    const drop = hurt ? (ph < 0.5 ? 1 : 0) : 0;
+    /* everybody leans a little into where they are going */
+    const tip = Math.round(Math.sign(me.v) * Math.min(1, Math.abs(me.v) / 60));
+    return { hop: Math.round(hop), drop, tip };
   }
 
   function drawActor(c, a, T) {
-    const face = a.face === undefined ? -1 : a.face;
+    /* HE LOOKS AT YOU WHEN YOU GET CLOSE. A frog who keeps facing the wall
+       while a detective walks up to him is furniture; turning his head is
+       one line and it makes the room feel occupied. */
+    const close = Math.abs(a.x - me.x) < 44;
+    const face = close ? (me.x > a.x ? 1 : -1)
+      : (a.face === undefined ? -1 : a.face);
     /* an actor mid-line wears the talking face; the rest of the time he
        wears whatever his mood does when it is left alone */
     const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
     const r = rig(a, a.frame || 0, face, a.back, ex);
     const fy = a.y === undefined ? floorAt(a.z) : a.y;
-    const id = a.still ? { rise: 0, lean: 0 } : idleOf(T, Math.round(a.x));
+    const id = a.still ? { rise: 0, lean: 0, roll: 0 } : idleOf(T, Math.round(a.x));
     const sc = scaleAt(a.z);
+    /* AND WHAT HE IS DOING WITH HIS HANDS. A witness at a counter is
+       working: wiping it down, sorting a rack, turning a page. One bob
+       and one lean on their own slow loops is enough to sell it. */
+    let work = 0;
+    if (a.busyAt) {
+      const wp = (T * a.busyAt + (a.x % 11) * 0.3) % 1;
+      work = Math.round(Math.sin(wp * Math.PI * 2) * 2);
+    }
     const w = Math.max(1, Math.round(r.w * sc));
     const h = Math.max(1, Math.round(r.h * sc) - id.rise);
-    ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(0,0,0,.32)');
-    c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
+    ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
+    c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
+      Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
   }
 
   /* ============================================================
@@ -1625,11 +1685,17 @@ const SCENE = (() => {
     /* the reach: a lean toward whatever he is doing, and a little crouch */
     const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
     const lean = Math.round(rc * 3) * (me.reachTo || 1);
+    const g = gaitOf(T);
     const w = Math.max(1, Math.round(r.w * sc * (1 + sq - st * 0.5 + rc * 0.04)));
     const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
-    ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
-    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean + lean, Math.round(fy - h + 1), w, h);
+    /* THE SHADOW STAYS ON THE FLOOR while he hops off it, which is the only
+       thing that makes a hop read as leaving the ground rather than as the
+       whole sprite sliding up the screen. */
+    ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2,
+      'rgba(52,44,32,' + (0.38 - g.hop * 0.06).toFixed(2) + ')');
+    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean + lean + g.tip,
+      Math.round(fy - h + 1 - g.hop + g.drop), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a

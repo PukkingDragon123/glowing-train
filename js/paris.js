@@ -953,7 +953,7 @@ const PARIS = (() => {
         tag: 'THE CUP MAN', tagCol: PIX.PAL.R, job: 'cups' },
       { id: 'wit', x: 600, z: 0.1, key: 'waiter',
         def: typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null, face: -1,
-        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased' },
+        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased', busyAt: 0.65 },
     ];
 
     const eggs = [

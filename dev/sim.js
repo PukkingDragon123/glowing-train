@@ -275,6 +275,8 @@ function driver() {
       boardFull: STORY.canFinish(), badge: !G.badgePulled,
       searches: G.simSearches || 0, nightsOut: G.simNightsOut || 0,
       errands: G.simErrands || 0, looks: G.simLooks || 0,
+      presses: G.simPresses || 0, broke: G.simBroke || 0,
+      shutOut: G.simShutOut || 0,
       named: G.run.called, misnamed: G.run.misnamed,
     };
   }
@@ -342,6 +344,7 @@ function driver() {
     CITY.reset();                          // a fresh night per lead
     G.place = 'precinct';
     let guard = 0, searches = 0, errands = 0, looks = 0;
+    let presses = 0, broke = 0, shutOut = 0;
     while (!CITY.nightOver() && CASE.left() > 1 && guard++ < 80) {
       /* somewhere in TONIGHT'S FILE with anything left to turn over. The
          city has eleven stops and the case only touches seven: a bot that
@@ -378,16 +381,44 @@ function driver() {
         const clue = CITY.plantedAt(to, prop);
         if (clue) clue.seen = true;
       }
-      /* and asks the witness something on the way out */
-      if (Math.random() < 0.4) {
-        const i = (c.asks || []).findIndex((a, k) => CASE.canAsk(k));
-        if (i >= 0) { CASE.ask(i); CITY.spend('ask'); }
-      }
+      /* WHOSE STORY IS SET HERE.
+
+         The counter frog knows whether the name on that wall was really
+         standing where he says he was, and a bot that never asks is
+         measuring a game with half its police work missing. It asks
+         whenever there is a story to check here, and it can only break
+         the one story that is a lie if it has already turned over the
+         piece of evidence that proves it. */
+      if (CITY.open ? CITY.open(to) : true) {
+        const stories = CASE.alibiAt(to);
+        /* A DETECTIVE LEANS ON THE ONE HE CAN PROVE. The phone tells the
+           player which story he is holding something against, so a bot
+           that presses at random is measuring a game nobody plays: it
+           takes the provable one first and only guesses if there is
+           nothing better in the room. */
+        const armed = stories.filter(o => CASE.hasLever(o.i));
+        const pick = armed.length ? armed
+          : (Math.random() < 0.55 ? stories : []);
+        if (pick.length) {
+          const o = pick[Math.floor(Math.random() * pick.length)];
+          const r2 = CASE.press(o.i);
+          if (r2) { presses++; if (r2.broken) broke = 1; }
+          CITY.spend('talk', 1.7);
+        }
+        /* and asks the witness something on the way out */
+        if (Math.random() < 0.4) {
+          const i = (c.asks || []).findIndex((a, k) => CASE.canAsk(k));
+          if (i >= 0) { CASE.ask(i); CITY.spend('ask'); }
+        }
+      } else shutOut++;
     }
     CITY.spend('lineup');
     G.simSearches = (G.simSearches || 0) + searches;
     G.simLooks = (G.simLooks || 0) + looks;
     G.simErrands = (G.simErrands || 0) + errands;
+    G.simPresses = (G.simPresses || 0) + presses;
+    G.simBroke = (G.simBroke || 0) + broke;
+    G.simShutOut = (G.simShutOut || 0) + shutOut;
     G.simNightsOut = (G.simNightsOut || 0) + (CITY.nightOver() ? 1 : 0);
     const stand = CASE.standing();
     const live = stand.map((ok, i) => ok ? i : -1).filter(i => i >= 0);
@@ -399,6 +430,7 @@ function driver() {
   let crashes = 0, finales = 0, boards = 0, badges = 0, goodEndings = 0;
   let chapters = 0, cards = 0, wards = 0, duelsWon = 0, shots = 0, gunSum = 0;
   let searches = 0, nightsOut = 0, named = 0, misnamed = 0, errands = 0, looks = 0;
+  let presses = 0, broke = 0, shutOut = 0;
   const collapse = {};
 
   for (let run = 0; run < N; run++) {
@@ -407,6 +439,7 @@ function driver() {
       chapters += r.chapter; cards += r.cards; wards += r.wardTrips;
       searches += r.searches; nightsOut += r.nightsOut; errands += r.errands;
       looks += r.looks;
+      presses += r.presses; broke += r.broke; shutOut += r.shutOut;
       named += r.named; misnamed += r.misnamed;
       if (r.finale) finales++;
       if (r.boardFull) boards++;
@@ -435,6 +468,9 @@ function driver() {
     '· avg gun idx:', (gunSum / N).toFixed(2));
   console.log('errands run: avg', (errands / N).toFixed(2), 'per run ·',
     'glass looks: avg', (looks / N).toFixed(1), 'per run');
+  console.log('alibis: avg', (presses / N).toFixed(2), 'stories checked ·',
+    (broke / N).toFixed(2), 'broken ·',
+    (shutOut / N).toFixed(2), 'arrivals after closing time');
   console.log('the investigation: avg', (searches / N).toFixed(1), 'props searched per run ·',
     (named / N).toFixed(2), 'named right ·', (misnamed / N).toFixed(2), 'named wrong ·',
     (nightsOut / N).toFixed(2), 'nights ran out');

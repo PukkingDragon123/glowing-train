@@ -1663,6 +1663,22 @@ const STORY = {
   /* ---------- a witness ---------- */
   async askWitness(place, who) {
     if (CINE.busy) return;
+    /* ============================================================
+       HE WENT HOME.
+
+       Every stop keeps hours, and the frog who knows something is
+       only behind that counter between them. Turn up at half past
+       five for the launderer and you are talking to a locked door,
+       and that is the clock doing what a clock is for.
+       ============================================================ */
+    if (CITY.open && !CITY.open(place)) {
+      const h = CITY.hours(place);
+      await TUTOR.say((h && h.who ? h.who : 'WHOEVER WORKS HERE')
+        + ' WENT HOME AT ' + STORY.hh(h ? h.shut : 0) + '.',
+        { name: 'A LOCKED DOOR', nameCol: PIX.PAL.q, rim: PIX.PAL.t,
+          hold: 2100, top: true });
+      return;
+    }
     /* HE KNOWS WHAT YOU DID. Opening a frog's parcel buys you the evidence
        inside it and costs you everything he was ever going to tell you. */
     if (G.burned && G.burned[place]) {
@@ -1679,23 +1695,80 @@ const STORY = {
     const c = G.case;
     if (!c) return;
     const open = (c.asks || []).map((a, i) => i).filter(i => CASE.canAsk(i));
-    if (!open.length || CASE.left() <= 1) {
+    /* ============================================================
+       WHOSE STORY IS SET IN THIS ROOM.
+
+       Somebody on that wall told the captain he was standing right
+       here this afternoon, and the frog behind this counter is the
+       one who would know. That is a different question from any of
+       the descriptions, and it goes at the top of the rack.
+       ============================================================ */
+    const stories = CASE.alibiAt(place);
+    if (!open.length && !stories.length) {
       await TUTOR.say('HE HAS TOLD YOU EVERYTHING HE IS GOING TO.',
         { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, hold: 1900, top: true });
       return;
     }
+    if (!open.length || CASE.left() <= 1) {
+      /* nothing left to ask about faces — but a story might still be
+         standing here, and that is the whole rest of the job */
+      if (!stories.length) {
+        await TUTOR.say('HE HAS TOLD YOU EVERYTHING HE IS GOING TO.',
+          { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, hold: 1900, top: true });
+        return;
+      }
+    }
     /* fog and hard rain cost him a detail: one fewer question on offer */
     const sky = CITY.sky();
-    const show = open.slice(0, sky.wit < 0 ? Math.max(1, open.length - 1) : open.length);
+    const show = (CASE.left() <= 1 ? [] : open)
+      .slice(0, sky.wit < 0 ? Math.max(1, open.length - 1) : open.length);
     const art = SPR.frogCustom('wit:' + place, PLACE_WITNESS[place] || BARMAN_DEF);
-    const replies = show.map(i => ({ label: c.asks[i].ask }));
+    const replies = stories.map(o => ({
+      label: 'WAS ' + o.s.name + ' IN HERE TODAY?',
+      note: CASE.hasLever(o.i) ? 'YOU HAVE SOMETHING THAT SAYS OTHERWISE'
+        : 'HIS STORY PUTS HIM HERE',
+    })).concat(show.map(i => ({ label: c.asks[i].ask })));
     replies.push({ label: 'NOTHING. FORGET IT.', note: 'LEAVE HIM ALONE', dim: true });
     const pickIdx = await TUTOR.ask(
       sky.wit < 0 ? 'I WAS HERE. I DID NOT SEE MUCH IN THAT ' + sky.word + '.'
-        : 'I WAS HERE ALL NIGHT. ASK ME SOMETHING.',
+        : 'I WAS HERE ALL DAY. ASK ME SOMETHING.',
       replies, { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, art });
-    if (pickIdx < 0 || pickIdx >= show.length) return;
-    const i = show[pickIdx];
+    if (pickIdx < 0 || pickIdx >= stories.length + show.length) return;
+
+    /* ---- the story questions come first in the rack ---- */
+    if (pickIdx < stories.length) {
+      const o = stories[pickIdx];
+      const r = CASE.press(o.i);
+      CITY.spend('talk', CASE_TUNING.alibiPressCost / (CITY.COST.talk || 6));
+      await STORY.converse(who, async () => {
+        if (!r) return;
+        if (r.broken) {
+          await TUTOR.say('HIM? NO. AND I WOULD KNOW.',
+            { name: 'A WITNESS', nameCol: PIX.PAL.R, rim: PIX.PAL.r, art });
+          if (r.why) {
+            await TUTOR.say(r.why + ' — AND HE SAID HE WAS HERE.',
+              { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+          }
+          STORY.note(r.name + " CANNOT ACCOUNT FOR HIMSELF.");
+          STORY.karmaHit && STORY.karmaHit('work');
+          await CINE.contradiction(r.name);
+        } else if (r.needs) {
+          await TUTOR.say('HE WAS HERE. THAT IS WHAT I TOLD THE OTHER ONE.',
+            { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, art });
+          await TUTOR.say('HE IS LYING AND I CANNOT PROVE IT YET.',
+            { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+        } else {
+          await TUTOR.say('HIM? YES. ALL AFTERNOON.',
+            { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, art });
+          await TUTOR.say('THEN IT IS NOT HIM. ONE FEWER STORY TO CHECK.',
+            { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+        }
+      });
+      if (CITY.nightOver()) await STORY.dawn();
+      return;
+    }
+
+    const i = show[pickIdx - stories.length];
     const a = CASE.ask(i);
     CITY.spend('ask');
     if (!a) return;
@@ -1709,6 +1782,12 @@ const STORY = {
         { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
     });
     if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* an hour, as somebody would say it */
+  hh(m) {
+    const h = Math.floor((m || 0) / 60) % 24, mm = (m || 0) % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (mm < 10 ? '0' : '') + mm;
   },
 
   async placeTalk(place, who) {

@@ -3170,6 +3170,42 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .map-holder > canvas.map-route {
   position: absolute; left: 0; top: 0; pointer-events: none;
 }
+
+/* ============================================================
+   THE ALIBI BOARD in the case file. Three states, and each one
+   has to be legible at a glance: unchecked, checked and it held,
+   checked and it came apart.
+   ============================================================ */
+.ph-alibi {
+  display: flex; align-items: flex-start; gap: 8px;
+  border-left: 4px solid #4a3826; padding: 4px 0 4px 8px;
+  background: rgba(233,220,188,.04);
+}
+.ph-alibi.got { border-left-color: #6f6252; background: rgba(233,220,188,.07); }
+.ph-alibi.broke {
+  border-left-color: #ff6a5e; background: rgba(184,56,74,.16);
+  box-shadow: inset 0 0 0 1px rgba(255,106,94,.22);
+}
+.ph-alibi.out { opacity: .45; }
+
+/* ============================================================
+   TWO MORE THINGS THE PLAN HAS TO SAY.
+
+   A red query over a stop means there is a story set there that
+   you are already holding something against — go and break it.
+   A stop that is shut, or about to be, wears the clock instead:
+   the frogs who know things go home, and the order the city
+   closes in is the order the afternoon has to be worked.
+   ============================================================ */
+.pin-story { position: absolute; top: -7px; left: -6px; z-index: 2; }
+.map-pin.story::before { background: #ffd0c8; box-shadow: 0 0 0 2px #8a2434; }
+.pin-shut {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(28,22,12,.88); padding: 0 2px; white-space: nowrap;
+}
+.map-pin.shut { opacity: .5; }
+.map-pin.shut::before { background: rgba(200,192,172,.5); box-shadow: 0 0 0 2px rgba(74,61,40,.4); }
+.map-pin.closing::before { box-shadow: 0 0 0 2px #b8564a; }
 </style>
 </head>
 <body>
@@ -3910,7 +3946,51 @@ const CASE_TUNING = {
   missHearts: 1,         // he is ready for you: one more heart on him
   missAggro: 0.12,
   missChips: 6,          // and the room charges you for the noise
+
+  /* ============================================================
+     ALIBIS.
+
+     Crossing faces off a wall is deduction; it is not police
+     work. Every suspect now says where he was, and one of them
+     is lying — and it is always the one you want, because the
+     innocent have nothing to invent.
+
+     Naming a frog whose story still stands works, but he has an
+     answer ready and the room hears it: he sits down with an
+     extra heart and the iron. Break the story first and he sits
+     down with nothing, and you go first.
+
+     Breaking one takes two things in the same place: the frog who
+     would have vouched for him, and one specific piece of
+     evidence to put on the counter in front of them.
+     ============================================================ */
+  /* THE PENALTY IS THE FIRST SHOT, NOT A HEART.
+
+     The first pass gave a frog with an intact story an extra heart AND
+     the opening move, and it took the good ending from one run in seven
+     to one in thirteen: in a game where a heart is one of six, an extra
+     one is not a cost, it is a different fight. Losing the initiative is
+     plenty — it says "he was ready for you" without rewriting the duel. */
+  alibiBonusHearts: 1,   // broken story: he comes to the table short
+  alibiHoldAggro: 0.10,  // story stands: he plays it harder
+  alibiPressCost: 10,    // minutes, to lean on a witness about a name
 };
+
+/* WHERE THEY SAY THEY WERE. One line each, and every one of them is
+   the sort of thing that is either trivially true or a whole day's
+   work to disprove. */
+const ALIBI_LINES = [
+  { at: 'laundry',   say: 'DROPPING OFF A SHIRT AT THE LAVERIE' },
+  { at: 'docks',     say: 'SIGNING FOR CARGO ON THE QUAI' },
+  { at: 'pawn',      say: 'IN THE QUEUE AT THE MONT-DE-PIETE' },
+  { at: 'diner',     say: 'AT THE CAFE DU PONT ALL AFTERNOON' },
+  { at: 'bar',       say: 'ASLEEP UPSTAIRS AT THE MOULIN' },
+  { at: 'tower',     say: 'WALKING THE CHAMP DE MARS' },
+  { at: 'arch',      say: 'IN A CAB AT THE ETOILE RANK' },
+  { at: 'butte',     say: 'HAVING HIS PORTRAIT DONE ON THE BUTTE' },
+  { at: 'museum',    say: 'IN THE COURTYARD OF THE MUSEE' },
+  { at: 'catacombs', say: 'DOWN IN THE CATACOMBES WITH THE KEEPER' },
+];
 
 /* ------------------------------------------------------------
    THE QUESTIONS you can put to the room. Each one is a feature
@@ -12413,6 +12493,40 @@ const CASE = {
       accused: -1, right: null, done: false,
       realIdx: suspects.findIndex(s => s.real),
     };
+    /* ============================================================
+       WHERE THEY SAY THEY WERE.
+
+       Every suspect gets a story, and each story is set at a
+       different stop so the board never sends you to the same
+       place twice. The real one's story is the lie, and it can
+       only be broken by putting one specific piece of evidence in
+       front of the frog who would have vouched for him — so the
+       clue you dug out of a drain has a second use, and the stop
+       you had no reason to visit suddenly has one.
+       ============================================================ */
+    {
+      const c = G.case;
+      const inCase = CASE.stops();
+      /* the stops with somebody in them to lie about, case stops first so
+         the alibi trail mostly overlaps the hunt rather than doubling it */
+      const pool = ALIBI_LINES.filter(a => inCase.indexOf(a.at) >= 0)
+        .concat(ALIBI_LINES.filter(a => inCase.indexOf(a.at) < 0));
+      U.shuffle(rng, pool);
+      /* the lever: a clue in this case's deck, so it is always findable */
+      const lever = c.clues.length ? U.pick(rng, c.clues).id : null;
+      c.suspects.forEach((sus, i) => {
+        const line = pool[i % pool.length];
+        sus.alibi = {
+          at: line.at, say: line.say,
+          /* only the guilty need a story that will not survive a look */
+          lie: !!sus.real,
+          lever: sus.real ? lever : null,
+          checked: false, broken: false,
+        };
+      });
+      c.pressed = 0;
+    }
+
     /* the papers you took off the last one: a clue is already turned over */
     const deck2 = G.case.clues;
     while ((G.intel || 0) > 0 && deck2.some(c => !c.seen)) {
@@ -12491,6 +12605,62 @@ const CASE = {
     return CASE.standing().filter(Boolean).length;
   },
 
+  /* ============================================================
+     THE ALIBIS.
+     ============================================================ */
+
+  /* whose story is set at this stop, and has not been settled yet */
+  alibiAt(place) {
+    const c = G.case;
+    if (!c || c.done) return [];
+    return c.suspects
+      .map((s, i) => ({ i, s }))
+      .filter(o => o.s.alibi && o.s.alibi.at === place && !o.s.alibi.checked);
+  },
+
+  /* have you got the thing that would break his story in your hand */
+  hasLever(i) {
+    const c = G.case;
+    const a = c && c.suspects[i] && c.suspects[i].alibi;
+    if (!a || !a.lever) return false;
+    return c.clues.some(cl => cl.id === a.lever && cl.seen);
+  },
+
+  /* THE PRESS. You are standing at the stop his story is set at, with the
+     frog who would have vouched for him in front of you. Either the story
+     holds — which is the truth, and you have learned that much — or you
+     put the evidence on the counter and it comes apart.
+
+     Returns what happened, or null if there was nothing to press. */
+  press(i) {
+    const c = G.case;
+    if (!c || c.done) return null;
+    const sus = c.suspects[i];
+    if (!sus || !sus.alibi || sus.alibi.checked) return null;
+    sus.alibi.checked = true;
+    c.pressed = (c.pressed || 0) + 1;
+    if (!sus.alibi.lie) {
+      return { name: sus.name, held: true, broken: false, why: null };
+    }
+    if (!CASE.hasLever(i)) {
+      /* he is lying and you cannot prove it yet. The check is spent —
+         that is the cost of leaning on somebody with nothing in your
+         hand — but the story goes back on the board as unsettled. */
+      sus.alibi.checked = false;
+      return { name: sus.name, held: true, broken: false, needs: true };
+    }
+    sus.alibi.broken = true;
+    const cl = c.clues.find(x => x.id === sus.alibi.lever);
+    return { name: sus.name, held: false, broken: true, why: cl ? cl.text : null };
+  },
+
+  /* is anybody's story in pieces */
+  broken() {
+    const c = G.case;
+    if (!c) return -1;
+    return c.suspects.findIndex(s => s.alibi && s.alibi.broken);
+  },
+
   /* ---- asking out loud ---- */
   canAsk(i) {
     const c = G.case;
@@ -12546,6 +12716,30 @@ const CASE = {
     c.accused = i;
     c.right = !!c.suspects[i].real;
     c.done = true;
+    /* ============================================================
+       DID YOU BREAK HIS STORY FIRST?
+
+       Naming the right frog is still naming the right frog. What
+       changes is what he brings to the table: a frog whose story
+       is intact has an answer ready and plays it hard, and a frog
+       whose story is in pieces sits down a heart short.
+
+       NOT TURN ORDER. The first pass handed him the opening move,
+       and the opening move is not this layer's to hand out: the
+       engine drives whose turn it is off the duel, and reaching in
+       from the accusation left the table waiting for a shot that
+       nothing was going to fire. Aggression and hearts are the two
+       dials the duel already reads, so those are the two to turn.
+       ============================================================ */
+    const al = c.suspects[i].alibi;
+    G.caseClean = !!(al && al.broken);
+    if (c.right && al && !al.broken) {
+      G.duel.opp.aggro = Math.min(0.94, G.duel.opp.aggro + CASE_TUNING.alibiHoldAggro);
+      G.caseLawyered = true;
+    } else if (c.right && al && al.broken) {
+      G.duel.opp.hp = Math.max(1, G.duel.opp.hp - CASE_TUNING.alibiBonusHearts);
+      G.caseLawyered = false;
+    }
     if (c.right) {
       G.caseBonus = true;
       G.run.called++;
@@ -15156,27 +15350,87 @@ const SCENE = (() => {
      free. Standing on the walk frame and twitching to the next one
      (which is what this used to do) reads as a flinch, not a breath.
      ============================================================ */
+  /* ============================================================
+     STANDING ABOUT.
+
+     Breathing, a weight shift every nine seconds, and — new — a
+     slow sway, a shoulder roll, and the small settle somebody
+     does when they have been on their feet a while. Everything is
+     seeded off the actor's own position so a room full of frogs
+     never moves as one animal.
+     ============================================================ */
   function idleOf(T, seed) {
     const t = T * 0.85 + (seed % 17) * 0.7;
     const rise = Math.sin(t) > 0.35 ? 1 : 0;              // the chest, 1px
     const ph = (t * 0.11) % 1;                            // a shift every ~9s
     const sway = ph < 0.1 ? Math.sin((ph / 0.1) * Math.PI) : 0;
-    return { rise, lean: Math.round(sway * 1.6) };
+    /* the long sway: a pixel out and back over about six seconds, which is
+       what standing still actually looks like */
+    const drift = Math.sin(t * 0.31 + seed) * 0.9;
+    /* and the shoulder roll, once in a while */
+    const rl = (t * 0.047 + (seed % 7) / 7) % 1;
+    const roll = rl < 0.06 ? Math.sin((rl / 0.06) * Math.PI) : 0;
+    return {
+      rise: rise + (roll > 0.5 ? 1 : 0),
+      lean: Math.round(sway * 1.6 + drift),
+      roll,
+    };
+  }
+
+  /* ============================================================
+     HOW HE IS WALKING.
+
+     One walk cycle is a machine. A gait is a mood: a frog the
+     city likes has a hop in the middle of his stride, and a frog
+     on his last two hearts drags one foot and rides low. Both are
+     read off the game state, not off a timer, so the way he
+     crosses a room tells you how the day is going before you look
+     at anything else.
+     ============================================================ */
+  function gaitOf(T) {
+    const speed = Math.hypot(Math.abs(me.v), Math.abs(me.vz) * (band() || 1));
+    if (speed < 8) return { hop: 0, drop: 0, tip: 0 };
+    /* where in the stride he is: the walk counter, not the clock */
+    const ph = (me.walk % 1);
+    const k = (typeof STORY !== 'undefined' && STORY.karma) ? STORY.karma() : null;
+    const hurt = (typeof G !== 'undefined' && (G.hearts || 6) <= 2);
+    const glad = k && k.band >= 2;
+    /* THE HOP: up on the pass of the stride, and only if he is pleased */
+    const hop = glad ? Math.max(0, Math.sin(ph * Math.PI * 2)) * 2 : 0;
+    /* THE DRAG: down on one foot of the two, and only if he is hurt */
+    const drop = hurt ? (ph < 0.5 ? 1 : 0) : 0;
+    /* everybody leans a little into where they are going */
+    const tip = Math.round(Math.sign(me.v) * Math.min(1, Math.abs(me.v) / 60));
+    return { hop: Math.round(hop), drop, tip };
   }
 
   function drawActor(c, a, T) {
-    const face = a.face === undefined ? -1 : a.face;
+    /* HE LOOKS AT YOU WHEN YOU GET CLOSE. A frog who keeps facing the wall
+       while a detective walks up to him is furniture; turning his head is
+       one line and it makes the room feel occupied. */
+    const close = Math.abs(a.x - me.x) < 44;
+    const face = close ? (me.x > a.x ? 1 : -1)
+      : (a.face === undefined ? -1 : a.face);
     /* an actor mid-line wears the talking face; the rest of the time he
        wears whatever his mood does when it is left alone */
     const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
     const r = rig(a, a.frame || 0, face, a.back, ex);
     const fy = a.y === undefined ? floorAt(a.z) : a.y;
-    const id = a.still ? { rise: 0, lean: 0 } : idleOf(T, Math.round(a.x));
+    const id = a.still ? { rise: 0, lean: 0, roll: 0 } : idleOf(T, Math.round(a.x));
     const sc = scaleAt(a.z);
+    /* AND WHAT HE IS DOING WITH HIS HANDS. A witness at a counter is
+       working: wiping it down, sorting a rack, turning a page. One bob
+       and one lean on their own slow loops is enough to sell it. */
+    let work = 0;
+    if (a.busyAt) {
+      const wp = (T * a.busyAt + (a.x % 11) * 0.3) % 1;
+      work = Math.round(Math.sin(wp * Math.PI * 2) * 2);
+    }
     const w = Math.max(1, Math.round(r.w * sc));
     const h = Math.max(1, Math.round(r.h * sc) - id.rise);
-    ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(0,0,0,.32)');
-    c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean, Math.round(fy - h + 1), w, h);
+    ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
+    c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
+      Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
   }
 
   /* ============================================================
@@ -15219,11 +15473,17 @@ const SCENE = (() => {
     /* the reach: a lean toward whatever he is doing, and a little crouch */
     const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
     const lean = Math.round(rc * 3) * (me.reachTo || 1);
+    const g = gaitOf(T);
     const w = Math.max(1, Math.round(r.w * sc * (1 + sq - st * 0.5 + rc * 0.04)));
     const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
-    ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2, 'rgba(0,0,0,.38)');
-    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean + lean, Math.round(fy - h + 1), w, h);
+    /* THE SHADOW STAYS ON THE FLOOR while he hops off it, which is the only
+       thing that makes a hop read as leaving the ground rather than as the
+       whole sprite sliding up the screen. */
+    ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2,
+      'rgba(52,44,32,' + (0.38 - g.hop * 0.06).toFixed(2) + ')');
+    c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean + lean + g.tip,
+      Math.round(fy - h + 1 - g.hop + g.drop), w, h);
   }
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
@@ -15584,6 +15844,60 @@ const CITY = (() => {
      everything in the game calls it that, and renaming it buys nothing. */
   function nightOver() { return minutesLeft() <= 0; }
 
+  /* ============================================================
+     WHO IS STILL BEHIND THE COUNTER.
+
+     A day shift means the people you need go home. Every stop has
+     a frog in it who knows something, and every one of them
+     finishes at a different hour: the launderer locks up at five,
+     the pawnbroker at six, the man on the quay works late and the
+     cabaret does not open until the evening.
+
+     This is the thing that makes the clock bite. Before it, an
+     hour spent was an hour of searching you did not do; now an
+     hour spent can be a witness you will never get to speak to,
+     and the plan has to be read in the order the city closes.
+     ============================================================ */
+  const HOURS = {
+    laundry:   { open: 7 * 60,  shut: 17 * 60,      who: 'THE LAUNDERER' },
+    pawn:      { open: 9 * 60,  shut: 18 * 60,      who: 'THE BROKER' },
+    diner:     { open: 6 * 60,  shut: 18 * 60 + 30, who: 'THE WAITRESS' },
+    docks:     { open: 6 * 60,  shut: 19 * 60,      who: 'THE WATCHMAN' },
+    bar:       { open: 16 * 60, shut: 23 * 60,      who: 'THE BARMAN' },
+    catacombs: { open: 9 * 60,  shut: 17 * 60,      who: 'THE KEEPER' },
+    museum:    { open: 10 * 60, shut: 18 * 60,      who: 'THE GUARD' },
+    butte:     { open: 8 * 60,  shut: 19 * 60,      who: 'THE PAINTER' },
+    /* the street never closes */
+    tower:     { open: 0,       shut: 24 * 60,      who: 'A HAWKER' },
+    arch:      { open: 0,       shut: 24 * 60,      who: 'A CABBIE' },
+    metro:     { open: 5 * 60,  shut: 24 * 60,      who: 'A GUARD' },
+  };
+
+  function hours(id) { return HOURS[id] || null; }
+
+  /* is there anybody at this stop to talk to right now */
+  function open(id) {
+    const h = HOURS[id];
+    if (!h) return true;
+    const m = minutes();
+    return m >= h.open && m < h.shut;
+  }
+
+  /* how long until they lock up, in minutes — negative once they have */
+  function untilShut(id) {
+    const h = HOURS[id];
+    if (!h) return 24 * 60;
+    return h.shut - minutes();
+  }
+
+  /* the ones that are about to close, soonest first, for the plan */
+  function closingSoon(within) {
+    const w = within === undefined ? 90 : within;
+    return Object.keys(HOURS)
+      .filter(id => open(id) && untilShut(id) <= w)
+      .sort((a, b) => untilShut(a) - untilShut(b));
+  }
+
   /* ---------------------------------------------------------
      THE SKY.
 
@@ -15686,6 +16000,7 @@ const CITY = (() => {
     PLACES, ORDER, WORK, PROPS, WEATHER, COST, START, END,
     propsAt, unsearchedAt,
     reset, spend, hhmm, watch, minutes, minutesLeft, nightOver,
+    HOURS, hours, open, untilShut, closingSoon,
     rollWeather, sky, here, at, distance,
     searchKey, searched, plantedAt, leftAt, totalLeft, found, NOTHING,
 
@@ -16675,7 +16990,7 @@ const PARIS = (() => {
         tag: 'THE CUP MAN', tagCol: PIX.PAL.R, job: 'cups' },
       { id: 'wit', x: 600, z: 0.1, key: 'waiter',
         def: typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null, face: -1,
-        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased' },
+        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased', busyAt: 0.65 },
     ];
 
     const eggs = [
@@ -17331,7 +17646,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 402, y: FY, key: 'launder', def: LAUNDER_DEF, face: -1, still: true,
-        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty' },
+        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty', busyAt: 0.55 },
     ];
 
     const eggs = [
@@ -17629,7 +17944,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 288, y: FY, key: 'pawn', def: PAWN_DEF, face: -1, still: true,
-        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch' },
+        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch', busyAt: 0.4 },
     ];
 
     /* the glass case and its counter are painted over him, so he is behind
@@ -17745,7 +18060,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 246, y: FY, key: 'waitress', def: WAITRESS_DEF, face: -1, still: true,
-        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased' },
+        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased', busyAt: 0.7 },
       { id: 'cook', x: 300, y: FY, key: 'cook', def: COOK_DEF, face: -1, still: true,
         tag: 'THE COOK', tagCol: PIX.PAL.N },
     ];
@@ -17889,7 +18204,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 168, y: FY, key: 'barman', def: BARMAN_DEF, face: 1, still: true,
-        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard' },
+        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard', busyAt: 0.5 },
       { id: 'drunk', x: 300, y: FY, key: 'drunk', def: DRUNK_DEF, face: -1, still: true,
         tag: 'A REGULAR', tagCol: PIX.PAL.d },
     ];
@@ -18515,12 +18830,25 @@ const PHONE = (() => {
     /* somebody at this stop is owed something, or owes you something */
     const errand = (typeof STORY !== 'undefined' && STORY.questsLive ? STORY.questsLive() : [])
       .find(x => x.q.place === p.id || (x.q.kind === 'carry' && x.q.to === p.id && x.state === 'taken'));
+    /* ============================================================
+       A STORY YOU CAN BREAK, AND WHETHER THE DOOR IS STILL OPEN.
+
+       These two together are the whole shape of the afternoon: a
+       name you are holding something against, the stop his story
+       is set at, and how long you have got before the frog who
+       could contradict him goes home.
+       ============================================================ */
+    const stories = (typeof CASE !== 'undefined' && CASE.alibiAt) ? CASE.alibiAt(p.id) : [];
+    const provable = stories.some(o => CASE.hasLever(o.i));
+    const shut = (typeof CITY.open === 'function') && !CITY.open(p.id);
+    const closing = !shut && CITY.untilShut && CITY.untilShut(p.id) <= 75;
     /* A NAME PLATE ON A PIN NEAR THE EDGE HANGS OFF THE PAPER. Anchor it
        inwards instead: the plate is wider than the pin, so a stop out at
        the wall has to grow its label back toward the middle. */
     const edge = p.x >= 68 ? ' tag-left' : p.x <= 30 ? ' tag-right' : '';
     const b = U.el('button', 'map-pin' + (here ? ' here' : '') + (hot ? ' hot' : '') +
-      (errand ? ' errand' : '') + (inCase ? '' : ' cold') + edge);
+      (errand ? ' errand' : '') + (inCase ? '' : ' cold') + edge +
+      (provable ? ' story' : '') + (shut ? ' shut' : closing ? ' closing' : ''));
     b.style.left = p.x + '%';
     b.style.top = p.y + '%';
     b.appendChild(SPR.clone(ART.art(p.icon || 'ic_map', k), 1));
@@ -18537,6 +18865,19 @@ const PHONE = (() => {
       const bang = U.el('span', 'pin-bang');
       bang.appendChild(line('!', k, '#ffd75e'));
       b.appendChild(bang);
+    }
+    /* a story here you can take apart */
+    if (provable) {
+      const st = U.el('span', 'pin-story');
+      st.appendChild(line('?', k, '#ff6a5e'));
+      b.appendChild(st);
+    }
+    /* and what the clock is doing to the door */
+    if (shut || closing) {
+      const cl = U.el('span', 'pin-shut');
+      cl.appendChild(line(shut ? 'SHUT' : CITY.untilShut(p.id) + 'M',
+        Math.max(1, k - 1), shut ? '#8d8672' : '#ff9a6e', null));
+      b.appendChild(cl);
     }
     b.onclick = () => {
       if (here) { SFX.tick && SFX.tick(); return; }
@@ -18786,6 +19127,18 @@ const PHONE = (() => {
     const foot = U.el('div', 'ph-foot');
     const p = CITY.here();
     foot.appendChild(line(p ? p.blurb : '', Math.max(1, k - 1), '#8fb3a0', null));
+    /* WHAT IS ABOUT TO SHUT. The single most useful line on the phone:
+       the frogs who know things go home, and the order the city closes in
+       is the order you have to work it. */
+    const soon = CITY.closingSoon ? CITY.closingSoon(120) : [];
+    if (soon.length) {
+      const id = soon[0], h = CITY.hours(id);
+      const mins = CITY.untilShut(id);
+      foot.appendChild(line((CITY.PLACES[id] ? CITY.PLACES[id].short : id)
+        + ' SHUTS AT ' + Math.floor(h.shut / 60) + ':00'
+        + '  -  ' + mins + ' MINUTES',
+        Math.max(1, k - 1), mins < 45 ? '#ff9a6e' : '#e0c07a', null));
+    }
     foot.appendChild(line('A DRIVE COSTS ' + CITY.COST.travel + ' MINUTES OF DAYLIGHT',
       Math.max(1, k - 1), '#5f8f7f', null));
     wrap.appendChild(foot);
@@ -18838,6 +19191,45 @@ const PHONE = (() => {
       list.appendChild(row);
     });
     wrap.appendChild(list);
+
+    /* ============================================================
+       WHERE THEY SAY THEY WERE.
+
+       The other half of the file. Every face on that wall told
+       somebody where he was this afternoon, and the only way to
+       settle it is to go to that stop and ask the frog who would
+       have seen him — with something in your hand, if he is lying.
+
+       Three states, and the phone says which: not checked yet,
+       checked and it held, or checked and it came apart.
+       ============================================================ */
+    if (c0.suspects.some(s2 => s2.alibi)) {
+      const ah = U.el('div', 'ph-head');
+      ah.appendChild(line('WHERE THEY SAY THEY WERE', k, '#eae4d0'));
+      wrap.appendChild(ah);
+      const al = U.el('div', 'ph-clues');
+      c0.suspects.forEach((s2, i) => {
+        const a = s2.alibi;
+        if (!a) return;
+        const st = a.broken ? ' broke' : a.checked ? ' got' : '';
+        const row = U.el('div', 'ph-alibi' + st + (stand[i] ? '' : ' out'));
+        row.appendChild(SPR.clone(ART.art(a.broken ? 'ic_star'
+          : a.checked ? 'ic_case' : 'ic_map', Math.max(1, k - 1)), 1));
+        const col = U.el('div', 'ph-cluecol');
+        col.appendChild(line(s2.name, Math.max(1, k - 1),
+          a.broken ? '#ff6a5e' : stand[i] ? '#eae4d0' : '#57585c', null));
+        col.appendChild(line(a.say, 1,
+          a.broken ? '#ff9a6e' : a.checked ? '#8fb3a0' : '#a8977a', null));
+        col.appendChild(line(
+          a.broken ? 'THAT IS A LIE AND YOU CAN PROVE IT'
+            : a.checked ? 'CHECKED OUT. IT WAS NOT HIM.'
+            : (CASE.hasLever(i) ? 'GO AND ASK. YOU HAVE SOMETHING.'
+              : 'NOBODY HAS CHECKED IT'),
+          1, a.broken ? '#ffd75e' : '#6f6252', null));
+        al.appendChild(row);
+      });
+      wrap.appendChild(al);
+    }
     return wrap;
   }
 
@@ -21973,6 +22365,22 @@ const STORY = {
   /* ---------- a witness ---------- */
   async askWitness(place, who) {
     if (CINE.busy) return;
+    /* ============================================================
+       HE WENT HOME.
+
+       Every stop keeps hours, and the frog who knows something is
+       only behind that counter between them. Turn up at half past
+       five for the launderer and you are talking to a locked door,
+       and that is the clock doing what a clock is for.
+       ============================================================ */
+    if (CITY.open && !CITY.open(place)) {
+      const h = CITY.hours(place);
+      await TUTOR.say((h && h.who ? h.who : 'WHOEVER WORKS HERE')
+        + ' WENT HOME AT ' + STORY.hh(h ? h.shut : 0) + '.',
+        { name: 'A LOCKED DOOR', nameCol: PIX.PAL.q, rim: PIX.PAL.t,
+          hold: 2100, top: true });
+      return;
+    }
     /* HE KNOWS WHAT YOU DID. Opening a frog's parcel buys you the evidence
        inside it and costs you everything he was ever going to tell you. */
     if (G.burned && G.burned[place]) {
@@ -21989,23 +22397,80 @@ const STORY = {
     const c = G.case;
     if (!c) return;
     const open = (c.asks || []).map((a, i) => i).filter(i => CASE.canAsk(i));
-    if (!open.length || CASE.left() <= 1) {
+    /* ============================================================
+       WHOSE STORY IS SET IN THIS ROOM.
+
+       Somebody on that wall told the captain he was standing right
+       here this afternoon, and the frog behind this counter is the
+       one who would know. That is a different question from any of
+       the descriptions, and it goes at the top of the rack.
+       ============================================================ */
+    const stories = CASE.alibiAt(place);
+    if (!open.length && !stories.length) {
       await TUTOR.say('HE HAS TOLD YOU EVERYTHING HE IS GOING TO.',
         { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, hold: 1900, top: true });
       return;
     }
+    if (!open.length || CASE.left() <= 1) {
+      /* nothing left to ask about faces — but a story might still be
+         standing here, and that is the whole rest of the job */
+      if (!stories.length) {
+        await TUTOR.say('HE HAS TOLD YOU EVERYTHING HE IS GOING TO.',
+          { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, hold: 1900, top: true });
+        return;
+      }
+    }
     /* fog and hard rain cost him a detail: one fewer question on offer */
     const sky = CITY.sky();
-    const show = open.slice(0, sky.wit < 0 ? Math.max(1, open.length - 1) : open.length);
+    const show = (CASE.left() <= 1 ? [] : open)
+      .slice(0, sky.wit < 0 ? Math.max(1, open.length - 1) : open.length);
     const art = SPR.frogCustom('wit:' + place, PLACE_WITNESS[place] || BARMAN_DEF);
-    const replies = show.map(i => ({ label: c.asks[i].ask }));
+    const replies = stories.map(o => ({
+      label: 'WAS ' + o.s.name + ' IN HERE TODAY?',
+      note: CASE.hasLever(o.i) ? 'YOU HAVE SOMETHING THAT SAYS OTHERWISE'
+        : 'HIS STORY PUTS HIM HERE',
+    })).concat(show.map(i => ({ label: c.asks[i].ask })));
     replies.push({ label: 'NOTHING. FORGET IT.', note: 'LEAVE HIM ALONE', dim: true });
     const pickIdx = await TUTOR.ask(
       sky.wit < 0 ? 'I WAS HERE. I DID NOT SEE MUCH IN THAT ' + sky.word + '.'
-        : 'I WAS HERE ALL NIGHT. ASK ME SOMETHING.',
+        : 'I WAS HERE ALL DAY. ASK ME SOMETHING.',
       replies, { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, art });
-    if (pickIdx < 0 || pickIdx >= show.length) return;
-    const i = show[pickIdx];
+    if (pickIdx < 0 || pickIdx >= stories.length + show.length) return;
+
+    /* ---- the story questions come first in the rack ---- */
+    if (pickIdx < stories.length) {
+      const o = stories[pickIdx];
+      const r = CASE.press(o.i);
+      CITY.spend('talk', CASE_TUNING.alibiPressCost / (CITY.COST.talk || 6));
+      await STORY.converse(who, async () => {
+        if (!r) return;
+        if (r.broken) {
+          await TUTOR.say('HIM? NO. AND I WOULD KNOW.',
+            { name: 'A WITNESS', nameCol: PIX.PAL.R, rim: PIX.PAL.r, art });
+          if (r.why) {
+            await TUTOR.say(r.why + ' — AND HE SAID HE WAS HERE.',
+              { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+          }
+          STORY.note(r.name + " CANNOT ACCOUNT FOR HIMSELF.");
+          STORY.karmaHit && STORY.karmaHit('work');
+          await CINE.contradiction(r.name);
+        } else if (r.needs) {
+          await TUTOR.say('HE WAS HERE. THAT IS WHAT I TOLD THE OTHER ONE.',
+            { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, art });
+          await TUTOR.say('HE IS LYING AND I CANNOT PROVE IT YET.',
+            { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+        } else {
+          await TUTOR.say('HIM? YES. ALL AFTERNOON.',
+            { name: 'A WITNESS', nameCol: PIX.PAL.N, rim: PIX.PAL.n, art });
+          await TUTOR.say('THEN IT IS NOT HIM. ONE FEWER STORY TO CHECK.',
+            { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+        }
+      });
+      if (CITY.nightOver()) await STORY.dawn();
+      return;
+    }
+
+    const i = show[pickIdx - stories.length];
     const a = CASE.ask(i);
     CITY.spend('ask');
     if (!a) return;
@@ -22019,6 +22484,12 @@ const STORY = {
         { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
     });
     if (CITY.nightOver()) await STORY.dawn();
+  },
+
+  /* an hour, as somebody would say it */
+  hh(m) {
+    const h = Math.floor((m || 0) / 60) % 24, mm = (m || 0) % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (mm < 10 ? '0' : '') + mm;
   },
 
   async placeTalk(place, who) {
@@ -26989,68 +27460,95 @@ const CINE = {
     window.addEventListener('keydown', bail);
     const P = PIX.PAL;
     const rng = U.mulberry32(99);
+    /* THE DRIVE HAPPENS IN WHATEVER LIGHT IT IS.
+
+       This used to be a night drive with stars over it, which was the
+       right shot when the shift ran to six in the morning. Now the sky
+       behind the windscreen is DAY's, so a drive at eleven is blue and
+       a drive at six is on fire — and the hour on the clock and the
+       hour out of the window are the same hour. */
     const stars = [];
     for (let i = 0; i < 26; i++) stars.push([rng() * 180, rng() * 40]);
+    const lamps = typeof DAY === 'undefined' || DAY.lamps();
 
     const draw = (t) => {
       c.clearRect(0, 0, 180, 108);
-      PIX.rect(c, 0, 0, 180, 108, '#070a12');
-      stars.forEach(([sx, sy]) => PIX.rect(c, Math.round(sx), Math.round(sy), 1, 1, 'rgba(200,220,255,.35)'));
+      if (typeof DAY !== 'undefined') DAY.sky(c, 0, 0, 180, 56, t, 99);
+      else PIX.rect(c, 0, 0, 180, 108, '#070a12');
+      if (lamps) {
+        stars.forEach(([sx, sy]) =>
+          PIX.rect(c, Math.round(sx), Math.round(sy), 1, 1, 'rgba(200,220,255,.35)'));
+      }
       /* far skyline, slow */
       const off1 = Math.round(t * 26) % 90;
       for (let i = -1; i < 4; i++) {
         const bx = i * 90 - off1;
-        PIX.rect(c, bx, 34, 34, 46, '#10141f');
-        PIX.rect(c, bx + 40, 24, 26, 56, '#0e1220');
-        PIX.rect(c, bx + 70, 42, 16, 38, '#111627');
+        PIX.rect(c, bx, 34, 34, 46, lamps ? '#10141f' : '#b4ac96');
+        PIX.rect(c, bx, 34, 34, 1, lamps ? '#1c2230' : '#d0c8b0');
+        PIX.rect(c, bx + 40, 24, 26, 56, lamps ? '#0e1220' : '#a8a08a');
+        PIX.rect(c, bx + 40, 24, 26, 1, lamps ? '#1c2230' : '#cac2aa');
+        PIX.rect(c, bx + 70, 42, 16, 38, lamps ? '#111627' : '#bdb49c');
         for (let w = 0; w < 8; w++) {
           PIX.rect(c, bx + 4 + (w % 4) * 8, 40 + Math.floor(w / 4) * 12, 3, 4,
-            (w + i) % 3 ? '#3a3520' : '#a5741f');
+            lamps ? ((w + i) % 3 ? '#3a3520' : '#a5741f') : '#6b7684');
         }
       }
       /* near buildings, fast */
       const off2 = Math.round(t * 78) % 140;
       for (let i = -1; i < 3; i++) {
         const bx = i * 140 - off2;
-        PIX.rect(c, bx, 52, 60, 30, '#151a28');
-        PIX.rect(c, bx + 12, 56, 8, 10, '#e0a63c');
-        PIX.rect(c, bx + 80, 46, 40, 36, '#121624');
-        PIX.rect(c, bx + 88, 52, 7, 9, '#6e4c12');
-        /* a streetlight */
-        PIX.rect(c, bx + 66, 44, 2, 38, '#0b0e14');
-        PIX.rect(c, bx + 62, 42, 10, 3, '#0b0e14');
-        PIX.disc(c, bx + 67, 47, 3, '#fff3b0');
+        PIX.rect(c, bx, 52, 60, 30, lamps ? '#151a28' : '#e2d8bc');
+        PIX.rect(c, bx, 52, 60, 2, lamps ? '#232a3c' : '#f4ecd2');
+        PIX.rect(c, bx, 78, 60, 4, lamps ? '#0d1016' : '#b8384a');   // the awning
+        PIX.rect(c, bx + 12, 56, 8, 10, lamps ? '#e0a63c' : '#67788a');
+        PIX.rect(c, bx + 80, 46, 40, 36, lamps ? '#121624' : '#d4c9ab');
+        PIX.rect(c, bx + 80, 46, 40, 2, lamps ? '#1e2436' : '#eee2c4');
+        PIX.rect(c, bx + 88, 52, 7, 9, lamps ? '#6e4c12' : '#67788a');
+        /* a lamp post, lit only if anybody would have it lit */
+        PIX.rect(c, bx + 66, 44, 2, 38, lamps ? '#0b0e14' : '#3f6b45');
+        PIX.rect(c, bx + 62, 42, 10, 3, lamps ? '#0b0e14' : '#3f6b45');
+        PIX.disc(c, bx + 67, 47, 3, lamps ? '#fff3b0' : '#cdd6dc');
       }
       /* the road */
-      PIX.rect(c, 0, 82, 180, 26, '#0d1016');
-      PIX.rect(c, 0, 82, 180, 2, '#1c2230');
+      PIX.rect(c, 0, 82, 180, 26, lamps ? '#0d1016' : '#8f8779');
+      PIX.rect(c, 0, 82, 180, 2, lamps ? '#1c2230' : '#a8a094');
       const dash = Math.round(t * 120) % 24;
-      for (let i = -1; i < 9; i++) PIX.rect(c, i * 24 - dash, 94, 12, 2, 'rgba(200,200,210,.35)');
+      for (let i = -1; i < 9; i++) {
+        PIX.rect(c, i * 24 - dash, 94, 12, 2, lamps ? 'rgba(200,200,210,.35)' : 'rgba(255,252,244,.65)');
+      }
       /* the car, bobbing */
       const bob = Math.round(Math.sin(t * 9) * 1);
       const carY = 70 + bob;
       PIX.rect(c, 56, carY + 2, 52, 12, P.K);
       PIX.rect(c, 58, carY + 3, 48, 10, '#2b3346');
+      if (!lamps) PIX.rect(c, 58, carY + 3, 48, 2, '#5d6a84');
       PIX.rect(c, 66, carY - 6, 30, 10, P.K);
       PIX.rect(c, 68, carY - 5, 26, 8, '#2b3346');
+      if (!lamps) PIX.rect(c, 68, carY - 5, 26, 2, '#5d6a84');
       PIX.rect(c, 70, carY - 3, 10, 5, '#7fd7ff');       // glass
       PIX.rect(c, 84, carY - 3, 8, 5, '#7fd7ff');
       PIX.disc(c, 66, carY + 14, 5, P.K); PIX.disc(c, 66, carY + 14, 3, '#3f465c');
       PIX.disc(c, 98, carY + 14, 5, P.K); PIX.disc(c, 98, carY + 14, 3, '#3f465c');
-      /* headlight */
-      c.globalAlpha = 0.2; c.fillStyle = '#fff3b0';
-      c.beginPath(); c.moveTo(108, carY + 4); c.lineTo(150, carY - 2); c.lineTo(150, carY + 14); c.closePath(); c.fill();
-      c.globalAlpha = 1;
-      /* rain, driving sideways */
-      for (let i = 0; i < 60; i++) {
-        const rx = (i * 37 + Math.round(t * 220)) % 190 - 5;
-        const ry = (i * 53) % 100;
-        PIX.rect(c, 180 - rx, ry, 2, 1, 'rgba(127,215,255,.22)');
+      /* headlight, if anybody would have it on */
+      if (lamps) {
+        c.globalAlpha = 0.2; c.fillStyle = '#fff3b0';
+        c.beginPath(); c.moveTo(108, carY + 4); c.lineTo(150, carY - 2);
+        c.lineTo(150, carY + 14); c.closePath(); c.fill();
+        c.globalAlpha = 1;
       }
-      const lab = PIXFONT.render('TO ' + dest, { scale: 1, color: P.q, shadow: null });
+      /* rain, driving sideways — and only when it is actually raining */
+      const drops = (typeof CITY !== 'undefined' && CITY.sky) ? CITY.sky().drops : 1;
+      if (drops > 0.3) {
+        for (let i = 0; i < Math.round(40 * drops); i++) {
+          const rx = (i * 37 + Math.round(t * 220)) % 190 - 5;
+          const ry = (i * 53) % 100;
+          PIX.rect(c, 180 - rx, ry, 2, 1, 'rgba(127,215,255,.22)');
+        }
+      }
+      const lab = PIXFONT.render('TO ' + dest, { scale: 1, color: P.W, shadow: P.K });
       c.drawImage(lab, Math.round(90 - lab.width / 2), 99);
       const dots = '.'.repeat(1 + (Math.floor(t * 2) % 3));
-      const d2 = PIXFONT.render(dots, { scale: 1, color: P.q, shadow: null });
+      const d2 = PIXFONT.render(dots, { scale: 1, color: P.W, shadow: P.K });
       c.drawImage(d2, Math.round(90 + lab.width / 2 + 2), 99);
     };
 
@@ -28149,6 +28647,82 @@ const CINE = {
   },
 
   /* you said a name out loud */
+  /* ============================================================
+     THE CONTRADICTION.
+
+     The best moment in this kind of game is the one where a story
+     comes apart, so it gets its own beat: the frame snaps to a
+     letterbox, a red rule sweeps across it, and the name lands on
+     top of the words the witness just said.
+
+     Deliberately short — a second and a half, no tap needed. This
+     fires in the middle of a conversation and a card that waits
+     for a click would stop the conversation dead.
+     ============================================================ */
+  async contradiction(name) {
+    const root = CINE.stage();
+    CINE.letterbox(true);
+    root.className = 'anim-cut';
+    root.innerHTML = '';
+    const W = 240, H2 = 76;
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / (W + 12),
+      window.innerHeight / (H2 + 8))), 2, 8);
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H2 * K;
+    cv.className = 'pix anim-frame';
+    root.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    /* A NAME CAN BE ANY LENGTH. Rendered at a fixed scale, BAPTISTE LE GROS
+       came out half again as wide as the plate and the front and back of it
+       simply were not on screen. Step the scale down until it fits. */
+    const fit = (str, want, maxW, col) => {
+      for (let k = want; k > 1; k--) {
+        const cvv = PIXFONT.render(str, { scale: k, color: col, shadow: '#12101d' });
+        if (cvv.width <= maxW) return cvv;
+      }
+      return PIXFONT.render(str, { scale: 1, color: col, shadow: '#12101d' });
+    };
+    SFX.backfire && SFX.backfire();
+    const t0 = performance.now();
+    await new Promise(res => {
+      const draw = () => {
+        const t = Math.min(1, (performance.now() - t0) / 1500);
+        const sw = U.ease.outCubic ? U.ease.outCubic(Math.min(1, t * 2.2)) : Math.min(1, t * 2.2);
+        c.fillStyle = '#1a1218'; c.fillRect(0, 0, W, H2);
+        /* the hatching behind it, so the plate is not a flat rectangle */
+        for (let i = -H2; i < W; i += 6) {
+          ART.px(c, i + 40, 0, 2, H2, 'rgba(180,56,74,.10)');
+        }
+        /* THE RULE, sweeping across */
+        const w = Math.round(W * sw);
+        ART.px(c, 0, 34, w, 3, '#b8384a');
+        ART.px(c, 0, 34, w, 1, '#ff6a5e');
+        if (w < W) ART.px(c, w - 2, 30, 3, 11, '#ffd75e');
+        /* and the words, once it has got past them */
+        if (t > 0.30) {
+          const a = Math.min(1, (t - 0.30) / 0.22);
+          const w1 = fit('THAT IS NOT WHERE HE WAS', 2, W - 12, '#f4efe0');
+          c.globalAlpha = a;
+          c.drawImage(w1, Math.round(W / 2 - w1.width / 2), 14);
+          c.globalAlpha = 1;
+        }
+        if (t > 0.52) {
+          const a = Math.min(1, (t - 0.52) / 0.22);
+          const w2 = fit(name, 4, W - 12, '#ff6a5e');
+          c.globalAlpha = a;
+          c.drawImage(w2, Math.round(W / 2 - w2.width / 2), 46);
+          c.globalAlpha = 1;
+        }
+        if (t < 1) requestAnimationFrame(draw); else setTimeout(res, 320);
+      };
+      draw();
+    });
+    root.innerHTML = ''; root.className = 'hidden';
+    CINE.letterbox(false);
+  },
+
   async namedCard(sus, right) {
     const root = CINE.stage();
     CINE.letterbox(true);

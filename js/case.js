@@ -360,6 +360,40 @@ const CASE = {
       accused: -1, right: null, done: false,
       realIdx: suspects.findIndex(s => s.real),
     };
+    /* ============================================================
+       WHERE THEY SAY THEY WERE.
+
+       Every suspect gets a story, and each story is set at a
+       different stop so the board never sends you to the same
+       place twice. The real one's story is the lie, and it can
+       only be broken by putting one specific piece of evidence in
+       front of the frog who would have vouched for him — so the
+       clue you dug out of a drain has a second use, and the stop
+       you had no reason to visit suddenly has one.
+       ============================================================ */
+    {
+      const c = G.case;
+      const inCase = CASE.stops();
+      /* the stops with somebody in them to lie about, case stops first so
+         the alibi trail mostly overlaps the hunt rather than doubling it */
+      const pool = ALIBI_LINES.filter(a => inCase.indexOf(a.at) >= 0)
+        .concat(ALIBI_LINES.filter(a => inCase.indexOf(a.at) < 0));
+      U.shuffle(rng, pool);
+      /* the lever: a clue in this case's deck, so it is always findable */
+      const lever = c.clues.length ? U.pick(rng, c.clues).id : null;
+      c.suspects.forEach((sus, i) => {
+        const line = pool[i % pool.length];
+        sus.alibi = {
+          at: line.at, say: line.say,
+          /* only the guilty need a story that will not survive a look */
+          lie: !!sus.real,
+          lever: sus.real ? lever : null,
+          checked: false, broken: false,
+        };
+      });
+      c.pressed = 0;
+    }
+
     /* the papers you took off the last one: a clue is already turned over */
     const deck2 = G.case.clues;
     while ((G.intel || 0) > 0 && deck2.some(c => !c.seen)) {
@@ -438,6 +472,62 @@ const CASE = {
     return CASE.standing().filter(Boolean).length;
   },
 
+  /* ============================================================
+     THE ALIBIS.
+     ============================================================ */
+
+  /* whose story is set at this stop, and has not been settled yet */
+  alibiAt(place) {
+    const c = G.case;
+    if (!c || c.done) return [];
+    return c.suspects
+      .map((s, i) => ({ i, s }))
+      .filter(o => o.s.alibi && o.s.alibi.at === place && !o.s.alibi.checked);
+  },
+
+  /* have you got the thing that would break his story in your hand */
+  hasLever(i) {
+    const c = G.case;
+    const a = c && c.suspects[i] && c.suspects[i].alibi;
+    if (!a || !a.lever) return false;
+    return c.clues.some(cl => cl.id === a.lever && cl.seen);
+  },
+
+  /* THE PRESS. You are standing at the stop his story is set at, with the
+     frog who would have vouched for him in front of you. Either the story
+     holds — which is the truth, and you have learned that much — or you
+     put the evidence on the counter and it comes apart.
+
+     Returns what happened, or null if there was nothing to press. */
+  press(i) {
+    const c = G.case;
+    if (!c || c.done) return null;
+    const sus = c.suspects[i];
+    if (!sus || !sus.alibi || sus.alibi.checked) return null;
+    sus.alibi.checked = true;
+    c.pressed = (c.pressed || 0) + 1;
+    if (!sus.alibi.lie) {
+      return { name: sus.name, held: true, broken: false, why: null };
+    }
+    if (!CASE.hasLever(i)) {
+      /* he is lying and you cannot prove it yet. The check is spent —
+         that is the cost of leaning on somebody with nothing in your
+         hand — but the story goes back on the board as unsettled. */
+      sus.alibi.checked = false;
+      return { name: sus.name, held: true, broken: false, needs: true };
+    }
+    sus.alibi.broken = true;
+    const cl = c.clues.find(x => x.id === sus.alibi.lever);
+    return { name: sus.name, held: false, broken: true, why: cl ? cl.text : null };
+  },
+
+  /* is anybody's story in pieces */
+  broken() {
+    const c = G.case;
+    if (!c) return -1;
+    return c.suspects.findIndex(s => s.alibi && s.alibi.broken);
+  },
+
   /* ---- asking out loud ---- */
   canAsk(i) {
     const c = G.case;
@@ -493,6 +583,30 @@ const CASE = {
     c.accused = i;
     c.right = !!c.suspects[i].real;
     c.done = true;
+    /* ============================================================
+       DID YOU BREAK HIS STORY FIRST?
+
+       Naming the right frog is still naming the right frog. What
+       changes is what he brings to the table: a frog whose story
+       is intact has an answer ready and plays it hard, and a frog
+       whose story is in pieces sits down a heart short.
+
+       NOT TURN ORDER. The first pass handed him the opening move,
+       and the opening move is not this layer's to hand out: the
+       engine drives whose turn it is off the duel, and reaching in
+       from the accusation left the table waiting for a shot that
+       nothing was going to fire. Aggression and hearts are the two
+       dials the duel already reads, so those are the two to turn.
+       ============================================================ */
+    const al = c.suspects[i].alibi;
+    G.caseClean = !!(al && al.broken);
+    if (c.right && al && !al.broken) {
+      G.duel.opp.aggro = Math.min(0.94, G.duel.opp.aggro + CASE_TUNING.alibiHoldAggro);
+      G.caseLawyered = true;
+    } else if (c.right && al && al.broken) {
+      G.duel.opp.hp = Math.max(1, G.duel.opp.hp - CASE_TUNING.alibiBonusHearts);
+      G.caseLawyered = false;
+    }
     if (c.right) {
       G.caseBonus = true;
       G.run.called++;

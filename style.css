@@ -3150,3 +3150,39 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .map-holder > canvas.map-route {
   position: absolute; left: 0; top: 0; pointer-events: none;
 }
+
+/* ============================================================
+   THE ALIBI BOARD in the case file. Three states, and each one
+   has to be legible at a glance: unchecked, checked and it held,
+   checked and it came apart.
+   ============================================================ */
+.ph-alibi {
+  display: flex; align-items: flex-start; gap: 8px;
+  border-left: 4px solid #4a3826; padding: 4px 0 4px 8px;
+  background: rgba(233,220,188,.04);
+}
+.ph-alibi.got { border-left-color: #6f6252; background: rgba(233,220,188,.07); }
+.ph-alibi.broke {
+  border-left-color: #ff6a5e; background: rgba(184,56,74,.16);
+  box-shadow: inset 0 0 0 1px rgba(255,106,94,.22);
+}
+.ph-alibi.out { opacity: .45; }
+
+/* ============================================================
+   TWO MORE THINGS THE PLAN HAS TO SAY.
+
+   A red query over a stop means there is a story set there that
+   you are already holding something against — go and break it.
+   A stop that is shut, or about to be, wears the clock instead:
+   the frogs who know things go home, and the order the city
+   closes in is the order the afternoon has to be worked.
+   ============================================================ */
+.pin-story { position: absolute; top: -7px; left: -6px; z-index: 2; }
+.map-pin.story::before { background: #ffd0c8; box-shadow: 0 0 0 2px #8a2434; }
+.pin-shut {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(28,22,12,.88); padding: 0 2px; white-space: nowrap;
+}
+.map-pin.shut { opacity: .5; }
+.map-pin.shut::before { background: rgba(200,192,172,.5); box-shadow: 0 0 0 2px rgba(74,61,40,.4); }
+.map-pin.closing::before { box-shadow: 0 0 0 2px #b8564a; }

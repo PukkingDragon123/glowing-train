@@ -209,6 +209,60 @@ const CITY = (() => {
      everything in the game calls it that, and renaming it buys nothing. */
   function nightOver() { return minutesLeft() <= 0; }
 
+  /* ============================================================
+     WHO IS STILL BEHIND THE COUNTER.
+
+     A day shift means the people you need go home. Every stop has
+     a frog in it who knows something, and every one of them
+     finishes at a different hour: the launderer locks up at five,
+     the pawnbroker at six, the man on the quay works late and the
+     cabaret does not open until the evening.
+
+     This is the thing that makes the clock bite. Before it, an
+     hour spent was an hour of searching you did not do; now an
+     hour spent can be a witness you will never get to speak to,
+     and the plan has to be read in the order the city closes.
+     ============================================================ */
+  const HOURS = {
+    laundry:   { open: 7 * 60,  shut: 17 * 60,      who: 'THE LAUNDERER' },
+    pawn:      { open: 9 * 60,  shut: 18 * 60,      who: 'THE BROKER' },
+    diner:     { open: 6 * 60,  shut: 18 * 60 + 30, who: 'THE WAITRESS' },
+    docks:     { open: 6 * 60,  shut: 19 * 60,      who: 'THE WATCHMAN' },
+    bar:       { open: 16 * 60, shut: 23 * 60,      who: 'THE BARMAN' },
+    catacombs: { open: 9 * 60,  shut: 17 * 60,      who: 'THE KEEPER' },
+    museum:    { open: 10 * 60, shut: 18 * 60,      who: 'THE GUARD' },
+    butte:     { open: 8 * 60,  shut: 19 * 60,      who: 'THE PAINTER' },
+    /* the street never closes */
+    tower:     { open: 0,       shut: 24 * 60,      who: 'A HAWKER' },
+    arch:      { open: 0,       shut: 24 * 60,      who: 'A CABBIE' },
+    metro:     { open: 5 * 60,  shut: 24 * 60,      who: 'A GUARD' },
+  };
+
+  function hours(id) { return HOURS[id] || null; }
+
+  /* is there anybody at this stop to talk to right now */
+  function open(id) {
+    const h = HOURS[id];
+    if (!h) return true;
+    const m = minutes();
+    return m >= h.open && m < h.shut;
+  }
+
+  /* how long until they lock up, in minutes — negative once they have */
+  function untilShut(id) {
+    const h = HOURS[id];
+    if (!h) return 24 * 60;
+    return h.shut - minutes();
+  }
+
+  /* the ones that are about to close, soonest first, for the plan */
+  function closingSoon(within) {
+    const w = within === undefined ? 90 : within;
+    return Object.keys(HOURS)
+      .filter(id => open(id) && untilShut(id) <= w)
+      .sort((a, b) => untilShut(a) - untilShut(b));
+  }
+
   /* ---------------------------------------------------------
      THE SKY.
 
@@ -311,6 +365,7 @@ const CITY = (() => {
     PLACES, ORDER, WORK, PROPS, WEATHER, COST, START, END,
     propsAt, unsearchedAt,
     reset, spend, hhmm, watch, minutes, minutesLeft, nightOver,
+    HOURS, hours, open, untilShut, closingSoon,
     rollWeather, sky, here, at, distance,
     searchKey, searched, plantedAt, leftAt, totalLeft, found, NOTHING,
 

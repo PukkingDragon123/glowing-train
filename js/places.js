@@ -300,7 +300,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 402, y: FY, key: 'launder', def: LAUNDER_DEF, face: -1, still: true,
-        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty' },
+        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty', busyAt: 0.55 },
     ];
 
     const eggs = [
@@ -598,7 +598,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 288, y: FY, key: 'pawn', def: PAWN_DEF, face: -1, still: true,
-        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch' },
+        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch', busyAt: 0.4 },
     ];
 
     /* the glass case and its counter are painted over him, so he is behind
@@ -714,7 +714,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 246, y: FY, key: 'waitress', def: WAITRESS_DEF, face: -1, still: true,
-        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased' },
+        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased', busyAt: 0.7 },
       { id: 'cook', x: 300, y: FY, key: 'cook', def: COOK_DEF, face: -1, still: true,
         tag: 'THE COOK', tagCol: PIX.PAL.N },
     ];
@@ -858,7 +858,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 168, y: FY, key: 'barman', def: BARMAN_DEF, face: 1, still: true,
-        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard' },
+        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard', busyAt: 0.5 },
       { id: 'drunk', x: 300, y: FY, key: 'drunk', def: DRUNK_DEF, face: -1, still: true,
         tag: 'A REGULAR', tagCol: PIX.PAL.d },
     ];
