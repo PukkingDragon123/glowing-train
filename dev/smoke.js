@@ -41,6 +41,31 @@ fs.mkdirSync(SHOTS, { recursive: true });
     console.log('shot:', name);
   };
   const click = (sel) => page.locator(sel).first().click({ timeout: 6000 });
+
+  /* ---------- PLAYING A SKILL METER ----------
+     The lock on the shed, the range, the drinks: all the same sweep with
+     a band in it, and none of them can be beaten by clicking blindly.
+     Poll the sweep, tap when the needle is inside the band. That is what
+     a player does with their eyes; this is the same thing with a clock. */
+  const playMeter = async (label) => {
+    for (let taps = 0; taps < 40; taps++) {
+      let fired = false;
+      for (let poll = 0; poll < 240; poll++) {
+        const m = await page.evaluate(() =>
+          (typeof JOBS !== 'undefined' && JOBS.debugMeter) ? JOBS.debugMeter() : null);
+        if (!m) return taps;                       /* the meter is finished */
+        if (m.live && Math.abs(m.x - m.centre) <= m.band * 0.30) {
+          await page.mouse.click(640, 400);
+          fired = true;
+          await page.waitForTimeout(620);
+          break;
+        }
+        await page.waitForTimeout(12);
+      }
+      if (!fired) { errors.push('[meter] never lined up: ' + label); return taps; }
+    }
+    return 40;
+  };
   const state = () => page.evaluate(() => ({
     phase: G2().phase, chapter: G2().chapter, briefed: G2().briefed,
     cards: (G2().intelCards || []).length, hearts: G2().hearts, chips: G2().chips,
@@ -470,11 +495,27 @@ fs.mkdirSync(SHOTS, { recursive: true });
          searching it opens the pick meter first. */
       if (await page.locator('.job-card').count()) {
         if (!lockShot) { lockShot = 1; await shot('12d-lock'); }
-        for (let t = 0; t < 3; t++) { await page.mouse.click(640, 400); await page.waitForTimeout(760); }
+        /* THE LOCK HAS TO BE PICKED, NOT MASHED. Sixteen blind taps miss
+           the band sixteen times, the lock stays on, and everything
+           behind that door — including the clue the harness is waiting
+           for — never happens. */
+        await playMeter('the lock on the ' + step.prop);
+        /* the card animates out over about two tenths of a second, so give
+           it that before calling it stuck */
+        await page.waitForFunction(() => !document.querySelector('.job-card'),
+          null, { timeout: 4000 })
+          .catch(() => errors.push('[lock] the pick meter would not finish'));
         await page.waitForTimeout(700);
         await clearPlates(6);
-        await page.evaluate((pr) => { STORY.search(G2().place, pr); }, step.prop);
-        await page.waitForTimeout(900);
+        /* AND THE METER DOES THE SEARCH ITSELF once the lock is off, so
+           asking again just puts a new lock on the door: the harness was
+           opening the shed, searching it a second time, and then waiting
+           for a pick-up behind a meter it had reopened. */
+        const done = await page.evaluate((pr) => CITY.searched(G2().place, pr), step.prop);
+        if (!done) {
+          await page.evaluate((pr) => { STORY.search(G2().place, pr); }, step.prop);
+          await page.waitForTimeout(900);
+        }
       }
       if (buried) {
         /* the pick-up plays as an animation, so wait for it rather than
@@ -483,7 +524,17 @@ fs.mkdirSync(SHOTS, { recursive: true });
         await page.waitForTimeout(900);
         if (await page.locator('.pick-card').count()) {
           if (!pickShot) { pickShot = 1; await shot('13-clue'); }
-        } else errors.push('[pick-up] finding something showed no pick-up');
+        } else {
+          const why = await page.evaluate((pr) => ({
+            prop: pr, planted: !!CITY.plantedAt(G2().place, pr),
+            searched: CITY.searched(G2().place, pr),
+            cineBusy: typeof CINE !== 'undefined' ? !!CINE.busy : null,
+            sceneBusy: typeof SCENE !== 'undefined' ? !!SCENE.busy() : null,
+            job: !!document.querySelector('.job-card'),
+            plate: !!document.querySelector('.tut-plate'),
+          }), step.prop);
+          errors.push('[pick-up] finding something showed no pick-up ' + JSON.stringify(why));
+        }
       }
       await page.mouse.click(700, 120);
       await page.waitForTimeout(700);
@@ -589,6 +640,43 @@ fs.mkdirSync(SHOTS, { recursive: true });
         await shot('12i-pet');
         await clearPlates(4);
       } else errors.push('[pets] no animal in this room');
+    }
+
+    /* ---------- THE SECRETS ----------
+       An easter egg is not a signpost. Without the eyeglass in your hand
+       it is not a target at all — pointing at it finds whatever real
+       prop it is sitting on — and even with the glass out it will not
+       tell you its name until you have looked. */
+    {
+      const eg = await page.evaluate(() => {
+        const spots = (SCENE.def && SCENE.def.spots) || [];
+        const e = spots.find(s => s.egg);
+        if (!e) return null;
+        const x = Math.round(e.x);
+        const y = Math.round(e.y === undefined ? (e.top + e.bot) / 2 : e.y);
+        const was = TOOLS.cur();
+        TOOLS.set('hand');
+        const hand = SCENE.debugPick(x, y);
+        TOOLS.set('glass');
+        const glass = SCENE.debugPick(x, y);
+        /* the name is only hidden until you have LOOKED, and this run may
+           already have looked, so ask what a fresh one would say */
+        const seen = G2().eggs && G2().eggs[e.id];
+        if (seen) delete G2().eggs[e.id];
+        const lbl = glass && (typeof glass.label === 'function' ? glass.label() : glass.label);
+        if (seen) (G2().eggs = G2().eggs || {})[e.id] = seen;
+        TOOLS.set(was);
+        return { handEgg: !!(hand && hand.egg), glassEgg: !!(glass && glass.egg), lbl };
+      });
+      if (!eg) console.log('  no easter egg in this room to check');
+      else {
+        if (eg.handEgg) errors.push('[eggs] an easter egg is pickable with the bare hand');
+        if (!eg.glassEgg) errors.push('[eggs] the eyeglass cannot find the easter egg');
+        if (eg.glassEgg && eg.lbl !== 'SOMETHING SMALL') {
+          errors.push('[eggs] an unfound egg is giving its name away: ' + eg.lbl);
+        }
+        console.log('  eggs: hidden from the hand, found by the glass, unnamed until looked at');
+      }
     }
 
     /* ---------- THE ALIBIS: press one, and break one ----------

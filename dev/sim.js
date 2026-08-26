@@ -54,7 +54,11 @@ const STUBS = `
   const TUTOR = { say: async () => {}, skipAll(){}, armed(){ return false; }, check(){} };
   const SCENE = { close(){}, open(){}, walkTo(){}, focus(){}, unfocus(){},
     me: { x: 40 }, def: null };
-  const PHONE = { open(){}, close(){}, toggle(){}, isOpen(){ return false; } };
+  const PHONE = { open(){}, close(){}, toggle(){}, isOpen(){ return false; },
+    /* the notification layer is presentation, but the CLOCK rings it, so
+       the stub has to keep the ledger the rules read back */
+    notify(o){ (G.notes = G.notes || []).push(o || {}); return o; },
+    unread(){ return 0; }, markRead(){}, notes(){ return G.notes || []; } };
   const JOBS = { pour: async () => ({ hits: 0, perfect: 0, pay: 0, rounds: 3 }),
     donuts: async () => ({ hits: 0, perfect: 0, pay: 0, rounds: 3 }),
     rats: async () => ({ hits: 0, perfect: 0, pay: 0, rounds: 3 }),

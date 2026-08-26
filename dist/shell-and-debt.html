@@ -245,18 +245,21 @@ body {
     radial-gradient(120% 80% at 50% 0%, #12161d 0%, #0a0c11 60%, #06070a 100%);
 }
 
-/* CRT: scanlines + vignette. Both purely decorative, no hit area. */
-body::before {
-  content: ''; position: fixed; inset: 0; z-index: 91; pointer-events: none;
-  background: repeating-linear-gradient(0deg,
-    rgba(0, 0, 0, .14) 0px, rgba(0, 0, 0, .14) 1px,
-    transparent 1px, transparent 3px);
-  opacity: .4;
-}
-body::after {
-  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 92;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, .58) 100%);
-}
+/* ============================================================
+   THE CRT IS GONE.
+
+   Two full-screen layers used to sit over everything: a scanline
+   gradient at forty percent, and a radial vignette taking the
+   corners down by fifty-eight percent. Both were pinned to the
+   BODY, so they went over the rooms, the cutscenes, the murder
+   board and — worst of all — the phone: a plan of Paris printed
+   on pale paper with a dark ring round it and a horizontal haze
+   combed across it. That is the "fade light layer" on the map,
+   and it was never the map's fault.
+
+   Decorative CRT dressing over crisp pixel art is a filter over a
+   painting. The art is the art. Nothing goes over it.
+   ============================================================ */
 
 /* layout shell — dvh so mobile browser chrome can't crop the rail */
 #fx-shake { height: 100%; height: 100dvh; position: relative; z-index: 1; }
@@ -3208,6 +3211,169 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .map-pin.shut { opacity: .5; }
 .map-pin.shut::before { background: rgba(200,192,172,.5); box-shadow: 0 0 0 2px rgba(74,61,40,.4); }
 .map-pin.closing::before { box-shadow: 0 0 0 2px #b8564a; }
+
+/* ============================================================
+   THE OPENING.
+
+   Full-bleed painted cards with a caption under them and, where
+   the beat is something you DO rather than something you watch,
+   invisible hot spots laid over the art at card scale. A hot spot
+   is not drawn — the card already shows what is there — but it
+   lights up under a pointer and carries the name of the thing so
+   you know what you are about to look at.
+   ============================================================ */
+/* CINE.stage() IS #cine-stage, NOT #cine-root. The first pass styled the
+   wrong element, so the opening painted its cards over a live murder board
+   with the title buttons showing round the edges. */
+#cine-stage.intro-on {
+  position: fixed; inset: 0; z-index: 160;
+  display: flex; align-items: center; justify-content: center;
+  background: #06070a;
+  pointer-events: auto;
+}
+.intro-card {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  opacity: 0; transform: translateY(10px) scale(.985);
+  transition: opacity .26s ease, transform .26s cubic-bezier(.2,1.5,.4,1);
+}
+.intro-card.in { opacity: 1; transform: none; }
+/* A HELD CARD SITS UP TOP AND TAKES NO CLICKS. The stage is above the
+   dialogue plate in the stack, so a held card that ate pointer events
+   meant the reply buttons under it could never be pressed. */
+#cine-stage.intro-on.held {
+  align-items: flex-start; padding-top: 2vh; pointer-events: none;
+}
+.intro-card.held { gap: 6px; }
+.intro-card.out { opacity: 0; transform: translateY(-6px) scale(.99); }
+.intro-frame {
+  image-rendering: pixelated; display: block;
+  box-shadow: 0 0 0 3px #12101d, 0 10px 0 rgba(0,0,0,.55);
+}
+.intro-head, .intro-line, .intro-foot {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  text-align: center;
+}
+.intro-head { letter-spacing: 1px; }
+.intro-line { max-width: min(92vw, 760px); }
+
+/* the touchable places on a card */
+.intro-hot { position: absolute; left: 0; top: 0; pointer-events: none; }
+/* A HOT SPOT HAS TO BE VISIBLE WITHOUT A MOUSE. The first pass only
+   drew the ring on :hover, which on a touch screen means the beat asks
+   you to look at three places and shows you none of them. */
+.intro-hot .intro-spot {
+  position: absolute; pointer-events: auto; cursor: pointer;
+  background: rgba(255,215,126,.05); border: 0; padding: 0;
+  box-shadow: inset 0 0 0 2px rgba(255,215,126,.28);
+  animation: spot-breathe 2.4s ease-in-out infinite;
+  transition: box-shadow .12s ease, background .12s ease;
+}
+/* the corner brackets, so it reads as a viewfinder and not a box */
+.intro-spot::before, .intro-spot::after {
+  content: ''; position: absolute; width: 9px; height: 9px; pointer-events: none;
+  border: 2px solid rgba(255,215,126,.85);
+}
+.intro-spot::before { left: -2px; top: -2px; border-right: 0; border-bottom: 0; }
+.intro-spot::after { right: -2px; bottom: -2px; border-left: 0; border-top: 0; }
+@keyframes spot-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 2px rgba(255,215,126,.22); }
+  50% { box-shadow: inset 0 0 0 2px rgba(255,215,126,.52); }
+}
+.intro-spot:hover, .intro-spot:focus-visible {
+  background: rgba(255,215,126,.14);
+  box-shadow: inset 0 0 0 2px rgba(255,215,126,.85);
+  animation: none;
+}
+.intro-spot.done { opacity: .34; animation: none; }
+.intro-spot .intro-tag {
+  position: absolute; left: 50%; bottom: -3px; transform: translate(-50%, 100%);
+  background: rgba(20,14,8,.86); padding: 2px 5px; white-space: nowrap;
+  opacity: .72; transition: opacity .12s ease;
+}
+.intro-spot:hover .intro-tag, .intro-spot:focus-visible .intro-tag { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .intro-spot { animation: none; } }
+/* the way out of a thirteen-beat opening */
+.intro-skip {
+  position: absolute; right: 0; bottom: -26px;
+  pointer-events: auto; cursor: pointer; border: 0;
+  background: rgba(20,14,8,.72); padding: 3px 8px;
+  box-shadow: inset 0 0 0 1px rgba(201,192,168,.30);
+  opacity: .55; transition: opacity .12s ease, background .12s ease;
+}
+.intro-skip:hover, .intro-skip:focus-visible {
+  opacity: 1; background: rgba(40,28,16,.9);
+  box-shadow: inset 0 0 0 1px rgba(255,215,126,.7);
+}
+.intro-card.held .intro-skip { bottom: -24px; }
+
+/* ============================================================
+   THE NOTIFICATION RAIL.
+
+   Banners slide in at the top right, over everything, three at a
+   time, and go away on their own. Tapping one opens the app it
+   came from. It is the only part of the interface that talks to
+   you without being asked, so it stays small and it leaves.
+   ============================================================ */
+#note-rail {
+  position: fixed; top: 10px; right: 10px; z-index: 190;
+  display: flex; flex-direction: column; gap: 6px;
+  pointer-events: none; max-width: min(92vw, 360px);
+}
+.note-card {
+  pointer-events: auto; cursor: pointer;
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 7px 10px 7px 8px;
+  background: rgba(6,20,15,.94);
+  box-shadow: inset 0 0 0 2px #0b1a14, 0 4px 0 rgba(0,0,0,.5);
+  border-left: 4px solid #5f8f7f;
+  opacity: 0; transform: translateX(14px);
+  transition: opacity .18s ease, transform .22s cubic-bezier(.2,1.4,.4,1);
+}
+.note-card.in { opacity: 1; transform: none; }
+.note-card.out { opacity: 0; transform: translateX(14px); }
+.note-card:hover { background: rgba(10,30,22,.98); }
+.note-good { border-left-color: #2ec4a9; }
+.note-bad { border-left-color: #d13b45; }
+.note-time { border-left-color: #e0a63c; }
+.note-ic { flex: 0 0 auto; image-rendering: pixelated; }
+/* align-items MATTERS HERE. A flex column stretches its children across
+   the cross axis by default, and a canvas that gets stretched keeps its
+   aspect ratio: the five-character clock came out four times the height
+   of the headline it sat under. */
+.note-col {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 1px; min-width: 0;
+}
+.note-col > canvas { max-width: 100%; }
+.ph-note-row { cursor: pointer; }
+
+/* A QUARTER YOU HAVE NOT EARNED. Not dimmed like an off-case stop —
+   barred, with a lock on it, so the difference between "not tonight"
+   and "not yet" is visible at a glance. */
+.map-pin.barred { filter: grayscale(1) brightness(.72); }
+.map-pin.barred .pin-tag {
+  background: rgba(24,20,14,.9);
+  box-shadow: inset 0 0 0 1px rgba(141,134,114,.5);
+}
+.map-pin.barred:hover { filter: grayscale(.6) brightness(.95); }
+
+/* the unread count on the phone in the belt */
+.phone-btn { position: relative; }
+.phone-badge {
+  position: absolute; top: -6px; right: -6px;
+  min-width: 18px; padding: 2px 4px;
+  background: #d13b45; box-shadow: inset 0 0 0 2px #12101d;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.phone-badge.hidden { display: none; }
+@media (max-width: 560px) {
+  #note-rail { top: 6px; right: 6px; left: 6px; max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-card { transition: none; }
+}
 </style>
 </head>
 <body>
@@ -6233,6 +6399,175 @@ SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
    are rolled as TRAITS and drawn right on the frog.
    ============================================================ */
 
+/* ============================================================
+   THE HEAD, IN PROFILE.
+
+   Drawn from nothing on its own canvas rather than repainted over
+   the front-facing one — that was the first attempt and it never
+   read, because the outline underneath still said "front": a snout
+   painted inside a head-on silhouette is a head-on head with a
+   snout painted on it.
+
+   A frog turned sideways is mostly muzzle. So the silhouette here
+   is the whole point: the skull is a dome set well back, the jaw
+   runs out a long way in front of it and comes to a blunt tip, and
+   the single eye sits high and forward where the two bulges meet
+   the brow. Everything else — hat, collar, expression — hangs off
+   those three shapes.
+
+   Same canvas size as the front head so the rig can swap one for
+   the other without moving anything.
+   ============================================================ */
+SPR.profileHead = function (d, expr) {
+  expr = expr || 'neutral';
+  const P = PIX.PAL;
+  const skin = P[d.skin[0]], shade = P[d.skin[1]], dark = P[d.skin[2]];
+  const W = 46, H = 42;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  const fat = !!d.fat;
+  /* he faces RIGHT; the rig flips the whole sprite when he faces left */
+  const bx = fat ? 12 : 14;              // back of the skull
+  const ty = 24;                         // the jaw line
+  const sk = fat ? 16 : 14;              // skull radius
+  const jaw = fat ? 30 : 28;             // how far the muzzle runs out
+
+  /* ---- THE SILHOUETTE, in ink, one pixel bigger all round ---- */
+  const ink = (col) => {
+    /* the skull */
+    SPR.ellipse(c, bx + 4, ty - 5, sk, sk - 3, col);
+    /* the jaw: a long wedge from under the skull out to the tip */
+    for (let i = 0; i < jaw; i++) {
+      const t = i / jaw;
+      const top = ty - 6 + Math.round(t * t * 5);
+      const bot = ty + 5 - Math.round(t * t * 3);
+      PIX.rect(c, bx + 2 + i, top, 1, bot - top, col);
+    }
+    /* the throat, hanging under the back of the jaw */
+    SPR.ellipse(c, bx + 10, ty + 5, 12, 4, col);
+  };
+  ink(P.K);
+  /* and the skin inside it, inset by one */
+  c.save();
+  c.translate(0, 0);
+  SPR.ellipse(c, bx + 4, ty - 5, sk - 1, sk - 4, skin);
+  for (let i = 1; i < jaw - 1; i++) {
+    const t = i / jaw;
+    const top = ty - 5 + Math.round(t * t * 5);
+    const bot = ty + 4 - Math.round(t * t * 3);
+    PIX.rect(c, bx + 2 + i, top, 1, bot - top, skin);
+  }
+  SPR.ellipse(c, bx + 10, ty + 4, 11, 3, shade);
+  c.restore();
+  /* the shading: the underside of the jaw and the back of the skull */
+  for (let i = 2; i < jaw - 2; i++) {
+    const t = i / jaw;
+    const bot = ty + 4 - Math.round(t * t * 3);
+    PIX.rect(c, bx + 2 + i, bot - 2, 1, 2, shade);
+  }
+  SPR.ellipse(c, bx - 1, ty - 4, 6, 9, shade);
+  /* the mottle a frog has, if this one has it */
+  if (d.spots) {
+    [[8, -10], [16, -4], [24, 0], [12, 2]].forEach(o =>
+      PIX.disc(c, bx + o[0], ty + o[1], 2, shade));
+  }
+  if (d.warts) {
+    [[6, -12], [18, -6], [26, -1]].forEach(o => {
+      PIX.disc(c, bx + o[0], ty + o[1], 2, shade);
+      PIX.disc(c, bx + o[0], ty + o[1] - 1, 1, skin);
+    });
+  }
+
+  /* ---- THE MOUTH, the whole length of the jaw ---- */
+  const EX = {
+    neutral: 0, talk: -3, talk2: -1, happy: 2, joy: 3, laugh: 4, grin: 2,
+    smug: 1, sad: -2, angry: -1, worry: 0, wince: -1, blink: 0, bored: 0,
+    squint: 0, think: -1, doubt: 0, sniff: 0, alarm: -4, blush: 1,
+    pain: -2, dead: -4, wink: 2, thinkb: 0,
+  };
+  const open = EX[expr] === undefined ? 0 : EX[expr];
+  const lipY = ty + 1;
+  if (open < 0) {
+    /* the jaw is down: the mouth is a wedge of dark with a tongue in it */
+    for (let i = 4; i < jaw - 2; i++) {
+      const t = i / jaw;
+      const drop = Math.round(-open * (1 - t) * 1.2);
+      PIX.rect(c, bx + 2 + i, lipY - drop, 1, drop + 2, P.K);
+    }
+    PIX.rect(c, bx + 8, lipY - 1, 12, 2, P.r);
+  } else {
+    for (let i = 3; i < jaw - 1; i++) {
+      const t = i / jaw;
+      const up = Math.round(open * (1 - Math.abs(t - 0.75) * 2) * 0.9);
+      PIX.rect(c, bx + 2 + i, lipY - Math.round(t * t * 2) - up, 1, 2, P.K);
+    }
+  }
+  /* the corner of it, tucked under the eye */
+  PIX.rect(c, bx + 3, lipY - 1, 2, 3, P.K);
+  /* the nostril, near the tip */
+  PIX.rect(c, bx + jaw - 6, ty - 4, 2, 2, dark);
+
+  /* ---- ONE EYE, high and forward ---- */
+  const exx = bx + (fat ? 14 : 12), eyy = ty - 12;
+  const shut = expr === 'blink' || expr === 'joy' || expr === 'laugh' || expr === 'dead';
+  const lid = expr === 'squint' || expr === 'bored' ? 3
+    : expr === 'smug' || expr === 'wince' ? 2 : 0;
+  SPR.ellipse(c, exx, eyy + 1, 8, 7, P.K);
+  SPR.ellipse(c, exx, eyy + 1, 7, 6, skin);
+  if (shut) {
+    PIX.rect(c, exx - 5, eyy + 1, 11, 2, P.K);
+    PIX.rect(c, exx - 4, eyy + 3, 9, 1, dark);
+  } else if (expr === 'dead') {
+    PIX.rect(c, exx - 3, eyy - 1, 7, 1, P.K);
+  } else {
+    const iris = d.goldEyes ? P.G : d.spiral ? P.N : P.g;
+    SPR.ellipse(c, exx + 1, eyy + 1, 5, 4, P.W);
+    SPR.ellipse(c, exx + 1, eyy + 1, 4, 3, iris);
+    PIX.rect(c, exx, eyy + 1, 4, 2, P.K);            // the slot pupil
+    PIX.rect(c, exx - 1, eyy, 1, 1, P.W);            // the catchlight
+    if (lid) PIX.rect(c, exx - 6, eyy - 3, 13, lid, skin);
+  }
+  /* the brow, which is where the expression lives */
+  const brow = expr === 'angry' || expr === 'doubt' ? 2
+    : expr === 'sad' || expr === 'worry' || expr === 'alarm' ? -2 : 0;
+  for (let i = 0; i < 13; i++) {
+    PIX.rect(c, exx - 6 + i, eyy - 5 + Math.round(i * 0.18) + brow, 1, 2, P.K);
+  }
+
+  /* ---- THE HAT ---- */
+  const C = SPR.costumeOf(d);
+  if (d.flatcap || (C && C.cap)) {
+    const hc = P[d.hatCol] || P.t;
+    PIX.rect(c, bx - 4, eyy - 8, 26, 4, P.K);
+    PIX.rect(c, bx - 3, eyy - 7, 24, 3, hc);
+    PIX.rect(c, bx - 3, eyy - 7, 24, 1, 'rgba(255,255,255,.14)');
+    /* the peak, out over the eye */
+    PIX.rect(c, bx + 16, eyy - 5, 12, 3, P.K);
+    PIX.rect(c, bx + 16, eyy - 5, 11, 2, hc);
+  } else if (d.hat) {
+    const hc = P[d.hatCol] || P.T, hb = P[d.band] || P.d;
+    PIX.rect(c, bx - 6, eyy - 7, 34, 4, P.K);          // the brim
+    PIX.rect(c, bx - 5, eyy - 6, 32, 2, hc);
+    PIX.rect(c, bx - 5, eyy - 6, 32, 1, 'rgba(255,255,255,.14)');
+    PIX.rect(c, bx - 1, eyy - 18, 20, 12, P.K);        // the crown
+    PIX.rect(c, bx, eyy - 17, 18, 11, hc);
+    PIX.rect(c, bx, eyy - 17, 3, 11, 'rgba(255,255,255,.10)');
+    PIX.rect(c, bx, eyy - 9, 18, 3, hb);               // the band
+    PIX.rect(c, bx + 2, eyy - 17, 12, 2, 'rgba(0,0,0,.30)');  // the pinch
+  }
+
+  /* ---- THE COLLAR, edge on ---- */
+  const CO = C && (C.overcoat || C.jacket);
+  const cc = P[(CO && CO.col) || d.suit] || P.T;
+  const shirt = P[(C && C.shirt && C.shirt.col) || d.shirt] || P.W;
+  PIX.rect(c, bx + 2, ty + 7, 20, 4, P.K);
+  PIX.rect(c, bx + 3, ty + 7, 18, 3, cc);
+  PIX.rect(c, bx + 12, ty + 7, 7, 3, shirt);
+  if (d.tie) PIX.rect(c, bx + 15, ty + 9, 4, 2, P[d.tie] || P.r);
+  return cv;
+};
+
 SPR.buildFrog = function (d, expr) {
   expr = expr || 'neutral';
   const P = PIX.PAL;
@@ -8922,10 +9257,21 @@ SPR.frogWhole = function (key, def, opts) {
      only ever reached by the portraits in a conversation. Now a frog
      standing at a counter can be bored, pleased, or watching you. */
   const ex = opts.expr || 'neutral';
-  return SPR.cached('whole_' + key + ':' + frame + ':' + ex + (back ? ':b' : ''), () => {
+  /* AND WHICH WAY HE IS TURNED. Front, back, or — new — in profile,
+     which is what he actually is for most of the time he is on screen:
+     walking along a street is walking sideways. */
+  const side = !!opts.side && !back;
+  return SPR.cached('whole_' + key + ':' + frame + ':' + ex
+    + (back ? ':b' : '') + (side ? ':s' : ''), () => {
     const P = PIX.PAL;
     const ph = SPR.walkPhase(frame);
-    const head = SPR.frogCustom('fb:' + key + ':' + ex, def, ex);
+    /* THE HEAD. Front-on and back-on share one canvas — the back view
+       repaints the face out. Side-on is its own drawing, because a
+       profile needs its own silhouette and no amount of repainting
+       inside a head-on outline will give it one. */
+    const head = side
+      ? SPR.cached('fbp:' + key + ':' + ex, () => SPR.profileHead(def, ex))
+      : SPR.frogCustom('fb:' + key + ':' + ex, def, ex);
     const body = SPR.bodyStanding('fb:' + key, def, ph);
     /* PROPORTION. The portrait head and the duel bust were both drawn for a
        frog sitting at a table, where you never see him below the chest. Used
@@ -8957,7 +9303,11 @@ SPR.frogWhole = function (key, def, opts) {
     const O = C.overcoat || C.jacket || null;
     const legC = P[(O && O.dark) || 'k'] || P.k;
     const hipY = bodyTop + bh - 6;
-    const spread = def.fat ? 10 : 8;      // hips, not a pair of stilts
+    /* TURNED, HIS LEGS ARE IN LINE, not side by side. A profile with the
+       feet spread apart across the frame is a frog standing front-on with
+       a side-on head stuck on it, which is the single thing that stops
+       the turn reading. */
+    const spread = side ? 3 : (def.fat ? 10 : 8);
     [-1, 1].forEach(sgn => {
       /* the leading leg is the one the swing is carrying toward */
       const lead = sgn * swing > 0;
@@ -8983,7 +9333,7 @@ SPR.frogWhole = function (key, def, opts) {
     const coatC = P[(O && O.col) || 'T'] || P.T;
     const coatD = P[(O && O.dark) || 'k'] || P.k;
     const skirtY = bodyTop + bh - 4;
-    const skW = Math.round(bw * 0.27);
+    const skW = Math.round(bw * (side ? 0.19 : 0.27));
     const kick = Math.round(swing * 0.35);
     PIX.rect(c, cx - skW - 1 + kick, skirtY, skW * 2 + 2, 14, P.K);
     PIX.rect(c, cx - skW + kick, skirtY, skW * 2, 12, coatC);
@@ -8992,21 +9342,28 @@ SPR.frogWhole = function (key, def, opts) {
     PIX.rect(c, cx + skW - 3 + kick, skirtY, 3, 12, 'rgba(0,0,0,.26)');
     PIX.rect(c, cx + kick, skirtY + 5, 1, 9, 'rgba(0,0,0,.34)');   // the vent
 
-    c.drawImage(body, Math.round((W - bw) / 2), bodyTop, bw, bh);
+    /* SHOULDERS TURN. A torso seen edge-on is about two thirds the width
+       it is head-on, and drawing it at full width is what made the first
+       profile read as a front view with a snout drawn on it. */
+    const sbw = side ? Math.round(bw * 0.66) : bw;
+    const shw = side ? Math.round(hw * 0.90) : hw;
+    c.drawImage(body, Math.round((W - sbw) / 2), bodyTop, sbw, bh);
 
     /* HANDS. The bust stops at a shirt cuff because the duel paints the
        hands onto the felt itself. Standing up he needs his own, hung on the
-       wrist the body reports, swinging against the leg on the same beat. */
+       wrist the body reports, swinging against the leg on the same beat.
+       Turned, only the near one is in front of him — the other arm is on
+       the far side of his body and is drawn with the profile below. */
     const wr = body.wristAt;
-    if (wr) {
-      const bx = Math.round((W - bw) / 2);
+    if (wr && !side) {
+      const bx = Math.round((W - sbw) / 2);
       wr.forEach(w => {
         SPR.frogHand(c, bx + Math.round(w.x * BS), bodyTop + Math.round(w.y * BS),
           def, w.sgn, { noCuff: true, grip: true });
       });
     }
 
-    c.drawImage(head, Math.round((W - hw) / 2), bob, hw, hh);
+    c.drawImage(head, Math.round((W - shw) / 2), bob, shw, hh);
 
     /* ------------------------------------------------------------
        WALKING AWAY FROM YOU.
@@ -9051,6 +9408,78 @@ SPR.frogWhole = function (key, def, opts) {
       PIX.rect(c, cx2 - Math.round(hw * 0.22), ey + Math.round(hh * 0.28),
         Math.round(hw * 0.44), 2, 'rgba(0,0,0,.35)');
     }
+    /* ------------------------------------------------------------
+       IN PROFILE.
+
+       A frog's head is nearly all muzzle, which is the one thing
+       that makes a side view of one worth drawing: front-on he is
+       two eye bulges and a very wide mouth, and turned he is a
+       snout. So the face gets painted out in his own skin and
+       redrawn as a profile — the dome set back, the muzzle pushed
+       forward, ONE eye near the front of it, the mouth running the
+       length of the jaw, and a nostril at the tip.
+
+       The torso turns with him: the tie and the far lapel go under
+       one panel of coat, the far shoulder drops into shadow, and
+       the far arm goes behind the body instead of beside it.
+
+       Everything is drawn inside the head and body boxes the front
+       rig already laid down, so the silhouette, the hat and the
+       outline all still belong to the same frog.
+       ------------------------------------------------------------ */
+    if (side) {
+      const bw2 = sbw, hw2 = shw;
+      const bx2 = Math.round((W - bw2) / 2);
+      const hx = Math.round((W - hw2) / 2);
+      const cx2 = hx + Math.round(hw2 / 2);
+      const ey = bob + Math.round(hh * 0.46);
+      const sk = P[def.skin[0]] || P.F;
+      const sh = P[def.skin[1]] || P.f;
+      const dk = P[def.skin[2]] || P.e;
+
+      /* ---- the torso, turned ---- */
+      const px0 = bx2 + Math.round(bw2 * 0.28), pw = Math.round(bw2 * 0.44);
+      const py0 = bodyTop + Math.round(bh * 0.14), ph = Math.round(bh * 0.82);
+      PIX.rect(c, px0, py0, pw, ph, coatC);
+      PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.06)');
+      /* the one lapel you can see, edge-on */
+      PIX.rect(c, px0 + pw - 4, py0 + 2, 4, Math.round(ph * 0.42), 'rgba(255,255,255,.10)');
+      PIX.rect(c, px0 + pw - 1, py0 + 2, 1, Math.round(ph * 0.42), 'rgba(0,0,0,.30)');
+      /* a sliver of collar at the throat, and a tie only if he wears one —
+         the fallback used to paint a red bar down the shirt of every frog
+         in the game who does not own a tie */
+      PIX.rect(c, px0 + pw - 5, py0 + 1, 4, 3, P.W);
+      if (def.tie) {
+        PIX.rect(c, px0 + pw - 4, py0 + 3, 2, Math.round(ph * 0.26), P[def.tie] || P.r);
+      }
+      /* the far shoulder, dropped into shadow behind the near one */
+      PIX.rect(c, bx2 + Math.round(bw2 * 0.16), py0 + 3,
+        Math.round(bw2 * 0.14), Math.round(ph * 0.6), 'rgba(0,0,0,.30)');
+
+      /* the head is its own drawing now; nothing to repaint */
+
+      /* ---- ONE ARM IN FRONT, ONE BEHIND ----
+         The far arm is a sliver of sleeve showing past the back of him;
+         the near one swings across his front with the hand on the end. */
+      const wr2 = body.wristAt;
+      if (wr2 && wr2.length) {
+        const near = wr2.reduce((a, b) => (b.x > a.x ? b : a), wr2[0]);
+        const far = wr2.reduce((a, b) => (b.x < a.x ? b : a), wr2[0]);
+        /* the far sleeve, behind the torso */
+        PIX.rect(c, px0 - 3, py0 + 6, 4, Math.round(ph * 0.62), coatD);
+        PIX.rect(c, px0 - 3, py0 + 6, 1, Math.round(ph * 0.62), 'rgba(0,0,0,.30)');
+        SPR.frogHand(c, px0 - 4, bodyTop + Math.round(far.y * BS), def, -1,
+          { noCuff: true, grip: true });
+        /* the near sleeve, across the front */
+        const nx = px0 + Math.round(pw * 0.62);
+        PIX.rect(c, nx, py0 + 5, 7, Math.round(ph * 0.60), coatC);
+        PIX.rect(c, nx, py0 + 5, 7, 1, 'rgba(255,255,255,.10)');
+        PIX.rect(c, nx + 5, py0 + 5, 2, Math.round(ph * 0.60), 'rgba(0,0,0,.24)');
+        SPR.frogHand(c, nx + 1, bodyTop + Math.round(near.y * BS), def, 1,
+          { noCuff: true, grip: true });
+      }
+    }
+
     /* and one hard line all the way round him, with a rim light on it */
     SPR.inkEdge(cv, true);
     return cv;
@@ -9089,7 +9518,7 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    the frame sizes where that does not come out even, plus mugshots
    and pins.
    ============================================================ */
-SPR.rigLOD = function (key, def, frame, face, down, back, expr) {
+SPR.rigLOD = function (key, def, frame, face, down, back, expr, side) {
   down = down || 3;
   /* EIGHT FRAMES, NOT FOUR. This used to fold the frame number modulo four,
      which quietly threw away half of the walk cycle the rig had drawn. */
@@ -9098,8 +9527,8 @@ SPR.rigLOD = function (key, def, frame, face, down, back, expr) {
   const fc = face < 0 ? -1 : 1;
   const ex = expr || 'neutral';
   return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down + ':' + ex
-    + (back ? ':b' : ''), () => {
-    const src = SPR.frogWhole(key, def, { frame: f, back: !!back, expr: ex });
+    + (back ? ':b' : '') + (side ? ':s' : ''), () => {
+    const src = SPR.frogWhole(key, def, { frame: f, back: !!back, expr: ex, side: !!side });
     if (down === 1 && fc > 0) return src;
     const w = Math.max(1, Math.round(src.width / down));
     const h = Math.max(1, Math.round(src.height / down));
@@ -13950,10 +14379,10 @@ const SCENE = (() => {
   }
 
   /* { cv, w, h } — the picture, and the room-space box it goes in */
-  function rig(d, frame, face, back, expr) {
+  function rig(d, frame, face, back, expr, side) {
     const down = lodFor();
-    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : ''),
-      d.def || d, frame, face, down, back, expr);
+    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : '') + (side ? ':s' : ''),
+      d.def || d, frame, face, down, back, expr, side);
     return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
   }
 
@@ -14252,11 +14681,30 @@ const SCENE = (() => {
     return null;
   }
 
-  function targets() {
+  /* is the eyeglass in your hand right now */
+  const glassOut = () => typeof TOOLS !== 'undefined' && TOOLS.is('glass');
+
+  /* ============================================================
+     WHAT IS IN REACH.
+
+     `quiet` is for the walk-past label — the thing the game names
+     at you because you happened to stop next to it. An easter egg
+     is never that: it is not in this list at all unless the
+     eyeglass is out, and it is never in the quiet list, so the
+     only way to find the Thai flag on the shelf or the cards
+     under the till is to sweep the room with the glass and notice
+     the glint. They used to shout their own names at anybody who
+     walked past, which is the opposite of a secret.
+     ============================================================ */
+  function targets(quiet) {
     if (!def) return [];
     const out = [];
     for (const a of (def.actors || [])) if (!a.gone) out.push(a);
-    for (const s of (def.spots || [])) if (!s.gone && !(s.when && !s.when())) out.push(s);
+    for (const s of (def.spots || [])) {
+      if (s.gone || (s.when && !s.when())) continue;
+      if (s.egg && (quiet || !glassOut())) continue;
+      out.push(s);
+    }
     /* the animals are things you can walk up to as well */
     for (const a of pets) {
       const fy = a.y === undefined ? floorAt(a.z) : a.y;
@@ -14284,8 +14732,18 @@ const SCENE = (() => {
     return out;
   }
 
+  /* ============================================================
+     WHAT IS UNDER THE POINTER.
+
+     THE SMALLEST BOX WINS. It used to be the nearest centre, and a
+     nearest-centre rule makes anything small that sits on top of
+     anything big unreachable: the eighteen-pixel easter egg on the
+     bar stool was at the same x as the stool, so pointing at it
+     always got the stool. The specific thing beats the general one,
+     and a tie in size falls back to the nearer centre.
+     ============================================================ */
   function pick(x, y) {
-    let best = null, bd = 1e9;
+    let best = null, bestA = 1e9, bd = 1e9;
     for (const o of targets()) {
       const w = o.w || 26;
       /* a thing standing back in the room has its box up there with it */
@@ -14293,8 +14751,10 @@ const SCENE = (() => {
       const top = o.top === undefined ? fy - 44 : o.top + dy;
       const bot = o.bot === undefined ? fy + 6 : o.bot + dy;
       if (x > o.x - w / 2 - 4 && x < o.x + w / 2 + 4 && y > top - 8 && y < bot + 4) {
-        const dd = Math.abs(x - o.x);
-        if (dd < bd) { bd = dd; best = o; }
+        const area = w * Math.max(1, bot - top), dd = Math.abs(x - o.x);
+        if (area < bestA - 1 || (Math.abs(area - bestA) <= 1 && dd < bd)) {
+          bestA = area; bd = dd; best = o;
+        }
       }
     }
     return best;
@@ -14510,7 +14970,7 @@ const SCENE = (() => {
 
     /* what is within arm's reach, measured across the ground */
     let best = null, bd = 26;
-    for (const o of targets()) {
+    for (const o of targets(true)) {
       const d = dist2(o.x, o.z === undefined ? me.z : o.z, me.x, me.z);
       if (d < bd) { bd = d; best = o; }
     }
@@ -15430,6 +15890,31 @@ const SCENE = (() => {
 
     /* furniture that people stand behind */
     if (def.onPaintFront) def.onPaintFront(c, T);
+
+    /* ============================================================
+       THE GLINT.
+
+       With the glass in your hand, and only then, every easter egg
+       in the room catches a little light — one pixel, on a slow
+       count, out of phase with its neighbours. Without the glass
+       there is nothing there at all. That is the whole game of
+       finding them: sweep the room and watch for the sparkle.
+       ============================================================ */
+    if (glassOut()) {
+      for (const s of (def.spots || [])) {
+        if (!s.egg || s.gone) continue;
+        const fy = floorAt(s.z), dy = fy - def.floorY;
+        const gy = (s.top === undefined ? fy - 10 : s.top + dy) - 4;
+        const ph = Math.sin(T * 2.4 + (s.x % 23)) ;
+        if (ph < 0.55) continue;
+        const a2 = ((ph - 0.55) / 0.45).toFixed(2);
+        ART.px(c, s.x, gy, 1, 1, 'rgba(255,248,210,' + a2 + ')');
+        ART.px(c, s.x - 2, gy, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+        ART.px(c, s.x + 2, gy, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+        ART.px(c, s.x, gy - 2, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+        ART.px(c, s.x, gy + 2, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+      }
+    }
     /* THE ANIMALS GO IN FRONT OF IT. A cat is twenty pixels tall and every
        room has a counter across the front of it: behind the furniture, in
        depth order, the dog was simply invisible. */
@@ -15589,7 +16074,11 @@ const SCENE = (() => {
     /* an actor mid-line wears the talking face; the rest of the time he
        wears whatever his mood does when it is left alone */
     const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
-    const r = rig(a, a.frame || 0, face, a.back, ex);
+    /* HE TURNS TO YOU WHEN YOU ARE CLOSE, and stands in profile the rest
+       of the time — which is what somebody minding their own business at a
+       counter looks like from across a room. */
+    const aside = !a.back && !close && a.profile !== false;
+    const r = rig(a, a.frame || 0, face, a.back, ex, aside);
     const fy = a.y === undefined ? floorAt(a.z) : a.y;
     const id = a.still ? { rise: 0, lean: 0, roll: 0 } : idleOf(T, Math.round(a.x));
     const sc = scaleAt(a.z);
@@ -15629,9 +16118,15 @@ const SCENE = (() => {
   }
 
   function drawMe(c, T) {
-    /* WALKING AWAY, YOU SEE HIS BACK. The rig is the same frog; the head
-       just has nothing on the front of it. */
-    const r = rig(SCENE.meDef(), me.frame, me.face, me.faceZ < 0, myFace(T));
+    /* WHICH WAY HE IS TURNED.
+
+       Walking away you see his back. Walking INTO or OUT OF the depth you
+       see him front or back on. And walking along the street — which is
+       what he is doing most of the time he is moving at all — you see him
+       in profile, because that is what walking sideways looks like. */
+    const back = me.faceZ < 0;
+    const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
+    const r = rig(SCENE.meDef(), me.frame, me.face, back, myFace(T), side);
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
@@ -15750,6 +16245,9 @@ const SCENE = (() => {
         floorY: def ? def.floorY : null, roomW: def ? def.w : null };
     },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
+    /* the harness asks what is under a point, so the egg rules can be
+       asserted rather than eyeballed */
+    debugPick(x, y) { return pick(x, y === undefined ? (def ? def.floorY - 10 : 100) : y); },
     debugRatCount() { return rats.length; },
     debugRatsWhere() { return rats.map(r => ({ x: Math.round(r.x), d: r.dir, v: Math.round(r.v) })); },
     get def() { return def; },
@@ -15904,10 +16402,78 @@ const CITY = (() => {
       short: 'THE BONES', x: 40, y: 82, icon: 'ic_skull', scene: true,
       blurb: 'THE ONLY ROOM IN THIS CITY NOBODY HAS EVER BUGGED.',
     },
+
+    /* ---------------------------------------------------------
+       AND THE PARTS OF THE CITY YOU HAVE TO EARN.
+
+       A foreign policeman on his first afternoon gets the five
+       stops on the file and the streets in between. He does not
+       get the Opera, he does not get taken up the hill to the
+       cemetery, and nobody drives him under the ring road until
+       there is a reason. `lock` is that reason: the number of
+       pieces that have to be on the board first.
+       --------------------------------------------------------- */
+    opera: {
+      id: 'opera', name: "L'OPERA", sub: 'THE GRANDEST STAIRCASE IN EUROPE',
+      short: "L'OPERA", x: 52, y: 26, icon: 'ic_dome', scene: true,
+      lock: 1, lockWhy: 'THE BRIGADE DOES NOT SEND A NEW MAN TO THE OPERA.',
+      blurb: 'THE MONEY IN THIS CITY GOES IN THE FRONT. THE REST GOES ROUND THE BACK.',
+    },
+    pere: {
+      id: 'pere', name: 'PERE-LACHAISE', sub: 'A HILL OF DEAD PARISIANS',
+      short: 'THE HILL', x: 90, y: 40, icon: 'ic_skull', scene: true,
+      lock: 2, lockWhy: 'NOBODY HAS GIVEN YOU A NAME UP THERE YET.',
+      blurb: 'THE ONE PLACE IN PARIS WHERE STANDING STILL IS NOT SUSPICIOUS.',
+    },
+    perif: {
+      id: 'perif', name: 'LA ZONE', sub: 'UNDER THE RING ROAD',
+      short: 'LA ZONE', x: 14, y: 84, icon: 'ic_anchor', scene: true,
+      lock: 4, lockWhy: 'YOU DO NOT KNOW THIS PLACE EXISTS YET.',
+      blurb: 'WHERE THE CITY KEEPS THE THINGS IT DOES NOT WANT PHOTOGRAPHED.',
+    },
   };
 
+  /* ---------------------------------------------------------
+     THE ZONES.
+
+     Eleven pins on a sheet of paper is a list. The same eleven
+     inside eight named quarters is a city — and once the plan has
+     quarters on it, a locked stop is a locked QUARTER, which is a
+     much better thing to be told you cannot go to.
+
+     x/y/w/h are on the same 0-100 grid the pins use.
+     --------------------------------------------------------- */
+  const ZONES = [
+    { id: 'butte', name: 'MONTMARTRE', x: 38, y: 0, w: 30, h: 22,
+      places: ['bar', 'butte'], tint: '#c9b795' },
+    { id: 'opera', name: "L'OPERA", x: 44, y: 18, w: 20, h: 18,
+      places: ['opera'], tint: '#c2ae88' },
+    { id: 'marais', name: 'LE MARAIS', x: 58, y: 18, w: 26, h: 24,
+      places: ['pawn', 'laundry'], tint: '#c9b795' },
+    { id: 'etoile', name: "L'ETOILE", x: 10, y: 18, w: 28, h: 22,
+      places: ['arch'], tint: '#c2ae88' },
+    { id: 'mars', name: 'CHAMP DE MARS', x: 8, y: 40, w: 28, h: 24,
+      places: ['tower'], tint: '#c9b795' },
+    { id: 'louvre', name: 'LE LOUVRE', x: 38, y: 32, w: 20, h: 20,
+      places: ['museum', 'diner'], tint: '#c2ae88' },
+    { id: 'cite', name: "L'ILE", x: 42, y: 48, w: 20, h: 18,
+      places: ['precinct'], tint: '#c9b795' },
+    { id: 'bercy', name: 'BERCY', x: 68, y: 58, w: 26, h: 24,
+      places: ['docks'], tint: '#c2ae88' },
+    { id: 'lachaise', name: 'PERE-LACHAISE', x: 80, y: 28, w: 20, h: 24,
+      places: ['pere'], tint: '#c9b795' },
+    { id: 'parnasse', name: 'MONTPARNASSE', x: 28, y: 70, w: 26, h: 26,
+      places: ['catacombs'], tint: '#c2ae88' },
+    { id: 'zone', name: 'LA ZONE', x: 4, y: 74, w: 24, h: 24,
+      places: ['perif'], tint: '#b8ae94' },
+  ];
+
+  const ZONE_OF = {};
+  ZONES.forEach(z => z.places.forEach(pl => { ZONE_OF[pl] = z; }));
+
   const ORDER = ['laundry', 'docks', 'pawn', 'diner', 'bar',
-    'tower', 'arch', 'butte', 'museum', 'catacombs'];
+    'tower', 'arch', 'butte', 'museum', 'catacombs',
+    'opera', 'pere', 'perif'];
 
   /* the five you work a case in. The landmarks are where the crew is. */
   const WORK = ['laundry', 'docks', 'pawn', 'diner', 'bar'];
@@ -15936,6 +16502,10 @@ const CITY = (() => {
     butte:      ['easel', 'steps', 'crate2', 'table'],
     museum:     ['fountain', 'glass', 'crate3', 'door'],
     catacombs:  ['bones', 'niche', 'plaque', 'pool'],
+    /* and the three you have to earn */
+    opera:      ['steps2', 'bill', 'cab2', 'grate'],
+    pere:       ['tomb', 'urn2', 'leaves', 'bench3'],
+    perif:      ['roller', 'drum', 'wreck', 'fence'],
   };
 
   /* ---------------------------------------------------------
@@ -15980,6 +16550,10 @@ const CITY = (() => {
     G.cargo = {};
     G.capAsked = {};
     G.burned = {};
+    /* the last-call warnings are per shift: whoever shut on you yesterday
+       is going to shut on you again today, and you want telling again */
+    G.rang = {};
+    G.notes = [];
   }
 
   /* HOW MUCH DAY IS LEFT.
@@ -16017,7 +16591,33 @@ const CITY = (() => {
     const c = Math.round((COST[kind] || 5) * (mult === undefined ? 1 : mult));
     G.clock = Math.round((G.clock === undefined ? START : G.clock)) + c;
     if (UI && UI.syncStory) UI.syncStory();
+    lastCall();
     return c;
+  }
+
+  /* ---------------------------------------------------------
+     LAST CALL.
+
+     The whole afternoon is a question of which door shuts first,
+     and the answer used to be buried in a badge on a pin nobody
+     was looking at. Now, the first time a stop that matters drops
+     under the wire, the phone says so once — and only once, and
+     only for the stops tonight's file actually wants.
+     --------------------------------------------------------- */
+  function lastCall() {
+    if (typeof PHONE === 'undefined' || !PHONE.notify) return;
+    G.rang = G.rang || {};
+    const want = (typeof CASE !== 'undefined' && CASE.stops) ? CASE.stops() : ORDER;
+    want.forEach(id => {
+      if (G.rang[id] || locked(id)) return;
+      const left = untilShut(id);
+      if (left === null || left <= 0 || left > 45) return;
+      const h = HOURS[id];
+      G.rang[id] = 1;
+      PHONE.notify({ app: 'map', tone: 'time',
+        head: (PLACES[id] ? PLACES[id].short : id) + ' SHUTS IN ' + left + ' MINUTES',
+        body: (h && h.who ? h.who : 'WHOEVER IS IN THERE') + ' GOES HOME AND TAKES IT WITH THEM.' });
+    });
   }
 
   /* the shift is over. Still called nightOver everywhere because
@@ -16051,6 +16651,10 @@ const CITY = (() => {
     tower:     { open: 0,       shut: 24 * 60,      who: 'A HAWKER' },
     arch:      { open: 0,       shut: 24 * 60,      who: 'A CABBIE' },
     metro:     { open: 5 * 60,  shut: 24 * 60,      who: 'A GUARD' },
+    opera:     { open: 11 * 60, shut: 18 * 60 + 30, who: 'THE HOUSE MANAGER' },
+    pere:      { open: 8 * 60,  shut: 17 * 60 + 30, who: 'THE GARDENER' },
+    /* nothing under a flyover has opening hours */
+    perif:     { open: 0,       shut: 24 * 60,      who: 'THE MAN AT THE FIRE' },
   };
 
   function hours(id) { return HOURS[id] || null; }
@@ -16176,8 +16780,46 @@ const CITY = (() => {
   function propsAt(id) { return (PROPS[id] || []).slice(); }
   function unsearchedAt(id) { return propsAt(id).filter(pr => !searched(id, pr)); }
 
+  /* ---------------------------------------------------------
+     WHAT IS OPEN TO YOU AT ALL.
+
+     Separate from HOURS: hours say whether anybody is behind the
+     counter, this says whether the city has told you the place
+     exists. A locked stop is not dimmed, it is shut, and the plan
+     draws a padlock on the quarter it is in.
+     --------------------------------------------------------- */
+  function pinned() { return (G.intelCards || []).length; }
+  function locked(id) {
+    const p = PLACES[id];
+    if (!p || !p.lock) return false;
+    if (G.unlocked && G.unlocked[id]) return false;
+    return pinned() < p.lock;
+  }
+  function lockWhy(id) {
+    const p = PLACES[id];
+    if (!p || !p.lock) return null;
+    const need = p.lock - pinned();
+    return (p.lockWhy || 'NOT YET.') + '  '
+      + (need === 1 ? 'ONE MORE PIECE ON THE BOARD.'
+        : need + ' MORE PIECES ON THE BOARD.');
+  }
+  /* called when the board gains a piece: returns the stops that just
+     opened, so somebody can put a notification on the phone about it */
+  function openUp() {
+    const out = [];
+    if (!G.unlocked) G.unlocked = {};
+    ORDER.forEach(id => {
+      const p = PLACES[id];
+      if (!p.lock || G.unlocked[id]) return;
+      if (pinned() >= p.lock) { G.unlocked[id] = 1; out.push(p); }
+    });
+    return out;
+  }
+
   return {
     PLACES, ORDER, WORK, PROPS, WEATHER, COST, START, END,
+    ZONES, zoneOf(id) { return ZONE_OF[id] || null; },
+    locked, lockWhy, openUp, pinned,
     propsAt, unsearchedAt,
     reset, spend, hhmm, watch, minutes, minutesLeft, nightOver,
     HOURS, hours, open, untilShut, closingSoon,
@@ -16201,6 +16843,9 @@ const CITY = (() => {
           /* is this stop part of tonight's case at all */
           inCase: (typeof CASE === 'undefined' ? true : CASE.stops().indexOf(id) >= 0),
           hint: (G.tips && G.tips[id]) || null,
+          zone: ZONE_OF[id] || null,
+          locked: locked(id),
+          lockWhy: lockWhy(id),
         };
       });
     },
@@ -16276,6 +16921,28 @@ const PARIS = (() => {
 
   function seedFor(id) {
     return U.hashSeed((G.seedStr || 'X') + ':' + (G.chapter || 1) + ':' + id);
+  }
+
+  /* ============================================================
+     WHY THINGS FLOAT, AND THE ONE-LINE CURE.
+
+     A bench drawn on a pavement at the same brightness as the
+     pavement is a bench-shaped hole. The eye reads CONTACT from a
+     shadow, not from a coordinate — and half the furniture in this
+     city had none, so it all looked like it was hovering an inch
+     off the ground even though every one of them was placed
+     exactly right.
+
+     `foot` puts the shadow down: darkest and tightest where the
+     legs meet the stone, softer and wider as it spreads, and
+     always off to the shaded side. Called at the END of a prop, so
+     nothing is drawn on top of it.
+     ============================================================ */
+  function foot(c, x, y, w, spread) {
+    const sp = spread === undefined ? 3 : spread;
+    px(c, x, y, w, 1, 'rgba(52,44,32,.42)');
+    px(c, x + 1, y + 1, w + sp, 1, 'rgba(52,44,32,.26)');
+    px(c, x + 2, y + 2, w + sp * 2, 1, 'rgba(52,44,32,.14)');
   }
 
   /* ============================================================
@@ -16406,6 +17073,7 @@ const PARIS = (() => {
     });
     px(c, x - 1, y - h - 9, 3, 4, L.iron);
     px(c, x - 1, y - h - 10, 3, 1, L.brass);
+    foot(c, x - 5, y + 2, 11, 4);
   }
 
   /* a pollarded plane tree: the trunk is the point, the crown is a blob */
@@ -16439,8 +17107,9 @@ const PARIS = (() => {
       px(c, lx, ly, 3, 2, rng() < 0.4 ? L.leafLit : L.leaf);
     }
     /* and the shade it throws, which is why anybody planted it */
-    px(c, x - 14, y - 1, 29, 2, 'rgba(58,52,36,.22)');
-    px(c, x - 9, y + 1, 19, 1, 'rgba(58,52,36,.14)');
+    foot(c, x - 6, y, 13, 8);
+    px(c, x - 16, y + 2, 33, 2, 'rgba(58,52,36,.20)');
+    px(c, x - 11, y + 4, 23, 1, 'rgba(58,52,36,.12)');
   }
 
   /* THE WALLACE FOUNTAIN. Four bronze women holding up a dome, and
@@ -16466,6 +17135,7 @@ const PARIS = (() => {
     /* the water */
     px(c, x, y - 12, 1, 8, 'rgba(160,220,235,.35)');
     px(c, x - 3, y - 5, 7, 2, 'rgba(160,220,235,.18)');
+    foot(c, x - 9, y, 19, 5);
   }
 
   /* a Morris column: a fat cylinder of theatre posters with a cap */
@@ -16487,6 +17157,7 @@ const PARIS = (() => {
     px(c, x - 9, y - h - 8, 19, 5, L.iron);
     PIX.disc(c, x, y - h - 11, 5, L.iron);
     px(c, x - 1, y - h - 16, 3, 5, L.brass);
+    foot(c, x - 12, y, 25, 6);
   }
 
   /* a green slat bench, the kind bolted to every gravel path in the city */
@@ -16500,6 +17171,7 @@ const PARIS = (() => {
     px(c, x + w - 4, y - 7, 3, 7, dk);
     px(c, x, y - 20, 2, 12, dk);
     px(c, x + w - 2, y - 20, 2, 12, dk);
+    foot(c, x, y, w, 4);
   }
 
   /* the pavement: setts, worn smooth, wet more often than not */
@@ -16543,6 +17215,10 @@ const PARIS = (() => {
     px(c, x + 2, y - 20, 3, 2, '#5a3a22');
     px(c, x + 6, y - 20, 3, 4, 'rgba(210,235,245,.75)');
     px(c, x - 7, y - 19, 4, 3, L.cream);          // the saucer with the bill on it
+    /* three shadows, because a table and two chairs are three things */
+    foot(c, x - 6, y, 13, 3);
+    foot(c, x - 20, y, 10, 2);
+    foot(c, x + 9, y, 10, 2);
   }
 
   /* ============================================================
@@ -16920,6 +17596,7 @@ const PARIS = (() => {
       morris(c, 470, FY - 2, 54);
       /* the chestnut cart, under a striped parasol, doing no trade at all
          because it is twenty degrees out */
+      foot(c, 620, FY, 30, 4);
       ART.box(c, 620, FY - 22, 30, 22, { fill: '#8a5a3a', top: '#a87a52', bot: '#4e3220', ink: p.K });
       px(c, 624, FY - 26, 22, 5, '#6b4630');
       px(c, 628, FY - 30, 14, 5, '#c96a1e');
@@ -16932,6 +17609,7 @@ const PARIS = (() => {
       }
       px(c, 616, FY - 51, 38, 2, L.cream);
       /* the souvenir stand: forty little towers on a trestle */
+      foot(c, 92, FY, 54, 4);
       ART.box(c, 92, FY - 20, 54, 20, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
       for (let i = 0; i < 9; i++) {
         const sx = 96 + i * 6;
@@ -17168,12 +17846,38 @@ const PARIS = (() => {
         px(c, x - 10, y - 2, 9, 2, '#4a3f2e');
         px(c, x + 4, y - 2, 9, 2, '#4a3f2e');
         px(c, x - 14, y - 36, 28, 3, '#5a4f3a');
+        foot(c, x - 11, y, 23, 4);
       };
       easel(180, FY - 1, '#3f6a4a');
       easel(228, FY - 1, '#6a4a3f');
       easel(560, FY - 1, '#4a3f6a');
+      /* THE FRONT ROW IS NOT PAINTED HERE.
+
+         Everything standing at the near kerb used to go into the backdrop,
+         which put it BEHIND a crowd walking about forty feet further away:
+         a frog at the back of the square appeared to be standing on the
+         near table. Front-row furniture is drawn per frame, after the
+         cast, by `front` below. */
+      /* the artist's crate of tubes, and his loaf — also front row */
+      const _crateSkip = 1;
+      if (!_crateSkip) ART.box(c, 120, FY - 14, 26, 14,
+        { fill: '#5e5038', top: '#7a6a4a', bot: '#2a231a', ink: p.K });
+      for (let i = 0; i < 5; i++) px(c, 123 + i * 5, FY - 18, 3, 5, ['#b8232f', '#e0a63c', '#3a5f9c', '#4fae6d', '#f4efe0'][i]);
+      px(c, 148, FY - 8, 22, 5, '#c98a4a');
+      px(c, 148, FY - 8, 22, 2, '#e0a86a');
+    };
+
+    /* ============================================================
+       THE NEAR KERB.
+
+       Drawn every frame, after everybody, so a table three feet from
+       the camera is in front of a frog forty feet away instead of
+       behind him. Everything in here stands at z 0.
+       ============================================================ */
+    const front = (c) => {
       /* the scammers' folding table, three cups on it */
-      ART.box(c, 300, FY - 18, 62, 18, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: p.K });
+      foot(c, 300, FY, 62, 4);
+      ART.box(c, 300, FY - 18, 62, 18, { fill: '#4a3f2e', top: '#5e5038', bot: '#241d14', ink: P().K });
       for (let i = 0; i < 3; i++) {
         const cx2 = 312 + i * 19;
         px(c, cx2, FY - 26, 11, 8, '#b8232f');
@@ -17184,10 +17888,13 @@ const PARIS = (() => {
       cafeTable(c, 660, FY - 1);
       cafeTable(c, 706, FY - 1);
       /* the artist's crate of tubes, and his loaf */
-      ART.box(c, 120, FY - 14, 26, 14, { fill: '#5e5038', top: '#7a6a4a', bot: '#2a231a', ink: p.K });
-      for (let i = 0; i < 5; i++) px(c, 123 + i * 5, FY - 18, 3, 5, ['#b8232f', '#e0a63c', '#3a5f9c', '#4fae6d', '#f4efe0'][i]);
-      px(c, 148, FY - 8, 22, 5, '#c98a4a');
-      px(c, 148, FY - 8, 22, 2, '#e0a86a');
+      foot(c, 120, FY, 26, 3);
+      ART.box(c, 120, FY - 14, 26, 14, { fill: '#5e5038', top: '#7a6a4a', bot: '#2a231a', ink: P().K });
+      px(c, 124, FY - 18, 6, 5, '#c96a1e');
+      px(c, 132, FY - 18, 5, 5, '#3f6a4a');
+      px(c, 139, FY - 17, 5, 4, '#2f4a70');
+      px(c, 150, FY - 8, 16, 6, '#d9a45c');
+      px(c, 150, FY - 8, 16, 2, '#f0c98a');
     };
 
     const spots = [
@@ -17223,7 +17930,8 @@ const PARIS = (() => {
     ];
 
     return {
-      id: 'butte', w: W, floorY: FY, paint, spots, actors, eggs, outdoor: true,
+      id: 'butte', w: W, floorY: FY, paint, onPaintFront: front,
+      spots, actors, eggs, outdoor: true,
       skyTo: FY - BAND,
       depthBand: BAND, crowd: { n: 20, z0: 0.4, z1: 1 },
       pets: [{ kind: 'dog', x: 480, name: "A PAINTER'S DOG", fouls: true },
@@ -17417,6 +18125,7 @@ const PARIS = (() => {
       PIX.disc(c, 191, 25, 3, '#ffe7a8');
       PIX.disc(c, 191, 25, 12, 'rgba(255,231,168,.09)');
       /* the table they meet at, and the two chairs nobody dusted */
+      foot(c, 236, FY, 70, 4);
       ART.box(c, 236, FY - 20, 70, 8, { fill: '#4a3f2e', top: '#61533b', bot: '#241d14', ink: p.K });
       px(c, 244, FY - 12, 4, 12, '#2a231a');
       px(c, 294, FY - 12, 4, 12, '#2a231a');
@@ -17545,17 +18254,587 @@ const PARIS = (() => {
 
   /* pulled in from places.js so the eggs work the same way out here */
   function egg(o) {
+    const key = 'egg:' + o.id;
     const sp = {
-      id: 'egg:' + o.id, x: o.x, y: o.y, w: 18,
+      id: key, x: o.x, y: o.y, w: 18,
       top: o.y - 11, bot: o.y + 11,
-      egg: true, art: o.art, label: o.label, hint: 'WORTH A CLOSER LOOK', look: o.look,
+      egg: true, art: o.art,
+      /* nameless until the glass has been on it */
+      label: () => ((G.eggs && G.eggs[key]) ? o.label : 'SOMETHING SMALL'),
+      hint: () => ((G.eggs && G.eggs[key]) ? o.label : 'THE GLASS MIGHT TELL YOU'),
+      look: o.look,
     };
-    sp.onUse = () => STORY.lookClose(sp, sp.x, o.y);
+    sp.onUse = () => { (G.eggs = G.eggs || {})[key] = 1; return STORY.lookClose(sp, sp.x, o.y); };
     return sp;
   }
 
+  /* ============================================================
+     6. L'OPERA — the grandest staircase in Europe, and the men
+        who do business at the bottom of it
+
+     Locked until the board has one piece on it. Nobody takes a
+     foreign policeman to the Opera on his first afternoon.
+     ============================================================ */
+  function opera() {
+    const W = 720, FY = 112, seed = seedFor('opera');
+    const BAND = 18;
+
+    const paint = (c) => {
+      const p = P();
+      /* the square, and the buildings closing it in on both sides */
+      haussmann(c, -30, FY - BAND - 74, 150, 74, seed + 3);
+      haussmann(c, 600, FY - BAND - 70, 160, 70, seed + 8);
+      /* haze across the far side */
+      for (let i = 0; i < 22; i++) {
+        px(c, 0, FY - BAND - 22 + i, W, 1,
+          'rgba(240,234,216,' + (0.02 + i * 0.010).toFixed(3) + ')');
+      }
+      /* ---------- THE PALAIS ----------
+         Three storeys of it: an arcade at the bottom, the loggia with
+         its columns above that, the attic and the dome over all of it. */
+      const bx = 130, bw = 460, base = FY - BAND;
+      /* THE HEIGHT BUDGET. A room has sixty-two rows of headroom above
+         the floor line and the first pass built a hundred and ninety-four
+         rows of opera house into it, so the dome, the attic and both
+         gilded groups were painted somewhere off the top of the world.
+         Everything below is the same building at two thirds the height. */
+      for (let i = 0; i < 7; i++) {
+        px(c, bx - 12 + i * 2, base - i * 2, bw + 24 - i * 4, 2,
+          i % 2 ? L.stoneMid : L.stone);
+        px(c, bx - 12 + i * 2, base - i * 2, bw + 24 - i * 4, 1, L.stoneLit);
+      }
+      const py = base - 14;
+      /* THE ARCADE: seven arches, deep and dark */
+      px(c, bx, py - 38, bw, 38, L.stone);
+      px(c, bx, py - 38, bw, 3, L.stoneLit);
+      for (let i = 0; i < 7; i++) {
+        const ax = bx + 14 + i * 63;
+        px(c, ax, py - 28, 44, 28, L.stoneDeep);
+        for (let k = 0; k < 44; k++) {
+          const yy = py - 28 - Math.round(Math.sqrt(Math.max(0, 484 - (k - 22) * (k - 22))) * 0.7);
+          px(c, ax + k, yy, 1, py - 28 - yy, L.stoneDeep);
+          px(c, ax + k, yy, 1, 2, L.stoneMid);
+        }
+        px(c, ax + 6, py - 20, 32, 20, '#2a2620');
+        px(c, ax - 5, py - 34, 4, 34, L.stoneMid);
+        px(c, ax - 5, py - 34, 1, 34, L.stoneLit);
+        /* the medallion over each arch */
+        PIX.disc(c, ax + 22, py - 35, 4, L.brass);
+        PIX.disc(c, ax + 22, py - 35, 2, '#8a5a1a');
+      }
+      /* THE LOGGIA: paired columns, and a gilded group on the parapet */
+      const ly = py - 38;
+      /* THE PORTICO IS RECESSED. Pale columns on a pale wall read as slits;
+         the wall behind them has to go into shadow before they read as
+         columns standing in front of anything. */
+      px(c, bx, ly - 40, bw, 40, '#4a4336');
+      px(c, bx, ly - 40, bw, 3, L.stoneLit);
+      px(c, bx, ly - 37, bw, 2, '#332e25');
+      px(c, bx, ly - 5, bw, 5, L.stoneMid);
+      px(c, bx, ly - 5, bw, 1, L.stoneLit);
+      for (let i = 0; i < 8; i++) {
+        const cx0 = bx + 20 + i * 60;
+        [0, 20].forEach(d => {
+          px(c, cx0 + d, ly - 34, 11, 29, L.stone);
+          px(c, cx0 + d, ly - 34, 3, 29, L.stoneLit);
+          px(c, cx0 + d + 8, ly - 34, 3, 29, L.stoneDk);
+          px(c, cx0 + d - 2, ly - 37, 15, 3, L.stoneLit);   /* the capital */
+          px(c, cx0 + d - 2, ly - 8, 15, 3, L.stoneMid);    /* and the base */
+        });
+        /* and the arch over the dark bay between each pair */
+        for (let k = 0; k < 12; k++) {
+          const yy = ly - 34 - Math.round(Math.sqrt(Math.max(0, 36 - (k - 6) * (k - 6))));
+          px(c, cx0 + 11 + k, yy, 1, 3, L.stoneMid);
+        }
+      }
+      /* the frieze of names nobody reads */
+      px(c, bx + 4, ly - 46, bw - 8, 7, L.stoneMid);
+      for (let i = 0; i < bw - 20; i += 13) px(c, bx + 12 + i, ly - 44, 7, 3, L.stoneDeep);
+      /* THE ATTIC, and the dome */
+      const ay = ly - 46;
+      px(c, bx + 60, ay - 16, bw - 120, 16, L.stoneMid);
+      px(c, bx + 60, ay - 16, bw - 120, 2, L.stoneLit);
+      px(c, bx + 60, ay - 16, 3, 16, L.stoneLit);
+      /* the drum, and then a dome with some height in it. Eighty-four
+         pixels wide and eighteen tall was a hill, not a dome. */
+      const dcx = bx + Math.round(bw / 2);
+      px(c, dcx - 46, ay - 24, 92, 8, L.stone);
+      px(c, dcx - 46, ay - 24, 92, 2, L.stoneLit);
+      for (let i = 0; i < 8; i += 3) px(c, dcx - 44 + i * 12, ay - 22, 3, 6, L.stoneDk);
+      for (let i = 0; i < 26; i++) {
+        const t = i / 26;
+        const hw = Math.round(42 * Math.sqrt(Math.max(0, 1 - t * t)));
+        px(c, dcx - hw, ay - 24 - i, hw * 2, 1,
+          i < 3 ? '#7fa07a' : (i % 6 < 3 ? '#5f8f66' : '#4e7a56'));
+        px(c, dcx - hw, ay - 24 - i, 2, 1, '#8fb08a');
+        px(c, dcx + hw - 2, ay - 24 - i, 2, 1, '#3d6446');
+      }
+      /* the ribs, which is what makes a dome look like a dome */
+      [-26, -13, 0, 13, 26].forEach(d => {
+        for (let i = 0; i < 26; i++) {
+          const t = i / 26, hw = 42 * Math.sqrt(Math.max(0, 1 - t * t));
+          if (Math.abs(d) > hw - 2) continue;
+          px(c, dcx + Math.round(d * (hw / 42)), ay - 24 - i, 1, 1, '#4e7a56');
+        }
+      });
+      px(c, dcx - 6, ay - 54, 12, 6, '#4e7a56');
+      px(c, dcx - 6, ay - 54, 12, 1, '#7fa07a');
+      px(c, dcx - 2, ay - 60, 4, 7, L.brass);
+      PIX.disc(c, dcx, ay - 61, 3, L.brass);
+      /* THE GILDED GROUPS on the corners of the attic: a pair of figures
+         with an arm up, not a gold bollard. */
+      [bx + 74, bx + bw - 86].forEach(gx => {
+        px(c, gx - 6, ay - 4, 24, 4, '#8a5a1a');          /* the plinth */
+        px(c, gx - 6, ay - 4, 24, 1, L.brass);
+        [0, 8].forEach((d, n) => {
+          px(c, gx + d, ay - 14, 5, 10, L.brass);          /* a body */
+          px(c, gx + d, ay - 14, 2, 10, '#f4d98a');
+          px(c, gx + d, ay - 19, 5, 5, L.brass);           /* a head */
+          px(c, gx + d + (n ? 5 : -2), ay - 22, 2, 8, L.brass);   /* an arm up */
+        });
+        px(c, gx + 1, ay - 24, 11, 2, L.brass);            /* and a lyre between */
+      });
+
+      /* ---------- THE SQUARE ---------- */
+      cobbles(c, 0, FY - BAND, W, BAND + 22, seed);
+      px(c, 0, FY - 4, W, 4, L.settDk);
+      /* the kerb, and the metro mouth at the corner */
+      px(c, 0, FY - BAND, W, 2, L.settLit);
+      metroSign(c, 66, FY - 1);
+      /* two cabs waiting at the rank, and the rank sign */
+      [[500, 0], [592, 1]].forEach(([cx0, k]) => {
+        px(c, cx0, FY - 26, 74, 16, k ? '#2f3a52' : '#3a2f2f');
+        px(c, cx0, FY - 26, 74, 2, k ? '#4a5570' : '#544040');
+        px(c, cx0 + 14, FY - 36, 44, 11, k ? '#2f3a52' : '#3a2f2f');
+        px(c, cx0 + 17, FY - 34, 17, 7, 'rgba(160,205,230,.45)');
+        px(c, cx0 + 37, FY - 34, 17, 7, 'rgba(160,205,230,.45)');
+        px(c, cx0 + 30, FY - 40, 14, 5, k ? '#e0a63c' : '#c9c0a8');
+        PIX.disc(c, cx0 + 14, FY - 9, 7, '#1a1720'); PIX.disc(c, cx0 + 60, FY - 9, 7, '#1a1720');
+        PIX.disc(c, cx0 + 14, FY - 9, 3, '#4a4d58'); PIX.disc(c, cx0 + 60, FY - 9, 3, '#4a4d58');
+        foot(c, cx0 + 4, FY - 2, 68, 3);
+      });
+      px(c, 470, FY - 48, 3, 48, L.iron);
+      px(c, 458, FY - 56, 28, 10, '#e8dfc6');
+      px(c, 460, FY - 54, 24, 6, '#3f6ba8');
+      /* the morris column and a bench, because this is still a street */
+      morris(c, 106, FY - 2, 54);
+      bench(c, 30, FY - 2, 46);
+      [22, 700].forEach(lx => lamp(c, lx, FY - BAND + 4, 30, true));
+      planeTree(c, 660, FY - 2, 58, seed + 5);
+      /* the poster case with tonight's bill in it */
+      px(c, 150, FY - 46, 34, 44, L.iron);
+      px(c, 153, FY - 43, 28, 38, '#e8dfc6');
+      px(c, 155, FY - 41, 24, 10, '#b8384a');
+      for (let i = 0; i < 5; i++) px(c, 156, FY - 28 + i * 4, 22 - (i % 2) * 6, 2, '#8a7754');
+    };
+
+    const spots = [
+      { id: 'steps2', x: 300, z: 0.12, w: 90, top: FY - 30, label: 'THE STEPS',
+        hint: 'SOMEBODY SAT HERE LONG ENOUGH TO LEAVE SOMETHING' },
+      { id: 'bill', x: 167, z: 0.16, w: 34, top: FY - 48, label: 'THE POSTER CASE',
+        hint: 'THE GLASS HAS BEEN FORCED AND PUT BACK' },
+      { id: 'cab2', x: 537, z: 0.08, w: 74, top: FY - 40, label: 'THE FIRST CAB',
+        hint: 'THE MAN IS ASLEEP AND THE METER IS RUNNING' },
+      { id: 'grate', x: 66, z: 0.1, w: 30, top: FY - 22, label: 'THE METRO MOUTH',
+        hint: 'THE DRAUGHT COMES UP WITH SOMETHING IN IT' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 400, z: 0.14, key: 'usher',
+        def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
+        tag: 'THE HOUSE MANAGER', tagCol: PIX.PAL.g, witness: true, mood: 'watch' },
+    ];
+
+    return {
+      id: 'opera', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      /* the sky is painted from the top of the frame DOWN TO here, and the
+         room is painted over it — so this is the ground line, not the roof */
+      skyTo: FY - BAND,
+      depthBand: BAND, crowd: { n: 16, z0: 0.5, z1: 0.96 },
+      pets: [{ kind: 'dog', x: 240, name: 'A DOG ON A LONG LEAD' }],
+      enterX: 24, enterFace: 1,
+      eggs: [egg({ id: 'ticket', x: 330, y: FY - 26, art: 'card4',
+        label: 'A TORN TICKET', look: 'ROW C, SEAT 14. THE DATE IS THE NIGHT HE DIED.' })],
+      lights: [{ x: 66, y: FY - 14, r: 30, a: 0.05 }],
+    };
+  }
+
+  /* ============================================================
+     7. PERE-LACHAISE — a hill of dead Parisians, and the only
+        place in the city where nobody minds you standing still
+     ============================================================ */
+  function pere() {
+    const W = 680, FY = 116, seed = seedFor('pere');
+    const BAND = 24;
+
+    const paint = (c) => {
+      const p = P();
+      /* THE WALL along the top, in shade, with the city over it.
+
+         VALUE, NOT HUE, is what makes a cemetery read: pale tombs
+         need something darker than themselves to stand against, and
+         the first pass put stone-coloured tombs on a stone-coloured
+         wall and got one cream smear across the middle of the frame. */
+      px(c, 0, FY - BAND - 54, W, 54, '#a89d84');
+      px(c, 0, FY - BAND - 54, W, 3, '#c2b79c');
+      for (let rx = 0; rx < W; rx += 22) {
+        px(c, rx, FY - BAND - 54, 1, 54, 'rgba(70,62,48,.38)');
+      }
+      for (let ry = 0; ry < 54; ry += 9) px(c, 0, FY - BAND - 54 + ry, W, 1, 'rgba(255,250,232,.10)');
+      /* moss up the bottom of it, and the roofs behind */
+      px(c, 0, FY - BAND - 14, W, 14, 'rgba(64,92,52,.26)');
+      px(c, 0, FY - BAND - 2, W, 2, 'rgba(40,36,28,.34)');
+      for (let i = -20; i < W; i += 74) {
+        haussmann(c, i, FY - BAND - 96, 60, 44, seed + i);
+      }
+      px(c, 0, FY - BAND - 54, W, 4, L.stoneDk);
+
+      /* ---------- THE TOMBS, in three ranks up the slope ----------
+         Near ones tall and sharp, far ones small and hazed, because a
+         cemetery on a hill is the one place perspective is the subject. */
+      const rank = (y, hgt, step, haze) => {
+        for (let x = -10; x < W; x += step) {
+          const r = ((x * 7 + y * 3 + seed) % 100) / 100;
+          const h2 = Math.round(hgt * (0.7 + r * 0.6));
+          const w2 = Math.round(step * (0.45 + r * 0.2));
+          const kind = Math.floor(r * 3);
+          if (kind === 0) {
+            /* a chapel, with a door and a little pitched roof */
+            px(c, x, y - h2, w2, h2, L.stone);
+            px(c, x, y - h2, w2, 2, L.stoneLit);
+            px(c, x + w2 - 3, y - h2, 3, h2, L.stoneDk);
+            for (let i = 0; i < 7; i++) {
+              px(c, x + i, y - h2 - 7 + i, w2 - i * 2, 1, i < 2 ? L.zincLit : L.zinc);
+            }
+            px(c, x + Math.round(w2 / 2) - 3, y - Math.round(h2 * 0.62), 7,
+              Math.round(h2 * 0.62), '#3f3a30');
+            px(c, x + Math.round(w2 / 2) - 3, y - Math.round(h2 * 0.62), 7, 2, '#5f5748');
+            px(c, x + Math.round(w2 / 2) - 1, y - h2 - 13, 3, 7, L.stoneMid);
+            px(c, x + Math.round(w2 / 2) - 3, y - h2 - 11, 7, 2, L.stoneMid);
+          } else if (kind === 1) {
+            /* a slab with a cross on it */
+            px(c, x, y - Math.round(h2 * 0.4), w2, Math.round(h2 * 0.4), L.stoneMid);
+            px(c, x, y - Math.round(h2 * 0.4), w2, 2, L.stoneLit);
+            px(c, x + Math.round(w2 / 2) - 2, y - h2, 5, Math.round(h2 * 0.62), L.stone);
+            px(c, x + Math.round(w2 / 2) - 6, y - Math.round(h2 * 0.74), 13, 4, L.stone);
+            px(c, x + Math.round(w2 / 2) - 6, y - Math.round(h2 * 0.74), 13, 1, L.stoneLit);
+          } else {
+            /* an obelisk, or a broken column, which is the same shape */
+            px(c, x + 2, y - h2, w2 - 4, h2, L.stone);
+            px(c, x + 2, y - h2, 2, h2, L.stoneLit);
+            px(c, x, y - 4, w2, 4, L.stoneMid);
+            px(c, x, y - 4, w2, 1, L.stoneLit);
+            if (r > 0.8) px(c, x + 2, y - h2, w2 - 4, 3, L.stoneDeep);
+          }
+          /* a shadow off the right of it and one on the ground under it,
+             which is what separates one pale stone from the next */
+          px(c, x + w2, y - Math.round(h2 * 0.8), 3, Math.round(h2 * 0.8),
+            'rgba(52,46,34,.30)');
+          px(c, x - 2, y, w2 + 6, 2, 'rgba(52,46,34,.26)');
+          if (haze) px(c, x - 2, y - h2 - 14, w2 + 8, h2 + 18,
+            'rgba(238,232,214,' + haze + ')');
+        }
+      };
+      rank(FY - BAND - 8, 30, 40, 0.20);
+      rank(FY - BAND + 4, 40, 54, 0.05);
+
+      /* ---------- AND THE THREE YOU CAN ACTUALLY TOUCH ----------
+         A field of generated tombs is a texture. The stops the case
+         wants have to be objects: a vault with its door off, an angel
+         over a slab, a chapel with a gable. Placed by hand where the
+         hot spots are, so a marker points at a thing and not at a wall. */
+      /* THE OPEN VAULT, door prised off its hinges and leaning */
+      const vx = 318, vb = FY - 16;
+      px(c, vx, vb - 52, 46, 52, L.stone);
+      px(c, vx, vb - 52, 46, 3, L.stoneLit);
+      px(c, vx + 42, vb - 52, 4, 52, L.stoneDk);
+      for (let i = 0; i < 9; i++) {
+        px(c, vx + i * 2, vb - 52 - 9 + i, 46 - i * 4, 1, i < 2 ? L.zincLit : L.zinc);
+      }
+      px(c, vx + 21, vb - 66, 4, 9, L.stoneMid);
+      px(c, vx + 17, vb - 63, 12, 3, L.stoneMid);
+      px(c, vx + 12, vb - 36, 22, 36, '#1d1a16');         /* the way in */
+      px(c, vx + 12, vb - 36, 22, 2, '#3a352c');
+      px(c, vx + 14, vb - 30, 7, 5, '#2f2a22');
+      px(c, vx + 36, vb - 34, 9, 34, '#3f3a30');          /* the door, leaning */
+      px(c, vx + 36, vb - 34, 3, 34, '#5f5748');
+      px(c, vx + 6, vb - 8, 44, 3, 'rgba(0,0,0,.28)');
+      /* THE ANGEL over a slab, wings folded */
+      const gx2 = 190, gb = FY - 14;
+      px(c, gx2 - 16, gb - 12, 34, 12, L.stoneMid);
+      px(c, gx2 - 16, gb - 12, 34, 2, L.stoneLit);
+      px(c, gx2 - 8, gb - 20, 18, 8, L.stone);
+      px(c, gx2 - 5, gb - 44, 11, 25, L.stone);
+      px(c, gx2 - 5, gb - 44, 3, 25, L.stoneLit);
+      px(c, gx2 - 3, gb - 52, 7, 9, L.stone);             /* a head, bowed */
+      px(c, gx2 - 3, gb - 52, 7, 2, L.stoneLit);
+      for (let i = 0; i < 16; i++) {                      /* the wings */
+        const w2 = Math.round(7 - i * 0.32);
+        px(c, gx2 - 12 - Math.round(i * 0.35), gb - 44 + i, w2, 1, L.stoneMid);
+        px(c, gx2 + 6 + Math.round(i * 0.35), gb - 44 + i, w2, 1, L.stoneDk);
+      }
+      px(c, gx2 - 20, gb - 2, 42, 3, 'rgba(0,0,0,.26)');
+      /* THE CHAPEL with the gable, up the path a way */
+      const cx2 = 430, cb = FY - 18;
+      px(c, cx2, cb - 44, 38, 44, L.stone);
+      px(c, cx2, cb - 44, 38, 3, L.stoneLit);
+      px(c, cx2 + 34, cb - 44, 4, 44, L.stoneDk);
+      for (let i = 0; i < 14; i++) {
+        px(c, cx2 + 19 - 19 + i, cb - 44 - i, 38 - i * 2, 1, i < 2 ? L.stoneLit : L.stoneMid);
+      }
+      px(c, cx2 + 12, cb - 30, 14, 30, '#2a2620');
+      px(c, cx2 + 12, cb - 30, 14, 2, L.stoneMid);
+      px(c, cx2 + 14, cb - 26, 4, 10, '#4a5f6a');
+      px(c, cx2 + 20, cb - 26, 4, 10, '#4a5f6a');
+      px(c, cx2 + 4, cb - 10, 30, 3, 'rgba(0,0,0,.26)');
+
+      /* ---------- THE PATH ---------- */
+      cobbles(c, 0, FY - 18, W, 22, seed + 4);
+      px(c, 0, FY - 20, W, 3, L.settLit);
+      px(c, 0, FY - 4, W, 4, L.settDk);
+      /* the leaves nobody sweeps in this part */
+      const rng = U.mulberry32(seed * 7 + 11);
+      for (let i = 0; i < 260; i++) {
+        const lx = Math.floor(rng() * W), ly = FY - 18 + Math.floor(rng() * 18);
+        px(c, lx, ly, 2, 1, rng() < 0.4 ? '#8a6a2a' : (rng() < 0.5 ? '#7a4a22' : '#a08640'));
+      }
+      /* chestnuts and cypress, which is what actually grows here */
+      [70, 300, 560].forEach((tx, i) => planeTree(c, tx, FY - 6, 66 + i * 6, seed + tx));
+      [200, 420, 640].forEach((tx) => {
+        for (let i = 0; i < 46; i++) {
+          const hw = Math.max(1, Math.round(9 * Math.sin((1 - i / 46) * 2.2)));
+          px(c, tx - hw, FY - 8 - i, hw * 2, 1, i % 7 < 4 ? '#31502f' : '#26402a');
+        }
+        px(c, tx - 2, FY - 12, 5, 11, L.barkDk);
+        foot(c, tx - 6, FY - 3, 13, 3);
+      });
+      /* the water tap and the watering cans, which is a cemetery detail */
+      px(c, 496, FY - 26, 4, 24, L.iron);
+      px(c, 492, FY - 30, 12, 5, L.iron);
+      px(c, 500, FY - 27, 7, 3, L.ironLit);
+      px(c, 486, FY - 10, 13, 9, '#4a5a4a');
+      px(c, 486, FY - 10, 13, 2, '#5f7a5f');
+      px(c, 498, FY - 8, 6, 3, '#4a5a4a');
+      foot(c, 484, FY - 2, 22, 3);
+      /* a bench where somebody sat for a long time */
+      bench(c, 130, FY - 3, 52);
+      /* the crows */
+      [[250, FY - 88], [268, FY - 82], [604, FY - 96]].forEach(([kx, ky]) => {
+        px(c, kx, ky, 5, 3, '#1d1a22');
+        px(c, kx + 4, ky - 1, 2, 2, '#1d1a22');
+        px(c, kx + 1, ky + 3, 1, 2, '#1d1a22');
+      });
+    };
+
+    /* the tops are the tops of the things drawn above, so a marker
+       points at an object and not at the wall behind it */
+    const spots = [
+      { id: 'tomb', x: 341, z: 0.10, w: 46, top: FY - 68, label: 'THE OPEN VAULT',
+        hint: 'THE DOOR HAS BEEN PRISED AND IT WAS NOT A THIEF' },
+      { id: 'urn2', x: 496, z: 0.14, w: 30, top: FY - 32, label: 'THE TAP',
+        hint: 'SOMEBODY WASHED SOMETHING HERE THIS MORNING' },
+      { id: 'leaves', x: 620, z: 0.06, w: 60, top: FY - 20, label: 'THE LEAF DRIFT',
+        hint: 'SOMETHING WENT INTO IT ON PURPOSE' },
+      { id: 'bench3', x: 156, z: 0.12, w: 52, top: FY - 22, label: 'THE BENCH',
+        hint: 'CIGARETTE ENDS. ALL THE SAME BRAND.' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 240, z: 0.13, key: 'keeper2',
+        def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
+          : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
+        tag: 'THE GARDENER', tagCol: PIX.PAL.F, witness: true, mood: 'weary' },
+    ];
+
+    return {
+      id: 'pere', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      skyTo: FY - BAND - 54,
+      depthBand: BAND, crowd: { n: 5, z0: 0.55, z1: 0.9 },
+      pets: [{ kind: 'cat', x: 420, name: 'THE CEMETERY CAT' }],
+      enterX: 24, enterFace: 1,
+      eggs: [egg({ id: 'flower', x: 366, y: FY - 22, art: 'card1',
+        label: 'FRESH FLOWERS', look: 'NO NAME ON THE CARD. THE SHOP IS TWO STREETS FROM THE LAVERIE.' })],
+    };
+  }
+
+  /* ============================================================
+     8. LA ZONE — under the ring road, where the city keeps the
+        things it does not want photographed
+
+     The last door to open, and the one the finale walks through.
+     ============================================================ */
+  function perif() {
+    const W = 700, FY = 118, seed = seedFor('perif');
+    const BAND = 14;
+
+    const paint = (c) => {
+      const p = P();
+      /* ---------- THE FLYOVER, right over your head ----------
+
+         THE TOP TEN ROWS OF A ROOM ARE WHAT THE SCENE TILES UPWARD to
+         fill the headroom above the frame, so they have to be the
+         darkest thing in the picture. The first pass put pale concrete
+         in them and got a slab of grey filling half the screen. */
+      px(c, 0, 0, W, 12, '#1f1f26');
+      px(c, 0, 10, W, 4, '#2a2a32');
+      px(c, 0, 14, W, 26, '#6f6f76');
+      px(c, 0, 36, W, 6, '#4a4a52');
+      px(c, 0, 42, W, 5, '#3a3a42');
+      for (let rx = 0; rx < W; rx += 96) {
+        px(c, rx, 14, 3, 28, '#5a5a62');
+        px(c, rx + 3, 14, 1, 28, 'rgba(255,255,255,.10)');
+      }
+      /* the expansion joints in the soffit */
+      for (let rx = 24; rx < W; rx += 48) px(c, rx, 14, 1, 26, 'rgba(30,30,36,.5)');
+      /* the stains where forty years of rain has come off it */
+      const rng = U.mulberry32(seed * 3 + 19);
+      for (let i = 0; i < 90; i++) {
+        const sx = Math.floor(rng() * W);
+        px(c, sx, 40, 2 + Math.floor(rng() * 4), 6 + Math.floor(rng() * 22),
+          'rgba(40,40,46,' + (0.10 + rng() * 0.16).toFixed(3) + ')');
+      }
+      /* the piers holding it up */
+      [90, 330, 570].forEach(pxx => {
+        px(c, pxx, 40, 46, FY - BAND - 40, '#5f5f68');
+        px(c, pxx, 40, 6, FY - BAND - 40, '#74747c');
+        px(c, pxx + 40, 40, 6, FY - BAND - 40, '#46464e');
+        px(c, pxx - 6, FY - BAND - 12, 58, 12, '#4a4a52');
+        px(c, pxx - 6, FY - BAND - 12, 58, 2, '#63636c');
+        /* AND THE TAG somebody put on every one of them. Four coloured
+           bars in a row read as a bar chart; a tag is a fat scrawl with
+           an outline round it and a drip off the bottom. */
+        const ty0 = FY - BAND - 42, col = ['#b8384a', '#e0a63c', '#3f6ba8'][(pxx / 90) % 3 | 0];
+        px(c, pxx + 4, ty0 + 4, 6, 12, '#14141a');
+        px(c, pxx + 5, ty0 + 5, 5, 10, col);
+        px(c, pxx + 10, ty0, 7, 18, '#14141a');
+        px(c, pxx + 11, ty0 + 1, 5, 16, col);
+        px(c, pxx + 16, ty0 + 6, 10, 9, '#14141a');
+        px(c, pxx + 17, ty0 + 7, 9, 7, col);
+        px(c, pxx + 26, ty0 + 2, 6, 15, '#14141a');
+        px(c, pxx + 27, ty0 + 3, 5, 13, col);
+        px(c, pxx + 32, ty0 + 8, 8, 6, '#14141a');
+        px(c, pxx + 33, ty0 + 9, 7, 4, col);
+        px(c, pxx + 13, ty0 + 17, 2, 7, col);            /* the drip */
+        px(c, pxx + 29, ty0 + 16, 2, 5, col);
+      });
+      /* the daylight that gets in at the open end, and the wedge it
+         throws across the floor: without it the whole frame is one value */
+      for (let i = 0; i < 30; i++) {
+        px(c, 0, FY - BAND - 30 + i, W, 1,
+          'rgba(220,214,196,' + (0.015 + i * 0.006).toFixed(3) + ')');
+      }
+      for (let i = 0; i < 46; i++) {
+        px(c, 0, 46 + i, Math.round(200 - i * 2.6), 1,
+          'rgba(240,232,206,' + (0.055 - i * 0.001).toFixed(4) + ')');
+      }
+      /* ---------- THE LOCK-UPS, in the arch of it ---------- */
+      const unit = (x, w2, shut2) => {
+        px(c, x, FY - BAND - 52, w2, 52, '#4a463e');
+        px(c, x, FY - BAND - 52, w2, 3, '#5f5a4e');
+        px(c, x + 4, FY - BAND - 44, w2 - 8, 44, shut2 ? '#7a6a52' : '#241f1a');
+        if (shut2) {
+          for (let ry = 0; ry < 44; ry += 3) {
+            px(c, x + 4, FY - BAND - 44 + ry, w2 - 8, 1, 'rgba(0,0,0,.24)');
+            px(c, x + 4, FY - BAND - 44 + ry + 1, w2 - 8, 1, 'rgba(255,240,210,.10)');
+          }
+          px(c, x + Math.round(w2 / 2) - 5, FY - BAND - 6, 11, 4, '#2a2620');
+        } else {
+          px(c, x + 8, FY - BAND - 30, 12, 28, '#3a3630');
+          px(c, x + 26, FY - BAND - 22, 20, 20, '#4a3a24');
+        }
+        px(c, x + 6, FY - BAND - 50, 16, 5, '#c9c0a8');
+        px(c, x + 8, FY - BAND - 49, 12, 3, '#3a3630');
+      };
+      unit(150, 120, true);
+      unit(400, 130, false);
+      /* the chain-link fence across the near right */
+      for (let fx = 560; fx < W; fx += 4) {
+        px(c, fx, FY - BAND - 44, 1, 44, 'rgba(150,150,160,.5)');
+      }
+      for (let fy = 0; fy < 44; fy += 4) {
+        px(c, 560, FY - BAND - 44 + fy, W - 560, 1, 'rgba(150,150,160,.5)');
+      }
+      px(c, 560, FY - BAND - 48, W - 560, 4, '#5f5f68');
+      px(c, 560, FY - BAND - 48, 4, 48, '#5f5f68');
+      /* ---------- THE GROUND ---------- */
+      px(c, 0, FY - BAND, W, BAND + 20, '#4a4640');
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#413d38', '#565046', seed % 29);
+      for (let rx = 0; rx < W; rx += 60) px(c, rx, FY - BAND, 2, BAND + 18, 'rgba(30,28,26,.32)');
+      /* the puddle that never dries under here */
+      px(c, 230, FY - 12, 120, 11, '#3a4650');
+      px(c, 234, FY - 11, 112, 3, 'rgba(170,200,215,.30)');
+      for (let k = 0; k < 112; k += 11) px(c, 236 + k, FY - 7 + ((k + seed) % 3), 6, 1, 'rgba(220,235,245,.24)');
+      /* the brazier, which is the only warm thing in the frame */
+      px(c, 90, FY - 26, 30, 24, '#3a2f26');
+      px(c, 90, FY - 26, 30, 2, '#5f4a3a');
+      for (let i = 0; i < 7; i++) {
+        px(c, 96 + (i % 4) * 5, FY - 30 - (i % 3) * 3, 4, 5,
+          i % 3 ? '#e0631e' : '#f4b23c');
+      }
+      px(c, 88, FY - 2, 34, 3, 'rgba(0,0,0,.34)');
+      /* the dumped car, on its rims */
+      px(c, 600, FY - 30, 96, 20, '#4a3a3a');
+      px(c, 600, FY - 30, 96, 2, '#5f4a4a');
+      px(c, 618, FY - 42, 58, 13, '#4a3a3a');
+      px(c, 622, FY - 40, 22, 9, '#2a2620');
+      px(c, 648, FY - 40, 22, 9, '#2a2620');
+      px(c, 610, FY - 12, 14, 10, '#2a2620');
+      px(c, 668, FY - 12, 14, 10, '#2a2620');
+      for (let i = 0; i < 12; i++) {
+        px(c, 604 + i * 8, FY - 28 + (i % 3), 4, 3, 'rgba(120,70,40,.5)');
+      }
+      foot(c, 596, FY - 2, 104, 4);
+      /* the oil drums, stacked */
+      [[350, 0], [372, 1], [361, 2]].forEach(([dx, k]) => {
+        const dy = FY - 2 - k * 17;
+        px(c, dx, dy - 17, 20, 17, k === 2 ? '#3f5a6a' : '#5a4a2a');
+        px(c, dx, dy - 17, 20, 2, k === 2 ? '#557488' : '#7a6a3a');
+        px(c, dx, dy - 11, 20, 2, 'rgba(0,0,0,.26)');
+        px(c, dx, dy - 6, 20, 2, 'rgba(0,0,0,.26)');
+      });
+      foot(c, 346, FY - 2, 50, 3);
+      /* one lamp on a bracket, which does not reach the corners */
+      px(c, 336, FY - BAND - 40, 3, 26, '#3a3a42');
+      px(c, 336, FY - BAND - 40, 16, 3, '#3a3a42');
+      px(c, 348, FY - BAND - 38, 10, 5, '#e8dcb8');
+    };
+
+    const spots = [
+      { id: 'roller', x: 465, z: 0.16, w: 60, top: FY - 60, label: 'THE OPEN LOCK-UP',
+        hint: 'SOMETHING WAS DRAGGED OUT OF HERE THIS WEEK' },
+      { id: 'drum', x: 361, z: 0.08, w: 40, top: FY - 54, label: 'THE DRUMS',
+        hint: 'ONE OF THEM IS LIGHTER THAN THE OTHERS' },
+      { id: 'wreck', x: 648, z: 0.06, w: 96, top: FY - 46, label: 'THE WRECK',
+        hint: 'THE PLATES ARE OFF AND THE SEATS ARE NOT' },
+      { id: 'fence', x: 600, z: 0.3, w: 60, top: FY - BAND - 50, label: 'THE FENCE',
+        hint: 'CUT AND BENT BACK, AT THE HEIGHT OF A SHOULDER' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 130, z: 0.11, key: 'zone',
+        def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
+          : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
+        tag: 'THE MAN AT THE FIRE', tagCol: PIX.PAL.r, witness: true, mood: 'watch' },
+    ];
+
+    return {
+      /* NOT OUTDOOR. There is a concrete deck between this place and the
+         sky, so the room is lit like an interior and the headroom above
+         the frame is more flyover — a `skyTo` of zero did not suppress
+         the sky, it just moved the horizon up into the deck. */
+      id: 'perif', w: W, floorY: FY, paint, spots, actors,
+      depthBand: BAND, crowd: { n: 4, z0: 0.6, z1: 0.92 },
+      pets: [{ kind: 'rat', x: 300, name: 'SOMETHING UNDER THE DRUMS' }],
+      enterX: 24, enterFace: 1,
+      eggs: [egg({ id: 'plate', x: 690, y: FY - 20, art: 'card2',
+        label: 'A NUMBER PLATE', look: 'BENT DOUBLE AND THROWN. THE NUMBER IS STILL READABLE.' })],
+      lights: [{ x: 105, y: FY - 30, r: 44, a: 0.10 },
+        { x: 352, y: FY - BAND - 34, r: 40, a: 0.07 }],
+    };
+  }
+
   return {
-    BUILD: { tower, arch, butte, museum, catacombs, metro },
+    BUILD: { tower, arch, butte, museum, catacombs, metro, opera, pere, perif },
     /* the helpers, so places.js and rooms.js can dress themselves in Paris */
     haussmann, lamp, planeTree, wallace, morris, bench, cobbles, cafeTable,
     eiffel, arc, basilica, pyramid, boneWall, metroSign, egg,
@@ -17604,15 +18883,19 @@ const PLACES = (() => {
      to hold the eyeglass up to it.
      ============================================================ */
   function egg(o) {
+    const key = 'egg:' + o.id;
     const sp = {
-      id: 'egg:' + o.id, x: o.x, y: o.y, w: 18,
+      id: key, x: o.x, y: o.y, w: 18,
       top: o.y - 11, bot: o.y + 11,
       egg: true, art: o.art,
-      label: o.label,
-      hint: 'WORTH A CLOSER LOOK',
+      /* THE NAME IS THE PRIZE. Until you have held the glass to it, the
+         plate says nothing useful — an easter egg that announces itself
+         is a signpost. */
+      label: () => ((G.eggs && G.eggs[key]) ? o.label : 'SOMETHING SMALL'),
+      hint: () => ((G.eggs && G.eggs[key]) ? o.label : 'THE GLASS MIGHT TELL YOU'),
       look: o.look,
     };
-    sp.onUse = () => STORY.lookClose(sp, sp.x, o.y);
+    sp.onUse = () => { (G.eggs = G.eggs || {})[key] = 1; return STORY.lookClose(sp, sp.x, o.y); };
     return sp;
   }
 
@@ -18691,7 +19974,107 @@ const PHONE = (() => {
     { id: 'job', word: 'WORK', icon: 'ic_star', dock: true },
     { id: 'karma', word: 'KARMA', icon: 'ic_paw' },
     { id: 'jobs', word: 'JOBS', icon: 'ic_coin' },
+    { id: 'notes', word: 'ALERTS', icon: 'ic_star' },
   ];
+
+  /* ============================================================
+     NOTIFICATIONS.
+
+     The city used to tell you things by putting a line in a log
+     nobody opened. Now it tells you the way a phone tells you: a
+     banner slides in over the top of the screen for a few seconds,
+     a red number appears on the phone in the belt and on the app
+     the thing belongs to, and the whole run of them is kept on the
+     lock screen and in ALERTS so you can go back and read what you
+     were too busy to read the first time.
+
+     PHONE.notify({ app, head, body, tone }) is the whole surface,
+     and every other module calls it: the story when a quarter of
+     the city opens, the case when a story breaks, jobs when work
+     goes up, the clock when a door is about to shut.
+     ============================================================ */
+  const TONES = {
+    good: { rim: '#2ec4a9', ink: '#8ff7c8', icon: 'ic_star' },
+    bad:  { rim: '#d13b45', ink: '#ff8a7e', icon: 'ic_iron' },
+    plain: { rim: '#5f8f7f', ink: '#eae4d0', icon: 'ic_case' },
+    time: { rim: '#e0a63c', ink: '#ffd98a', icon: 'ic_clock' },
+  };
+
+  function notify(o) {
+    o = o || {};
+    const tone = TONES[o.tone] ? o.tone : 'plain';
+    const note = {
+      app: o.app || 'notes', head: o.head || '', body: o.body || '',
+      tone, at: CITY.hhmm(), t: CITY.minutes ? CITY.minutes() : 0, seen: false,
+    };
+    G.notes = G.notes || [];
+    /* the same thing twice in one minute is one thing */
+    const last = G.notes[G.notes.length - 1];
+    if (last && last.head === note.head && last.t === note.t) return note;
+    G.notes.push(note);
+    if (G.notes.length > 40) G.notes.shift();
+    banner(note);
+    /* A NOTIFICATION MUST NOT REBUILD THE INTERFACE. A full UI.render()
+       here tore down whatever transient card happened to be on screen —
+       a clue pick-up landed at the same moment a last-call warning went
+       off and the pick-up vanished mid-animation. The unread badge is
+       cosmetic; it can wait for the next natural render. */
+    if (typeof UI !== 'undefined' && UI.syncPhoneBadge) UI.syncPhoneBadge();
+    if (layer() && layer().className === 'phone-on') render();
+    return note;
+  }
+
+  /* how many nobody has read */
+  function unread(app) {
+    return (G.notes || []).filter(n => !n.seen && (!app || n.app === app)).length;
+  }
+  function markRead(app) {
+    (G.notes || []).forEach(n => { if (!app || n.app === app) n.seen = true; });
+  }
+
+  /* ---- the banner, which lives outside the phone ---- */
+  function bannerRail() {
+    let r = document.getElementById('note-rail');
+    if (!r) {
+      r = U.el('div');
+      r.id = 'note-rail';
+      document.body.appendChild(r);
+    }
+    return r;
+  }
+  function banner(note) {
+    const rail = bannerRail();
+    /* three at a time, oldest gone */
+    while (rail.childElementCount >= 3) rail.removeChild(rail.firstChild);
+    const t = TONES[note.tone];
+    const el = U.el('div', 'note-card note-' + note.tone);
+    const ic = U.el('div', 'note-ic');
+    ic.appendChild(SPR.clone(ART.art(t.icon, 2), 1));
+    el.appendChild(ic);
+    const col = U.el('div', 'note-col');
+    col.appendChild(line(note.head, 2, t.ink, '#04120c'));
+    if (note.body) {
+      UI.wrapLines(note.body, 38).slice(0, 3).forEach(x =>
+        col.appendChild(line(x, 1, '#cfe6da', null)));
+    }
+    col.appendChild(line(note.at, 1, '#5f8f7f', null));
+    el.appendChild(col);
+    el.onclick = () => {
+      el.remove();
+      if (typeof PHONE !== 'undefined') PHONE.open(note.app === 'notes' ? null : note.app);
+    };
+    rail.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('in'));
+    if (SFX && SFX.tick) SFX.tick();
+    setTimeout(() => {
+      el.classList.remove('in'); el.classList.add('out');
+      setTimeout(() => el.remove(), 300);
+    }, 4200);
+  }
+
+  /* bumped by every open and close, so a pending close can tell whether
+     it is still the most recent thing that happened to the phone */
+  let gen = 0;
 
   function layer() {
     let r = document.getElementById('phone-root');
@@ -18810,7 +20193,7 @@ const PHONE = (() => {
   }
 
   function drawMap() {
-    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v5';
+    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v6';
     return ART.cached(key, () => {
       const o = ART.cv(MW, MH), c = o.c;
       const rng = U.mulberry32(U.hashSeed((G.seedStr || 'CITY') + ':map'));
@@ -18987,6 +20370,33 @@ const PHONE = (() => {
       ART.px(c, 0, Math.round(MH / 2), MW, 1, 'rgba(160,146,112,.26)');
       ART.px(c, 0, Math.round(MH / 2) + 1, MW, 1, 'rgba(255,250,232,.22)');
 
+      /* ---------- THE QUARTERS ----------
+         Eleven pins on a sheet is a list. The same eleven inside named
+         quarters is a city, and a locked stop becomes a locked QUARTER,
+         which is a far better thing to be told you cannot go to. Drawn
+         under the pins: a dashed boundary, a wash, and the name across
+         the middle of it in wide letters. */
+      (CITY.ZONES || []).forEach(z => {
+        const zx = Math.round(z.x / 100 * MW), zy = Math.round(z.y / 100 * MH);
+        const zw = Math.round(z.w / 100 * MW), zh = Math.round(z.h / 100 * MH);
+        /* the boundary, dot-dash, the way a plan draws an administrative line */
+        for (let i = 0; i < zw; i++) {
+          if ((i % 9) > 5) continue;
+          ART.px(c, zx + i, zy, 1, 1, 'rgba(120,104,72,.42)');
+          ART.px(c, zx + i, zy + zh, 1, 1, 'rgba(120,104,72,.42)');
+        }
+        for (let i = 0; i < zh; i++) {
+          if ((i % 9) > 5) continue;
+          ART.px(c, zx, zy + i, 1, 1, 'rgba(120,104,72,.42)');
+          ART.px(c, zx + zw, zy + i, 1, 1, 'rgba(120,104,72,.42)');
+        }
+        /* a wash so the quarters read apart from each other */
+        ART.px(c, zx + 1, zy + 1, zw - 1, zh - 1, 'rgba(196,178,138,.10)');
+        /* and its name, in the top left of it, out of the pins' way */
+        const t = PIXFONT.render(z.name, { scale: 1, color: 'rgba(90,76,48,.72)', shadow: null });
+        c.drawImage(t, zx + 4, zy + 3);
+      });
+
       /* ---------- THE CARTOUCHE, THE ROSE AND THE SCALE ---------- */
       ART.px(c, 8, MH - 56, 132, 40, M.paperLit);
       ART.px(c, 8, MH - 56, 132, 2, '#ffffff');
@@ -19107,9 +20517,19 @@ const PHONE = (() => {
        inwards instead: the plate is wider than the pin, so a stop out at
        the wall has to grow its label back toward the middle. */
     const edge = p.x >= 68 ? ' tag-left' : p.x <= 30 ? ' tag-right' : '';
+    /* ============================================================
+       AND WHETHER THE CITY HAS TOLD YOU THIS PLACE EXISTS.
+
+       Three quarters are shut to a new man until the board has
+       pieces on it. A locked pin is not dimmed like an off-case
+       stop — it is barred, it says what it wants, and tapping it
+       tells you instead of driving you.
+       ============================================================ */
+    const barred = (typeof CITY.locked === 'function') && CITY.locked(p.id);
     const b = U.el('button', 'map-pin' + (here ? ' here' : '') + (hot ? ' hot' : '') +
       (errand ? ' errand' : '') + (inCase ? '' : ' cold') + edge +
-      (provable ? ' story' : '') + (shut ? ' shut' : closing ? ' closing' : ''));
+      (provable ? ' story' : '') + (shut ? ' shut' : closing ? ' closing' : '') +
+      (barred ? ' barred' : ''));
     b.style.left = p.x + '%';
     b.style.top = p.y + '%';
     b.appendChild(SPR.clone(ART.art(p.icon || 'ic_map', k), 1));
@@ -19120,7 +20540,12 @@ const PHONE = (() => {
       tag.appendChild(SPR.clone(ART.art(errand.state === 'ready' ? 'ic_star' : 'ic_bag',
         Math.max(1, k - 1)), 1));
     }
-    tag.appendChild(line(p.short, Math.max(1, k - 1), here ? '#6ff7d8' : '#eae4d0'));
+    /* THE PADLOCK RIDES INSIDE THE TAG, in front of the name, the way
+       the errand mark does. Floated over the pin it was invisible under
+       whatever stop happened to be drawn next door. */
+    if (barred) tag.appendChild(SPR.clone(padlock(), Math.max(1, k - 1)));
+    tag.appendChild(line(p.short, Math.max(1, k - 1),
+      barred ? '#a89e86' : here ? '#6ff7d8' : '#eae4d0'));
     b.appendChild(tag);
     if (hot) {
       const bang = U.el('span', 'pin-bang');
@@ -19142,10 +20567,34 @@ const PHONE = (() => {
     }
     b.onclick = () => {
       if (here) { SFX.tick && SFX.tick(); return; }
+      if (barred) {
+        SFX.tick && SFX.tick();
+        const z = CITY.zoneOf(p.id);
+        notify({ app: 'map', tone: 'bad',
+          head: (z ? z.name : p.name) + ' IS SHUT TO YOU',
+          body: CITY.lockWhy(p.id) });
+        return;
+      }
       PHONE.close();
       STORY.travel(p.id);
     };
     return b;
+  }
+
+  /* a padlock, for a quarter of the city you have not earned */
+  function padlock() {
+    return ART.cached('ph_padlock', () => {
+      const o = ART.cv(9, 11), c = o.c;
+      for (let i = 0; i < 4; i++) {
+        const w = 7 - i * 2;
+        ART.px(c, 1 + i, i, w, 1, '#c9c0a8');
+      }
+      ART.px(c, 1, 3, 2, 3, '#c9c0a8'); ART.px(c, 6, 3, 2, 3, '#c9c0a8');
+      ART.px(c, 0, 5, 9, 6, '#8d8672');
+      ART.px(c, 0, 5, 9, 1, '#c9c0a8');
+      ART.px(c, 4, 7, 1, 3, '#3a3630');
+      return o.cv;
+    });
   }
 
   /* ---------- the screen furniture ---------- */
@@ -19223,11 +20672,21 @@ const PHONE = (() => {
       notes.appendChild(n);
     };
     push(ob.icon || 'ic_star', 'LA BRIGADE', ob.line);
+    /* THE NOTIFICATIONS THEMSELVES, newest first, the way a lock screen
+       stacks them. Four, because a lock screen is a glance. */
+    (G.notes || []).slice(-4).reverse().forEach(n => {
+      const t = TONES[n.tone] || TONES.plain;
+      push(t.icon, n.head + '   ' + n.at, n.body);
+    });
     const owed = (STORY.questsLive() || []).filter(x => x.state === 'ready');
     if (owed.length) push('ic_bag', owed[0].q.who, 'HE OWES YOU. GO BACK FOR IT.');
     const km = STORY.karma ? STORY.karma() : null;
     if (km && km.last) push('ic_paw', 'KARMA ' + (km.score > 0 ? '+' : '') + km.score, km.last);
     wrap.appendChild(notes);
+    if ((G.notes || []).length > 4) {
+      wrap.appendChild(line('+' + ((G.notes || []).length - 4) + ' MORE IN ALERTS',
+        Math.max(1, k - 1), '#5f8f7f', null));
+    }
 
     const go = U.el('button', 'ph-unlock');
     go.appendChild(line('SLIDE TO UNLOCK', k, '#0b1a14', null));
@@ -19263,13 +20722,15 @@ const PHONE = (() => {
     return wrap;
   }
 
-  /* how many things are waiting in each app */
+  /* how many things are waiting in each app, unread alerts included */
   function badgeFor(id) {
-    if (id === 'map') return (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
-    if (id === 'case') return CITY.found().length;
-    if (id === 'kit') return Object.keys(G.cargo || {}).length;
-    if (id === 'jobs') return (STORY.jobsOpen ? STORY.jobsOpen().length : 0);
-    return 0;
+    const n = unread(id);
+    if (id === 'notes') return unread();
+    if (id === 'map') return n + (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
+    if (id === 'case') return n + CITY.found().length;
+    if (id === 'kit') return n + Object.keys(G.cargo || {}).length;
+    if (id === 'jobs') return n + (STORY.jobsOpen ? STORY.jobsOpen().length : 0);
+    return n;
   }
 
   /* the dock: the same four apps, always there */
@@ -19339,6 +20800,41 @@ const PHONE = (() => {
       log.appendChild(row);
     });
     wrap.appendChild(log);
+    return wrap;
+  }
+
+  /* ============================================================
+     ALERTS — everything the night has told you, newest first
+     ============================================================ */
+  function notesApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('WHAT YOU MISSED', k, '#eae4d0'));
+    head.appendChild(line((G.notes || []).length + ' SINCE THE SHIFT STARTED',
+      Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const list = U.el('div', 'ph-clues');
+    const all = (G.notes || []).slice().reverse();
+    if (!all.length) {
+      const row = U.el('div', 'ph-clue');
+      row.appendChild(line('NOTHING YET. ENJOY IT.', Math.max(1, k - 1), '#5f8f7f', null));
+      list.appendChild(row);
+    }
+    all.forEach(n => {
+      const t = TONES[n.tone] || TONES.plain;
+      const row = U.el('div', 'ph-clue ph-note-row' + (n.seen ? '' : ' got'));
+      row.appendChild(SPR.clone(ART.art(t.icon, Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(n.head, Math.max(1, k - 1), t.ink, null));
+      UI.wrapLines(n.body, 32).forEach(x =>
+        col.appendChild(line(x, 1, '#8fb3a0', null)));
+      col.appendChild(line(n.at, 1, '#5f8f7f', null));
+      row.appendChild(col);
+      row.onclick = () => { view = n.app; app = n.app; markRead(n.app); render(); };
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+    markRead();
     return wrap;
   }
 
@@ -19667,7 +21163,8 @@ const PHONE = (() => {
         : view === 'kit' ? kitApp(k)
           : view === 'job' ? jobApp(k)
             : view === 'karma' ? karmaApp(k)
-              : view === 'jobs' ? jobsApp(k) : mapApp(k));
+              : view === 'jobs' ? jobsApp(k)
+                : view === 'notes' ? notesApp(k) : mapApp(k));
       screen.appendChild(dock(k));
     }
     body.appendChild(screen);
@@ -19698,6 +21195,7 @@ const PHONE = (() => {
          screen, because that is what taking a phone out looks like */
       if (which) { app = which; view = which; }
       else if (view === 'lock' || !view) view = 'lock';
+      gen++;
       render();
       SFX.tick && SFX.tick();
       if (tick) clearInterval(tick);
@@ -19714,7 +21212,15 @@ const PHONE = (() => {
       if (!r) return;
       const b = r.querySelector('.ph-body');
       if (b) b.classList.add('out');
-      setTimeout(() => { r.innerHTML = ''; r.className = 'hidden'; }, 160);
+      /* THE WIPE HAS TO KNOW IT IS STILL WANTED. Closing the phone and
+         opening it again in the same breath used to leave a blank slab:
+         the close's timeout landed after the reopen had already painted
+         and emptied the root under it. */
+      const mine = ++gen;
+      setTimeout(() => {
+        if (mine !== gen) return;
+        r.innerHTML = ''; r.className = 'hidden';
+      }, 160);
     },
     isOpen() {
       const r = document.getElementById('phone-root');
@@ -19724,6 +21230,9 @@ const PHONE = (() => {
     app() { return view === 'lock' || view === 'home' ? view : app; },
     /* the lock screen next time it comes out of the coat */
     lock() { view = 'lock'; },
+    /* THE NOTIFICATIONS, for everybody else to ring */
+    notify, unread, markRead,
+    notes() { return (G.notes || []).slice(); },
   };
 })();
 </script>
@@ -19833,8 +21342,21 @@ const JOBS = (() => {
       };
       requestAnimationFrame(step);
 
+      /* THE HARNESS HAS TO BE ABLE TO PLAY THIS. A skill meter cannot be
+         beaten by clicking blindly, and a headless test that cannot pick
+         a lock cannot test anything behind a locked door. This is a
+         read-only window onto the sweep: the harness polls it and taps
+         when the needle is inside the band, which is exactly what a
+         player does with their eyes. */
+      JOBS._meter = {
+        get x() { return x; }, get centre() { return centre; },
+        get band() { return band; }, get live() { return live; },
+        get round() { return round; }, get rounds() { return rounds; },
+      };
+
       const finish = () => {
         done = true;
+        JOBS._meter = null;
         window.removeEventListener('pointerdown', hit);
         window.removeEventListener('keydown', key);
         wrap.classList.add('out');
@@ -20271,8 +21793,66 @@ const JOBS = (() => {
     if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.16).toFixed(3) + ')');
   }
 
+  /* THE RANGE. A paper target on a rail, and a sight that swings across
+     it: six shots, and the band is tight because a police range is
+     supposed to be. Drawn as the target you are actually shooting at
+     rather than a bar, because the whole point is that it is a target. */
+  function drawTarget(c, W, H, st) {
+    const t = st.x, band = st.band, live = st.live, centre = st.centre;
+    /* the range: a lane, a backstop, a light overhead */
+    ART.px(c, 0, 0, W, H, '#242028');
+    ART.px(c, 0, 0, W, 8, '#1a171e');
+    ART.px(c, 0, H - 14, W, 14, '#38322c');
+    ART.px(c, 0, H - 14, W, 1, '#4e463c');
+    for (let i = 4; i < W; i += 18) ART.px(c, i, H - 12, 9, 2, 'rgba(255,240,210,.07)');
+    /* the sandbags at the back */
+    for (let i = 0; i < W; i += 14) {
+      ART.px(c, i, 14, 13, 9, '#5f5744');
+      ART.px(c, i, 14, 13, 2, '#736a53');
+    }
+    /* THE TARGET, and the rings on it */
+    const tx = Math.round(W * 0.5), ty = 44;
+    ART.px(c, tx - 2, ty + 14, 4, H - 14 - ty - 14, '#4a3f2e');
+    ART.px(c, tx - 22, ty - 20, 44, 40, '#e9e2cc');
+    ART.px(c, tx - 22, ty - 20, 44, 1, '#ffffff');
+    ART.px(c, tx - 22, ty + 19, 44, 1, '#b8b09a');
+    [16, 12, 8, 4].forEach((r, i) => {
+      for (let a = 0; a < 60; a++) {
+        const th = (a / 60) * Math.PI * 2;
+        ART.px(c, Math.round(tx + Math.cos(th) * r), Math.round(ty + Math.sin(th) * r * 0.9),
+          1, 1, i % 2 ? '#8a8272' : '#2a2620');
+      }
+    });
+    PIX.disc(c, tx, ty, 3, '#b8384a');
+    /* THE BAND you have to be inside, painted on the target where the
+       meter actually put it — the meter rolls a new centre every round
+       and drawing it at the middle would be a lie. */
+    const bw = Math.max(3, Math.round(44 * band));
+    ART.px(c, tx - 22 + Math.round(44 * centre - bw / 2), ty - 20, bw, 40,
+      'rgba(111,247,216,.16)');
+    ART.px(c, tx - 22 + Math.round(44 * centre), ty - 20, 1, 40, 'rgba(111,247,216,.4)');
+    /* AND THE SIGHT, swinging across it */
+    const sx = Math.round(tx - 22 + 44 * t);
+    ART.px(c, sx, ty - 24, 1, 48, live ? '#ffd75e' : '#6a6252');
+    ART.px(c, sx - 4, ty, 9, 1, live ? '#ffd75e' : '#6a6252');
+    ART.px(c, sx - 1, ty - 1, 3, 3, live ? '#ff6a5e' : '#6a6252');
+  }
+
   return {
+    /* the live sweep, for the harness only */
+    debugMeter() { return JOBS._meter ? { x: JOBS._meter.x, centre: JOBS._meter.centre, band: JOBS._meter.band, live: JOBS._meter.live, round: JOBS._meter.round, rounds: JOBS._meter.rounds } : null; },
     meter,
+
+    /* SIX SHOTS ON THE BRIGADE RANGE. Nobody pays you; it is a test. */
+    async range() {
+      const r = await meter({
+        head: 'THE RANGE', sub: 'SIX SHOTS. FOUR OF THEM HAVE TO LAND.',
+        key: 'TAP TO FIRE',
+        rounds: 6, band: 0.15, speed: 1.35,
+        draw: drawTarget,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, pass: r.hits >= 4 };
+    },
 
     /* three pints. Money, and a barman who will answer one more thing. */
     async pour() {
@@ -21119,6 +22699,21 @@ const STORY = {
     if (!c) return null;
     G.intelCards.push(c.id);
     STORY.note('PINNED: ' + c.name + ' - ' + c.line);
+    /* A PIECE ON THE BOARD OPENS DOORS. Three quarters of the city are
+       shut to a foreign policeman until somebody has a reason to take
+       him there, and a piece is that reason. */
+    if (typeof CITY !== 'undefined' && CITY.openUp) {
+      CITY.openUp().forEach(pl => {
+        const z = CITY.zoneOf(pl.id);
+        STORY.note('OPENED: ' + pl.name + (z ? ' - ' + z.name : ''));
+        if (typeof PHONE !== 'undefined' && PHONE.notify) {
+          PHONE.notify({
+            app: 'map', head: (z ? z.name : pl.name) + ' IS OPEN TO YOU',
+            body: pl.blurb || pl.sub, tone: 'good',
+          });
+        }
+      });
+    }
     return c;
   },
   canFinish() { return (G.intelCards || []).length >= INTEL_CARDS.length; },
@@ -22443,6 +24038,28 @@ const STORY = {
 
     if (hit && hit.look) lines.push(hit.look);
 
+    /* ============================================================
+       A SECRET IS WORTH SOMETHING.
+
+       An easter egg costs nothing to walk past and cannot be found
+       without the glass, so finding one has to pay: it is counted
+       across every run you ever play, and the phone tells you what
+       number it was.
+       ============================================================ */
+    if (hit && hit.egg) {
+      G.eggsSeen = G.eggsSeen || {};
+      if (!G.eggsSeen[hit.id]) {
+        G.eggsSeen[hit.id] = 1;
+        META.bump('eggsFound'); META.save();
+        const n = META.stats().eggsFound || 1;
+        if (typeof PHONE !== 'undefined' && PHONE.notify) {
+          PHONE.notify({ app: 'notes', tone: 'good',
+            head: 'FOUND SOMETHING NOBODY PUT THERE',
+            body: 'NUMBER ' + n + '. THE GLASS EARNS ITS KEEP.' });
+        }
+      }
+    }
+
     if (isProp) {
       CITY.spend('look');
       if (CITY.searched(place, hit.id)) {
@@ -23257,8 +24874,13 @@ const UI = {
       ph.id = 'btn-phone';
       ph.appendChild(SPR.clone(ART.art('ic_phone', K + 1), 1));
       ph.appendChild(UI.txt('PHONE', { scale: K, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+      /* the unread count, which the notification layer pokes in place */
+      const bg = U.el('span', 'phone-badge hidden');
+      bg.id = 'tb-phone-badge';
+      ph.appendChild(bg);
       ph.onclick = () => PHONE.toggle('map');
       stack.appendChild(ph);
+      UI.syncPhoneBadge();
     }
 
     const cash = U.el('div', 'corner-chip has-tip');
@@ -23402,6 +25024,23 @@ const UI = {
       clk.appendChild(cc);
     }
     UI.syncObjective();
+  },
+
+  /* ============================================================
+     THE RED NUMBER ON THE PHONE.
+
+     Poked in place by PHONE.notify, because a notification that
+     rebuilt the whole interface to show a badge took whatever was
+     mid-animation down with it.
+     ============================================================ */
+  syncPhoneBadge() {
+    const b = document.getElementById('tb-phone-badge');
+    if (!b) return;
+    const n = (typeof PHONE !== 'undefined' && PHONE.unread) ? PHONE.unread() : 0;
+    if (!n) { b.className = 'phone-badge hidden'; b.innerHTML = ''; return; }
+    b.className = 'phone-badge';
+    b.innerHTML = '';
+    b.appendChild(UI.txt(n > 9 ? '9+' : String(n), { scale: 2, color: PIX.PAL.W }));
   },
 
   syncChips() {
@@ -23666,12 +25305,24 @@ const UI = {
     deal.appendChild(UI.txt('OPEN THE CASE', { scale: 4, shadow: null, color: PIX.PAL.K }));
     deal.onclick = () => {
       SFX.chak();
-      /* the whole story the first time; after that just the last panel.
-         Then the load-up, the drive, and the precinct. */
+      /* ============================================================
+         HOW A RUN STARTS.
+
+         First time through, you play how you got here: the house,
+         the room, the thing in the ashtray, the security line, the
+         flight, the descent — and then the application, because the
+         Brigade does not hand a case to a foreign cop with a
+         cigarette end. After that it is the last panel of the reel
+         and straight to work, because nobody wants to sit through
+         an airport twice.
+         ============================================================ */
       const seen = META.stats().loreSeen > 0;
       UI.goto(() => E.newRun(inp.value)).then(() => {
         META.bump('loreSeen'); META.save();
-        return CINE.lore(seen);
+        if (seen) return CINE.lore(true);
+        return CINE.lore(false)
+          .then(() => INTRO.play())
+          .then(() => INTRO.application());
       }).then(() => CINE.driveTo())
         .then(() => {
           UI.render();
@@ -29111,6 +30762,1638 @@ const CINE = {
     root.innerHTML = ''; root.className = 'hidden';
   },
 };
+</script>
+<script>
+/* ==== js/intro.js ==== */
+/* ============================================================
+   SHELL & DEBT — intro.js
+   HOW YOU GOT HERE.
+
+   The game used to open on a slideshow: eight painted panels with
+   a caption under each, and then you were a detective in Paris
+   with no explanation of why a frog with an American accent is
+   working a Paris murder.
+
+   This is the explanation, and you play it.
+
+     THE HOUSE      you come home. The door is open.
+     THE ROOM       three places to look. One of them has the
+                    only thing the killer left behind in it.
+     THE DEPARTURE  a security line, and a pistol you are not
+                    allowed to take. What you do about that is
+                    the first real decision in the game.
+     THE AIRCRAFT   nine hours over the water.
+     THE DESCENT    Paris out of the window at first light.
+
+   Then the Brigade will not let a foreign cop work a case
+   without a card, so:
+
+     THE PAPER      four questions, answered out loud, and the
+                    captain reads the answers back to you.
+     THE RANGE      six shots. Four of them have to land.
+
+   EVERY BEAT IS INTERACTIVE OR IT IS NOT IN HERE. If a panel
+   would only be looked at, it is a panel in the reel that
+   already exists. What is in this file is the things you do.
+
+   All of it drawn, like everything else: no images, at boot.
+   ============================================================ */
+
+const INTRO = (() => {
+
+  const px = (c, x, y, w, h, col) => ART.px(c, x, y, w, h, col);
+  const P = () => PIX.PAL;
+  /* two colours and a distance between them, as something canvas will take */
+  const mix = (a, b, t) => (typeof DAY !== 'undefined' && DAY.mix)
+    ? DAY.rgb(DAY.mix(a, b, t)) : a;
+
+  /* the card these scenes are painted on: wide, cinematic, and the
+     same shape every time so the cuts do not jump */
+  const CW = 220, CH = 124;
+
+  function card() {
+    const o = ART.cv(CW, CH);
+    return o;
+  }
+
+  /* how big the card can be drawn on this screen, as a whole number */
+  function scale() {
+    return U.clamp(Math.floor(Math.min(window.innerWidth * 0.94 / CW,
+      window.innerHeight * 0.78 / CH)), 2, 8);
+  }
+
+  /* ------------------------------------------------------------
+     THE WAY OUT.
+
+     Thirteen beats is a lot to sit through twice, and a beat with
+     hot spots on it cannot be got past by mashing a key, so the
+     opening carries a real skip: one press and the whole thing —
+     reel and application both — folds up and hands you the badge.
+     `skipping` is the flag; SKIP is what a beat throws once it is
+     set, and `play` catches it in the finally it already had.
+     ------------------------------------------------------------ */
+  let skipping = false;
+  const SKIP = { skip: true };
+  function skip() { skipping = true; }
+  function skipButton(onSkip) {
+    const b = U.el('button', 'intro-skip');
+    b.appendChild(UI.txt('SKIP', { scale: 1, color: PIX.PAL.q, shadow: PIX.PAL.K }));
+    b.onclick = (ev) => { ev.stopPropagation(); skipping = true; onSkip(); };
+    return b;
+  }
+
+  /* ------------------------------------------------------------
+     SHOW ONE CARD, and wait for a tap on it.
+
+     `hot` is a list of { x, y, w, h, id } — the places on this
+     card you can actually touch. With no hot spots it is a plain
+     beat and any tap moves on; with them, the tap resolves to the
+     id you hit and nothing else does anything.
+     ------------------------------------------------------------ */
+  function rawShow(paint, opts) {
+    opts = opts || {};
+    return new Promise(res => {
+      const root = CINE.stage();
+      root.className = 'intro-on';
+      root.innerHTML = '';
+      const K = scale();
+      const wrap = U.el('div', 'intro-card');
+
+      const o = card();
+      paint(o.c);
+      const cv = SPR.clone(o.cv, K);
+      cv.className = 'pix intro-frame';
+      wrap.appendChild(cv);
+
+      if (opts.head) {
+        const h = U.el('div', 'intro-head');
+        /* the words are a canvas, so the words go on the element too:
+           a harness cannot read pixels but it can read an attribute */
+        h.dataset.head = opts.head;
+        h.appendChild(UI.txt(opts.head, { scale: 2, color: PIX.PAL.g, shadow: null }));
+        wrap.insertBefore(h, cv);
+      }
+      if (opts.line) {
+        const l = U.el('div', 'intro-line');
+        l.appendChild(UI.wrap(opts.line, 46,
+          { scale: 2, color: PIX.PAL.W, outline: PIX.PAL.K }));
+        wrap.appendChild(l);
+      }
+      if (opts.foot) {
+        const f = U.el('div', 'intro-foot');
+        f.appendChild(UI.txt(opts.foot, { scale: 1, color: PIX.PAL.q, shadow: null }));
+        wrap.appendChild(f);
+      }
+
+      /* the hot spots, as buttons laid over the card at card scale */
+      const hot = opts.hot || [];
+      if (hot.length) {
+        const layer = U.el('div', 'intro-hot');
+        layer.style.width = (CW * K) + 'px';
+        layer.style.height = (CH * K) + 'px';
+        hot.forEach(h => {
+          const b = U.el('button', 'intro-spot' + (h.done ? ' done' : ''));
+          b.style.left = (h.x * K) + 'px';
+          b.style.top = (h.y * K) + 'px';
+          b.style.width = (h.w * K) + 'px';
+          b.style.height = (h.h * K) + 'px';
+          if (h.label) {
+            const t = U.el('span', 'intro-tag');
+            t.appendChild(UI.txt(h.label, { scale: 1, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+            b.appendChild(t);
+          }
+          b.onclick = (ev) => {
+            ev.stopPropagation();
+            SFX.tick && SFX.tick();
+            done(h.id);
+          };
+          layer.appendChild(b);
+        });
+        wrap.appendChild(layer);
+      }
+
+      root.appendChild(wrap);
+      wrap.appendChild(skipButton(() => done('__skip')));
+      requestAnimationFrame(() => wrap.classList.add('in'));
+      if (opts.sfx !== false) SFX.tone(70 + Math.random() * 30, 0.5, 'sine', 0.08, 0, -24);
+
+      let finished = false;
+      const done = (id) => {
+        if (finished) return;
+        finished = true;
+        window.removeEventListener('pointerdown', anywhere);
+        window.removeEventListener('keydown', anywhere);
+        wrap.classList.add('out');
+        setTimeout(() => {
+          root.innerHTML = ''; root.className = 'hidden';
+          res(id);
+        }, 220);
+      };
+      const anywhere = (ev) => {
+        /* ESCAPE IS THE SKIP, not the next beat: a card with hot spots on
+           it cannot be got past any other way from a keyboard. */
+        if (ev && ev.key === 'Escape') { skipping = true; done('__skip'); return; }
+        if (!hot.length) done(null);
+      };
+      setTimeout(() => {
+        window.addEventListener('pointerdown', anywhere);
+        window.addEventListener('keydown', anywhere);
+      }, 340);
+    });
+  }
+
+  /* ------------------------------------------------------------
+     HOLD A CARD UP while a conversation happens over the top of
+     it. `show` clears itself on a tap; this does not, so a beat
+     made of several lines of dialogue keeps its set behind it.
+     ------------------------------------------------------------ */
+  let held = null;
+  function hold(paint, opts) {
+    opts = opts || {};
+    const root = CINE.stage();
+    root.className = 'intro-on held';
+    root.innerHTML = '';
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.92 / CW,
+      window.innerHeight * 0.62 / CH)), 2, 8);
+    const wrap = U.el('div', 'intro-card held');
+    const o = card();
+    paint(o.c);
+    const cv = SPR.clone(o.cv, K);
+    cv.className = 'pix intro-frame';
+    wrap.appendChild(cv);
+    if (opts.head) {
+      const h = U.el('div', 'intro-head');
+      h.dataset.head = opts.head;
+      h.appendChild(UI.txt(opts.head, { scale: 2, color: PIX.PAL.g, shadow: null }));
+      wrap.insertBefore(h, cv);
+    }
+    root.appendChild(wrap);
+    if (opts.skip !== false) wrap.appendChild(skipButton(() => { drop(); }));
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    held = root;
+  }
+  function drop() {
+    if (!held) return;
+    held.innerHTML = ''; held.className = 'hidden';
+    held = null;
+  }
+
+  /* ============================================================
+     THE PAINTINGS.
+     ============================================================ */
+
+  /* a night sky over a low American street: this is not Paris yet */
+  function nightSky(c, h) {
+    for (let i = 0; i < h; i++) {
+      const t = i / h;
+      const r = Math.round(10 + t * 26), g = Math.round(12 + t * 22), b = Math.round(28 + t * 30);
+      px(c, 0, i, CW, 1, 'rgb(' + r + ',' + g + ',' + b + ')');
+    }
+    const rng = U.mulberry32(4021);
+    for (let i = 0; i < 60; i++) {
+      px(c, Math.floor(rng() * CW), Math.floor(rng() * h * 0.8), 1, 1,
+        'rgba(220,230,255,' + (0.2 + rng() * 0.5).toFixed(2) + ')');
+    }
+    /* the moon, low and cold */
+    PIX.disc(c, 176, 18, 12, 'rgba(220,232,255,.06)');
+    PIX.disc(c, 176, 18, 7, '#cfd8ea');
+    PIX.disc(c, 179, 16, 5, 'rgba(0,0,0,.18)');
+  }
+
+  /* THE HOUSE. A porch light on, and the front door standing open. */
+  function houseCard(c, open) {
+    nightSky(c, 66);
+    /* the street, and the neighbours' places going off both ways */
+    px(c, 0, 66, CW, CH - 66, '#1b1d24');
+    const rng = U.mulberry32(9112);
+    for (let i = -8; i < CW; i += 33) {
+      const th = 14 + Math.floor(rng() * 8);
+      const ry = 66 - th;
+      for (let r = 0; r < 7; r++) {                     /* a roof, so it is a house */
+        px(c, i + r * 2, ry - 7 + r, 30 - r * 4, 1, '#191b21');
+      }
+      px(c, i, ry, 30, th, '#20242c');
+      px(c, i, ry, 30, 1, '#2b303a');
+      if (rng() < 0.7) px(c, i + 6, ry + 5, 5, 6, '#3a3222');
+      if (rng() < 0.5) px(c, i + 18, ry + 5, 5, 6, '#463a22');
+    }
+    /* a tree on the corner, all silhouette */
+    px(c, 200, 40, 4, 30, '#151720');
+    for (let i = 0; i < 30; i++) {
+      const a = i * 2.399, r = 4 + (i % 5) * 3;
+      PIX.disc(c, Math.round(202 + Math.cos(a) * r), Math.round(34 + Math.sin(a) * r * 0.7),
+        4, '#171a23');
+    }
+    /* the house: clapboard, a pitched roof, a porch */
+    const hx = 74, hy = 34, hw = 72, hh = 44;
+    px(c, hx - 4, hy + 6, hw + 8, 4, '#2a2119');
+    for (let i = 0; i < 12; i++) {
+      px(c, hx + i * 3, hy + 6 - i, hw - i * 6, 2, i < 2 ? '#4a3b2c' : '#33291e');
+    }
+    px(c, hx + hw - 22, hy - 5, 7, 12, '#2a2119');      /* the chimney */
+    px(c, hx + hw - 23, hy - 6, 9, 2, '#3a2f22');
+    px(c, hx, hy + 10, hw, hh, '#5f5748');
+    for (let ly = hy + 10; ly < hy + 10 + hh; ly += 4) {
+      px(c, hx, ly, hw, 1, 'rgba(255,250,235,.07)');
+      px(c, hx, ly + 3, hw, 1, 'rgba(0,0,0,.22)');
+    }
+    px(c, hx, hy + 10, 2, hh, 'rgba(0,0,0,.28)');
+    px(c, hx + hw - 2, hy + 10, 2, hh, 'rgba(0,0,0,.28)');
+    /* two windows, both dark, both with a sill */
+    [[hx + 8, hy + 18], [hx + hw - 24, hy + 18]].forEach(([wx, wy]) => {
+      px(c, wx - 1, wy - 1, 18, 16, '#3a3226');
+      px(c, wx, wy, 16, 14, '#191c22');
+      px(c, wx + 1, wy + 1, 14, 12, '#242a34');
+      px(c, wx + 1, wy + 1, 14, 4, '#2d3542');
+      px(c, wx + 7, wy + 1, 2, 12, '#191c22');
+      px(c, wx + 1, wy + 6, 14, 1, '#191c22');
+      px(c, wx - 2, wy + 13, 20, 2, '#4a4034');
+    });
+    /* the porch, and the light nobody turned off */
+    px(c, hx - 7, hy + 39, hw + 14, 4, '#3a3226');
+    px(c, hx - 7, hy + 39, hw + 14, 1, '#5a4c38');
+    px(c, hx - 6, hy + 43, 3, 11, '#2a231a');
+    px(c, hx + hw + 3, hy + 43, 3, 11, '#2a231a');
+    px(c, hx - 7, hy + 53, hw + 14, 3, '#241d16');
+    /* the porch lamp: a housing, a bulb, and a glow that falls off
+       instead of one big translucent disc that reads as a smudge */
+    const lx = hx + hw / 2 + 14;
+    px(c, lx - 3, hy + 37, 7, 3, '#2a231a');
+    px(c, lx - 2, hy + 40, 5, 5, '#ffd98a');
+    px(c, lx - 1, hy + 41, 3, 3, '#fff4d0');
+    px(c, lx - 3, hy + 45, 7, 2, '#2a231a');
+    for (let i = 1; i <= 4; i++) {
+      PIX.disc(c, lx, hy + 42, 3 + i * 3, 'rgba(255,217,138,' + (0.05 - i * 0.008).toFixed(3) + ')');
+    }
+    /* THE DOOR. Shut, this is a house. Open, it is a crime scene. */
+    const dx = hx + hw / 2 - 7;
+    px(c, dx - 1, hy + 30, 16, 24, '#2a231a');
+    if (open) {
+      px(c, dx, hy + 30, 14, 24, '#0a0a0c');
+      px(c, dx + 10, hy + 30, 4, 24, '#3d3226');       /* the door, swung in */
+      px(c, dx, hy + 30, 14, 2, 'rgba(0,0,0,.6)');
+      /* the light from inside, falling out onto the boards */
+      for (let i = 0; i < 10; i++) {
+        px(c, dx - i, hy + 53 + i, 14 + i * 2, 1,
+          'rgba(255,220,150,' + (0.11 - i * 0.010).toFixed(3) + ')');
+      }
+    } else {
+      px(c, dx, hy + 30, 14, 24, '#4a3b2c');
+      px(c, dx + 1, hy + 32, 12, 8, '#3f3125');
+      px(c, dx + 1, hy + 42, 12, 10, '#3f3125');
+      px(c, dx + 10, hy + 40, 2, 2, '#c9a24a');
+    }
+    /* the path up from the kerb, and a fence along the front */
+    for (let i = 0; i < 12; i++) {
+      px(c, dx + 3 - i, hy + 56 + i * 3, 8 + i * 2, 2, i % 2 ? '#33302a' : '#3a3630');
+    }
+    for (let i = 0; i < CW; i += 7) {
+      if (i > dx - 22 && i < dx + 26) continue;
+      px(c, i, 80, 2, 10, '#2a2620');
+      px(c, i, 80, 2, 1, '#3a352c');
+    }
+    px(c, 0, 82, CW, 1, '#2f2b24');
+    /* a mailbox with the flag still up */
+    px(c, 152, 78, 2, 12, '#2a2620');
+    px(c, 148, 72, 11, 6, '#3a3f48');
+    px(c, 148, 72, 11, 1, '#4e5560');
+    px(c, 158, 70, 2, 5, '#8a2a1a');
+    /* the street lamp, and the pool it makes */
+    px(c, 12, 30, 3, 56, '#20232a');
+    px(c, 12, 30, 12, 3, '#20232a');
+    px(c, 20, 32, 7, 4, '#ffd98a');
+    for (let i = 0; i < 12; i++) {
+      PIX.disc(c, 23, 34 + i * 5, 4 + i * 2, 'rgba(255,217,138,.022)');
+    }
+    /* the car on the kerb, still warm */
+    px(c, 18, 92, 46, 11, '#2b3346');
+    px(c, 18, 92, 46, 2, '#4a5570');
+    px(c, 18, 100, 46, 3, '#1c2231');
+    for (let i = 0; i < 9; i++) {                       /* a roof that curves */
+      px(c, 26 + Math.round(i * 0.4), 92 - i, 27 - Math.round(i * 0.9), 1, '#2b3346');
+    }
+    px(c, 29, 86, 9, 5, 'rgba(160,205,230,.45)');
+    px(c, 40, 86, 8, 5, 'rgba(160,205,230,.45)');
+    px(c, 24, 90, 2, 3, '#4a5570');                     /* the mirror */
+    px(c, 62, 94, 3, 3, '#c9a24a');                     /* a light left on */
+    PIX.disc(c, 27, 103, 5, '#14121c'); PIX.disc(c, 53, 103, 5, '#14121c');
+    PIX.disc(c, 27, 103, 2, '#3a3d48'); PIX.disc(c, 53, 103, 2, '#3a3d48');
+    /* the road */
+    px(c, 0, CH - 10, CW, 10, '#15171d');
+    px(c, 0, CH - 10, CW, 1, '#22252d');
+    for (let i = 6; i < CW; i += 22) px(c, i, CH - 6, 11, 2, 'rgba(230,225,205,.30)');
+  }
+
+  /* THE ROOM. Three places to look, and one of them has it. */
+  function roomCard(c, found) {
+    /* wallpaper, and a picture rail */
+    px(c, 0, 0, CW, CH, '#2a2620');
+    for (let i = 0; i < CW; i += 8) {
+      px(c, i, 0, 3, 74, 'rgba(255,240,210,.035)');
+      px(c, i + 4, 0, 1, 74, 'rgba(0,0,0,.10)');
+      px(c, i + 1, 18, 1, 1, 'rgba(255,220,170,.07)');
+      px(c, i + 1, 46, 1, 1, 'rgba(255,220,170,.07)');
+    }
+    px(c, 0, 12, CW, 2, '#3a3226');
+    px(c, 0, 74, CW, 6, '#3a3226');                     /* the skirting */
+    px(c, 0, 74, CW, 1, '#4e422f');
+    px(c, 0, 80, CW, CH - 80, '#241f1a');
+    for (let i = 0; i < CW; i += 13) px(c, i, 80, 1, CH - 80, 'rgba(0,0,0,.20)');
+    /* THE RUG, which has to lie down: a rectangle painted between two
+       horizontals reads as a panel standing against the wall, so it is
+       drawn as a trapezoid, narrow at the back and wide at our feet. */
+    const rt = 88, rb = 118;
+    for (let y = rt; y <= rb; y++) {
+      const t = (y - rt) / (rb - rt);
+      const half = Math.round(56 + t * 46), edge = t < 0.10 || t > 0.90;
+      px(c, 110 - half, y, half * 2, 1, edge ? '#7d4046' : '#5a2a2e');
+      if (!edge) px(c, 110 - half + 4, y, half * 2 - 8, 1, '#6e3438');
+    }
+    for (let i = 0; i < 13; i++) {                      /* the medallion, closed */
+      const y = 94 + i * 2, t = (y - rt) / (rb - rt), half = Math.round(56 + t * 46);
+      const arm = (6 - Math.abs(6 - i)) * 3;      /* widest in the middle */
+      px(c, 110 - 6 - arm, y, 4, 2, '#8a4a4e');
+      px(c, 110 + 3 + arm, y, 4, 2, '#8a4a4e');
+      px(c, 110 - half + 6, y, 3, 1, '#8a4a4e');
+      px(c, 110 + half - 9, y, 3, 1, '#8a4a4e');
+    }
+    for (let i = -102; i < 102; i += 5) px(c, 110 + i, rb, 3, 4, '#7d4046'); /* the fringe */
+    /* ------------------------------------------------------------
+       THE ARMCHAIR. Her chair. It has to read as a chair somebody
+       sat in every evening, which means a back with a roll on it,
+       two arms in front of that back, a cushion between the arms,
+       and feet — not a slab with a lighter slab beside it.
+       ------------------------------------------------------------ */
+    for (let i = 0; i < 5; i++) {                       /* the rolled top */
+      px(c, 24 + (4 - i), 44 + i, 44 - (4 - i) * 2, 1, i < 2 ? '#5d596e' : '#4e4a5c');
+    }
+    px(c, 24, 49, 44, 32, '#3d3a48');                   /* the back */
+    px(c, 26, 52, 40, 20, '#454154');                   /* buttoned, faintly */
+    [[36, 58], [54, 58], [45, 66]].forEach(([bxp, byp]) => {
+      px(c, bxp, byp, 2, 2, '#332f3c');
+    });
+    px(c, 24, 49, 1, 32, 'rgba(255,255,255,.07)');
+    px(c, 67, 49, 1, 32, 'rgba(0,0,0,.30)');
+    /* the arms, in front of the back, with a roll on each */
+    for (let i = 0; i < 4; i++) {
+      px(c, 18 + (3 - i), 58 + i, 14 - (3 - i) * 2, 1, i < 2 ? '#565064' : '#453f52');
+      px(c, 60 + (3 - i), 58 + i, 14 - (3 - i) * 2, 1, i < 2 ? '#413c4c' : '#332f3c');
+    }
+    px(c, 18, 62, 14, 22, '#453f52');
+    px(c, 60, 62, 14, 22, '#332f3c');
+    px(c, 18, 62, 1, 22, 'rgba(255,255,255,.08)');
+    /* the seat, sagging where she sat */
+    px(c, 32, 70, 28, 12, '#4a4458');
+    for (let i = 0; i < 28; i++) {
+      px(c, 32 + i, 70 + Math.round(Math.sin(i / 27 * Math.PI) * 2), 1, 2, '#565064');
+    }
+    px(c, 32, 80, 28, 3, '#2f2c39');
+    /* feet, and the shadow they stand in */
+    px(c, 17, 84, 58, 2, 'rgba(0,0,0,.26)');
+    px(c, 22, 84, 6, 5, '#3a2f1e'); px(c, 64, 84, 6, 5, '#3a2f1e');
+    px(c, 22, 88, 6, 1, '#241d13'); px(c, 64, 88, 6, 1, '#241d13');
+    /* a throw folded over the near arm, with a fringe on it */
+    px(c, 18, 56, 16, 14, '#6b5a3c');
+    px(c, 18, 56, 16, 2, '#8a7550');
+    px(c, 18, 68, 16, 2, '#4e402a');
+    for (let i = 0; i < 16; i += 3) px(c, 18 + i, 70, 2, 3, '#8a7550');
+    /* THE TABLE, with an ashtray on it, and a chair gone over beside it */
+    px(c, 94, 60, 58, 4, '#6b5334');
+    px(c, 94, 60, 58, 1, '#8a6c44');
+    px(c, 94, 64, 58, 2, '#4a3a24');
+    px(c, 99, 66, 4, 22, '#4a3a24'); px(c, 143, 66, 4, 22, '#4a3a24');
+    px(c, 99, 86, 48, 2, '#3f321f');
+    /* THE ASHTRAY: a shallow oval dish, not a grey box */
+    for (let y = 0; y < 7; y++) {
+      const t = (y - 3) / 3.4, half = Math.round(13 * Math.sqrt(Math.max(0, 1 - t * t)));
+      px(c, 122 - half, 53 + y, half * 2, 1, y < 2 ? '#b0b8c2' : '#8a929c');
+    }
+    px(c, 110, 55, 24, 3, '#4e545c');
+    px(c, 112, 56, 20, 1, '#3a4046');
+    px(c, 109, 52, 26, 1, '#c2cbd4');
+    /* THE CHAIR, gone over: the seat on its edge, the back flat on the
+       floor, the legs in the air. An upright chair says nothing. */
+    px(c, 150, 100, 26, 5, '#4a3720');                  /* the back, lying down */
+    px(c, 150, 100, 26, 1, '#6b5334');
+    px(c, 150, 92, 4, 9, '#4a3720'); px(c, 172, 92, 4, 9, '#4a3720');
+    px(c, 150, 90, 26, 3, '#5a4426');
+    px(c, 176, 88, 11, 26, '#5a4426');                  /* the seat, on edge */
+    px(c, 176, 88, 11, 2, '#7a5e36');
+    px(c, 176, 112, 11, 2, '#3f2e1a');
+    [90, 111].forEach(y => {                            /* two legs, sideways */
+      px(c, 187, y, 13, 3, '#4a3720');
+      px(c, 187, y, 13, 1, '#6b5334');
+      px(c, 196, y + (y > 100 ? -3 : 3), 3, 4, '#3f2e1a');
+    });
+    px(c, 191, 93, 3, 20, '#4a3720');                   /* the rung between them */
+    px(c, 149, 114, 40, 2, 'rgba(0,0,0,.26)');
+    /* THE WINDOW, open, with the curtain moving */
+    px(c, 168, 18, 44, 46, '#14161c');
+    px(c, 170, 20, 40, 42, '#1d2733');
+    px(c, 170, 20, 40, 9, '#2c3d52');
+    px(c, 188, 20, 2, 42, '#14161c');
+    px(c, 170, 40, 40, 1, '#14161c');
+    for (let i = 0; i < 10; i++) {                      /* the curtain, lifting */
+      px(c, 164 + i, 14 + i, 12 - Math.round(i / 3), 58 - i * 2, i < 4 ? '#5f5344' : '#4a4034');
+    }
+    px(c, 204, 14, 12, 58, '#4a4034');
+    px(c, 206, 16, 8, 54, '#5f5344');
+    px(c, 162, 12, 58, 3, '#3a3226');
+    /* THE LAMP, over on its side, the shade crushed under it */
+    for (let i = 0; i < 10; i++) {
+      px(c, 72 + i, 80 + Math.round(i * 0.2), 2, 12 - i, '#b8ae94');
+    }
+    px(c, 71, 80, 3, 12, '#5f5344');                    /* the mouth of the shade */
+    px(c, 72, 82, 1, 8, '#3f372c');
+    px(c, 80, 84, 3, 3, '#e8dcb8');                     /* and the bulb in it */
+    px(c, 82, 82, 16, 4, '#8d8672');                    /* the stem */
+    px(c, 82, 82, 16, 1, '#a8a294');
+    px(c, 98, 80, 6, 8, '#5f5344');                     /* the base */
+    px(c, 98, 80, 6, 1, '#7a6c58');
+    for (let i = 0; i < 14; i++) {                      /* the cord, trailing */
+      px(c, 104 + i, 86 + Math.round(Math.sin(i * 0.6) * 2), 1, 1, '#2a2620');
+    }
+    px(c, 71, 90, 30, 2, 'rgba(0,0,0,.22)');
+    /* a small wooden frog on wheels, left where it was left */
+    px(c, 122, 112, 12, 7, '#4a7f44');
+    px(c, 124, 108, 8, 5, '#5e9a56');
+    px(c, 125, 109, 2, 2, '#12101d'); px(c, 129, 109, 2, 2, '#12101d');
+    PIX.disc(c, 124, 119, 2, '#2a2118'); PIX.disc(c, 132, 119, 2, '#2a2118');
+    /* THE PHOTOGRAPH on the wall, knocked crooked: a mount, a mat, and
+       three of them in it, which is why the rest of this matters. */
+    for (let i = 0; i < 24; i++) {
+      const sl = Math.round(i * 0.16);
+      px(c, 36 + sl, 18 + i, 32, 1, (i < 2 || i > 21) ? '#5a4426' : '#3a2f1e');
+    }
+    for (let i = 3; i < 21; i++) {
+      const sl = Math.round(i * 0.16);
+      px(c, 39 + sl, 18 + i, 26, 1, '#c9c0a8');
+    }
+    for (let i = 5; i < 19; i++) {
+      const sl = Math.round(i * 0.16);
+      px(c, 41 + sl, 18 + i, 22, 1, '#3d5164');
+    }
+    px(c, 44, 26, 5, 6, '#5e9a56'); px(c, 45, 27, 1, 1, '#12101d'); px(c, 47, 27, 1, 1, '#12101d');
+    px(c, 51, 25, 6, 8, '#7ab06e'); px(c, 52, 27, 1, 1, '#12101d'); px(c, 55, 27, 1, 1, '#12101d');
+    px(c, 58, 28, 4, 5, '#8ab894'); px(c, 59, 29, 1, 1, '#12101d');
+    px(c, 42, 34, 22, 3, '#2a3a4a');
+    px(c, 51, 14, 1, 5, '#4a4034');                     /* the nail it is on */
+    /* THE LIGHT FROM THE HALL, coming in behind you */
+    for (let i = 0; i < 34; i++) {
+      px(c, 0, 74 + i, Math.round(74 - i * 1.4), 1,
+        'rgba(255,220,150,' + (0.055 - i * 0.0015).toFixed(4) + ')');
+    }
+    px(c, 0, 0, 4, CH, 'rgba(255,220,150,.05)');
+    /* and the thing you found, once you have found it */
+    if (found) {
+      px(c, 118, 52, 7, 3, '#efe6cc');
+      px(c, 124, 52, 3, 3, '#8a5a2a');
+      px(c, 118, 51, 7, 1, '#ffffff');
+      PIX.disc(c, 122, 53, 9, 'rgba(255,220,150,.12)');
+    }
+  }
+
+  /* ------------------------------------------------------------
+     THE CIGARETTE, very close. A brand nobody in this country
+     smokes, which is the only reason any of the rest happens.
+
+     The lettering is the subject of the shot, so it gets room:
+     the first pass printed GAULOISE and PARIS on top of each
+     other and hung the second one off the end of the butt.
+     ------------------------------------------------------------ */
+  function buttCard(c) {
+    px(c, 0, 0, CW, CH, '#191612');
+    for (let i = 0; i < CH; i += 3) px(c, 0, i, CW, 1, 'rgba(255,240,210,.018)');
+    /* a hard light from above and to the left, and nothing else */
+    for (let i = 0; i < 46; i++) {
+      px(c, 0, i, CW, 1, 'rgba(255,238,200,' + (0.020 - i * 0.0004).toFixed(4) + ')');
+    }
+
+    /* THE ASHTRAY: a shallow glass dish, most of the lower frame */
+    const cx = 110, cy = 100, rx = 94, ry = 17;
+    for (let y = -ry - 5; y <= ry; y++) {
+      const t = y / ry;
+      if (Math.abs(t) > 1) continue;
+      const half = Math.round(rx * Math.sqrt(1 - t * t));
+      px(c, cx - half, cy + y, half * 2, 1, y < -ry + 6 ? '#4a463c' : '#6f6a5c');
+    }
+    for (let y = -ry + 4; y <= ry - 6; y++) {
+      const t = y / (ry - 5);
+      if (Math.abs(t) > 1) continue;
+      const half = Math.round((rx - 12) * Math.sqrt(1 - t * t));
+      px(c, cx - half, cy + y, half * 2, 1, '#3f3b33');
+    }
+    px(c, cx - 88, cy - ry - 4, 176, 1, '#8d8778');       /* the lit rim */
+    px(c, cx - 40, cy + ry - 8, 80, 2, '#4a463c');
+    /* ash, and the flecks of it that went over the side */
+    const rng = U.mulberry32(3311);
+    for (let i = 0; i < 90; i++) {
+      const a = rng() * Math.PI * 2, r = rng();
+      px(c, Math.round(cx + Math.cos(a) * r * 74), Math.round(cy + Math.sin(a) * r * 9 + 2),
+        1 + (i % 2), 1, i % 3 ? 'rgba(190,184,168,.28)' : 'rgba(140,134,120,.5)');
+    }
+
+    /* ------------------------------------------------------------
+       THE BUTT: a hundred and fifty pixels of it, lying in the
+       notch with the printing facing us.
+       ------------------------------------------------------------ */
+    const bx = 34, by = 66, bl = 152, bh = 26;
+    px(c, bx + 6, by + bh + 1, bl - 4, 4, 'rgba(0,0,0,.35)');
+    /* the tube, shaded like a tube */
+    for (let i = 0; i < bh; i++) {
+      const t = i / (bh - 1);
+      const inset = (i === 0 || i === bh - 1) ? 3 : (i === 1 || i === bh - 2) ? 1 : 0;
+      const col = t < 0.14 ? '#ffffff' : t < 0.34 ? '#f8f2dc'
+        : t < 0.62 ? '#eee6cc' : t < 0.84 ? '#d9cfb4' : '#b8ae94';
+      px(c, bx + inset, by + i, bl - inset * 2, 1, col);
+    }
+    /* the paper's fibre, just enough of it to not be flat */
+    for (let i = 0; i < 60; i++) {
+      const fx = bx + 4 + Math.floor(rng() * 84), fy = by + 3 + Math.floor(rng() * (bh - 6));
+      px(c, fx, fy, 1, 1, rng() < 0.5 ? 'rgba(255,255,255,.22)' : 'rgba(140,130,105,.14)');
+    }
+    /* THE FILTER, and the seam where it is joined on */
+    const fx0 = bx + 92, fw = bl - 92;
+    for (let i = 0; i < bh; i++) {
+      const t = i / (bh - 1);
+      const inset = (i === 0 || i === bh - 1) ? 3 : (i === 1 || i === bh - 2) ? 1 : 0;
+      const col = t < 0.14 ? '#f0c273' : t < 0.34 ? '#e0a63c'
+        : t < 0.62 ? '#c98a3c' : t < 0.84 ? '#a86e2a' : '#8a5a1a';
+      px(c, fx0 + inset, by + i, fw - inset * 2, 1, col);
+    }
+    for (let i = 0; i < fw - 6; i += 4) {                 /* the cork print */
+      px(c, fx0 + 3 + i, by + 3, 2, bh - 6, 'rgba(120,74,20,.22)');
+    }
+    px(c, fx0 - 2, by + 1, 3, bh - 2, '#8a5a1a');
+    px(c, fx0 + 1, by + 1, 1, bh - 2, 'rgba(255,235,190,.35)');
+    /* the gold band nobody in this country prints */
+    px(c, fx0 + 6, by + 2, 3, bh - 4, '#f4d98a');
+    px(c, fx0 + 6, by + 2, 1, bh - 4, '#fff4d0');
+    /* THE BURNT END, with the ash still on it */
+    px(c, bx - 8, by + 3, 10, bh - 6, '#3a2c1c');
+    px(c, bx - 12, by + 6, 6, bh - 12, '#241a12');
+    px(c, bx - 3, by + 8, 4, bh - 16, '#6b3a1a');
+    px(c, bx - 2, by + 10, 2, 3, '#c85a2a');
+    px(c, bx - 14, by + 9, 4, 6, 'rgba(200,192,176,.55)');
+
+    /* ------------------------------------------------------------
+       THE LETTERING, which is the whole point of the shot.
+       ------------------------------------------------------------ */
+    const t1 = PIXFONT.render('GAULOISE', { scale: 1, color: '#3a2f1a', shadow: null });
+    c.drawImage(t1, bx + 18, by + 10);
+    px(c, bx + 18, by + 8, t1.width, 1, 'rgba(90,74,40,.45)');
+    px(c, bx + 18, by + 20, t1.width, 1, 'rgba(90,74,40,.45)');
+    const t2 = PIXFONT.render('PARIS', { scale: 1, color: '#7a1e10', shadow: null });
+    c.drawImage(t2, fx0 + 16, by + 10);
+
+    /* the smoke that has not quite gone */
+    for (let i = 0; i < 16; i++) {
+      const w = i < 5 ? 3 : i < 10 ? 2 : 1;
+      const sx = bx - 10 + Math.round(Math.sin(i * 0.55) * (3 + i * 0.5));
+      px(c, sx, by + 4 - i * 4, w, 4, 'rgba(206,202,190,' + (0.17 - i * 0.010).toFixed(3) + ')');
+    }
+  }
+
+  /* ------------------------------------------------------------
+     ONE PERSON IN A CROWD.
+
+     The cards need people standing about in them — a queue, a
+     cabin, a hall — and the full rig is far too big for a figure
+     that is thirty pixels tall and nine metres away. This is the
+     cheap version: the same silhouette every time so a crowd
+     reads as a crowd and not as a row of different mistakes.
+
+     `fy` is the floor. He is 38 tall and 16 wide.
+     ------------------------------------------------------------ */
+  function folk(c, x, fy, o) {
+    o = o || {};
+    const coat = o.coat || '#39404e', dark = o.dark || '#262b36';
+    const skin = o.skin || '#5e9a56', shade = o.shade || '#3f6e3c';
+    /* what he is standing on */
+    px(c, x - 1, fy - 1, 18, 2, 'rgba(0,0,0,.28)');
+    px(c, x + 2, fy - 10, 5, 10, dark);
+    px(c, x + 9, fy - 10, 5, 10, dark);
+    px(c, x + 1, fy - 2, 6, 2, '#14121a');
+    px(c, x + 9, fy - 2, 6, 2, '#14121a');
+    /* the coat */
+    px(c, x, fy - 26, 16, 17, coat);
+    px(c, x, fy - 26, 16, 2, o.lit || '#4c5566');
+    px(c, x, fy - 26, 3, 17, dark);
+    px(c, x + 13, fy - 26, 3, 17, dark);
+    px(c, x + 7, fy - 24, 2, 15, 'rgba(0,0,0,.25)');
+    /* the head, with a jaw and a brow */
+    px(c, x + 2, fy - 39, 12, 13, skin);
+    px(c, x + 2, fy - 39, 12, 2, o.top || '#7ab06e');
+    px(c, x + 2, fy - 29, 12, 3, shade);
+    px(c, x + 1, fy - 36, 1, 7, shade);
+    px(c, x + 14, fy - 36, 1, 7, shade);
+    if (!o.back) {
+      px(c, x + 4, fy - 35, 3, 2, '#12101d');
+      px(c, x + 9, fy - 35, 3, 2, '#12101d');
+      px(c, x + 5, fy - 30, 6, 1, '#2a3a26');
+    }
+    /* a cap, if he is anybody official */
+    if (o.cap) {
+      px(c, x + 1, fy - 42, 14, 4, o.cap);
+      px(c, x + 1, fy - 42, 14, 1, 'rgba(255,255,255,.18)');
+      px(c, x, fy - 38, 16, 2, '#161a22');
+      if (o.badge) px(c, x + 7, fy - 41, 2, 2, '#e0a63c');
+    } else if (o.hat) {
+      px(c, x + 2, fy - 43, 12, 5, o.hat);
+      px(c, x, fy - 38, 16, 2, o.hat);
+    }
+  }
+
+  /* THE DEPARTURE HALL. A queue, a desk, a sign, and a machine. */
+  function airportCard(c, stage) {
+    /* the hall: a high concourse, lit from a roof you cannot see */
+    px(c, 0, 0, CW, CH, '#3a3a42');
+    for (let i = 0; i < 46; i++) {
+      px(c, 0, i, CW, 1, 'rgba(220,230,245,' + (0.11 - i * 0.0022).toFixed(3) + ')');
+    }
+    /* the floor, polished, with the hall reflected in it */
+    px(c, 0, 90, CW, CH - 90, '#4e4a48');
+    for (let i = 0; i < CW; i += 18) px(c, i, 90, 9, CH - 90, '#544f4c');
+    px(c, 0, 90, CW, 1, '#6f6866');
+    for (let i = 0; i < CW; i += 7) px(c, i, 95, 4, 1, 'rgba(255,255,255,.06)');
+    px(c, 0, 90, CW, 5, 'rgba(255,255,255,.04)');
+
+    /* ------------------------------------------------------------
+       THE GLAZING, and what is standing on the other side of it.
+
+       The first pass put a cream triangle behind the glass and
+       called it an aeroplane; it read as a shark. This is the
+       whole aircraft, side on, small enough to be a hundred
+       metres away: tube, fin, tailplane, wing, engine, and a row
+       of windows.
+       ------------------------------------------------------------ */
+    const gx = 126, gy = 24, gw = 88, gh = 50;
+    px(c, gx - 2, gy - 2, gw + 4, gh + 4, '#2a2e36');
+    /* morning, out there */
+    for (let i = 0; i < gh - 10; i++) {
+      const t = i / (gh - 10);
+      px(c, gx, gy + i, gw, 1, mix('#8fb2cc', '#c6d2d2', t));
+    }
+    /* the apron */
+    px(c, gx, gy + gh - 10, gw, 10, '#4a4a50');
+    px(c, gx, gy + gh - 10, gw, 1, '#63636a');
+    px(c, gx + 4, gy + gh - 5, gw - 8, 1, 'rgba(240,220,120,.5)');
+    const ax = gx + 4, ay = gy + gh - 14;               /* nose, and the waterline */
+    /* the fin, swept */
+    for (let i = 0; i < 20; i++) {
+      const t = i / 20;
+      px(c, ax + 58 + Math.round(t * 11), ay - i, Math.round(14 - t * 9), 1, '#eae4d0');
+      px(c, ax + 58 + Math.round(t * 11), ay - i, 1, 1, '#2a2e36');
+    }
+    px(c, ax + 63, ay - 14, 7, 7, '#b8384a');
+    /* the tailplane */
+    px(c, ax + 54, ay - 2, 16, 2, '#cfc8b4');
+    /* the tube: a nose that tapers and a tail that lifts */
+    for (let i = 0; i < 68; i++) {
+      const t = i / 68;
+      const top = ay - 8 + (t < 0.10 ? Math.round((0.10 - t) * 34) : 0)
+        - (t > 0.86 ? Math.round((t - 0.86) * 22) : 0);
+      const bot = ay + (t < 0.08 ? -Math.round((0.08 - t) * 30) : 0)
+        - (t > 0.88 ? Math.round((t - 0.88) * 14) : 0);
+      px(c, ax + i, top, 1, Math.max(1, bot - top), '#eee8d4');
+      px(c, ax + i, top, 1, 1, '#ffffff');
+      px(c, ax + i, bot - 2, 1, 2, '#8e8878');
+      px(c, ax + i, bot, 1, 1, 'rgba(20,20,24,.35)');
+    }
+    px(c, ax, ay - 8, 1, 8, '#2a2e36');
+    px(c, ax + 2, ay - 4, 66, 1, '#b8384a');            /* the cheatline */
+    for (let i = 10; i < 60; i += 5) px(c, ax + i, ay - 6, 2, 2, '#5f7f96');
+    px(c, ax + 2, ay - 7, 4, 3, '#2a3a4a');             /* the flight deck */
+    /* the wing, and the engine slung under it */
+    for (let i = 0; i < 22; i++) {
+      px(c, ax + 24 + i, ay - 1 + Math.round(i * 0.30), Math.max(1, 5 - Math.round(i * 0.2)),
+        2, '#cfc8b4');
+    }
+    px(c, ax + 26, ay + 2, 12, 5, '#9a9482');
+    px(c, ax + 26, ay + 2, 12, 1, '#c2bba6');
+    /* undercarriage, so it is standing and not floating */
+    px(c, ax + 8, ay, 2, 4, '#3a3a3e'); px(c, ax + 30, ay + 6, 2, 3, '#3a3a3e');
+    px(c, ax + 7, ay + 4, 4, 2, '#1a1a1e'); px(c, ax + 29, ay + 9, 4, 2, '#1a1a1e');
+    /* the jetway reaching for the door */
+    px(c, gx + 66, ay - 12, 22, 9, '#78787e');
+    px(c, gx + 66, ay - 12, 22, 1, '#9a9aa0');
+    for (let i = 0; i < 22; i += 4) px(c, gx + 66 + i, ay - 10, 2, 5, '#4a4a50');
+    /* the mullions, over all of it */
+    for (let i = 0; i <= gw; i += 14) px(c, gx + i, gy, 2, gh, '#39414c');
+    px(c, gx, gy + 22, gw, 2, '#39414c');
+    px(c, gx, gy, gw, 2, '#39414c'); px(c, gx, gy + gh - 2, gw, 2, '#39414c');
+    px(c, gx + 1, gy + 1, gw - 2, 1, 'rgba(255,255,255,.16)');
+
+    /* THE CLOCK, and the sign pointing the way you are going */
+    PIX.disc(c, 108, 40, 9, '#22262e');
+    PIX.disc(c, 108, 40, 7, '#dcd6c2');
+    px(c, 108, 34, 1, 7, '#22262e'); px(c, 108, 40, 5, 1, '#22262e');
+    PIX.disc(c, 108, 40, 1, '#8a2a1a');
+    px(c, 14, 34, 62, 12, '#2c333e');
+    px(c, 14, 34, 62, 1, '#3f4a58');
+    c.drawImage(PIXFONT.render('GATES', { scale: 1, color: '#8fd0b0', shadow: null }), 18, 36);
+    for (let i = 0; i < 5; i++) px(c, 56 + i, 39 - i, 1, 1 + i * 2, '#8fd0b0');
+    px(c, 50, 39, 8, 2, '#8fd0b0');
+
+    /* ------------------------------------------------------------
+       THE BOARD, hung across the ceiling.
+
+       Two lines of a 5x7 font stacked ten rows apart came out
+       printed through each other, so the two lines are side by
+       side now, on one baseline, in a band as wide as the hall.
+       ------------------------------------------------------------ */
+    const s1 = PIXFONT.render('DEPARTURES', { scale: 2, color: '#e0a63c', shadow: null });
+    const s2 = PIXFONT.render('ORLY  GATE 6', { scale: 1, color: '#8fd0b0', shadow: null });
+    px(c, 88, 0, 2, 4, '#14161c'); px(c, 148, 0, 2, 4, '#14161c');
+    px(c, 4, 2, CW - 8, 24, '#14161c');
+    px(c, 5, 3, CW - 10, 22, '#1b232e');
+    px(c, 5, 3, CW - 10, 1, '#33445a');
+    px(c, 5, 24, CW - 10, 1, '#0d1016');
+    for (let i = 6; i < CW - 6; i += 3) px(c, i, 14, 1, 1, 'rgba(255,255,255,.03)');
+    c.drawImage(s1, 10, 5);
+    c.drawImage(s2, CW - 12 - s2.width, 11);
+    px(c, CW - 16 - s2.width, 6, 1, 16, '#33445a');
+
+    /* THE TWO OFFICERS on the far side of the counter */
+    folk(c, 110, 90, { coat: '#22364e', dark: '#1a2a3e', cap: '#1d3a62', badge: 1, lit: '#2f4a70' });
+    folk(c, 88, 90, { coat: '#2f4a70', dark: '#22364e', cap: '#1d3a62', badge: 1, lit: '#3f5f86' });
+
+    /* THE MACHINE: an arch with a rubber curtain, and a belt through it */
+    px(c, 2, 52, 38, 38, '#2f353f');
+    px(c, 6, 56, 30, 26, '#14161c');
+    for (let i = 0; i < 30; i += 3) px(c, 6 + i, 56, 2, 22, '#232833');
+    px(c, 2, 52, 38, 3, '#454d5a');
+    px(c, 4, 78, 34, 4, '#1a1e26');
+    px(c, 36, 78, 44, 4, '#3f4653');                    /* the belt, coming out */
+    px(c, 36, 78, 44, 1, '#5a6472');
+    for (let i = 38; i < 80; i += 6) px(c, i, 80, 3, 2, '#2a2f38');
+    /* THE COUNTER, standing on the floor and hiding their feet */
+    px(c, 40, 82, 62, 18, '#3a3f48');
+    px(c, 40, 82, 62, 2, '#525a66');
+    px(c, 40, 96, 62, 4, '#262a31');
+    px(c, 46, 86, 22, 9, '#333842');
+    px(c, 74, 86, 22, 9, '#333842');
+    px(c, 39, 99, 64, 2, 'rgba(0,0,0,.30)');
+    /* the tray on the belt, clear of everybody */
+    px(c, 42, 74, 26, 5, '#7a4a1e');
+    px(c, 42, 74, 26, 1, '#a3702c');
+    px(c, 44, 75, 22, 3, '#5c3714');
+
+    /* TWO PEOPLE WAITING, with their backs to us */
+    folk(c, 150, 100, { coat: '#4a3a5a', dark: '#332844', skin: '#7ab06e', hat: '#2a2118', back: 1 });
+    folk(c, 176, 108, { coat: '#5a4a34', dark: '#3f3324', skin: '#8ab894', back: 1 });
+    /* somebody's case, stood on end where somebody left it */
+    px(c, 196, 100, 18, 22, '#4a3524');
+    px(c, 196, 100, 18, 2, '#6b5334');
+    px(c, 196, 108, 18, 2, '#33251a');
+    px(c, 203, 96, 5, 5, '#2a2118');
+    px(c, 195, 121, 20, 2, 'rgba(0,0,0,.30)');
+
+    /* THE ROPE ACROSS THE FRONT OF THE FRAME: you are in the queue, and
+       the barrier is between the camera and the desk. */
+    [4, 58, 112].forEach((i, n) => {
+      px(c, i, 100, 4, 24, '#6a6252');
+      px(c, i, 100, 1, 24, '#a39a82');
+      px(c, i + 3, 100, 1, 24, '#4a4438');
+      px(c, i - 3, 121, 10, 3, '#4a4438');
+      px(c, i - 4, 123, 12, 2, 'rgba(0,0,0,.30)');
+      PIX.disc(c, i + 2, 99, 3, '#c9c0a8');
+      PIX.disc(c, i + 2, 98, 1, '#f0e8d0');
+      if (n < 2) {
+        for (let t = 0; t <= 54; t++) {
+          const u = t / 54;
+          const y = 104 + Math.round(Math.sin(u * Math.PI) * 7);
+          px(c, i + 2 + t, y, 1, 3, '#8d8672');
+          px(c, i + 2 + t, y, 1, 1, '#b8ae94');
+        }
+      }
+    });
+
+    /* WHAT IS IN YOUR HAND, depending on where we are */
+    if (stage === 'gun') {
+      /* THE PISTOL, in the tray: slide, barrel, guard, grip */
+      px(c, 44, 69, 22, 5, '#39404e');
+      px(c, 44, 69, 22, 1, '#9aa3b8');
+      px(c, 44, 73, 22, 1, '#22262e');
+      px(c, 62, 70, 5, 3, '#2a2f36');
+      px(c, 46, 74, 6, 6, '#241c14');
+      px(c, 47, 74, 4, 5, '#3a2c1c');
+      px(c, 52, 74, 7, 2, '#2a2f36');
+      px(c, 53, 76, 5, 1, '#39404e');
+      px(c, 58, 74, 2, 3, '#2a2f36');
+    }
+    if (stage === 'stopped') {
+      /* three of them now, and one has a hand on your arm */
+      folk(c, 66, 106, { coat: '#2f4a70', dark: '#22364e', cap: '#1d3a62', badge: 1 });
+      px(c, 58, 82, 15, 4, '#5e9a56');
+      px(c, 58, 82, 15, 1, '#7ab06e');
+      px(c, 56, 81, 3, 6, '#4a7f44');
+    }
+  }
+
+  /* ------------------------------------------------------------
+     THE CABIN. Nine hours over the water, and then the morning.
+
+     Seen from your own seat, which means: the seat back in front
+     of you fills the bottom of the frame, you can see over it to
+     the tops of the heads in the rows ahead, the bins run along
+     the top, and the window is on the wall to your right. The
+     first pass was two flat blue slabs and a window pasted on
+     the wall, which is what a cabin looks like if you have never
+     been in one.
+     ------------------------------------------------------------ */
+  function cabinCard(c, night) {
+    const wall = night ? '#242833' : '#4e4a42';
+    const dim = night ? '#1a1c24' : '#3a3630';
+    const seam = night ? '#171a21' : '#332f28';
+    const trim = night ? '#31364a' : '#65604f';
+    px(c, 0, 0, CW, CH, dim);
+    /* the ceiling, curving away over your head */
+    for (let i = 0; i < 14; i++) px(c, i * 2, i, CW - i * 4, 1, night ? '#272b38' : '#57524a');
+    px(c, 0, 13, CW, 2, seam);
+    /* THE BINS: one long lid, latched every so often, and the lights
+       and vents in the panel underneath it */
+    px(c, 0, 15, CW, 17, wall);
+    px(c, 0, 15, CW, 2, trim);
+    px(c, 0, 30, CW, 4, seam);
+    for (let i = 10; i < CW; i += 34) {
+      px(c, i, 17, 2, 13, seam);
+      px(c, i + 15, 25, 6, 2, trim);
+    }
+    for (let i = 22; i < CW; i += 34) {
+      px(c, i, 31, 5, 2, night ? '#3a3f52' : '#d8cfb4');
+      px(c, i + 9, 31, 3, 2, night ? '#2a2f3e' : '#8d8672');
+      if (!night && i === 90) px(c, i + 9, 31, 3, 2, '#ffd98a');
+    }
+    /* the seat-belt sign, on, because it always is */
+    px(c, 96, 18, 26, 11, '#191c22');
+    px(c, 97, 19, 24, 9, '#2a1f14');
+    px(c, 100, 22, 5, 4, '#e0a63c'); px(c, 106, 22, 4, 4, '#e0a63c');
+    px(c, 111, 22, 6, 4, '#e0a63c');
+    /* ------------------------------------------------------------
+       THE ROWS AHEAD: each row a thinner band than the one in
+       front of it, with the crown of a head coming up over most
+       of the headrests. This is the whole trick of the shot — and
+       the first pass got the geometry backwards, giving every row
+       the same top and stacking them into one blue wall.
+       ------------------------------------------------------------ */
+    const rows = [
+      { top: 40, h: 9, w: 13, sh: 0.36 },
+      { top: 49, h: 12, w: 17, sh: 0.18 },
+      { top: 61, h: 25, w: 23, sh: 0 },
+    ];
+    const base = night ? '#22303e' : '#2a3a4a';
+    rows.forEach((r, ri) => {
+      for (let x = 4; x < 146; x += r.w + 2) {
+        const w = Math.min(r.w, 146 - x);
+        if (w < 7) continue;
+        /* the crown of a head, first, so the headrest cuts it off */
+        if ((x * 7 + ri * 11) % 9 < 3) {
+          const hw = Math.max(6, Math.round(w * 0.58)), hh = Math.round(hw * 0.85);
+          const hx = x + Math.round((w - hw) / 2);
+          /* a dome, not a cone: the first pass tapered over the top four
+             rows only and gave everybody a witch's hat */
+          for (let i = 0; i < hh + 3; i++) {
+            const u = Math.min(1, i / hh), k = 1 - u;
+            const in_ = Math.round((1 - Math.sqrt(Math.max(0, 1 - k * k))) * (hw / 2));
+            px(c, hx + in_, r.top - hh + i, Math.max(1, hw - in_ * 2), 1,
+              i < 2 ? (night ? '#3a6136' : '#7ab06e') : (night ? '#2f5230' : '#5e9a56'));
+          }
+          if (r.sh) px(c, hx, r.top - hh, hw, hh + 3, 'rgba(10,12,18,' + r.sh + ')');
+        }
+        px(c, x, r.top, w, r.h, base);
+        px(c, x, r.top, w, 2, night ? '#31445a' : '#3d5164');
+        px(c, x + 2, r.top + 3, w - 4, Math.max(2, Math.round(r.h * 0.35)),
+          night ? '#1d2733' : '#243342');          /* the headrest cover */
+        px(c, x + 1, r.top + 3 + Math.round(r.h * 0.45), w - 2, 1, 'rgba(0,0,0,.24)');
+        px(c, x + w - 1, r.top, 1, r.h, 'rgba(0,0,0,.35)');
+        px(c, x, r.top, 1, r.h, 'rgba(255,255,255,.06)');
+        if (r.h > 18) {                             /* the near row gets a pocket */
+          px(c, x + 3, r.top + 14, w - 6, 7, night ? '#1a222e' : '#20303e');
+          px(c, x + 3, r.top + 14, w - 6, 1, night ? '#2b3a4c' : '#33465a');
+          if ((x % 3) === 1) px(c, x + 6, r.top + 12, 9, 3, '#8d8672');
+        }
+        if (r.sh) px(c, x, r.top, w, r.h, 'rgba(10,12,18,' + r.sh + ')');
+      }
+    });
+    /* ------------------------------------------------------------
+       THE WALL ON YOUR RIGHT, and the window in it.
+       ------------------------------------------------------------ */
+    px(c, 148, 30, CW - 148, 62, wall);
+    px(c, 148, 30, 2, 62, seam);
+    px(c, 148, 30, CW - 148, 2, trim);
+    px(c, 176, 32, 1, 58, seam);
+    const wx = 156, wy = 40, ww = 50, wh = 40;
+    px(c, wx - 6, wy - 6, ww + 12, wh + 14, night ? '#191c22' : '#3f3b34');
+    px(c, wx - 4, wy - 8, ww + 8, 4, trim);              /* the shade rail */
+    px(c, wx - 3, wy - 3, ww + 6, wh + 6, night ? '#2a2e38' : '#6b6558');
+    px(c, wx - 3, wy - 3, ww + 6, 2, night ? '#3a3f4c' : '#8d8672');
+    /* the reveal, and then the view: an aircraft window is a rounded
+       rectangle, not a rectangle */
+    for (let i = 0; i < wh; i++) {
+      const t = Math.abs((i / (wh - 1)) * 2 - 1);
+      const inset = Math.round(Math.pow(t, 3.2) * 11);
+      px(c, wx + inset, wy + i, ww - inset * 2, 1, night ? '#0d1424' : '#7fb0d8');
+      px(c, wx + inset, wy + i, 1, 1, 'rgba(0,0,0,.35)');
+      px(c, wx + ww - inset - 1, wy + i, 1, 1, 'rgba(255,255,255,.10)');
+    }
+    if (night) {
+      /* THE OCEAN AT NIGHT IS NOTHING, and that is the point — but a
+         black hole is not a shot, so: stars up top, a moon-lit cloud
+         deck below, and the wing in silhouette between them. */
+      const rng = U.mulberry32(77);
+      for (let i = 0; i < 22; i++) {
+        const sx = wx + 6 + Math.floor(rng() * (ww - 12));
+        const sy = wy + 3 + Math.floor(rng() * (wh * 0.5));
+        px(c, sx, sy, 1, 1, 'rgba(210,226,255,' + (0.22 + rng() * 0.5).toFixed(2) + ')');
+      }
+      for (let i = 0; i < 8; i++) {
+        px(c, wx + 4, wy + wh - 14 + i, ww - 8, 1,
+          'rgba(120,150,190,' + (0.05 + i * 0.018).toFixed(3) + ')');
+      }
+      for (let i = 0; i < 5; i++) {
+        PIX.disc(c, wx + 8 + i * 9, wy + wh - 6 + (i % 2) * 2, 5, 'rgba(150,175,210,.20)');
+      }
+      /* the wing, and the lights on the end of it, out there */
+      for (let i = 0; i < 32; i++) {
+        px(c, wx + 10 + i, wy + wh - 16 + Math.round(i * 0.26), 1, 8, '#141a26');
+        px(c, wx + 10 + i, wy + wh - 16 + Math.round(i * 0.26), 1, 1, '#2a3446');
+      }
+      px(c, wx + 41, wy + wh - 9, 3, 3, '#ff6a5e');
+      px(c, wx + 41, wy + wh - 9, 1, 1, '#ffd0c8');
+      px(c, wx + 24, wy + wh - 5, 2, 2, 'rgba(255,255,255,.8)');
+    } else {
+      /* cloud tops, from above, with the sea between them */
+      for (let i = 0; i < wh; i++) {
+        const t = i / wh;
+        px(c, wx + 4, wy + i, ww - 8, 1, mix('#5f9fd0', '#bcd8e8', t));
+      }
+      for (let i = 0; i < 7; i++) {
+        PIX.disc(c, wx + 6 + i * 7, wy + 26 + (i % 3) * 3, 5 + (i % 2) * 2, '#ffffff');
+      }
+      px(c, wx + 4, wy + 30, ww - 8, 10, 'rgba(255,255,255,.72)');
+      px(c, wx + 8, wy + 8, 12, 3, 'rgba(255,255,255,.8)');
+      px(c, wx + 26, wy + 14, 8, 2, 'rgba(255,255,255,.6)');
+      /* the wing, catching the sun */
+      for (let i = 0; i < 32; i++) {
+        px(c, wx + 10 + i, wy + wh - 14 + Math.round(i * 0.24), 1, 7, '#9a9caa');
+        px(c, wx + 10 + i, wy + wh - 14 + Math.round(i * 0.24), 1, 1, '#d0d2dc');
+      }
+    }
+    /* your own reflection in the glass, faintly */
+    px(c, wx + 5, wy + 6, 13, 16, 'rgba(90,150,110,.13)');
+    px(c, wx + 7, wy + 9, 3, 2, 'rgba(20,18,28,.20)');
+    /* ------------------------------------------------------------
+       THE SEAT IN FRONT OF YOU, close enough to touch, with the
+       tray down and what is on it.
+       ------------------------------------------------------------ */
+    px(c, 0, 86, 148, 4, seam);
+    px(c, 2, 88, 66, 36, night ? '#22303e' : '#2a3a4a');
+    px(c, 2, 88, 66, 3, night ? '#31445a' : '#3d5164');
+    px(c, 72, 88, 70, 36, night ? '#22303e' : '#2a3a4a');
+    px(c, 72, 88, 70, 3, night ? '#31445a' : '#3d5164');
+    px(c, 68, 86, 4, 38, night ? '#161c26' : '#1d2733');
+    px(c, 8, 96, 54, 12, night ? '#1d2733' : '#243342');  /* the seat pocket */
+    px(c, 8, 96, 54, 1, night ? '#2b3a4c' : '#33465a');
+    px(c, 14, 92, 22, 6, '#8d8672');                      /* a magazine in it */
+    px(c, 14, 92, 22, 1, '#c9c0a8');
+    px(c, 78, 96, 58, 12, night ? '#1d2733' : '#243342');
+    px(c, 78, 96, 58, 1, night ? '#2b3a4c' : '#33465a');
+    /* THE TRAY, down, with a coffee going cold on it and the only
+       thing you brought with you */
+    px(c, 76, 108, 68, 5, '#8d8672');
+    px(c, 76, 108, 68, 1, '#c1b9a2');
+    px(c, 76, 113, 68, 2, '#5f5a4e');
+    px(c, 86, 100, 11, 9, '#e8e0cc');
+    px(c, 86, 100, 11, 2, '#5a3a22');
+    px(c, 97, 102, 3, 4, '#e8e0cc');
+    px(c, 110, 101, 28, 8, 'rgba(210,220,230,.30)');      /* the bag */
+    px(c, 110, 101, 28, 1, 'rgba(240,246,252,.55)');
+    px(c, 115, 104, 15, 3, '#f4ecd4');
+    px(c, 127, 104, 5, 3, '#c98a3c');
+    px(c, 112, 102, 6, 2, '#b8384a');
+  }
+
+  /* ------------------------------------------------------------
+     THE DESCENT. Paris out of the window at first light.
+
+     The first pass drew a field of evenly-scattered dots on sand
+     with three straight boulevards across it, and it came out
+     looking exactly like a brick wall with a blue snake on it.
+     What makes an aerial read is density and perspective: the
+     blocks get bigger and darker as they come towards you, the
+     roads narrow as they go away, and the haze eats the far edge.
+     ------------------------------------------------------------ */
+  function descentCard(c) {
+    const HZ = 52;                                        /* the horizon */
+    /* the sky, from the band the game actually thinks it is */
+    if (typeof DAY !== 'undefined' && DAY.sky) DAY.sky(c, 0, 0, CW, HZ + 2, 0, 11);
+    else for (let i = 0; i < HZ + 2; i++) px(c, 0, i, CW, 1, mix('#2f5f9c', '#cfd8dc', i / HZ));
+    /* the haze the city sits in */
+    for (let i = 0; i < 16; i++) {
+      px(c, 0, HZ - 10 + i, CW, 1, 'rgba(236,226,206,' + (0.30 + i * 0.035).toFixed(3) + ')');
+    }
+    /* the sun, just up, and the light it throws down the river */
+    PIX.disc(c, 168, HZ - 18, 7, '#fff0c0');
+    for (let i = 1; i <= 5; i++) {
+      PIX.disc(c, 168, HZ - 18, 7 + i * 4, 'rgba(255,232,168,' + (0.09 - i * 0.014).toFixed(3) + ')');
+    }
+
+    /* THE GROUND. Limestone, and a lot of it. */
+    for (let i = HZ; i < CH; i++) {
+      const t = (i - HZ) / (CH - HZ);
+      px(c, 0, i, CW, 1, mix('#cfc4a8', '#9e9376', t));
+    }
+    /* the parks, which are the only green from up here */
+    [[6, 66, 34, 10], [166, 74, 48, 14], [92, 100, 30, 12]].forEach(([x, y, w, h]) => {
+      px(c, x, y, w, h, '#5f7a4a');
+      px(c, x, y, w, 1, '#74905a');
+      for (let i = 0; i < w; i += 5) px(c, x + i, y + Math.round(h / 2), 3, 1, '#8a9e6a');
+    });
+
+    /* ------------------------------------------------------------
+       THE BOULEVARDS, radiating from the Etoile, narrowing as they
+       go away. Drawn before the blocks so the blocks sit between
+       them instead of on top of them.
+       ------------------------------------------------------------ */
+    const ex = 62, ey = 76;
+    const road = (x0, y0, x1, y1, w) => {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (let i = 0; i <= n; i++) {
+        const u = i / n, x = Math.round(x0 + (x1 - x0) * u), y = Math.round(y0 + (y1 - y0) * u);
+        /* a road that leaves the ground is a wire in the sky */
+        if (y < HZ + 1 || y >= CH || x < 0 || x >= CW) continue;
+        const ww = Math.max(1, Math.round(w * (0.4 + (y - HZ) / (CH - HZ) * 0.9)));
+        px(c, x - Math.floor(ww / 2), y, ww, 1, '#e6dcc0');
+      }
+    };
+    for (let a = 0; a < 12; a++) {
+      const th = (a / 12) * Math.PI * 2;
+      road(ex, ey, Math.round(ex + Math.cos(th) * 150), Math.round(ey + Math.sin(th) * 90), 2);
+    }
+    road(0, 62, CW, 70, 2); road(0, 92, CW, 84, 2); road(0, 116, CW, 104, 3);
+    road(130, HZ, 150, CH, 2); road(196, HZ, 186, CH, 2);
+
+    /* ------------------------------------------------------------
+       THE BLOCKS: dense, bigger and darker as they come at you,
+       each one a roof with a lit face and a shadow off it.
+       ------------------------------------------------------------ */
+    const rng = U.mulberry32(6108);
+    for (let i = 0; i < 1500; i++) {
+      const y = HZ + 1 + Math.floor(Math.pow(rng(), 0.72) * (CH - HZ - 2));
+      const x = Math.floor(rng() * CW);
+      const t = (y - HZ) / (CH - HZ);
+      const w = 2 + Math.floor(rng() * 3 + t * 5), h = 1 + Math.floor(t * 4 + rng() * 2);
+      const roof = rng() < 0.32 ? mix('#7c6f58', '#4a4234', t) : mix('#c2b795', '#8d8266', t);
+      px(c, x, y, w, h, roof);
+      px(c, x, y, w, 1, mix('#e2d8bc', '#b8ac90', t));
+      px(c, x, y + h, w, 1, 'rgba(60,52,38,' + (0.16 + t * 0.24).toFixed(2) + ')');
+      if (t > 0.45 && rng() < 0.30) px(c, x + w, y + 1, 1, h, 'rgba(60,52,38,.22)');
+    }
+    /* the haze again, over the far blocks, so distance reads */
+    for (let i = 0; i < 14; i++) {
+      px(c, 0, HZ + i, CW, 1, 'rgba(236,226,206,' + (0.34 - i * 0.024).toFixed(3) + ')');
+    }
+
+    /* ------------------------------------------------------------
+       THE RIVER, meandering, with its banks and its bridges.
+       ------------------------------------------------------------ */
+    const river = [];
+    for (let x = 0; x < CW; x++) {
+      river[x] = 82 + Math.round(Math.sin(x / 66) * 8 + Math.sin(x / 17) * 2 - x * 0.030);
+    }
+    for (let x = 0; x < CW; x++) {
+      const y = river[x], t = (y - HZ) / (CH - HZ), w = Math.round(4 + t * 5);
+      px(c, x, y - 1, 1, 1, '#8d8266');
+      px(c, x, y, 1, w, mix('#6f9db4', '#4e7f9c', t));
+      px(c, x, y, 1, 1, '#a8ccdc');
+      px(c, x, y + w, 1, 1, '#7c6f58');
+      if (x > 150 && x < 200 && (x % 3)) px(c, x, y + 1, 1, 2, 'rgba(255,240,200,.30)');
+    }
+    for (let b = 0; b < 7; b++) {                         /* the bridges */
+      const x = 14 + b * 30, y = river[x], t = (y - HZ) / (CH - HZ);
+      px(c, x, y - 1, 3, Math.round(6 + t * 5), '#d8cdb0');
+      px(c, x, y - 1, 3, 1, '#f0e6c8');
+    }
+    /* the island in the middle of it */
+    const ix = 108, iy = river[ix];
+    px(c, ix - 12, iy + 1, 26, 4, '#b8ac90');
+    px(c, ix - 12, iy + 1, 26, 1, '#d8cdb0');
+    px(c, ix - 2, iy - 1, 5, 5, '#8d8266');
+
+    /* THE ETOILE: a ring, and the arch standing in the middle of it */
+    for (let a = 0; a < 40; a++) {
+      const th = (a / 40) * Math.PI * 2;
+      px(c, Math.round(ex + Math.cos(th) * 9), Math.round(ey + Math.sin(th) * 6), 2, 1, '#e6dcc0');
+    }
+    px(c, ex - 3, ey - 3, 7, 6, '#e8dec2');
+    px(c, ex - 3, ey - 3, 7, 1, '#fff6dc');
+    px(c, ex - 1, ey - 1, 3, 4, '#8d8266');
+    px(c, ex + 4, ey + 3, 5, 2, 'rgba(60,52,38,.34)');
+
+    /* THE TOWER, on the bank, with its shadow lying east. Iron in
+       the morning is warm and pale, not a black stump. */
+    const tx = 150, tb = river[tx] + 9;
+    px(c, tx + 3, tb - 1, 30, 3, 'rgba(60,52,38,.30)');
+    for (let i = 0; i < 30; i++) {
+      const hw = Math.max(1, Math.round(7 * Math.pow(1 - i / 30, 1.9)));
+      px(c, tx - hw, tb - i, hw * 2, 1, i > 26 ? '#b8a486' : '#a08c68');
+      px(c, tx - hw, tb - i, 1, 1, '#c2b092');
+      if (i === 9 || i === 18) px(c, tx - hw - 2, tb - i, hw * 2 + 4, 1, '#c9b795');
+    }
+    px(c, tx - 7, tb - 3, 3, 4, '#8d7856'); px(c, tx + 4, tb - 3, 3, 4, '#8d7856');
+    px(c, tx - 6, tb - 6, 12, 1, '#c9b795');
+
+    /* ------------------------------------------------------------
+       THE WING across the bottom of the frame, on a diagonal
+       because the aircraft is banking onto final.
+       ------------------------------------------------------------ */
+    for (let x = 0; x < 172; x++) {
+      const y = CH - 30 + Math.round(x * 0.115);
+      const th = Math.round(15 - x * 0.045);
+      px(c, x, y, 1, th, '#8d8fa0');
+      px(c, x, y, 1, 2, '#c2c4d2');
+      px(c, x, y + th - 2, 1, 2, '#5f6270');
+      if (x % 24 < 2 && x > 30) px(c, x, y + 2, 1, th - 4, 'rgba(50,52,62,.5)');
+    }
+    /* the engine, slung UNDER the wing and forward of it */
+    px(c, 26, CH - 12, 8, 6, '#5f6270');                  /* the pylon */
+    px(c, 20, CH - 8, 44, 16, '#6a6d7c');
+    px(c, 20, CH - 8, 44, 3, '#a0a3b4');
+    px(c, 20, CH - 8, 44, 1, '#c8cad6');
+    px(c, 18, CH - 6, 4, 12, '#3a3d48');                  /* the fan face */
+    px(c, 19, CH - 4, 2, 8, '#22242c');
+    px(c, 62, CH - 5, 4, 10, '#2a2d38');
+    px(c, 166, CH - 8, 5, 7, '#ff6a5e');                  /* the wingtip light */
+    px(c, 167, CH - 7, 3, 5, '#ffd0c8');
+  }
+
+  /* ------------------------------------------------------------
+     THE CAPTAIN'S OFFICE.
+
+     The paper test used to play with nothing behind it, which
+     meant it played over whatever happened to be on screen — on
+     a first run, the title board, with the buttons showing. A
+     scene needs a set, so here is the set: his desk, his window,
+     his filing cabinet, and the form waiting on the near edge.
+
+     `stage` is 'paper' while you are filling it in and 'stamp'
+     once he has signed the thing.
+     ------------------------------------------------------------ */
+  function officeCard(c, stage) {
+    /* the wall, and the light coming through the blind */
+    px(c, 0, 0, CW, CH, '#4a4438');
+    for (let i = 0; i < 40; i++) px(c, 0, i, CW, 1, 'rgba(255,240,200,' + (0.05 - i * 0.001).toFixed(3) + ')');
+    px(c, 0, 60, CW, 3, '#5f5748');
+    px(c, 0, 63, CW, 20, '#3f3a30');
+    /* THE WINDOW, with a venetian blind half down. He sits in front
+       of it, which is how you get a captain in silhouette. */
+    px(c, 4, 8, 78, 52, '#2a261e');
+    for (let i = 0; i < 48; i++) {
+      const t = i / 48;
+      px(c, 7, 11 + i, 72, 1, mix('#9fc4dc', '#e8dcb8', t));
+    }
+    for (let i = 0; i < 28; i += 3) {
+      px(c, 7, 11 + i, 72, 2, 'rgba(40,36,28,.80)');
+      px(c, 7, 11 + i, 72, 1, 'rgba(180,170,140,.35)');
+    }
+    px(c, 7, 38, 72, 1, '#2a261e');
+    px(c, 74, 10, 3, 28, '#2a261e');                     /* the cord */
+    px(c, 4, 58, 78, 4, '#5f5748');
+    /* the light it throws across the wall */
+    for (let i = 0; i < 22; i++) {
+      px(c, 84 + i * 2, 12 + i, 34, 2, 'rgba(255,240,200,.04)');
+    }
+    /* THE PORTRAIT, and the clock next to it */
+    px(c, 100, 10, 34, 28, '#3a2f1e');
+    px(c, 103, 13, 28, 22, '#8d8672');
+    px(c, 107, 17, 9, 12, '#5e9a56');
+    px(c, 108, 20, 2, 2, '#12101d'); px(c, 113, 20, 2, 2, '#12101d');
+    px(c, 118, 19, 10, 10, '#2a3a4a');
+    px(c, 103, 32, 28, 3, '#6b6558');
+    PIX.disc(c, 152, 24, 11, '#2a261e');
+    PIX.disc(c, 152, 24, 9, '#dcd6c2');
+    px(c, 152, 17, 1, 8, '#2a261e'); px(c, 152, 24, 6, 1, '#2a261e');
+    PIX.disc(c, 152, 24, 1, '#8a2a1a');
+    /* THE FILING CABINET, and the plant nobody waters */
+    px(c, 176, 22, 40, 61, '#4e4a42');
+    px(c, 176, 22, 40, 2, '#6b6558');
+    for (let i = 0; i < 3; i++) {
+      px(c, 179, 28 + i * 18, 34, 16, '#3f3b34');
+      px(c, 179, 28 + i * 18, 34, 1, '#5a554a');
+      px(c, 190, 34 + i * 18, 12, 3, '#8d8672');
+    }
+    px(c, 182, 6, 28, 16, '#3a2f1e');
+    for (let i = 0; i < 5; i++) {
+      PIX.disc(c, 188 + i * 5, 8 - (i % 2) * 3, 5, '#4a7f44');
+      PIX.disc(c, 188 + i * 5, 8 - (i % 2) * 3, 3, '#5e9a56');
+    }
+    /* ------------------------------------------------------------
+       THE CAPTAIN, sitting against his own window, which means you
+       get him in half-silhouette. He is two feet away across a
+       desk, so he is drawn at the size that implies and not at the
+       size of somebody standing in a queue.
+       ------------------------------------------------------------ */
+    const kx = 40, kb = 84;                              /* centre, and the desk line */
+    px(c, kx - 26, kb - 30, 52, 30, '#2f3646');          /* the shoulders */
+    px(c, kx - 26, kb - 30, 52, 3, '#3f4758');
+    px(c, kx - 26, kb - 30, 4, 30, '#232936');
+    px(c, kx + 22, kb - 30, 4, 30, '#232936');
+    px(c, kx - 9, kb - 30, 18, 30, '#3a4152');           /* the shirt front */
+    px(c, kx - 9, kb - 30, 18, 2, '#4a5366');
+    px(c, kx - 2, kb - 28, 4, 26, '#7a1e10');            /* and a tie on it */
+    px(c, kx - 12, kb - 32, 24, 4, '#c9c0a8');           /* the collar */
+    px(c, kx - 12, kb - 32, 24, 1, '#e2d8bc');
+    px(c, kx + 12, kb - 26, 5, 5, '#e0a63c');            /* the shield on his chest */
+    px(c, kx + 13, kb - 25, 3, 3, '#8a5a1a');
+    /* the head, big, and lit only down one side */
+    px(c, kx - 13, kb - 56, 26, 25, '#4f7f4a');
+    px(c, kx - 13, kb - 56, 26, 3, '#639a5c');
+    px(c, kx - 13, kb - 56, 6, 25, '#365a33');
+    px(c, kx - 14, kb - 50, 1, 13, '#365a33');
+    px(c, kx + 13, kb - 50, 1, 13, '#365a33');
+    px(c, kx - 11, kb - 36, 22, 5, '#3d6839');           /* the jaw */
+    /* eyes with a brow over them, and a mouth that is not enjoying this */
+    px(c, kx - 9, kb - 50, 8, 3, '#e8e0cc'); px(c, kx + 2, kb - 50, 8, 3, '#e8e0cc');
+    px(c, kx - 6, kb - 50, 3, 3, '#12101d'); px(c, kx + 5, kb - 50, 3, 3, '#12101d');
+    px(c, kx - 10, kb - 53, 9, 2, '#2f5230'); px(c, kx + 1, kb - 53, 9, 2, '#2f5230');
+    px(c, kx - 6, kb - 40, 13, 2, '#2a4426');
+    px(c, kx - 7, kb - 41, 2, 2, '#2a4426');
+    /* the cap, with a peak on it */
+    px(c, kx - 14, kb - 64, 28, 8, '#1d3a62');
+    px(c, kx - 14, kb - 64, 28, 2, '#2f4a70');
+    px(c, kx - 4, kb - 63, 9, 5, '#e0a63c');
+    px(c, kx - 17, kb - 57, 34, 3, '#141a26');
+    px(c, kx - 17, kb - 57, 34, 1, '#2a3446');
+    /* his hands, resting on the desk top and not hovering above it */
+    px(c, kx - 26, kb, 14, 7, '#4f7f4a');
+    px(c, kx - 26, kb, 14, 2, '#639a5c');
+    px(c, kx - 26, kb + 6, 14, 1, '#365a33');
+    px(c, kx + 12, kb, 14, 7, '#4f7f4a');
+    px(c, kx + 12, kb, 14, 2, '#639a5c');
+    px(c, kx + 12, kb + 6, 14, 1, '#365a33');
+    /* ------------------------------------------------------------
+       THE DESK, across the frame, seen from the chair you are in.
+       ------------------------------------------------------------ */
+    px(c, 0, 83, CW, 8, '#6b5334');
+    px(c, 0, 83, CW, 2, '#8a6c44');
+    px(c, 0, 91, CW, 33, '#4a3a24');
+    for (let i = 0; i < CW; i += 26) px(c, i, 91, 1, 33, 'rgba(0,0,0,.22)');
+    px(c, 0, 118, CW, 6, '#3f3120');
+    /* the blotter */
+    px(c, 62, 86, 96, 30, '#2f4a34');
+    px(c, 62, 86, 96, 2, '#3f6142');
+    px(c, 62, 114, 96, 2, '#22381f');
+    /* the lamp, on, over on the far side */
+    px(c, 148, 70, 4, 14, '#3a3d48');
+    px(c, 140, 62, 20, 8, '#2a3a4a');
+    px(c, 142, 68, 16, 3, '#ffd98a');
+    for (let i = 1; i <= 4; i++) {
+      PIX.disc(c, 150, 72, 6 + i * 5, 'rgba(255,217,138,' + (0.05 - i * 0.009).toFixed(3) + ')');
+    }
+    px(c, 142, 82, 18, 3, '#2a3a4a');
+    /* the typewriter, shoved to one side */
+    px(c, 166, 68, 40, 17, '#3a3d48');
+    px(c, 166, 68, 40, 2, '#565b6c');
+    px(c, 170, 62, 32, 7, '#2a2d38');
+    px(c, 172, 63, 28, 4, '#c9c0a8');
+    for (let r = 0; r < 2; r++) for (let i = 0; i < 9; i++) {
+      px(c, 170 + i * 4, 74 + r * 5, 3, 3, '#8d8672');
+    }
+    px(c, 164, 82, 44, 3, '#2a2d38');
+    /* a stack of dossiers, in the gap between him and the typewriter */
+    for (let i = 0; i < 5; i++) {
+      px(c, 108 + (i % 2), 78 - i * 3, 26, 4, i % 2 ? '#c9c0a8' : '#b8ae94');
+      px(c, 108 + (i % 2), 78 - i * 3, 26, 1, '#e2d8bc');
+      px(c, 110 + (i % 2), 80 - i * 3, 8, 1, '#8a2a1a');
+    }
+    /* ------------------------------------------------------------
+       THE FORM, on the near edge of the desk, facing you.
+       ------------------------------------------------------------ */
+    px(c, 72, 90, 76, 32, '#efe6cc');
+    px(c, 72, 90, 76, 2, '#ffffff');
+    px(c, 72, 120, 76, 2, '#c9c0a8');
+    px(c, 76, 94, 30, 3, '#5f5344');
+    for (let i = 0; i < 6; i++) {
+      px(c, 76, 101 + i * 3, 60 - (i % 3) * 8, 1, '#8d8672');
+    }
+    px(c, 130, 94, 14, 12, '#dcd0b0');
+    px(c, 131, 95, 12, 10, '#8ab894');
+    px(c, 133, 97, 8, 6, '#4f7f4a');
+    /* the pen, uncapped, lying where you left it */
+    for (let i = 0; i < 22; i++) px(c, 96 + i, 118 - Math.round(i * 0.3), 1, 3, '#22262e');
+    px(c, 94, 118, 4, 3, '#c9a24a');
+    px(c, 116, 112, 4, 3, '#8a2a1a');
+    if (stage === 'stamp') {
+      /* HE HAS SIGNED IT. */
+      for (let i = 0; i < 22; i++) {
+        const t = i / 22;
+        px(c, 100 - Math.round(t * 3), 96 + i, Math.round(6 + t * 3), 1, 'rgba(122,30,16,.0)');
+      }
+      px(c, 92, 96, 46, 20, 'rgba(122,30,16,.14)');
+      px(c, 92, 96, 46, 2, '#7a1e10'); px(c, 92, 114, 46, 2, '#7a1e10');
+      px(c, 92, 96, 2, 20, '#7a1e10'); px(c, 136, 96, 2, 20, '#7a1e10');
+      const st = PIXFONT.render('ADMIS', { scale: 1, color: '#7a1e10', shadow: null });
+      c.drawImage(st, 92 + Math.round((46 - st.width) / 2), 103);
+    }
+  }
+
+  /* ============================================================
+     THE REEL.
+     ============================================================ */
+
+  async function play() {
+    CINE.letterbox(true);
+    skipping = false;
+    /* every beat goes through here so one press gets you out of all of them */
+    const show = async (paint, opts) => {
+      if (skipping) throw SKIP;
+      const r = await rawShow(paint, opts);
+      if (skipping || r === '__skip') { skipping = true; throw SKIP; }
+      return r;
+    };
+    try {
+      /* ---- 1. THE HOUSE ---- */
+      await show((c) => houseCard(c, false), {
+        head: 'SIX YEARS AGO', line: 'YOU GOT OFF SHIFT AT ELEVEN.',
+        foot: 'TAP',
+      });
+      await show((c) => houseCard(c, true), {
+        line: 'THE DOOR WAS ALREADY OPEN.',
+        foot: 'TAP',
+      });
+
+      /* ---- 2. THE ROOM. Three places, and you have to look. ---- */
+      let found = false, looks = 0;
+      const looked = {};
+      const HOT = [
+        { id: 'chair', x: 24, y: 44, w: 46, h: 46, label: 'THE CHAIR' },
+        { id: 'window', x: 164, y: 16, w: 54, h: 60, label: 'THE WINDOW' },
+        { id: 'table', x: 96, y: 52, w: 54, h: 38, label: 'THE TABLE' },
+      ];
+      const SAID = {
+        chair: 'HER CHAIR. NOBODY IN IT. NOTHING UNDER IT.',
+        window: 'OPEN FROM THE INSIDE. HE WAS LET IN.',
+        table: 'AN ASHTRAY. YOU DO NOT SMOKE. SHE NEVER DID.',
+      };
+      while (!found) {
+        const pick = await show((c) => roomCard(c, looked.table), {
+          head: looks ? 'WHAT ELSE' : 'LOOK AT SOMETHING',
+          line: looks ? null : 'THE ROOM IS THE ONLY WITNESS YOU ARE GOING TO GET.',
+          foot: 'THREE PLACES. ONE OF THEM MATTERS.',
+          hot: HOT.map(h => ({ ...h, done: !!looked[h.id] })),
+        });
+        looks++;
+        looked[pick] = true;
+        /* THE SET STAYS UP WHILE SOMEBODY TALKS OVER IT. Without this the
+           card folds away and the line is spoken over whatever happens to
+           be behind the opening — on a first run, the title board. */
+        hold((c) => roomCard(c, looked.table));
+        await TUTOR.say(SAID[pick] || 'NOTHING.',
+          { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+        drop();
+        if (pick === 'table') found = true;
+      }
+
+      /* ---- 3. THE THING HE LEFT ---- */
+      await show(buttCard, {
+        head: 'IN THE ASHTRAY',
+        line: 'HALF SMOKED. STILL WARM. AND NOBODY IN THIS STATE SELLS THEM.',
+        foot: 'TAP',
+      });
+      hold(buttCard, { head: 'IN THE ASHTRAY' });
+      await TUTOR.say('GAULOISE. PARIS.',
+        { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+      drop();
+
+      /* ---- 4. THE DEPARTURE. The first real decision. ---- */
+      await show((c) => airportCard(c, null), {
+        head: 'THREE WEEKS LATER', line: 'ORLY, BY WAY OF EVERYTHING YOU OWNED.',
+        foot: 'TAP',
+      });
+      let through = false, tries = 0;
+      while (!through) {
+        hold((c) => airportCard(c, tries ? 'stopped' : null), { head: 'THE LINE' });
+        const pick = await TUTOR.ask(
+          tries ? 'SIR. THE BAG. AGAIN.' : 'ANYTHING TO DECLARE? ANYTHING ON YOU?',
+          [
+            { label: 'HAND OVER THE PISTOL.', note: 'IT GOES IN THE HOLD. YOU GET IT BACK.' },
+            { label: 'NOTHING ON ME.', note: 'THERE IS SOMETHING ON YOU' },
+            { label: 'I AM A POLICE OFFICER.', note: 'NOT IN THIS COUNTRY YOU ARE NOT' },
+          ],
+          { name: 'SECURITY', nameCol: PIX.PAL.L, rim: PIX.PAL.l });
+        drop();
+        if (skipping) throw SKIP;
+        if (pick === 0) {
+          await show((c) => airportCard(c, 'gun'), {
+            head: 'THE TRAY',
+            line: 'THEY TAG IT, THEY BAG IT, AND IT FLIES IN THE HOLD LIKE A SUITCASE.',
+            foot: 'TAP',
+          });
+          hold((c) => airportCard(c, 'gun'), { head: 'THE TRAY' });
+          await TUTOR.say('IT WILL BE AT THE DESK AT ORLY. SIGN FOR IT THERE.',
+            { name: 'SECURITY', nameCol: PIX.PAL.L, rim: PIX.PAL.l });
+          drop();
+          through = true;
+          G.introClean = true;
+        } else {
+          tries++;
+          await show((c) => airportCard(c, 'stopped'), {
+            head: 'THE MACHINE DISAGREES',
+            line: pick === 2
+              ? 'A BADGE FROM SIX THOUSAND MILES AWAY IS A PIECE OF TIN HERE.'
+              : 'IT WENT THROUGH THE MACHINE. THE MACHINE DOES NOT CARE WHAT YOU SAID.',
+            foot: 'TAP',
+          });
+          G.introClean = false;
+        }
+      }
+
+      /* ---- 5. THE FLIGHT ---- */
+      await show((c) => cabinCard(c, true), {
+        head: 'SOMEWHERE OVER THE ATLANTIC',
+        line: 'NINE HOURS. YOU DID NOT SLEEP FOR ANY OF THEM.',
+        foot: 'TAP',
+      });
+      await show((c) => cabinCard(c, false), {
+        line: 'YOU HAVE ONE THING. A CIGARETTE END AND THE CITY THAT MAKES THEM.',
+        foot: 'TAP',
+      });
+
+      /* ---- 6. THE DESCENT ---- */
+      await show(descentCard, {
+        head: 'PARIS',
+        line: 'SIX MILLION OF THEM DOWN THERE AND ONE OF THEM WAS IN YOUR HOUSE.',
+        foot: 'TAP',
+      });
+    } catch (e) {
+      if (e !== SKIP) throw e;
+    } finally {
+      CINE.letterbox(false);
+      const root = CINE.stage();
+      root.innerHTML = ''; root.className = 'hidden';
+    }
+  }
+
+  /* ============================================================
+     THE APPLICATION.
+
+     A foreign cop with a dead family and a cigarette end does not
+     get handed a case. He gets handed a form.
+
+     Four questions on paper, and six shots on the range. The
+     paper is real — the answers are in the game's own rules, and
+     getting them wrong costs you standing with the captain before
+     you have met him. The range is the same steady-hand meter
+     every other trade in this game uses, because it is the same
+     hand.
+     ============================================================ */
+
+  const PAPER = [
+    {
+      q: 'A WITNESS PUTS YOUR SUSPECT SOMEWHERE ELSE. YOU HAVE NOTHING TO SAY OTHERWISE. WHAT IS THE STORY?',
+      a: ['UNBROKEN. IT STANDS UNTIL I CAN BREAK IT.',
+          'BROKEN. HE IS OBVIOUSLY LYING.',
+          'IRRELEVANT. I NAME HIM ANYWAY.'],
+      right: 0,
+      why: 'A STORY YOU CANNOT BREAK IS A STORY THAT HOLDS. WRITE THAT DOWN.',
+    },
+    {
+      q: 'IT IS HALF PAST FOUR. THE LAUNDERER SHUTS AT FIVE AND THE PAWN AT SIX. WHERE DO YOU GO?',
+      a: ['THE PAWN. IT IS CLOSER.',
+          'THE LAUNDERER. HE SHUTS FIRST.',
+          'NEITHER. I SEARCH THE STREET.'],
+      right: 1,
+      why: 'YOU WORK A CITY IN THE ORDER IT CLOSES. NOT THE ORDER IT IS DRAWN IN.',
+    },
+    {
+      q: 'TWENTY-FIVE THINGS TO TURN OVER AND SIX HUNDRED MINUTES. HOW DO YOU SPEND THEM?',
+      a: ['TURN OVER EVERYTHING IN ORDER.',
+          'GUESS, AND TURN OVER THE GUESSES.',
+          'LOOK AT EVERYTHING FIRST. TURN OVER WHAT LOOKS BACK.'],
+      right: 2,
+      why: 'THREE MINUTES WITH A GLASS SAVES EIGHTEEN WITH YOUR HANDS. THAT IS THE JOB.',
+    },
+    {
+      q: 'YOU NAME THE WRONG FROG IN A LINE-UP. WHAT HAVE YOU DONE?',
+      a: ['NOTHING. I TRY AGAIN.',
+          'TOLD THE ONE I WANT THAT I AM COMING.',
+          'WASTED TWENTY MINUTES.'],
+      right: 1,
+      why: 'A ROOM FULL OF PEOPLE HEARD YOU. INCLUDING HIM.',
+    },
+  ];
+
+  async function application() {
+    /* SKIPPED THE OPENING? Then you skipped the exam with it, and the
+       captain signs you off in the middle of the range: a conditional
+       pass, which is exactly what a man who walked in off a plane gets. */
+    if (skipping) {
+      G.paperScore = 2; G.rangeScore = 4; G.badge = true; G.applied = true;
+      if (G.introClean === undefined) G.introClean = true;
+      drop();
+      CINE.letterbox(false);
+      return CINE.titleBeat('BRIGADE CRIMINELLE', 'CONDITIONAL. DO NOT MAKE ME REGRET IT.',
+        PIX.PAL.g);
+    }
+    /* ---- THE PAPER ---- */
+    CINE.letterbox(true);
+    hold((c) => officeCard(c, 'paper'), { head: 'BRIGADE CRIMINELLE - 36 QUAI DES ORFEVRES' });
+    await TUTOR.say('YOU ARE NOT A POLICEMAN HERE. YOU ARE A FORM. SIT DOWN AND FILL IT IN.',
+      { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+    let right = 0;
+    for (let i = 0; i < PAPER.length; i++) {
+      const q = PAPER[i];
+      const pick = await TUTOR.ask('QUESTION ' + (i + 1) + ' OF ' + PAPER.length
+        + '.  ' + q.q,
+        q.a.map(a => ({ label: a })),
+        { name: 'THE PAPER', nameCol: PIX.PAL.q, rim: PIX.PAL.t });
+      const ok = pick === q.right;
+      if (ok) right++;
+      await TUTOR.say((ok ? 'CORRECT. ' : 'NO. ') + q.why,
+        { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s,
+          rimCol: ok ? PIX.PAL.F : PIX.PAL.r });
+    }
+    G.paperScore = right;
+    await TUTOR.say(right + ' OF ' + PAPER.length + '. '
+      + (right >= 3 ? 'THAT IS A PASS. BARELY.' : 'THAT IS A FAIL, AND I AM SIGNING IT ANYWAY.'),
+      { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+
+    /* ---- THE RANGE ---- */
+    hold((c) => officeCard(c, 'stamp'), { head: 'SIGNED' });
+    await TUTOR.say('DOWNSTAIRS. SIX SHOTS. I WANT FOUR.',
+      { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+    drop();
+    CINE.letterbox(false);
+    const r = await JOBS.range();
+    G.rangeScore = r.hits;
+    const pass = r.hits >= 4;
+    await TUTOR.say(r.hits + ' OF 6. '
+      + (pass ? 'YOU CAN HIT A THING THAT IS NOT MOVING. GOOD ENOUGH.'
+        : 'FOUR WAS THE NUMBER. TAKE THE BADGE ANYWAY, NOBODY ELSE WANTS THIS CASE.'),
+      { name: 'THE CAPTAIN', nameCol: PIX.PAL.S, rim: PIX.PAL.s });
+
+    /* ---- AND THE CARD ---- */
+    G.badge = true;
+    G.applied = true;
+    /* a good application is worth something you can feel */
+    if (right >= 3 && pass) {
+      G.chips = (G.chips || 0) + 20;
+      if (typeof STORY !== 'undefined' && STORY.karmaHit) STORY.karmaHit('work');
+    }
+    await CINE.titleBeat('BRIGADE CRIMINELLE',
+      right >= 3 && pass ? 'PASSED. BOTH PAPERS.' : 'CONDITIONAL. DO NOT MAKE ME REGRET IT.',
+      right >= 3 && pass ? PIX.PAL.G : PIX.PAL.g);
+  }
+
+  return {
+    play, application, PAPER, hold, drop, skip,
+    skipped() { return skipping; },
+    /* the cards, exposed so the harness can shoot them without playing */
+    cards: { houseCard, roomCard, buttCard, airportCard, cabinCard, descentCard, officeCard },
+    CW, CH,
+  };
+})();
 </script>
 <script>
 /* ==== js/cops.js ==== */

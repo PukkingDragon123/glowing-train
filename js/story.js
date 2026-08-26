@@ -150,6 +150,21 @@ const STORY = {
     if (!c) return null;
     G.intelCards.push(c.id);
     STORY.note('PINNED: ' + c.name + ' - ' + c.line);
+    /* A PIECE ON THE BOARD OPENS DOORS. Three quarters of the city are
+       shut to a foreign policeman until somebody has a reason to take
+       him there, and a piece is that reason. */
+    if (typeof CITY !== 'undefined' && CITY.openUp) {
+      CITY.openUp().forEach(pl => {
+        const z = CITY.zoneOf(pl.id);
+        STORY.note('OPENED: ' + pl.name + (z ? ' - ' + z.name : ''));
+        if (typeof PHONE !== 'undefined' && PHONE.notify) {
+          PHONE.notify({
+            app: 'map', head: (z ? z.name : pl.name) + ' IS OPEN TO YOU',
+            body: pl.blurb || pl.sub, tone: 'good',
+          });
+        }
+      });
+    }
     return c;
   },
   canFinish() { return (G.intelCards || []).length >= INTEL_CARDS.length; },
@@ -1473,6 +1488,28 @@ const STORY = {
     const isProp = hit && place && CITY.propsAt(place).indexOf(hit.id) >= 0;
 
     if (hit && hit.look) lines.push(hit.look);
+
+    /* ============================================================
+       A SECRET IS WORTH SOMETHING.
+
+       An easter egg costs nothing to walk past and cannot be found
+       without the glass, so finding one has to pay: it is counted
+       across every run you ever play, and the phone tells you what
+       number it was.
+       ============================================================ */
+    if (hit && hit.egg) {
+      G.eggsSeen = G.eggsSeen || {};
+      if (!G.eggsSeen[hit.id]) {
+        G.eggsSeen[hit.id] = 1;
+        META.bump('eggsFound'); META.save();
+        const n = META.stats().eggsFound || 1;
+        if (typeof PHONE !== 'undefined' && PHONE.notify) {
+          PHONE.notify({ app: 'notes', tone: 'good',
+            head: 'FOUND SOMETHING NOBODY PUT THERE',
+            body: 'NUMBER ' + n + '. THE GLASS EARNS ITS KEEP.' });
+        }
+      }
+    }
 
     if (isProp) {
       CITY.spend('look');

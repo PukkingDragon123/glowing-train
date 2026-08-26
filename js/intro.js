@@ -100,6 +100,9 @@ const INTRO = (() => {
 
       if (opts.head) {
         const h = U.el('div', 'intro-head');
+        /* the words are a canvas, so the words go on the element too:
+           a harness cannot read pixels but it can read an attribute */
+        h.dataset.head = opts.head;
         h.appendChild(UI.txt(opts.head, { scale: 2, color: PIX.PAL.g, shadow: null }));
         wrap.insertBefore(h, cv);
       }
@@ -193,6 +196,7 @@ const INTRO = (() => {
     wrap.appendChild(cv);
     if (opts.head) {
       const h = U.el('div', 'intro-head');
+      h.dataset.head = opts.head;
       h.appendChild(UI.txt(opts.head, { scale: 2, color: PIX.PAL.g, shadow: null }));
       wrap.insertBefore(h, cv);
     }
@@ -1414,8 +1418,13 @@ const INTRO = (() => {
         });
         looks++;
         looked[pick] = true;
+        /* THE SET STAYS UP WHILE SOMEBODY TALKS OVER IT. Without this the
+           card folds away and the line is spoken over whatever happens to
+           be behind the opening — on a first run, the title board. */
+        hold((c) => roomCard(c, looked.table));
         await TUTOR.say(SAID[pick] || 'NOTHING.',
           { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+        drop();
         if (pick === 'table') found = true;
       }
 
@@ -1425,8 +1434,10 @@ const INTRO = (() => {
         line: 'HALF SMOKED. STILL WARM. AND NOBODY IN THIS STATE SELLS THEM.',
         foot: 'TAP',
       });
+      hold(buttCard, { head: 'IN THE ASHTRAY' });
       await TUTOR.say('GAULOISE. PARIS.',
         { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t });
+      drop();
 
       /* ---- 4. THE DEPARTURE. The first real decision. ---- */
       await show((c) => airportCard(c, null), {
@@ -1435,6 +1446,7 @@ const INTRO = (() => {
       });
       let through = false, tries = 0;
       while (!through) {
+        hold((c) => airportCard(c, tries ? 'stopped' : null), { head: 'THE LINE' });
         const pick = await TUTOR.ask(
           tries ? 'SIR. THE BAG. AGAIN.' : 'ANYTHING TO DECLARE? ANYTHING ON YOU?',
           [
@@ -1442,15 +1454,19 @@ const INTRO = (() => {
             { label: 'NOTHING ON ME.', note: 'THERE IS SOMETHING ON YOU' },
             { label: 'I AM A POLICE OFFICER.', note: 'NOT IN THIS COUNTRY YOU ARE NOT' },
           ],
-          { name: 'SECURITY', nameCol: PIX.PAL.L, rim: PIX.PAL.l, big: true });
+          { name: 'SECURITY', nameCol: PIX.PAL.L, rim: PIX.PAL.l });
+        drop();
+        if (skipping) throw SKIP;
         if (pick === 0) {
           await show((c) => airportCard(c, 'gun'), {
             head: 'THE TRAY',
             line: 'THEY TAG IT, THEY BAG IT, AND IT FLIES IN THE HOLD LIKE A SUITCASE.',
             foot: 'TAP',
           });
+          hold((c) => airportCard(c, 'gun'), { head: 'THE TRAY' });
           await TUTOR.say('IT WILL BE AT THE DESK AT ORLY. SIGN FOR IT THERE.',
             { name: 'SECURITY', nameCol: PIX.PAL.L, rim: PIX.PAL.l });
+          drop();
           through = true;
           G.introClean = true;
         } else {

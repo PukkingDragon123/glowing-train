@@ -89,10 +89,78 @@ const CITY = (() => {
       short: 'THE BONES', x: 40, y: 82, icon: 'ic_skull', scene: true,
       blurb: 'THE ONLY ROOM IN THIS CITY NOBODY HAS EVER BUGGED.',
     },
+
+    /* ---------------------------------------------------------
+       AND THE PARTS OF THE CITY YOU HAVE TO EARN.
+
+       A foreign policeman on his first afternoon gets the five
+       stops on the file and the streets in between. He does not
+       get the Opera, he does not get taken up the hill to the
+       cemetery, and nobody drives him under the ring road until
+       there is a reason. `lock` is that reason: the number of
+       pieces that have to be on the board first.
+       --------------------------------------------------------- */
+    opera: {
+      id: 'opera', name: "L'OPERA", sub: 'THE GRANDEST STAIRCASE IN EUROPE',
+      short: "L'OPERA", x: 52, y: 26, icon: 'ic_dome', scene: true,
+      lock: 1, lockWhy: 'THE BRIGADE DOES NOT SEND A NEW MAN TO THE OPERA.',
+      blurb: 'THE MONEY IN THIS CITY GOES IN THE FRONT. THE REST GOES ROUND THE BACK.',
+    },
+    pere: {
+      id: 'pere', name: 'PERE-LACHAISE', sub: 'A HILL OF DEAD PARISIANS',
+      short: 'THE HILL', x: 90, y: 40, icon: 'ic_skull', scene: true,
+      lock: 2, lockWhy: 'NOBODY HAS GIVEN YOU A NAME UP THERE YET.',
+      blurb: 'THE ONE PLACE IN PARIS WHERE STANDING STILL IS NOT SUSPICIOUS.',
+    },
+    perif: {
+      id: 'perif', name: 'LA ZONE', sub: 'UNDER THE RING ROAD',
+      short: 'LA ZONE', x: 14, y: 84, icon: 'ic_anchor', scene: true,
+      lock: 4, lockWhy: 'YOU DO NOT KNOW THIS PLACE EXISTS YET.',
+      blurb: 'WHERE THE CITY KEEPS THE THINGS IT DOES NOT WANT PHOTOGRAPHED.',
+    },
   };
 
+  /* ---------------------------------------------------------
+     THE ZONES.
+
+     Eleven pins on a sheet of paper is a list. The same eleven
+     inside eight named quarters is a city — and once the plan has
+     quarters on it, a locked stop is a locked QUARTER, which is a
+     much better thing to be told you cannot go to.
+
+     x/y/w/h are on the same 0-100 grid the pins use.
+     --------------------------------------------------------- */
+  const ZONES = [
+    { id: 'butte', name: 'MONTMARTRE', x: 38, y: 0, w: 30, h: 22,
+      places: ['bar', 'butte'], tint: '#c9b795' },
+    { id: 'opera', name: "L'OPERA", x: 44, y: 18, w: 20, h: 18,
+      places: ['opera'], tint: '#c2ae88' },
+    { id: 'marais', name: 'LE MARAIS', x: 58, y: 18, w: 26, h: 24,
+      places: ['pawn', 'laundry'], tint: '#c9b795' },
+    { id: 'etoile', name: "L'ETOILE", x: 10, y: 18, w: 28, h: 22,
+      places: ['arch'], tint: '#c2ae88' },
+    { id: 'mars', name: 'CHAMP DE MARS', x: 8, y: 40, w: 28, h: 24,
+      places: ['tower'], tint: '#c9b795' },
+    { id: 'louvre', name: 'LE LOUVRE', x: 38, y: 32, w: 20, h: 20,
+      places: ['museum', 'diner'], tint: '#c2ae88' },
+    { id: 'cite', name: "L'ILE", x: 42, y: 48, w: 20, h: 18,
+      places: ['precinct'], tint: '#c9b795' },
+    { id: 'bercy', name: 'BERCY', x: 68, y: 58, w: 26, h: 24,
+      places: ['docks'], tint: '#c2ae88' },
+    { id: 'lachaise', name: 'PERE-LACHAISE', x: 80, y: 28, w: 20, h: 24,
+      places: ['pere'], tint: '#c9b795' },
+    { id: 'parnasse', name: 'MONTPARNASSE', x: 28, y: 70, w: 26, h: 26,
+      places: ['catacombs'], tint: '#c2ae88' },
+    { id: 'zone', name: 'LA ZONE', x: 4, y: 74, w: 24, h: 24,
+      places: ['perif'], tint: '#b8ae94' },
+  ];
+
+  const ZONE_OF = {};
+  ZONES.forEach(z => z.places.forEach(pl => { ZONE_OF[pl] = z; }));
+
   const ORDER = ['laundry', 'docks', 'pawn', 'diner', 'bar',
-    'tower', 'arch', 'butte', 'museum', 'catacombs'];
+    'tower', 'arch', 'butte', 'museum', 'catacombs',
+    'opera', 'pere', 'perif'];
 
   /* the five you work a case in. The landmarks are where the crew is. */
   const WORK = ['laundry', 'docks', 'pawn', 'diner', 'bar'];
@@ -121,6 +189,10 @@ const CITY = (() => {
     butte:      ['easel', 'steps', 'crate2', 'table'],
     museum:     ['fountain', 'glass', 'crate3', 'door'],
     catacombs:  ['bones', 'niche', 'plaque', 'pool'],
+    /* and the three you have to earn */
+    opera:      ['steps2', 'bill', 'cab2', 'grate'],
+    pere:       ['tomb', 'urn2', 'leaves', 'bench3'],
+    perif:      ['roller', 'drum', 'wreck', 'fence'],
   };
 
   /* ---------------------------------------------------------
@@ -165,6 +237,10 @@ const CITY = (() => {
     G.cargo = {};
     G.capAsked = {};
     G.burned = {};
+    /* the last-call warnings are per shift: whoever shut on you yesterday
+       is going to shut on you again today, and you want telling again */
+    G.rang = {};
+    G.notes = [];
   }
 
   /* HOW MUCH DAY IS LEFT.
@@ -202,7 +278,33 @@ const CITY = (() => {
     const c = Math.round((COST[kind] || 5) * (mult === undefined ? 1 : mult));
     G.clock = Math.round((G.clock === undefined ? START : G.clock)) + c;
     if (UI && UI.syncStory) UI.syncStory();
+    lastCall();
     return c;
+  }
+
+  /* ---------------------------------------------------------
+     LAST CALL.
+
+     The whole afternoon is a question of which door shuts first,
+     and the answer used to be buried in a badge on a pin nobody
+     was looking at. Now, the first time a stop that matters drops
+     under the wire, the phone says so once — and only once, and
+     only for the stops tonight's file actually wants.
+     --------------------------------------------------------- */
+  function lastCall() {
+    if (typeof PHONE === 'undefined' || !PHONE.notify) return;
+    G.rang = G.rang || {};
+    const want = (typeof CASE !== 'undefined' && CASE.stops) ? CASE.stops() : ORDER;
+    want.forEach(id => {
+      if (G.rang[id] || locked(id)) return;
+      const left = untilShut(id);
+      if (left === null || left <= 0 || left > 45) return;
+      const h = HOURS[id];
+      G.rang[id] = 1;
+      PHONE.notify({ app: 'map', tone: 'time',
+        head: (PLACES[id] ? PLACES[id].short : id) + ' SHUTS IN ' + left + ' MINUTES',
+        body: (h && h.who ? h.who : 'WHOEVER IS IN THERE') + ' GOES HOME AND TAKES IT WITH THEM.' });
+    });
   }
 
   /* the shift is over. Still called nightOver everywhere because
@@ -236,6 +338,10 @@ const CITY = (() => {
     tower:     { open: 0,       shut: 24 * 60,      who: 'A HAWKER' },
     arch:      { open: 0,       shut: 24 * 60,      who: 'A CABBIE' },
     metro:     { open: 5 * 60,  shut: 24 * 60,      who: 'A GUARD' },
+    opera:     { open: 11 * 60, shut: 18 * 60 + 30, who: 'THE HOUSE MANAGER' },
+    pere:      { open: 8 * 60,  shut: 17 * 60 + 30, who: 'THE GARDENER' },
+    /* nothing under a flyover has opening hours */
+    perif:     { open: 0,       shut: 24 * 60,      who: 'THE MAN AT THE FIRE' },
   };
 
   function hours(id) { return HOURS[id] || null; }
@@ -361,8 +467,46 @@ const CITY = (() => {
   function propsAt(id) { return (PROPS[id] || []).slice(); }
   function unsearchedAt(id) { return propsAt(id).filter(pr => !searched(id, pr)); }
 
+  /* ---------------------------------------------------------
+     WHAT IS OPEN TO YOU AT ALL.
+
+     Separate from HOURS: hours say whether anybody is behind the
+     counter, this says whether the city has told you the place
+     exists. A locked stop is not dimmed, it is shut, and the plan
+     draws a padlock on the quarter it is in.
+     --------------------------------------------------------- */
+  function pinned() { return (G.intelCards || []).length; }
+  function locked(id) {
+    const p = PLACES[id];
+    if (!p || !p.lock) return false;
+    if (G.unlocked && G.unlocked[id]) return false;
+    return pinned() < p.lock;
+  }
+  function lockWhy(id) {
+    const p = PLACES[id];
+    if (!p || !p.lock) return null;
+    const need = p.lock - pinned();
+    return (p.lockWhy || 'NOT YET.') + '  '
+      + (need === 1 ? 'ONE MORE PIECE ON THE BOARD.'
+        : need + ' MORE PIECES ON THE BOARD.');
+  }
+  /* called when the board gains a piece: returns the stops that just
+     opened, so somebody can put a notification on the phone about it */
+  function openUp() {
+    const out = [];
+    if (!G.unlocked) G.unlocked = {};
+    ORDER.forEach(id => {
+      const p = PLACES[id];
+      if (!p.lock || G.unlocked[id]) return;
+      if (pinned() >= p.lock) { G.unlocked[id] = 1; out.push(p); }
+    });
+    return out;
+  }
+
   return {
     PLACES, ORDER, WORK, PROPS, WEATHER, COST, START, END,
+    ZONES, zoneOf(id) { return ZONE_OF[id] || null; },
+    locked, lockWhy, openUp, pinned,
     propsAt, unsearchedAt,
     reset, spend, hhmm, watch, minutes, minutesLeft, nightOver,
     HOURS, hours, open, untilShut, closingSoon,
@@ -386,6 +530,9 @@ const CITY = (() => {
           /* is this stop part of tonight's case at all */
           inCase: (typeof CASE === 'undefined' ? true : CASE.stops().indexOf(id) >= 0),
           hint: (G.tips && G.tips[id]) || null,
+          zone: ZONE_OF[id] || null,
+          locked: locked(id),
+          lockWhy: lockWhy(id),
         };
       });
     },

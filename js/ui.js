@@ -155,8 +155,13 @@ const UI = {
       ph.id = 'btn-phone';
       ph.appendChild(SPR.clone(ART.art('ic_phone', K + 1), 1));
       ph.appendChild(UI.txt('PHONE', { scale: K, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+      /* the unread count, which the notification layer pokes in place */
+      const bg = U.el('span', 'phone-badge hidden');
+      bg.id = 'tb-phone-badge';
+      ph.appendChild(bg);
       ph.onclick = () => PHONE.toggle('map');
       stack.appendChild(ph);
+      UI.syncPhoneBadge();
     }
 
     const cash = U.el('div', 'corner-chip has-tip');
@@ -300,6 +305,23 @@ const UI = {
       clk.appendChild(cc);
     }
     UI.syncObjective();
+  },
+
+  /* ============================================================
+     THE RED NUMBER ON THE PHONE.
+
+     Poked in place by PHONE.notify, because a notification that
+     rebuilt the whole interface to show a badge took whatever was
+     mid-animation down with it.
+     ============================================================ */
+  syncPhoneBadge() {
+    const b = document.getElementById('tb-phone-badge');
+    if (!b) return;
+    const n = (typeof PHONE !== 'undefined' && PHONE.unread) ? PHONE.unread() : 0;
+    if (!n) { b.className = 'phone-badge hidden'; b.innerHTML = ''; return; }
+    b.className = 'phone-badge';
+    b.innerHTML = '';
+    b.appendChild(UI.txt(n > 9 ? '9+' : String(n), { scale: 2, color: PIX.PAL.W }));
   },
 
   syncChips() {

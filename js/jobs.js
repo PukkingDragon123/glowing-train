@@ -102,8 +102,21 @@ const JOBS = (() => {
       };
       requestAnimationFrame(step);
 
+      /* THE HARNESS HAS TO BE ABLE TO PLAY THIS. A skill meter cannot be
+         beaten by clicking blindly, and a headless test that cannot pick
+         a lock cannot test anything behind a locked door. This is a
+         read-only window onto the sweep: the harness polls it and taps
+         when the needle is inside the band, which is exactly what a
+         player does with their eyes. */
+      JOBS._meter = {
+        get x() { return x; }, get centre() { return centre; },
+        get band() { return band; }, get live() { return live; },
+        get round() { return round; }, get rounds() { return rounds; },
+      };
+
       const finish = () => {
         done = true;
+        JOBS._meter = null;
         window.removeEventListener('pointerdown', hit);
         window.removeEventListener('keydown', key);
         wrap.classList.add('out');
@@ -586,6 +599,8 @@ const JOBS = (() => {
   }
 
   return {
+    /* the live sweep, for the harness only */
+    debugMeter() { return JOBS._meter ? { x: JOBS._meter.x, centre: JOBS._meter.centre, band: JOBS._meter.band, live: JOBS._meter.live, round: JOBS._meter.round, rounds: JOBS._meter.rounds } : null; },
     meter,
 
     /* SIX SHOTS ON THE BRIGADE RANGE. Nobody pays you; it is a test. */

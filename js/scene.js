@@ -393,11 +393,30 @@ const SCENE = (() => {
     return null;
   }
 
-  function targets() {
+  /* is the eyeglass in your hand right now */
+  const glassOut = () => typeof TOOLS !== 'undefined' && TOOLS.is('glass');
+
+  /* ============================================================
+     WHAT IS IN REACH.
+
+     `quiet` is for the walk-past label — the thing the game names
+     at you because you happened to stop next to it. An easter egg
+     is never that: it is not in this list at all unless the
+     eyeglass is out, and it is never in the quiet list, so the
+     only way to find the Thai flag on the shelf or the cards
+     under the till is to sweep the room with the glass and notice
+     the glint. They used to shout their own names at anybody who
+     walked past, which is the opposite of a secret.
+     ============================================================ */
+  function targets(quiet) {
     if (!def) return [];
     const out = [];
     for (const a of (def.actors || [])) if (!a.gone) out.push(a);
-    for (const s of (def.spots || [])) if (!s.gone && !(s.when && !s.when())) out.push(s);
+    for (const s of (def.spots || [])) {
+      if (s.gone || (s.when && !s.when())) continue;
+      if (s.egg && (quiet || !glassOut())) continue;
+      out.push(s);
+    }
     /* the animals are things you can walk up to as well */
     for (const a of pets) {
       const fy = a.y === undefined ? floorAt(a.z) : a.y;
@@ -425,8 +444,18 @@ const SCENE = (() => {
     return out;
   }
 
+  /* ============================================================
+     WHAT IS UNDER THE POINTER.
+
+     THE SMALLEST BOX WINS. It used to be the nearest centre, and a
+     nearest-centre rule makes anything small that sits on top of
+     anything big unreachable: the eighteen-pixel easter egg on the
+     bar stool was at the same x as the stool, so pointing at it
+     always got the stool. The specific thing beats the general one,
+     and a tie in size falls back to the nearer centre.
+     ============================================================ */
   function pick(x, y) {
-    let best = null, bd = 1e9;
+    let best = null, bestA = 1e9, bd = 1e9;
     for (const o of targets()) {
       const w = o.w || 26;
       /* a thing standing back in the room has its box up there with it */
@@ -434,8 +463,10 @@ const SCENE = (() => {
       const top = o.top === undefined ? fy - 44 : o.top + dy;
       const bot = o.bot === undefined ? fy + 6 : o.bot + dy;
       if (x > o.x - w / 2 - 4 && x < o.x + w / 2 + 4 && y > top - 8 && y < bot + 4) {
-        const dd = Math.abs(x - o.x);
-        if (dd < bd) { bd = dd; best = o; }
+        const area = w * Math.max(1, bot - top), dd = Math.abs(x - o.x);
+        if (area < bestA - 1 || (Math.abs(area - bestA) <= 1 && dd < bd)) {
+          bestA = area; bd = dd; best = o;
+        }
       }
     }
     return best;
@@ -651,7 +682,7 @@ const SCENE = (() => {
 
     /* what is within arm's reach, measured across the ground */
     let best = null, bd = 26;
-    for (const o of targets()) {
+    for (const o of targets(true)) {
       const d = dist2(o.x, o.z === undefined ? me.z : o.z, me.x, me.z);
       if (d < bd) { bd = d; best = o; }
     }
@@ -1571,6 +1602,31 @@ const SCENE = (() => {
 
     /* furniture that people stand behind */
     if (def.onPaintFront) def.onPaintFront(c, T);
+
+    /* ============================================================
+       THE GLINT.
+
+       With the glass in your hand, and only then, every easter egg
+       in the room catches a little light — one pixel, on a slow
+       count, out of phase with its neighbours. Without the glass
+       there is nothing there at all. That is the whole game of
+       finding them: sweep the room and watch for the sparkle.
+       ============================================================ */
+    if (glassOut()) {
+      for (const s of (def.spots || [])) {
+        if (!s.egg || s.gone) continue;
+        const fy = floorAt(s.z), dy = fy - def.floorY;
+        const gy = (s.top === undefined ? fy - 10 : s.top + dy) - 4;
+        const ph = Math.sin(T * 2.4 + (s.x % 23)) ;
+        if (ph < 0.55) continue;
+        const a2 = ((ph - 0.55) / 0.45).toFixed(2);
+        ART.px(c, s.x, gy, 1, 1, 'rgba(255,248,210,' + a2 + ')');
+        ART.px(c, s.x - 2, gy, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+        ART.px(c, s.x + 2, gy, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+        ART.px(c, s.x, gy - 2, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+        ART.px(c, s.x, gy + 2, 1, 1, 'rgba(255,248,210,' + (a2 * 0.5).toFixed(2) + ')');
+      }
+    }
     /* THE ANIMALS GO IN FRONT OF IT. A cat is twenty pixels tall and every
        room has a counter across the front of it: behind the furniture, in
        depth order, the dog was simply invisible. */
@@ -1901,6 +1957,9 @@ const SCENE = (() => {
         floorY: def ? def.floorY : null, roomW: def ? def.w : null };
     },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
+    /* the harness asks what is under a point, so the egg rules can be
+       asserted rather than eyeballed */
+    debugPick(x, y) { return pick(x, y === undefined ? (def ? def.floorY - 10 : 100) : y); },
     debugRatCount() { return rats.length; },
     debugRatsWhere() { return rats.map(r => ({ x: Math.round(r.x), d: r.dir, v: Math.round(r.v) })); },
     get def() { return def; },

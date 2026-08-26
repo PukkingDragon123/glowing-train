@@ -22,6 +22,61 @@ revolver between you.
 
 That is the whole game, and it is the two endings.
 
+## You play how you got here
+
+The game used to open on a slideshow. Eight painted panels with a caption
+under each, and then you were a detective in Paris with no account of why a
+frog with an American accent is working a Paris murder. Now you play it.
+
+**The house.** You come home off shift at eleven and the front door is
+already open.
+
+![Six years ago](docs/screen-intro-house.png)
+
+**The room.** Three places to look, a bracket drawn round each of them, and
+one of them has the only thing the killer left behind in it. You can look at
+all three. You have to look at the right one.
+
+![Three places, one of them matters](docs/screen-intro-room.png)
+
+**The ashtray.** A hundred and fifty pixels of cigarette end with GAULOISE
+printed on the paper and PARIS printed on the filter. Nobody in your state
+sells them. That is the whole reason the rest of the game is in France.
+
+![Gauloise. Paris.](docs/screen-intro-butt.png)
+
+**The departure.** A security line at the airport and a pistol you are not
+allowed to take with you. What you do about that is the first real decision
+in the game, and the machine does not care what you told it.
+
+![Anything on you?](docs/screen-intro-airport.png)
+
+**The descent.** Nine hours over the water, and then Paris at four thousand
+feet with the wing across the bottom of the frame.
+
+![Paris, at four thousand feet](docs/screen-intro-descent.png)
+
+Thirteen beats, and every one of them is something you do rather than
+something you watch. It also has a **SKIP** on every card and Escape bound to
+the same thing, because nobody wants to play an opening twice.
+
+### And then the Brigade wants a form filled in
+
+A foreign policeman with a dead family and a cigarette end does not get
+handed a case. He gets handed paperwork. Four questions, whose answers are
+the game's own rules — *a story you cannot break is a story that holds*, *you
+work a city in the order it closes*, *three minutes with a glass saves
+eighteen with your hands* — and the captain reads your answers back to you
+across his desk.
+
+![The paper](docs/screen-exam.png)
+
+Then six shots downstairs, four of which have to land, on the same
+steady-hand meter every other trade in this game uses. Get both and you walk
+out with twenty francs and a captain who thinks you might be worth the desk.
+
+![Six shots](docs/screen-range.png)
+
 ### It is drawn at the size it is drawn at
 
 Every room is a canvas of world pixels blown up by a whole number, and that
@@ -167,6 +222,58 @@ Today's file only touches seven of the eleven, and the plan dims the ones
 it does not — nobody should burn thirty-five minutes driving to the
 catacombs for nothing. The rest of Paris is still there, with work in it.
 
+### It has quarters, and three of them are shut to you
+
+Eleven pins on a sheet of paper is a list. The same eleven inside named
+quarters is a city, so the plan is divided into the ones Paris actually has —
+**MONTMARTRE**, **L'ETOILE**, **CHAMP DE MARS**, **LE LOUVRE**, **L'ILE**,
+**LE MARAIS**, **BERCY**, **MONTPARNASSE** — with the boundary drawn in
+dot-dash and the name written across the top of it, the way a plan does.
+
+And three quarters are locked. Nobody drives a new man to the Opera on his
+first afternoon, nobody gives him a name up at the cemetery, and nobody takes
+him under the ring road until there is a reason to. The reason is the board:
+each piece you pin on it opens a door.
+
+- **L'OPERA** — one piece. The money in this city goes in the front. The rest
+  goes round the back.
+- **PERE-LACHAISE** — two pieces. The one place in Paris where standing still
+  is not suspicious.
+- **LA ZONE** — four pieces. Under the ring road, where the city keeps the
+  things it does not want photographed.
+
+A locked pin is not dimmed like an off-case stop. It is barred, it has a
+padlock on it, and tapping it tells you what it wants instead of driving you
+there.
+
+![The plan, in quarters](docs/screen-plan-quarters.png)
+
+![L'Opera](docs/screen-opera.png)
+
+![Pere-Lachaise](docs/screen-pere.png)
+
+![La Zone](docs/screen-zone.png)
+
+### The phone tells you things
+
+The city used to tell you things by putting a line in a log nobody opened.
+Now it tells you the way a phone tells you: a banner slides in over the top
+right for four seconds, a red number appears on the phone in your belt, and
+the whole run of them is kept on the lock screen and in **ALERTS** so you can
+go back and read what you were too busy to read the first time.
+
+Four things ring it, and they are the four things worth interrupting you for:
+a quarter of the city opening, a door about to shut on a witness you still
+need, a story coming apart, and finding something nobody put there.
+
+![What you missed](docs/screen-alertlist.png)
+
+The last-call warning is the one that matters. The whole afternoon is a
+question of which door shuts first, and that used to be buried in a badge on
+a pin nobody was looking at. Now, the first time a stop **tonight's file
+actually wants** drops under forty-five minutes, the phone says so once — and
+only once, and never about a stop the case does not care about.
+
 ### You can walk into it
 
 The rooms are not a line any more. Every street has a **depth band** you can
@@ -246,6 +353,23 @@ the safe. A little flag from somewhere warmer over the kitchen hatch. A rubber
 duck going round in a drum with somebody's shirts. They are painted into the
 rooms at their real size, which at room scale is a smudge — the only way to
 know what any of them is is to hold the eyeglass up to it.
+
+### The secrets are actually secret
+
+There are small things hidden in the rooms that have nothing to do with the
+case — a card in a sleeve, a red-and-white ball, a flag, things left on
+shelves and under tills. They used to shout their own names at anybody who
+walked past them, which is the opposite of a secret.
+
+Now they are not targets at all unless the **eyeglass** is in your hand.
+Point at one bare-handed and you get whatever real prop it is sitting on;
+walk past one and the game says nothing. With the glass out, each of them
+catches a little light on a slow count out of phase with its neighbours — one
+pixel, blinking — and even then the plate says only SOMETHING SMALL until you
+have actually held the glass up to it.
+
+Sweep a room, watch for the sparkle. Every one you find is counted across
+every case you ever play, and the phone tells you what number it was.
 
 ### The day is the budget
 
@@ -655,9 +779,14 @@ js/art.js         THE PROP SHOP: painted pixel maps + the shading kit
 js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
 js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
 js/places.js      the working stops, and the floors under and over them
+js/day.js         THE LIGHT: seven hours of the day, baked into the room
+js/intro.js       THE OPENING you play: the house, the room, the cigarette,
+                  the security line, the aircraft, the descent, and the
+                  form the Brigade makes you fill in
 js/paris.js       the city itself: the Tower, the Arch, the Butte, the
-                  Museum, the Catacombs, the Metro, and the furniture of
-                  Paris — Haussmann, plane trees, Wallace fountains
+                  Museum, the Catacombs, the Metro, the Opera, the
+                  cemetery, the ring road, and the furniture of Paris —
+                  Haussmann, plane trees, Wallace fountains
 js/phone.js       the FroggoPhone: the map, the file, the kit, the only menu
 js/jobs.js        the side work: taps, fryer, drums, lock, prints, scoop,
                   and three cups with a ball under one of them
@@ -692,6 +821,9 @@ dev/smoke.js      full browser smoke test (node dev/smoke.js)
 - What a room is furnished with — the scene definitions in `js/rooms.js`
 - The day, the sky and what a search costs — `COST` / `WEATHER` in `js/city.js`
 - Which props exist to be searched — `CITY.PROPS` in `js/city.js`
+- The quarters and what unlocks them — `CITY.ZONES` and each place's `lock`
+  in `js/city.js`
+- The four questions on the form — `INTRO.PAPER` in `js/intro.js`
 
 ### Dev checks
 
@@ -700,16 +832,28 @@ node dev/sim.js      # 500 bot cases + 200 fuzz cases against the real engine
 node dev/smoke.js    # drives the whole story in headless Chromium
 ```
 
+The smoke test plays the game rather than mashing at it. It taps through the
+first beats of the opening and skips the rest, and — new — it **picks locks
+properly**: a skill meter cannot be beaten by clicking blindly, so the
+harness polls the live sweep through `JOBS.debugMeter()` and taps when the
+needle is inside the band, which is what a player does with their eyes. It
+had been clicking three times and missing three times, which left the shed on
+the pier locked and everything behind that door untested.
+
+It also asserts the easter-egg rules directly: `SCENE.debugPick(x, y)` finds
+the prop with the hand out and the egg with the glass out, and an egg nobody
+has looked at yet must still be calling itself SOMETHING SMALL.
+
 Current curve, for a bot with **no eyes and no hunches**: it drives to a
 random stop, puts its hand in things at random, pays the clock for all of it,
 and names whoever is left standing.
 
-- **43%** fill the board
-- **39%** reach the Bullfrog at all
-- **17%** could still take the good ending when they get there
-- **4.1** trips to the ward per run
-- **~10** props searched per case, and **4 days in 16 run out** before it
-  has enough to say a name
+- **42%** fill the board
+- **34%** reach the Bullfrog at all
+- **14%** could still take the good ending when they get there
+- **4.2** trips to the ward per run
+- **40** props searched per case, **17** stories checked and **1.3** broken,
+  and **26 arrivals a run at a door that had already shut**
 
 A player who follows the captain's tip, reads what the evidence actually
 rules out, asks the witness the one question that splits the field, breaks

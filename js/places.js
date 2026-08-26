@@ -38,15 +38,19 @@ const PLACES = (() => {
      to hold the eyeglass up to it.
      ============================================================ */
   function egg(o) {
+    const key = 'egg:' + o.id;
     const sp = {
-      id: 'egg:' + o.id, x: o.x, y: o.y, w: 18,
+      id: key, x: o.x, y: o.y, w: 18,
       top: o.y - 11, bot: o.y + 11,
       egg: true, art: o.art,
-      label: o.label,
-      hint: 'WORTH A CLOSER LOOK',
+      /* THE NAME IS THE PRIZE. Until you have held the glass to it, the
+         plate says nothing useful — an easter egg that announces itself
+         is a signpost. */
+      label: () => ((G.eggs && G.eggs[key]) ? o.label : 'SOMETHING SMALL'),
+      hint: () => ((G.eggs && G.eggs[key]) ? o.label : 'THE GLASS MIGHT TELL YOU'),
       look: o.look,
     };
-    sp.onUse = () => STORY.lookClose(sp, sp.x, o.y);
+    sp.onUse = () => { (G.eggs = G.eggs || {})[key] = 1; return STORY.lookClose(sp, sp.x, o.y); };
     return sp;
   }
 

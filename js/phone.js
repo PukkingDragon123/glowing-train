@@ -34,7 +34,107 @@ const PHONE = (() => {
     { id: 'job', word: 'WORK', icon: 'ic_star', dock: true },
     { id: 'karma', word: 'KARMA', icon: 'ic_paw' },
     { id: 'jobs', word: 'JOBS', icon: 'ic_coin' },
+    { id: 'notes', word: 'ALERTS', icon: 'ic_star' },
   ];
+
+  /* ============================================================
+     NOTIFICATIONS.
+
+     The city used to tell you things by putting a line in a log
+     nobody opened. Now it tells you the way a phone tells you: a
+     banner slides in over the top of the screen for a few seconds,
+     a red number appears on the phone in the belt and on the app
+     the thing belongs to, and the whole run of them is kept on the
+     lock screen and in ALERTS so you can go back and read what you
+     were too busy to read the first time.
+
+     PHONE.notify({ app, head, body, tone }) is the whole surface,
+     and every other module calls it: the story when a quarter of
+     the city opens, the case when a story breaks, jobs when work
+     goes up, the clock when a door is about to shut.
+     ============================================================ */
+  const TONES = {
+    good: { rim: '#2ec4a9', ink: '#8ff7c8', icon: 'ic_star' },
+    bad:  { rim: '#d13b45', ink: '#ff8a7e', icon: 'ic_iron' },
+    plain: { rim: '#5f8f7f', ink: '#eae4d0', icon: 'ic_case' },
+    time: { rim: '#e0a63c', ink: '#ffd98a', icon: 'ic_clock' },
+  };
+
+  function notify(o) {
+    o = o || {};
+    const tone = TONES[o.tone] ? o.tone : 'plain';
+    const note = {
+      app: o.app || 'notes', head: o.head || '', body: o.body || '',
+      tone, at: CITY.hhmm(), t: CITY.minutes ? CITY.minutes() : 0, seen: false,
+    };
+    G.notes = G.notes || [];
+    /* the same thing twice in one minute is one thing */
+    const last = G.notes[G.notes.length - 1];
+    if (last && last.head === note.head && last.t === note.t) return note;
+    G.notes.push(note);
+    if (G.notes.length > 40) G.notes.shift();
+    banner(note);
+    /* A NOTIFICATION MUST NOT REBUILD THE INTERFACE. A full UI.render()
+       here tore down whatever transient card happened to be on screen —
+       a clue pick-up landed at the same moment a last-call warning went
+       off and the pick-up vanished mid-animation. The unread badge is
+       cosmetic; it can wait for the next natural render. */
+    if (typeof UI !== 'undefined' && UI.syncPhoneBadge) UI.syncPhoneBadge();
+    if (layer() && layer().className === 'phone-on') render();
+    return note;
+  }
+
+  /* how many nobody has read */
+  function unread(app) {
+    return (G.notes || []).filter(n => !n.seen && (!app || n.app === app)).length;
+  }
+  function markRead(app) {
+    (G.notes || []).forEach(n => { if (!app || n.app === app) n.seen = true; });
+  }
+
+  /* ---- the banner, which lives outside the phone ---- */
+  function bannerRail() {
+    let r = document.getElementById('note-rail');
+    if (!r) {
+      r = U.el('div');
+      r.id = 'note-rail';
+      document.body.appendChild(r);
+    }
+    return r;
+  }
+  function banner(note) {
+    const rail = bannerRail();
+    /* three at a time, oldest gone */
+    while (rail.childElementCount >= 3) rail.removeChild(rail.firstChild);
+    const t = TONES[note.tone];
+    const el = U.el('div', 'note-card note-' + note.tone);
+    const ic = U.el('div', 'note-ic');
+    ic.appendChild(SPR.clone(ART.art(t.icon, 2), 1));
+    el.appendChild(ic);
+    const col = U.el('div', 'note-col');
+    col.appendChild(line(note.head, 2, t.ink, '#04120c'));
+    if (note.body) {
+      UI.wrapLines(note.body, 38).slice(0, 3).forEach(x =>
+        col.appendChild(line(x, 1, '#cfe6da', null)));
+    }
+    col.appendChild(line(note.at, 1, '#5f8f7f', null));
+    el.appendChild(col);
+    el.onclick = () => {
+      el.remove();
+      if (typeof PHONE !== 'undefined') PHONE.open(note.app === 'notes' ? null : note.app);
+    };
+    rail.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('in'));
+    if (SFX && SFX.tick) SFX.tick();
+    setTimeout(() => {
+      el.classList.remove('in'); el.classList.add('out');
+      setTimeout(() => el.remove(), 300);
+    }, 4200);
+  }
+
+  /* bumped by every open and close, so a pending close can tell whether
+     it is still the most recent thing that happened to the phone */
+  let gen = 0;
 
   function layer() {
     let r = document.getElementById('phone-root');
@@ -153,7 +253,7 @@ const PHONE = (() => {
   }
 
   function drawMap() {
-    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v5';
+    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v6';
     return ART.cached(key, () => {
       const o = ART.cv(MW, MH), c = o.c;
       const rng = U.mulberry32(U.hashSeed((G.seedStr || 'CITY') + ':map'));
@@ -330,6 +430,33 @@ const PHONE = (() => {
       ART.px(c, 0, Math.round(MH / 2), MW, 1, 'rgba(160,146,112,.26)');
       ART.px(c, 0, Math.round(MH / 2) + 1, MW, 1, 'rgba(255,250,232,.22)');
 
+      /* ---------- THE QUARTERS ----------
+         Eleven pins on a sheet is a list. The same eleven inside named
+         quarters is a city, and a locked stop becomes a locked QUARTER,
+         which is a far better thing to be told you cannot go to. Drawn
+         under the pins: a dashed boundary, a wash, and the name across
+         the middle of it in wide letters. */
+      (CITY.ZONES || []).forEach(z => {
+        const zx = Math.round(z.x / 100 * MW), zy = Math.round(z.y / 100 * MH);
+        const zw = Math.round(z.w / 100 * MW), zh = Math.round(z.h / 100 * MH);
+        /* the boundary, dot-dash, the way a plan draws an administrative line */
+        for (let i = 0; i < zw; i++) {
+          if ((i % 9) > 5) continue;
+          ART.px(c, zx + i, zy, 1, 1, 'rgba(120,104,72,.42)');
+          ART.px(c, zx + i, zy + zh, 1, 1, 'rgba(120,104,72,.42)');
+        }
+        for (let i = 0; i < zh; i++) {
+          if ((i % 9) > 5) continue;
+          ART.px(c, zx, zy + i, 1, 1, 'rgba(120,104,72,.42)');
+          ART.px(c, zx + zw, zy + i, 1, 1, 'rgba(120,104,72,.42)');
+        }
+        /* a wash so the quarters read apart from each other */
+        ART.px(c, zx + 1, zy + 1, zw - 1, zh - 1, 'rgba(196,178,138,.10)');
+        /* and its name, in the top left of it, out of the pins' way */
+        const t = PIXFONT.render(z.name, { scale: 1, color: 'rgba(90,76,48,.72)', shadow: null });
+        c.drawImage(t, zx + 4, zy + 3);
+      });
+
       /* ---------- THE CARTOUCHE, THE ROSE AND THE SCALE ---------- */
       ART.px(c, 8, MH - 56, 132, 40, M.paperLit);
       ART.px(c, 8, MH - 56, 132, 2, '#ffffff');
@@ -450,9 +577,19 @@ const PHONE = (() => {
        inwards instead: the plate is wider than the pin, so a stop out at
        the wall has to grow its label back toward the middle. */
     const edge = p.x >= 68 ? ' tag-left' : p.x <= 30 ? ' tag-right' : '';
+    /* ============================================================
+       AND WHETHER THE CITY HAS TOLD YOU THIS PLACE EXISTS.
+
+       Three quarters are shut to a new man until the board has
+       pieces on it. A locked pin is not dimmed like an off-case
+       stop — it is barred, it says what it wants, and tapping it
+       tells you instead of driving you.
+       ============================================================ */
+    const barred = (typeof CITY.locked === 'function') && CITY.locked(p.id);
     const b = U.el('button', 'map-pin' + (here ? ' here' : '') + (hot ? ' hot' : '') +
       (errand ? ' errand' : '') + (inCase ? '' : ' cold') + edge +
-      (provable ? ' story' : '') + (shut ? ' shut' : closing ? ' closing' : ''));
+      (provable ? ' story' : '') + (shut ? ' shut' : closing ? ' closing' : '') +
+      (barred ? ' barred' : ''));
     b.style.left = p.x + '%';
     b.style.top = p.y + '%';
     b.appendChild(SPR.clone(ART.art(p.icon || 'ic_map', k), 1));
@@ -463,7 +600,12 @@ const PHONE = (() => {
       tag.appendChild(SPR.clone(ART.art(errand.state === 'ready' ? 'ic_star' : 'ic_bag',
         Math.max(1, k - 1)), 1));
     }
-    tag.appendChild(line(p.short, Math.max(1, k - 1), here ? '#6ff7d8' : '#eae4d0'));
+    /* THE PADLOCK RIDES INSIDE THE TAG, in front of the name, the way
+       the errand mark does. Floated over the pin it was invisible under
+       whatever stop happened to be drawn next door. */
+    if (barred) tag.appendChild(SPR.clone(padlock(), Math.max(1, k - 1)));
+    tag.appendChild(line(p.short, Math.max(1, k - 1),
+      barred ? '#a89e86' : here ? '#6ff7d8' : '#eae4d0'));
     b.appendChild(tag);
     if (hot) {
       const bang = U.el('span', 'pin-bang');
@@ -485,10 +627,34 @@ const PHONE = (() => {
     }
     b.onclick = () => {
       if (here) { SFX.tick && SFX.tick(); return; }
+      if (barred) {
+        SFX.tick && SFX.tick();
+        const z = CITY.zoneOf(p.id);
+        notify({ app: 'map', tone: 'bad',
+          head: (z ? z.name : p.name) + ' IS SHUT TO YOU',
+          body: CITY.lockWhy(p.id) });
+        return;
+      }
       PHONE.close();
       STORY.travel(p.id);
     };
     return b;
+  }
+
+  /* a padlock, for a quarter of the city you have not earned */
+  function padlock() {
+    return ART.cached('ph_padlock', () => {
+      const o = ART.cv(9, 11), c = o.c;
+      for (let i = 0; i < 4; i++) {
+        const w = 7 - i * 2;
+        ART.px(c, 1 + i, i, w, 1, '#c9c0a8');
+      }
+      ART.px(c, 1, 3, 2, 3, '#c9c0a8'); ART.px(c, 6, 3, 2, 3, '#c9c0a8');
+      ART.px(c, 0, 5, 9, 6, '#8d8672');
+      ART.px(c, 0, 5, 9, 1, '#c9c0a8');
+      ART.px(c, 4, 7, 1, 3, '#3a3630');
+      return o.cv;
+    });
   }
 
   /* ---------- the screen furniture ---------- */
@@ -566,11 +732,21 @@ const PHONE = (() => {
       notes.appendChild(n);
     };
     push(ob.icon || 'ic_star', 'LA BRIGADE', ob.line);
+    /* THE NOTIFICATIONS THEMSELVES, newest first, the way a lock screen
+       stacks them. Four, because a lock screen is a glance. */
+    (G.notes || []).slice(-4).reverse().forEach(n => {
+      const t = TONES[n.tone] || TONES.plain;
+      push(t.icon, n.head + '   ' + n.at, n.body);
+    });
     const owed = (STORY.questsLive() || []).filter(x => x.state === 'ready');
     if (owed.length) push('ic_bag', owed[0].q.who, 'HE OWES YOU. GO BACK FOR IT.');
     const km = STORY.karma ? STORY.karma() : null;
     if (km && km.last) push('ic_paw', 'KARMA ' + (km.score > 0 ? '+' : '') + km.score, km.last);
     wrap.appendChild(notes);
+    if ((G.notes || []).length > 4) {
+      wrap.appendChild(line('+' + ((G.notes || []).length - 4) + ' MORE IN ALERTS',
+        Math.max(1, k - 1), '#5f8f7f', null));
+    }
 
     const go = U.el('button', 'ph-unlock');
     go.appendChild(line('SLIDE TO UNLOCK', k, '#0b1a14', null));
@@ -606,13 +782,15 @@ const PHONE = (() => {
     return wrap;
   }
 
-  /* how many things are waiting in each app */
+  /* how many things are waiting in each app, unread alerts included */
   function badgeFor(id) {
-    if (id === 'map') return (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
-    if (id === 'case') return CITY.found().length;
-    if (id === 'kit') return Object.keys(G.cargo || {}).length;
-    if (id === 'jobs') return (STORY.jobsOpen ? STORY.jobsOpen().length : 0);
-    return 0;
+    const n = unread(id);
+    if (id === 'notes') return unread();
+    if (id === 'map') return n + (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
+    if (id === 'case') return n + CITY.found().length;
+    if (id === 'kit') return n + Object.keys(G.cargo || {}).length;
+    if (id === 'jobs') return n + (STORY.jobsOpen ? STORY.jobsOpen().length : 0);
+    return n;
   }
 
   /* the dock: the same four apps, always there */
@@ -682,6 +860,41 @@ const PHONE = (() => {
       log.appendChild(row);
     });
     wrap.appendChild(log);
+    return wrap;
+  }
+
+  /* ============================================================
+     ALERTS — everything the night has told you, newest first
+     ============================================================ */
+  function notesApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('WHAT YOU MISSED', k, '#eae4d0'));
+    head.appendChild(line((G.notes || []).length + ' SINCE THE SHIFT STARTED',
+      Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const list = U.el('div', 'ph-clues');
+    const all = (G.notes || []).slice().reverse();
+    if (!all.length) {
+      const row = U.el('div', 'ph-clue');
+      row.appendChild(line('NOTHING YET. ENJOY IT.', Math.max(1, k - 1), '#5f8f7f', null));
+      list.appendChild(row);
+    }
+    all.forEach(n => {
+      const t = TONES[n.tone] || TONES.plain;
+      const row = U.el('div', 'ph-clue ph-note-row' + (n.seen ? '' : ' got'));
+      row.appendChild(SPR.clone(ART.art(t.icon, Math.max(1, k - 1)), 1));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(n.head, Math.max(1, k - 1), t.ink, null));
+      UI.wrapLines(n.body, 32).forEach(x =>
+        col.appendChild(line(x, 1, '#8fb3a0', null)));
+      col.appendChild(line(n.at, 1, '#5f8f7f', null));
+      row.appendChild(col);
+      row.onclick = () => { view = n.app; app = n.app; markRead(n.app); render(); };
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+    markRead();
     return wrap;
   }
 
@@ -1010,7 +1223,8 @@ const PHONE = (() => {
         : view === 'kit' ? kitApp(k)
           : view === 'job' ? jobApp(k)
             : view === 'karma' ? karmaApp(k)
-              : view === 'jobs' ? jobsApp(k) : mapApp(k));
+              : view === 'jobs' ? jobsApp(k)
+                : view === 'notes' ? notesApp(k) : mapApp(k));
       screen.appendChild(dock(k));
     }
     body.appendChild(screen);
@@ -1041,6 +1255,7 @@ const PHONE = (() => {
          screen, because that is what taking a phone out looks like */
       if (which) { app = which; view = which; }
       else if (view === 'lock' || !view) view = 'lock';
+      gen++;
       render();
       SFX.tick && SFX.tick();
       if (tick) clearInterval(tick);
@@ -1057,7 +1272,15 @@ const PHONE = (() => {
       if (!r) return;
       const b = r.querySelector('.ph-body');
       if (b) b.classList.add('out');
-      setTimeout(() => { r.innerHTML = ''; r.className = 'hidden'; }, 160);
+      /* THE WIPE HAS TO KNOW IT IS STILL WANTED. Closing the phone and
+         opening it again in the same breath used to leave a blank slab:
+         the close's timeout landed after the reopen had already painted
+         and emptied the root under it. */
+      const mine = ++gen;
+      setTimeout(() => {
+        if (mine !== gen) return;
+        r.innerHTML = ''; r.className = 'hidden';
+      }, 160);
     },
     isOpen() {
       const r = document.getElementById('phone-root');
@@ -1067,5 +1290,8 @@ const PHONE = (() => {
     app() { return view === 'lock' || view === 'home' ? view : app; },
     /* the lock screen next time it comes out of the coat */
     lock() { view = 'lock'; },
+    /* THE NOTIFICATIONS, for everybody else to ring */
+    notify, unread, markRead,
+    notes() { return (G.notes || []).slice(); },
   };
 })();

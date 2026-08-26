@@ -1392,17 +1392,587 @@ const PARIS = (() => {
 
   /* pulled in from places.js so the eggs work the same way out here */
   function egg(o) {
+    const key = 'egg:' + o.id;
     const sp = {
-      id: 'egg:' + o.id, x: o.x, y: o.y, w: 18,
+      id: key, x: o.x, y: o.y, w: 18,
       top: o.y - 11, bot: o.y + 11,
-      egg: true, art: o.art, label: o.label, hint: 'WORTH A CLOSER LOOK', look: o.look,
+      egg: true, art: o.art,
+      /* nameless until the glass has been on it */
+      label: () => ((G.eggs && G.eggs[key]) ? o.label : 'SOMETHING SMALL'),
+      hint: () => ((G.eggs && G.eggs[key]) ? o.label : 'THE GLASS MIGHT TELL YOU'),
+      look: o.look,
     };
-    sp.onUse = () => STORY.lookClose(sp, sp.x, o.y);
+    sp.onUse = () => { (G.eggs = G.eggs || {})[key] = 1; return STORY.lookClose(sp, sp.x, o.y); };
     return sp;
   }
 
+  /* ============================================================
+     6. L'OPERA — the grandest staircase in Europe, and the men
+        who do business at the bottom of it
+
+     Locked until the board has one piece on it. Nobody takes a
+     foreign policeman to the Opera on his first afternoon.
+     ============================================================ */
+  function opera() {
+    const W = 720, FY = 112, seed = seedFor('opera');
+    const BAND = 18;
+
+    const paint = (c) => {
+      const p = P();
+      /* the square, and the buildings closing it in on both sides */
+      haussmann(c, -30, FY - BAND - 74, 150, 74, seed + 3);
+      haussmann(c, 600, FY - BAND - 70, 160, 70, seed + 8);
+      /* haze across the far side */
+      for (let i = 0; i < 22; i++) {
+        px(c, 0, FY - BAND - 22 + i, W, 1,
+          'rgba(240,234,216,' + (0.02 + i * 0.010).toFixed(3) + ')');
+      }
+      /* ---------- THE PALAIS ----------
+         Three storeys of it: an arcade at the bottom, the loggia with
+         its columns above that, the attic and the dome over all of it. */
+      const bx = 130, bw = 460, base = FY - BAND;
+      /* THE HEIGHT BUDGET. A room has sixty-two rows of headroom above
+         the floor line and the first pass built a hundred and ninety-four
+         rows of opera house into it, so the dome, the attic and both
+         gilded groups were painted somewhere off the top of the world.
+         Everything below is the same building at two thirds the height. */
+      for (let i = 0; i < 7; i++) {
+        px(c, bx - 12 + i * 2, base - i * 2, bw + 24 - i * 4, 2,
+          i % 2 ? L.stoneMid : L.stone);
+        px(c, bx - 12 + i * 2, base - i * 2, bw + 24 - i * 4, 1, L.stoneLit);
+      }
+      const py = base - 14;
+      /* THE ARCADE: seven arches, deep and dark */
+      px(c, bx, py - 38, bw, 38, L.stone);
+      px(c, bx, py - 38, bw, 3, L.stoneLit);
+      for (let i = 0; i < 7; i++) {
+        const ax = bx + 14 + i * 63;
+        px(c, ax, py - 28, 44, 28, L.stoneDeep);
+        for (let k = 0; k < 44; k++) {
+          const yy = py - 28 - Math.round(Math.sqrt(Math.max(0, 484 - (k - 22) * (k - 22))) * 0.7);
+          px(c, ax + k, yy, 1, py - 28 - yy, L.stoneDeep);
+          px(c, ax + k, yy, 1, 2, L.stoneMid);
+        }
+        px(c, ax + 6, py - 20, 32, 20, '#2a2620');
+        px(c, ax - 5, py - 34, 4, 34, L.stoneMid);
+        px(c, ax - 5, py - 34, 1, 34, L.stoneLit);
+        /* the medallion over each arch */
+        PIX.disc(c, ax + 22, py - 35, 4, L.brass);
+        PIX.disc(c, ax + 22, py - 35, 2, '#8a5a1a');
+      }
+      /* THE LOGGIA: paired columns, and a gilded group on the parapet */
+      const ly = py - 38;
+      /* THE PORTICO IS RECESSED. Pale columns on a pale wall read as slits;
+         the wall behind them has to go into shadow before they read as
+         columns standing in front of anything. */
+      px(c, bx, ly - 40, bw, 40, '#4a4336');
+      px(c, bx, ly - 40, bw, 3, L.stoneLit);
+      px(c, bx, ly - 37, bw, 2, '#332e25');
+      px(c, bx, ly - 5, bw, 5, L.stoneMid);
+      px(c, bx, ly - 5, bw, 1, L.stoneLit);
+      for (let i = 0; i < 8; i++) {
+        const cx0 = bx + 20 + i * 60;
+        [0, 20].forEach(d => {
+          px(c, cx0 + d, ly - 34, 11, 29, L.stone);
+          px(c, cx0 + d, ly - 34, 3, 29, L.stoneLit);
+          px(c, cx0 + d + 8, ly - 34, 3, 29, L.stoneDk);
+          px(c, cx0 + d - 2, ly - 37, 15, 3, L.stoneLit);   /* the capital */
+          px(c, cx0 + d - 2, ly - 8, 15, 3, L.stoneMid);    /* and the base */
+        });
+        /* and the arch over the dark bay between each pair */
+        for (let k = 0; k < 12; k++) {
+          const yy = ly - 34 - Math.round(Math.sqrt(Math.max(0, 36 - (k - 6) * (k - 6))));
+          px(c, cx0 + 11 + k, yy, 1, 3, L.stoneMid);
+        }
+      }
+      /* the frieze of names nobody reads */
+      px(c, bx + 4, ly - 46, bw - 8, 7, L.stoneMid);
+      for (let i = 0; i < bw - 20; i += 13) px(c, bx + 12 + i, ly - 44, 7, 3, L.stoneDeep);
+      /* THE ATTIC, and the dome */
+      const ay = ly - 46;
+      px(c, bx + 60, ay - 16, bw - 120, 16, L.stoneMid);
+      px(c, bx + 60, ay - 16, bw - 120, 2, L.stoneLit);
+      px(c, bx + 60, ay - 16, 3, 16, L.stoneLit);
+      /* the drum, and then a dome with some height in it. Eighty-four
+         pixels wide and eighteen tall was a hill, not a dome. */
+      const dcx = bx + Math.round(bw / 2);
+      px(c, dcx - 46, ay - 24, 92, 8, L.stone);
+      px(c, dcx - 46, ay - 24, 92, 2, L.stoneLit);
+      for (let i = 0; i < 8; i += 3) px(c, dcx - 44 + i * 12, ay - 22, 3, 6, L.stoneDk);
+      for (let i = 0; i < 26; i++) {
+        const t = i / 26;
+        const hw = Math.round(42 * Math.sqrt(Math.max(0, 1 - t * t)));
+        px(c, dcx - hw, ay - 24 - i, hw * 2, 1,
+          i < 3 ? '#7fa07a' : (i % 6 < 3 ? '#5f8f66' : '#4e7a56'));
+        px(c, dcx - hw, ay - 24 - i, 2, 1, '#8fb08a');
+        px(c, dcx + hw - 2, ay - 24 - i, 2, 1, '#3d6446');
+      }
+      /* the ribs, which is what makes a dome look like a dome */
+      [-26, -13, 0, 13, 26].forEach(d => {
+        for (let i = 0; i < 26; i++) {
+          const t = i / 26, hw = 42 * Math.sqrt(Math.max(0, 1 - t * t));
+          if (Math.abs(d) > hw - 2) continue;
+          px(c, dcx + Math.round(d * (hw / 42)), ay - 24 - i, 1, 1, '#4e7a56');
+        }
+      });
+      px(c, dcx - 6, ay - 54, 12, 6, '#4e7a56');
+      px(c, dcx - 6, ay - 54, 12, 1, '#7fa07a');
+      px(c, dcx - 2, ay - 60, 4, 7, L.brass);
+      PIX.disc(c, dcx, ay - 61, 3, L.brass);
+      /* THE GILDED GROUPS on the corners of the attic: a pair of figures
+         with an arm up, not a gold bollard. */
+      [bx + 74, bx + bw - 86].forEach(gx => {
+        px(c, gx - 6, ay - 4, 24, 4, '#8a5a1a');          /* the plinth */
+        px(c, gx - 6, ay - 4, 24, 1, L.brass);
+        [0, 8].forEach((d, n) => {
+          px(c, gx + d, ay - 14, 5, 10, L.brass);          /* a body */
+          px(c, gx + d, ay - 14, 2, 10, '#f4d98a');
+          px(c, gx + d, ay - 19, 5, 5, L.brass);           /* a head */
+          px(c, gx + d + (n ? 5 : -2), ay - 22, 2, 8, L.brass);   /* an arm up */
+        });
+        px(c, gx + 1, ay - 24, 11, 2, L.brass);            /* and a lyre between */
+      });
+
+      /* ---------- THE SQUARE ---------- */
+      cobbles(c, 0, FY - BAND, W, BAND + 22, seed);
+      px(c, 0, FY - 4, W, 4, L.settDk);
+      /* the kerb, and the metro mouth at the corner */
+      px(c, 0, FY - BAND, W, 2, L.settLit);
+      metroSign(c, 66, FY - 1);
+      /* two cabs waiting at the rank, and the rank sign */
+      [[500, 0], [592, 1]].forEach(([cx0, k]) => {
+        px(c, cx0, FY - 26, 74, 16, k ? '#2f3a52' : '#3a2f2f');
+        px(c, cx0, FY - 26, 74, 2, k ? '#4a5570' : '#544040');
+        px(c, cx0 + 14, FY - 36, 44, 11, k ? '#2f3a52' : '#3a2f2f');
+        px(c, cx0 + 17, FY - 34, 17, 7, 'rgba(160,205,230,.45)');
+        px(c, cx0 + 37, FY - 34, 17, 7, 'rgba(160,205,230,.45)');
+        px(c, cx0 + 30, FY - 40, 14, 5, k ? '#e0a63c' : '#c9c0a8');
+        PIX.disc(c, cx0 + 14, FY - 9, 7, '#1a1720'); PIX.disc(c, cx0 + 60, FY - 9, 7, '#1a1720');
+        PIX.disc(c, cx0 + 14, FY - 9, 3, '#4a4d58'); PIX.disc(c, cx0 + 60, FY - 9, 3, '#4a4d58');
+        foot(c, cx0 + 4, FY - 2, 68, 3);
+      });
+      px(c, 470, FY - 48, 3, 48, L.iron);
+      px(c, 458, FY - 56, 28, 10, '#e8dfc6');
+      px(c, 460, FY - 54, 24, 6, '#3f6ba8');
+      /* the morris column and a bench, because this is still a street */
+      morris(c, 106, FY - 2, 54);
+      bench(c, 30, FY - 2, 46);
+      [22, 700].forEach(lx => lamp(c, lx, FY - BAND + 4, 30, true));
+      planeTree(c, 660, FY - 2, 58, seed + 5);
+      /* the poster case with tonight's bill in it */
+      px(c, 150, FY - 46, 34, 44, L.iron);
+      px(c, 153, FY - 43, 28, 38, '#e8dfc6');
+      px(c, 155, FY - 41, 24, 10, '#b8384a');
+      for (let i = 0; i < 5; i++) px(c, 156, FY - 28 + i * 4, 22 - (i % 2) * 6, 2, '#8a7754');
+    };
+
+    const spots = [
+      { id: 'steps2', x: 300, z: 0.12, w: 90, top: FY - 30, label: 'THE STEPS',
+        hint: 'SOMEBODY SAT HERE LONG ENOUGH TO LEAVE SOMETHING' },
+      { id: 'bill', x: 167, z: 0.16, w: 34, top: FY - 48, label: 'THE POSTER CASE',
+        hint: 'THE GLASS HAS BEEN FORCED AND PUT BACK' },
+      { id: 'cab2', x: 537, z: 0.08, w: 74, top: FY - 40, label: 'THE FIRST CAB',
+        hint: 'THE MAN IS ASLEEP AND THE METER IS RUNNING' },
+      { id: 'grate', x: 66, z: 0.1, w: 30, top: FY - 22, label: 'THE METRO MOUTH',
+        hint: 'THE DRAUGHT COMES UP WITH SOMETHING IN IT' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 400, z: 0.14, key: 'usher',
+        def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
+        tag: 'THE HOUSE MANAGER', tagCol: PIX.PAL.g, witness: true, mood: 'watch' },
+    ];
+
+    return {
+      id: 'opera', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      /* the sky is painted from the top of the frame DOWN TO here, and the
+         room is painted over it — so this is the ground line, not the roof */
+      skyTo: FY - BAND,
+      depthBand: BAND, crowd: { n: 16, z0: 0.5, z1: 0.96 },
+      pets: [{ kind: 'dog', x: 240, name: 'A DOG ON A LONG LEAD' }],
+      enterX: 24, enterFace: 1,
+      eggs: [egg({ id: 'ticket', x: 330, y: FY - 26, art: 'card4',
+        label: 'A TORN TICKET', look: 'ROW C, SEAT 14. THE DATE IS THE NIGHT HE DIED.' })],
+      lights: [{ x: 66, y: FY - 14, r: 30, a: 0.05 }],
+    };
+  }
+
+  /* ============================================================
+     7. PERE-LACHAISE — a hill of dead Parisians, and the only
+        place in the city where nobody minds you standing still
+     ============================================================ */
+  function pere() {
+    const W = 680, FY = 116, seed = seedFor('pere');
+    const BAND = 24;
+
+    const paint = (c) => {
+      const p = P();
+      /* THE WALL along the top, in shade, with the city over it.
+
+         VALUE, NOT HUE, is what makes a cemetery read: pale tombs
+         need something darker than themselves to stand against, and
+         the first pass put stone-coloured tombs on a stone-coloured
+         wall and got one cream smear across the middle of the frame. */
+      px(c, 0, FY - BAND - 54, W, 54, '#a89d84');
+      px(c, 0, FY - BAND - 54, W, 3, '#c2b79c');
+      for (let rx = 0; rx < W; rx += 22) {
+        px(c, rx, FY - BAND - 54, 1, 54, 'rgba(70,62,48,.38)');
+      }
+      for (let ry = 0; ry < 54; ry += 9) px(c, 0, FY - BAND - 54 + ry, W, 1, 'rgba(255,250,232,.10)');
+      /* moss up the bottom of it, and the roofs behind */
+      px(c, 0, FY - BAND - 14, W, 14, 'rgba(64,92,52,.26)');
+      px(c, 0, FY - BAND - 2, W, 2, 'rgba(40,36,28,.34)');
+      for (let i = -20; i < W; i += 74) {
+        haussmann(c, i, FY - BAND - 96, 60, 44, seed + i);
+      }
+      px(c, 0, FY - BAND - 54, W, 4, L.stoneDk);
+
+      /* ---------- THE TOMBS, in three ranks up the slope ----------
+         Near ones tall and sharp, far ones small and hazed, because a
+         cemetery on a hill is the one place perspective is the subject. */
+      const rank = (y, hgt, step, haze) => {
+        for (let x = -10; x < W; x += step) {
+          const r = ((x * 7 + y * 3 + seed) % 100) / 100;
+          const h2 = Math.round(hgt * (0.7 + r * 0.6));
+          const w2 = Math.round(step * (0.45 + r * 0.2));
+          const kind = Math.floor(r * 3);
+          if (kind === 0) {
+            /* a chapel, with a door and a little pitched roof */
+            px(c, x, y - h2, w2, h2, L.stone);
+            px(c, x, y - h2, w2, 2, L.stoneLit);
+            px(c, x + w2 - 3, y - h2, 3, h2, L.stoneDk);
+            for (let i = 0; i < 7; i++) {
+              px(c, x + i, y - h2 - 7 + i, w2 - i * 2, 1, i < 2 ? L.zincLit : L.zinc);
+            }
+            px(c, x + Math.round(w2 / 2) - 3, y - Math.round(h2 * 0.62), 7,
+              Math.round(h2 * 0.62), '#3f3a30');
+            px(c, x + Math.round(w2 / 2) - 3, y - Math.round(h2 * 0.62), 7, 2, '#5f5748');
+            px(c, x + Math.round(w2 / 2) - 1, y - h2 - 13, 3, 7, L.stoneMid);
+            px(c, x + Math.round(w2 / 2) - 3, y - h2 - 11, 7, 2, L.stoneMid);
+          } else if (kind === 1) {
+            /* a slab with a cross on it */
+            px(c, x, y - Math.round(h2 * 0.4), w2, Math.round(h2 * 0.4), L.stoneMid);
+            px(c, x, y - Math.round(h2 * 0.4), w2, 2, L.stoneLit);
+            px(c, x + Math.round(w2 / 2) - 2, y - h2, 5, Math.round(h2 * 0.62), L.stone);
+            px(c, x + Math.round(w2 / 2) - 6, y - Math.round(h2 * 0.74), 13, 4, L.stone);
+            px(c, x + Math.round(w2 / 2) - 6, y - Math.round(h2 * 0.74), 13, 1, L.stoneLit);
+          } else {
+            /* an obelisk, or a broken column, which is the same shape */
+            px(c, x + 2, y - h2, w2 - 4, h2, L.stone);
+            px(c, x + 2, y - h2, 2, h2, L.stoneLit);
+            px(c, x, y - 4, w2, 4, L.stoneMid);
+            px(c, x, y - 4, w2, 1, L.stoneLit);
+            if (r > 0.8) px(c, x + 2, y - h2, w2 - 4, 3, L.stoneDeep);
+          }
+          /* a shadow off the right of it and one on the ground under it,
+             which is what separates one pale stone from the next */
+          px(c, x + w2, y - Math.round(h2 * 0.8), 3, Math.round(h2 * 0.8),
+            'rgba(52,46,34,.30)');
+          px(c, x - 2, y, w2 + 6, 2, 'rgba(52,46,34,.26)');
+          if (haze) px(c, x - 2, y - h2 - 14, w2 + 8, h2 + 18,
+            'rgba(238,232,214,' + haze + ')');
+        }
+      };
+      rank(FY - BAND - 8, 30, 40, 0.20);
+      rank(FY - BAND + 4, 40, 54, 0.05);
+
+      /* ---------- AND THE THREE YOU CAN ACTUALLY TOUCH ----------
+         A field of generated tombs is a texture. The stops the case
+         wants have to be objects: a vault with its door off, an angel
+         over a slab, a chapel with a gable. Placed by hand where the
+         hot spots are, so a marker points at a thing and not at a wall. */
+      /* THE OPEN VAULT, door prised off its hinges and leaning */
+      const vx = 318, vb = FY - 16;
+      px(c, vx, vb - 52, 46, 52, L.stone);
+      px(c, vx, vb - 52, 46, 3, L.stoneLit);
+      px(c, vx + 42, vb - 52, 4, 52, L.stoneDk);
+      for (let i = 0; i < 9; i++) {
+        px(c, vx + i * 2, vb - 52 - 9 + i, 46 - i * 4, 1, i < 2 ? L.zincLit : L.zinc);
+      }
+      px(c, vx + 21, vb - 66, 4, 9, L.stoneMid);
+      px(c, vx + 17, vb - 63, 12, 3, L.stoneMid);
+      px(c, vx + 12, vb - 36, 22, 36, '#1d1a16');         /* the way in */
+      px(c, vx + 12, vb - 36, 22, 2, '#3a352c');
+      px(c, vx + 14, vb - 30, 7, 5, '#2f2a22');
+      px(c, vx + 36, vb - 34, 9, 34, '#3f3a30');          /* the door, leaning */
+      px(c, vx + 36, vb - 34, 3, 34, '#5f5748');
+      px(c, vx + 6, vb - 8, 44, 3, 'rgba(0,0,0,.28)');
+      /* THE ANGEL over a slab, wings folded */
+      const gx2 = 190, gb = FY - 14;
+      px(c, gx2 - 16, gb - 12, 34, 12, L.stoneMid);
+      px(c, gx2 - 16, gb - 12, 34, 2, L.stoneLit);
+      px(c, gx2 - 8, gb - 20, 18, 8, L.stone);
+      px(c, gx2 - 5, gb - 44, 11, 25, L.stone);
+      px(c, gx2 - 5, gb - 44, 3, 25, L.stoneLit);
+      px(c, gx2 - 3, gb - 52, 7, 9, L.stone);             /* a head, bowed */
+      px(c, gx2 - 3, gb - 52, 7, 2, L.stoneLit);
+      for (let i = 0; i < 16; i++) {                      /* the wings */
+        const w2 = Math.round(7 - i * 0.32);
+        px(c, gx2 - 12 - Math.round(i * 0.35), gb - 44 + i, w2, 1, L.stoneMid);
+        px(c, gx2 + 6 + Math.round(i * 0.35), gb - 44 + i, w2, 1, L.stoneDk);
+      }
+      px(c, gx2 - 20, gb - 2, 42, 3, 'rgba(0,0,0,.26)');
+      /* THE CHAPEL with the gable, up the path a way */
+      const cx2 = 430, cb = FY - 18;
+      px(c, cx2, cb - 44, 38, 44, L.stone);
+      px(c, cx2, cb - 44, 38, 3, L.stoneLit);
+      px(c, cx2 + 34, cb - 44, 4, 44, L.stoneDk);
+      for (let i = 0; i < 14; i++) {
+        px(c, cx2 + 19 - 19 + i, cb - 44 - i, 38 - i * 2, 1, i < 2 ? L.stoneLit : L.stoneMid);
+      }
+      px(c, cx2 + 12, cb - 30, 14, 30, '#2a2620');
+      px(c, cx2 + 12, cb - 30, 14, 2, L.stoneMid);
+      px(c, cx2 + 14, cb - 26, 4, 10, '#4a5f6a');
+      px(c, cx2 + 20, cb - 26, 4, 10, '#4a5f6a');
+      px(c, cx2 + 4, cb - 10, 30, 3, 'rgba(0,0,0,.26)');
+
+      /* ---------- THE PATH ---------- */
+      cobbles(c, 0, FY - 18, W, 22, seed + 4);
+      px(c, 0, FY - 20, W, 3, L.settLit);
+      px(c, 0, FY - 4, W, 4, L.settDk);
+      /* the leaves nobody sweeps in this part */
+      const rng = U.mulberry32(seed * 7 + 11);
+      for (let i = 0; i < 260; i++) {
+        const lx = Math.floor(rng() * W), ly = FY - 18 + Math.floor(rng() * 18);
+        px(c, lx, ly, 2, 1, rng() < 0.4 ? '#8a6a2a' : (rng() < 0.5 ? '#7a4a22' : '#a08640'));
+      }
+      /* chestnuts and cypress, which is what actually grows here */
+      [70, 300, 560].forEach((tx, i) => planeTree(c, tx, FY - 6, 66 + i * 6, seed + tx));
+      [200, 420, 640].forEach((tx) => {
+        for (let i = 0; i < 46; i++) {
+          const hw = Math.max(1, Math.round(9 * Math.sin((1 - i / 46) * 2.2)));
+          px(c, tx - hw, FY - 8 - i, hw * 2, 1, i % 7 < 4 ? '#31502f' : '#26402a');
+        }
+        px(c, tx - 2, FY - 12, 5, 11, L.barkDk);
+        foot(c, tx - 6, FY - 3, 13, 3);
+      });
+      /* the water tap and the watering cans, which is a cemetery detail */
+      px(c, 496, FY - 26, 4, 24, L.iron);
+      px(c, 492, FY - 30, 12, 5, L.iron);
+      px(c, 500, FY - 27, 7, 3, L.ironLit);
+      px(c, 486, FY - 10, 13, 9, '#4a5a4a');
+      px(c, 486, FY - 10, 13, 2, '#5f7a5f');
+      px(c, 498, FY - 8, 6, 3, '#4a5a4a');
+      foot(c, 484, FY - 2, 22, 3);
+      /* a bench where somebody sat for a long time */
+      bench(c, 130, FY - 3, 52);
+      /* the crows */
+      [[250, FY - 88], [268, FY - 82], [604, FY - 96]].forEach(([kx, ky]) => {
+        px(c, kx, ky, 5, 3, '#1d1a22');
+        px(c, kx + 4, ky - 1, 2, 2, '#1d1a22');
+        px(c, kx + 1, ky + 3, 1, 2, '#1d1a22');
+      });
+    };
+
+    /* the tops are the tops of the things drawn above, so a marker
+       points at an object and not at the wall behind it */
+    const spots = [
+      { id: 'tomb', x: 341, z: 0.10, w: 46, top: FY - 68, label: 'THE OPEN VAULT',
+        hint: 'THE DOOR HAS BEEN PRISED AND IT WAS NOT A THIEF' },
+      { id: 'urn2', x: 496, z: 0.14, w: 30, top: FY - 32, label: 'THE TAP',
+        hint: 'SOMEBODY WASHED SOMETHING HERE THIS MORNING' },
+      { id: 'leaves', x: 620, z: 0.06, w: 60, top: FY - 20, label: 'THE LEAF DRIFT',
+        hint: 'SOMETHING WENT INTO IT ON PURPOSE' },
+      { id: 'bench3', x: 156, z: 0.12, w: 52, top: FY - 22, label: 'THE BENCH',
+        hint: 'CIGARETTE ENDS. ALL THE SAME BRAND.' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 240, z: 0.13, key: 'keeper2',
+        def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
+          : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
+        tag: 'THE GARDENER', tagCol: PIX.PAL.F, witness: true, mood: 'weary' },
+    ];
+
+    return {
+      id: 'pere', w: W, floorY: FY, paint, spots, actors, outdoor: true,
+      skyTo: FY - BAND - 54,
+      depthBand: BAND, crowd: { n: 5, z0: 0.55, z1: 0.9 },
+      pets: [{ kind: 'cat', x: 420, name: 'THE CEMETERY CAT' }],
+      enterX: 24, enterFace: 1,
+      eggs: [egg({ id: 'flower', x: 366, y: FY - 22, art: 'card1',
+        label: 'FRESH FLOWERS', look: 'NO NAME ON THE CARD. THE SHOP IS TWO STREETS FROM THE LAVERIE.' })],
+    };
+  }
+
+  /* ============================================================
+     8. LA ZONE — under the ring road, where the city keeps the
+        things it does not want photographed
+
+     The last door to open, and the one the finale walks through.
+     ============================================================ */
+  function perif() {
+    const W = 700, FY = 118, seed = seedFor('perif');
+    const BAND = 14;
+
+    const paint = (c) => {
+      const p = P();
+      /* ---------- THE FLYOVER, right over your head ----------
+
+         THE TOP TEN ROWS OF A ROOM ARE WHAT THE SCENE TILES UPWARD to
+         fill the headroom above the frame, so they have to be the
+         darkest thing in the picture. The first pass put pale concrete
+         in them and got a slab of grey filling half the screen. */
+      px(c, 0, 0, W, 12, '#1f1f26');
+      px(c, 0, 10, W, 4, '#2a2a32');
+      px(c, 0, 14, W, 26, '#6f6f76');
+      px(c, 0, 36, W, 6, '#4a4a52');
+      px(c, 0, 42, W, 5, '#3a3a42');
+      for (let rx = 0; rx < W; rx += 96) {
+        px(c, rx, 14, 3, 28, '#5a5a62');
+        px(c, rx + 3, 14, 1, 28, 'rgba(255,255,255,.10)');
+      }
+      /* the expansion joints in the soffit */
+      for (let rx = 24; rx < W; rx += 48) px(c, rx, 14, 1, 26, 'rgba(30,30,36,.5)');
+      /* the stains where forty years of rain has come off it */
+      const rng = U.mulberry32(seed * 3 + 19);
+      for (let i = 0; i < 90; i++) {
+        const sx = Math.floor(rng() * W);
+        px(c, sx, 40, 2 + Math.floor(rng() * 4), 6 + Math.floor(rng() * 22),
+          'rgba(40,40,46,' + (0.10 + rng() * 0.16).toFixed(3) + ')');
+      }
+      /* the piers holding it up */
+      [90, 330, 570].forEach(pxx => {
+        px(c, pxx, 40, 46, FY - BAND - 40, '#5f5f68');
+        px(c, pxx, 40, 6, FY - BAND - 40, '#74747c');
+        px(c, pxx + 40, 40, 6, FY - BAND - 40, '#46464e');
+        px(c, pxx - 6, FY - BAND - 12, 58, 12, '#4a4a52');
+        px(c, pxx - 6, FY - BAND - 12, 58, 2, '#63636c');
+        /* AND THE TAG somebody put on every one of them. Four coloured
+           bars in a row read as a bar chart; a tag is a fat scrawl with
+           an outline round it and a drip off the bottom. */
+        const ty0 = FY - BAND - 42, col = ['#b8384a', '#e0a63c', '#3f6ba8'][(pxx / 90) % 3 | 0];
+        px(c, pxx + 4, ty0 + 4, 6, 12, '#14141a');
+        px(c, pxx + 5, ty0 + 5, 5, 10, col);
+        px(c, pxx + 10, ty0, 7, 18, '#14141a');
+        px(c, pxx + 11, ty0 + 1, 5, 16, col);
+        px(c, pxx + 16, ty0 + 6, 10, 9, '#14141a');
+        px(c, pxx + 17, ty0 + 7, 9, 7, col);
+        px(c, pxx + 26, ty0 + 2, 6, 15, '#14141a');
+        px(c, pxx + 27, ty0 + 3, 5, 13, col);
+        px(c, pxx + 32, ty0 + 8, 8, 6, '#14141a');
+        px(c, pxx + 33, ty0 + 9, 7, 4, col);
+        px(c, pxx + 13, ty0 + 17, 2, 7, col);            /* the drip */
+        px(c, pxx + 29, ty0 + 16, 2, 5, col);
+      });
+      /* the daylight that gets in at the open end, and the wedge it
+         throws across the floor: without it the whole frame is one value */
+      for (let i = 0; i < 30; i++) {
+        px(c, 0, FY - BAND - 30 + i, W, 1,
+          'rgba(220,214,196,' + (0.015 + i * 0.006).toFixed(3) + ')');
+      }
+      for (let i = 0; i < 46; i++) {
+        px(c, 0, 46 + i, Math.round(200 - i * 2.6), 1,
+          'rgba(240,232,206,' + (0.055 - i * 0.001).toFixed(4) + ')');
+      }
+      /* ---------- THE LOCK-UPS, in the arch of it ---------- */
+      const unit = (x, w2, shut2) => {
+        px(c, x, FY - BAND - 52, w2, 52, '#4a463e');
+        px(c, x, FY - BAND - 52, w2, 3, '#5f5a4e');
+        px(c, x + 4, FY - BAND - 44, w2 - 8, 44, shut2 ? '#7a6a52' : '#241f1a');
+        if (shut2) {
+          for (let ry = 0; ry < 44; ry += 3) {
+            px(c, x + 4, FY - BAND - 44 + ry, w2 - 8, 1, 'rgba(0,0,0,.24)');
+            px(c, x + 4, FY - BAND - 44 + ry + 1, w2 - 8, 1, 'rgba(255,240,210,.10)');
+          }
+          px(c, x + Math.round(w2 / 2) - 5, FY - BAND - 6, 11, 4, '#2a2620');
+        } else {
+          px(c, x + 8, FY - BAND - 30, 12, 28, '#3a3630');
+          px(c, x + 26, FY - BAND - 22, 20, 20, '#4a3a24');
+        }
+        px(c, x + 6, FY - BAND - 50, 16, 5, '#c9c0a8');
+        px(c, x + 8, FY - BAND - 49, 12, 3, '#3a3630');
+      };
+      unit(150, 120, true);
+      unit(400, 130, false);
+      /* the chain-link fence across the near right */
+      for (let fx = 560; fx < W; fx += 4) {
+        px(c, fx, FY - BAND - 44, 1, 44, 'rgba(150,150,160,.5)');
+      }
+      for (let fy = 0; fy < 44; fy += 4) {
+        px(c, 560, FY - BAND - 44 + fy, W - 560, 1, 'rgba(150,150,160,.5)');
+      }
+      px(c, 560, FY - BAND - 48, W - 560, 4, '#5f5f68');
+      px(c, 560, FY - BAND - 48, 4, 48, '#5f5f68');
+      /* ---------- THE GROUND ---------- */
+      px(c, 0, FY - BAND, W, BAND + 20, '#4a4640');
+      ART.grain(c, 0, FY - BAND, W, BAND + 20, '#413d38', '#565046', seed % 29);
+      for (let rx = 0; rx < W; rx += 60) px(c, rx, FY - BAND, 2, BAND + 18, 'rgba(30,28,26,.32)');
+      /* the puddle that never dries under here */
+      px(c, 230, FY - 12, 120, 11, '#3a4650');
+      px(c, 234, FY - 11, 112, 3, 'rgba(170,200,215,.30)');
+      for (let k = 0; k < 112; k += 11) px(c, 236 + k, FY - 7 + ((k + seed) % 3), 6, 1, 'rgba(220,235,245,.24)');
+      /* the brazier, which is the only warm thing in the frame */
+      px(c, 90, FY - 26, 30, 24, '#3a2f26');
+      px(c, 90, FY - 26, 30, 2, '#5f4a3a');
+      for (let i = 0; i < 7; i++) {
+        px(c, 96 + (i % 4) * 5, FY - 30 - (i % 3) * 3, 4, 5,
+          i % 3 ? '#e0631e' : '#f4b23c');
+      }
+      px(c, 88, FY - 2, 34, 3, 'rgba(0,0,0,.34)');
+      /* the dumped car, on its rims */
+      px(c, 600, FY - 30, 96, 20, '#4a3a3a');
+      px(c, 600, FY - 30, 96, 2, '#5f4a4a');
+      px(c, 618, FY - 42, 58, 13, '#4a3a3a');
+      px(c, 622, FY - 40, 22, 9, '#2a2620');
+      px(c, 648, FY - 40, 22, 9, '#2a2620');
+      px(c, 610, FY - 12, 14, 10, '#2a2620');
+      px(c, 668, FY - 12, 14, 10, '#2a2620');
+      for (let i = 0; i < 12; i++) {
+        px(c, 604 + i * 8, FY - 28 + (i % 3), 4, 3, 'rgba(120,70,40,.5)');
+      }
+      foot(c, 596, FY - 2, 104, 4);
+      /* the oil drums, stacked */
+      [[350, 0], [372, 1], [361, 2]].forEach(([dx, k]) => {
+        const dy = FY - 2 - k * 17;
+        px(c, dx, dy - 17, 20, 17, k === 2 ? '#3f5a6a' : '#5a4a2a');
+        px(c, dx, dy - 17, 20, 2, k === 2 ? '#557488' : '#7a6a3a');
+        px(c, dx, dy - 11, 20, 2, 'rgba(0,0,0,.26)');
+        px(c, dx, dy - 6, 20, 2, 'rgba(0,0,0,.26)');
+      });
+      foot(c, 346, FY - 2, 50, 3);
+      /* one lamp on a bracket, which does not reach the corners */
+      px(c, 336, FY - BAND - 40, 3, 26, '#3a3a42');
+      px(c, 336, FY - BAND - 40, 16, 3, '#3a3a42');
+      px(c, 348, FY - BAND - 38, 10, 5, '#e8dcb8');
+    };
+
+    const spots = [
+      { id: 'roller', x: 465, z: 0.16, w: 60, top: FY - 60, label: 'THE OPEN LOCK-UP',
+        hint: 'SOMETHING WAS DRAGGED OUT OF HERE THIS WEEK' },
+      { id: 'drum', x: 361, z: 0.08, w: 40, top: FY - 54, label: 'THE DRUMS',
+        hint: 'ONE OF THEM IS LIGHTER THAN THE OTHERS' },
+      { id: 'wreck', x: 648, z: 0.06, w: 96, top: FY - 46, label: 'THE WRECK',
+        hint: 'THE PLATES ARE OFF AND THE SEATS ARE NOT' },
+      { id: 'fence', x: 600, z: 0.3, w: 60, top: FY - BAND - 50, label: 'THE FENCE',
+        hint: 'CUT AND BENT BACK, AT THE HEIGHT OF A SHOULDER' },
+    ];
+
+    const actors = [
+      { id: 'wit', x: 130, z: 0.11, key: 'zone',
+        def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
+          : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
+        tag: 'THE MAN AT THE FIRE', tagCol: PIX.PAL.r, witness: true, mood: 'watch' },
+    ];
+
+    return {
+      /* NOT OUTDOOR. There is a concrete deck between this place and the
+         sky, so the room is lit like an interior and the headroom above
+         the frame is more flyover — a `skyTo` of zero did not suppress
+         the sky, it just moved the horizon up into the deck. */
+      id: 'perif', w: W, floorY: FY, paint, spots, actors,
+      depthBand: BAND, crowd: { n: 4, z0: 0.6, z1: 0.92 },
+      pets: [{ kind: 'rat', x: 300, name: 'SOMETHING UNDER THE DRUMS' }],
+      enterX: 24, enterFace: 1,
+      eggs: [egg({ id: 'plate', x: 690, y: FY - 20, art: 'card2',
+        label: 'A NUMBER PLATE', look: 'BENT DOUBLE AND THROWN. THE NUMBER IS STILL READABLE.' })],
+      lights: [{ x: 105, y: FY - 30, r: 44, a: 0.10 },
+        { x: 352, y: FY - BAND - 34, r: 40, a: 0.07 }],
+    };
+  }
+
   return {
-    BUILD: { tower, arch, butte, museum, catacombs, metro },
+    BUILD: { tower, arch, butte, museum, catacombs, metro, opera, pere, perif },
     /* the helpers, so places.js and rooms.js can dress themselves in Paris */
     haussmann, lamp, planeTree, wallace, morris, bench, cobbles, cafeTable,
     eiffel, arc, basilica, pyramid, boneWall, metroSign, egg,
