@@ -540,8 +540,64 @@ const JOBS = (() => {
     if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,240,200,' + (s.flash * 0.16).toFixed(3) + ')');
   }
 
+  /* THE RANGE. A paper target on a rail, and a sight that swings across
+     it: six shots, and the band is tight because a police range is
+     supposed to be. Drawn as the target you are actually shooting at
+     rather than a bar, because the whole point is that it is a target. */
+  function drawTarget(c, W, H, st) {
+    const t = st.x, band = st.band, live = st.live, centre = st.centre;
+    /* the range: a lane, a backstop, a light overhead */
+    ART.px(c, 0, 0, W, H, '#242028');
+    ART.px(c, 0, 0, W, 8, '#1a171e');
+    ART.px(c, 0, H - 14, W, 14, '#38322c');
+    ART.px(c, 0, H - 14, W, 1, '#4e463c');
+    for (let i = 4; i < W; i += 18) ART.px(c, i, H - 12, 9, 2, 'rgba(255,240,210,.07)');
+    /* the sandbags at the back */
+    for (let i = 0; i < W; i += 14) {
+      ART.px(c, i, 14, 13, 9, '#5f5744');
+      ART.px(c, i, 14, 13, 2, '#736a53');
+    }
+    /* THE TARGET, and the rings on it */
+    const tx = Math.round(W * 0.5), ty = 44;
+    ART.px(c, tx - 2, ty + 14, 4, H - 14 - ty - 14, '#4a3f2e');
+    ART.px(c, tx - 22, ty - 20, 44, 40, '#e9e2cc');
+    ART.px(c, tx - 22, ty - 20, 44, 1, '#ffffff');
+    ART.px(c, tx - 22, ty + 19, 44, 1, '#b8b09a');
+    [16, 12, 8, 4].forEach((r, i) => {
+      for (let a = 0; a < 60; a++) {
+        const th = (a / 60) * Math.PI * 2;
+        ART.px(c, Math.round(tx + Math.cos(th) * r), Math.round(ty + Math.sin(th) * r * 0.9),
+          1, 1, i % 2 ? '#8a8272' : '#2a2620');
+      }
+    });
+    PIX.disc(c, tx, ty, 3, '#b8384a');
+    /* THE BAND you have to be inside, painted on the target where the
+       meter actually put it — the meter rolls a new centre every round
+       and drawing it at the middle would be a lie. */
+    const bw = Math.max(3, Math.round(44 * band));
+    ART.px(c, tx - 22 + Math.round(44 * centre - bw / 2), ty - 20, bw, 40,
+      'rgba(111,247,216,.16)');
+    ART.px(c, tx - 22 + Math.round(44 * centre), ty - 20, 1, 40, 'rgba(111,247,216,.4)');
+    /* AND THE SIGHT, swinging across it */
+    const sx = Math.round(tx - 22 + 44 * t);
+    ART.px(c, sx, ty - 24, 1, 48, live ? '#ffd75e' : '#6a6252');
+    ART.px(c, sx - 4, ty, 9, 1, live ? '#ffd75e' : '#6a6252');
+    ART.px(c, sx - 1, ty - 1, 3, 3, live ? '#ff6a5e' : '#6a6252');
+  }
+
   return {
     meter,
+
+    /* SIX SHOTS ON THE BRIGADE RANGE. Nobody pays you; it is a test. */
+    async range() {
+      const r = await meter({
+        head: 'THE RANGE', sub: 'SIX SHOTS. FOUR OF THEM HAVE TO LAND.',
+        key: 'TAP TO FIRE',
+        rounds: 6, band: 0.15, speed: 1.35,
+        draw: drawTarget,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, pass: r.hits >= 4 };
+    },
 
     /* three pints. Money, and a barman who will answer one more thing. */
     async pour() {

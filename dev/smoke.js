@@ -245,6 +245,42 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await shot('02-lore');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(1200);
+
+    /* ---------- the opening, which a first run now plays ----------
+       Two beats of it for real — the house, and the room with its three
+       hot spots — so the harness proves the cards paint and the spots
+       answer. Then Escape, which skips the whole rest of it including
+       the exam, because thirteen beats and a minigame is not a smoke
+       test. */
+    if (await page.locator('#cine-stage.intro-on').count() > 0) {
+      await shot('02b-intro');
+      /* the house is two beats before the room, so tap until the spots
+         show up rather than guessing how many taps that is */
+      let spots = 0;
+      for (let i = 0; i < 5 && !spots; i++) {
+        await page.mouse.click(720, 780);
+        await page.waitForTimeout(800);
+        spots = await page.locator('.intro-spot').count();
+      }
+      if (!spots) errors.push('[intro] the room beat has no hot spots on it');
+      else {
+        await shot('02c-intro-room');
+        await page.locator('.intro-spot').last().click({ timeout: 6000 });
+        await page.waitForTimeout(900);
+        await clearPlates();
+      }
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(900);
+      await page.evaluate(() => { if (typeof INTRO !== 'undefined') INTRO.skip(); });
+      /* and the exam folds up with it, so the badge is still signed */
+      await page.waitForFunction(() => !document.querySelector('#cine-stage.intro-on'),
+        null, { timeout: 25000 })
+        .catch(() => errors.push('[intro] the opening would not skip'));
+      await clearPlates();
+      const badge = await page.evaluate(() => ({ b: !!G2().badge, a: !!G2().applied }));
+      if (!badge.b || !badge.a) errors.push('[intro] skipped the opening without a badge');
+      await page.waitForTimeout(700);
+    }
     if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('04-drive');
 
     /* ================= 2. the bullpen ================= */

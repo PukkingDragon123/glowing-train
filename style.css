@@ -3191,3 +3191,98 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .map-pin.shut { opacity: .5; }
 .map-pin.shut::before { background: rgba(200,192,172,.5); box-shadow: 0 0 0 2px rgba(74,61,40,.4); }
 .map-pin.closing::before { box-shadow: 0 0 0 2px #b8564a; }
+
+/* ============================================================
+   THE OPENING.
+
+   Full-bleed painted cards with a caption under them and, where
+   the beat is something you DO rather than something you watch,
+   invisible hot spots laid over the art at card scale. A hot spot
+   is not drawn — the card already shows what is there — but it
+   lights up under a pointer and carries the name of the thing so
+   you know what you are about to look at.
+   ============================================================ */
+/* CINE.stage() IS #cine-stage, NOT #cine-root. The first pass styled the
+   wrong element, so the opening painted its cards over a live murder board
+   with the title buttons showing round the edges. */
+#cine-stage.intro-on {
+  position: fixed; inset: 0; z-index: 160;
+  display: flex; align-items: center; justify-content: center;
+  background: #06070a;
+  pointer-events: auto;
+}
+.intro-card {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  opacity: 0; transform: translateY(10px) scale(.985);
+  transition: opacity .26s ease, transform .26s cubic-bezier(.2,1.5,.4,1);
+}
+.intro-card.in { opacity: 1; transform: none; }
+/* A HELD CARD SITS UP TOP AND TAKES NO CLICKS. The stage is above the
+   dialogue plate in the stack, so a held card that ate pointer events
+   meant the reply buttons under it could never be pressed. */
+#cine-stage.intro-on.held {
+  align-items: flex-start; padding-top: 2vh; pointer-events: none;
+}
+.intro-card.held { gap: 6px; }
+.intro-card.out { opacity: 0; transform: translateY(-6px) scale(.99); }
+.intro-frame {
+  image-rendering: pixelated; display: block;
+  box-shadow: 0 0 0 3px #12101d, 0 10px 0 rgba(0,0,0,.55);
+}
+.intro-head, .intro-line, .intro-foot {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  text-align: center;
+}
+.intro-head { letter-spacing: 1px; }
+.intro-line { max-width: min(92vw, 760px); }
+
+/* the touchable places on a card */
+.intro-hot { position: absolute; left: 0; top: 0; pointer-events: none; }
+/* A HOT SPOT HAS TO BE VISIBLE WITHOUT A MOUSE. The first pass only
+   drew the ring on :hover, which on a touch screen means the beat asks
+   you to look at three places and shows you none of them. */
+.intro-hot .intro-spot {
+  position: absolute; pointer-events: auto; cursor: pointer;
+  background: rgba(255,215,126,.05); border: 0; padding: 0;
+  box-shadow: inset 0 0 0 2px rgba(255,215,126,.28);
+  animation: spot-breathe 2.4s ease-in-out infinite;
+  transition: box-shadow .12s ease, background .12s ease;
+}
+/* the corner brackets, so it reads as a viewfinder and not a box */
+.intro-spot::before, .intro-spot::after {
+  content: ''; position: absolute; width: 9px; height: 9px; pointer-events: none;
+  border: 2px solid rgba(255,215,126,.85);
+}
+.intro-spot::before { left: -2px; top: -2px; border-right: 0; border-bottom: 0; }
+.intro-spot::after { right: -2px; bottom: -2px; border-left: 0; border-top: 0; }
+@keyframes spot-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 2px rgba(255,215,126,.22); }
+  50% { box-shadow: inset 0 0 0 2px rgba(255,215,126,.52); }
+}
+.intro-spot:hover, .intro-spot:focus-visible {
+  background: rgba(255,215,126,.14);
+  box-shadow: inset 0 0 0 2px rgba(255,215,126,.85);
+  animation: none;
+}
+.intro-spot.done { opacity: .34; animation: none; }
+.intro-spot .intro-tag {
+  position: absolute; left: 50%; bottom: -3px; transform: translate(-50%, 100%);
+  background: rgba(20,14,8,.86); padding: 2px 5px; white-space: nowrap;
+  opacity: .72; transition: opacity .12s ease;
+}
+.intro-spot:hover .intro-tag, .intro-spot:focus-visible .intro-tag { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .intro-spot { animation: none; } }
+/* the way out of a thirteen-beat opening */
+.intro-skip {
+  position: absolute; right: 0; bottom: -26px;
+  pointer-events: auto; cursor: pointer; border: 0;
+  background: rgba(20,14,8,.72); padding: 3px 8px;
+  box-shadow: inset 0 0 0 1px rgba(201,192,168,.30);
+  opacity: .55; transition: opacity .12s ease, background .12s ease;
+}
+.intro-skip:hover, .intro-skip:focus-visible {
+  opacity: 1; background: rgba(40,28,16,.9);
+  box-shadow: inset 0 0 0 1px rgba(255,215,126,.7);
+}
+.intro-card.held .intro-skip { bottom: -24px; }

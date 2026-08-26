@@ -564,12 +564,24 @@ const UI = {
     deal.appendChild(UI.txt('OPEN THE CASE', { scale: 4, shadow: null, color: PIX.PAL.K }));
     deal.onclick = () => {
       SFX.chak();
-      /* the whole story the first time; after that just the last panel.
-         Then the load-up, the drive, and the precinct. */
+      /* ============================================================
+         HOW A RUN STARTS.
+
+         First time through, you play how you got here: the house,
+         the room, the thing in the ashtray, the security line, the
+         flight, the descent — and then the application, because the
+         Brigade does not hand a case to a foreign cop with a
+         cigarette end. After that it is the last panel of the reel
+         and straight to work, because nobody wants to sit through
+         an airport twice.
+         ============================================================ */
       const seen = META.stats().loreSeen > 0;
       UI.goto(() => E.newRun(inp.value)).then(() => {
         META.bump('loreSeen'); META.save();
-        return CINE.lore(seen);
+        if (seen) return CINE.lore(true);
+        return CINE.lore(false)
+          .then(() => INTRO.play())
+          .then(() => INTRO.application());
       }).then(() => CINE.driveTo())
         .then(() => {
           UI.render();
