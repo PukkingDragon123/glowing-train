@@ -2725,9 +2725,9 @@ body.in-scene #app { overflow: hidden; }
 /* the pin sits on a pale disc so a dark glyph reads on dark paper */
 .map-pin::before {
   content: ''; position: absolute; left: 50%; top: 1px;
-  width: 22px; height: 22px; margin-left: -11px;
-  background: rgba(244,236,214,.86);
-  box-shadow: 0 0 0 2px rgba(74,61,40,.55);
+  width: 15px; height: 15px; margin-left: -7px;
+  background: rgba(246,238,216,.90);
+  box-shadow: 0 0 0 2px rgba(66,54,31,.65);
   z-index: -1;
 }
 .map-pin.hot::before { background: #ffe9a8; box-shadow: 0 0 0 2px #8a5a10; }
@@ -2858,6 +2858,8 @@ body.in-scene #app { overflow: hidden; }
   pointer-events: none;
   padding: calc(10px + var(--sa-t)) calc(10px + var(--sa-r)) calc(10px + var(--sa-b)) calc(10px + var(--sa-l));
   display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+  /* the frame is letterboxed now, so the furniture rides the safe area
+     rather than the very edge of the glass */
 }
 /* pixel art at its own size: a stretched canvas is a blurred canvas */
 .corner-ui canvas {
@@ -2873,8 +2875,8 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .obj-plate {
   pointer-events: auto; cursor: pointer;
   display: flex; align-items: center; gap: 10px;
-  max-width: min(56vw, 520px);
-  padding: 7px 14px 8px 10px;
+  max-width: min(46vw, 460px);
+  padding: 5px 11px 6px 8px;
   background: linear-gradient(180deg, var(--hide-hi), var(--hide) 45%, var(--hide-lo));
   border: var(--bd-thick) solid var(--hide-ink);
   /* a brass rule down the left edge, which is what says "this is the job" */
@@ -2912,7 +2914,7 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   box-shadow: inset 0 0 0 2px rgba(255,236,196,.07),
               inset 0 2px 0 rgba(255,236,196,.10),
               0 5px 0 rgba(14,9,5,.55);
-  padding: 6px 10px; cursor: pointer; min-height: 44px;
+  padding: 4px 8px; cursor: pointer; min-height: 38px;
 }
 /* WHAT IS IN YOUR HAND IS BRASS. The old on-state was a slab of mint
    green, which was the single loudest thing on a screen full of Paris. */
@@ -2948,15 +2950,15 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   box-shadow: inset 0 0 0 2px rgba(255,236,196,.07),
               inset 0 2px 0 rgba(255,236,196,.10),
               0 5px 0 rgba(14,9,5,.55);
-  padding: 8px 12px; cursor: pointer;
-  min-height: 48px;
+  padding: 6px 10px; cursor: pointer;
+  min-height: 40px;
 }
 .big-btn:active {
   transform: translateY(2px);
   box-shadow: inset 0 0 0 2px rgba(255,236,196,.07), 0 3px 0 rgba(14,9,5,.55);
 }
-.big-btn.sq { min-width: 48px; justify-content: center; padding: 8px; }
-.phone-btn { padding: 8px 14px 8px 10px; }
+.big-btn.sq { min-width: 40px; justify-content: center; padding: 6px; }
+.phone-btn { padding: 6px 12px 6px 8px; }
 .phone-btn canvas:first-child { filter: drop-shadow(0 2px 0 rgba(0,0,0,.5)); }
 
 .corner-chip {
@@ -3180,7 +3182,7 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .pin-story { position: absolute; top: -7px; left: -6px; z-index: 2; }
 .map-pin.story::before { background: #ffd0c8; box-shadow: 0 0 0 2px #8a2434; }
 .pin-shut {
-  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
   background: rgba(28,22,12,.88); padding: 0 2px; white-space: nowrap;
 }
 .map-pin.shut { opacity: .5; }

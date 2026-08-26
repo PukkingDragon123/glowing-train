@@ -111,7 +111,16 @@ const UI = {
      big enough to hit with a thumb.
      ============================================================ */
   buildCorner(app, kind) {
-    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;         // icon scale
+    /* THE HUD IS DRAWN AT THE SAME RESOLUTION AS THE GAME.
+
+       It was scale three, which was right when a room pixel was six
+       screen pixels: chunky furniture in front of a chunky world. The
+       world renders at half that now, and scale three furniture in front
+       of it reads as a mobile game's buttons pasted over a painting. Two
+       everywhere, and three only on a screen big enough that two would be
+       hard to read across the room. */
+    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2
+      : (window.innerWidth > 1700 ? 3 : 2);
     const wrap = U.el('div', 'corner-ui corner-' + kind);
 
     if (kind === 'scene') {
@@ -122,7 +131,7 @@ const UI = {
       plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
       const col = U.el('div', 'obj-col');
       col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
-      col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+      col.appendChild(UI.wrap(ob.line, 34, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
       plate.appendChild(col);
       plate.onclick = () => PHONE.open('job');
 

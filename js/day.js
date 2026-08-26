@@ -53,8 +53,10 @@ const DAY = (() => {
       hi: '#2c3a63', mid: '#6a6a92', lo: '#c99a86',
       sun: '#ffd9a8', sunY: 0.86, sunA: 0.16,
       shaftA: 0.05,
-      lift: 'rgba(96,104,140,.30)',
-      warm: 'rgba(255,190,150,.06)', cool: 'rgba(40,50,90,.20)',
+      lift: 'rgba(70,78,110,.22)',
+      warm: 'rgba(255,190,150,.05)', cool: 'rgba(40,50,90,.14)',
+      rake: 0,
+      castWarm: 'rgba(255,190,150,.03)', castCool: 'rgba(40,50,90,.07)',
       lit: '#b9b0a0', shade: '#8a8478', trim: '#6d6860',
       leaf: '#3c5a44', cloud: '#8e8ca8', keel: '#5a5878',
       lamps: true, birds: 1,
@@ -64,8 +66,10 @@ const DAY = (() => {
       hi: '#5b8fd0', mid: '#93bde4', lo: '#d6e6f2',
       sun: '#fff6dc', sunY: 0.60, sunA: 0.13,
       shaftA: 0.30,
-      lift: 'rgba(168,158,128,.54)',
-      warm: 'rgba(255,244,214,.05)', cool: 'rgba(70,100,150,.13)',
+      lift: 'rgba(150,146,124,.30)',
+      warm: 'rgba(255,246,220,.05)', cool: 'rgba(70,100,150,.05)',
+      rake: 0,
+      castWarm: 'rgba(255,246,220,.03)', castCool: 'rgba(70,100,150,.03)',
       lit: '#e6ddc8', shade: '#b3ab99', trim: '#8d8676',
       leaf: '#4e7c4a', cloud: '#f4f6f8', keel: '#b9c6d4',
       lamps: false, birds: 3,
@@ -75,8 +79,10 @@ const DAY = (() => {
       hi: '#4f8ada', mid: '#8dc0ec', lo: '#e4eef6',
       sun: '#ffffff', sunY: 0.16, sunA: 0.10,
       shaftA: 0.26,
-      lift: 'rgba(176,170,146,.58)',
-      warm: 'rgba(255,252,236,.04)', cool: 'rgba(60,90,140,.10)',
+      lift: 'rgba(160,158,140,.32)',
+      warm: 'rgba(255,253,240,.05)', cool: 'rgba(60,90,140,.03)',
+      rake: 0,
+      castWarm: 'rgba(255,253,240,.03)', castCool: 'rgba(60,90,140,.02)',
       lit: '#f2ead4', shade: '#bdb5a2', trim: '#96907f',
       leaf: '#5a8c4e', cloud: '#ffffff', keel: '#c8d4de',
       lamps: false, birds: 2,
@@ -86,8 +92,10 @@ const DAY = (() => {
       hi: '#4d84c8', mid: '#9dc0dd', lo: '#f0e8d6',
       sun: '#fff2c8', sunY: 0.42, sunA: 0.13,
       shaftA: 0.34,
-      lift: 'rgba(184,162,126,.56)',
-      warm: 'rgba(255,236,196,.07)', cool: 'rgba(74,96,138,.12)',
+      lift: 'rgba(172,154,122,.30)',
+      warm: 'rgba(255,238,200,.06)', cool: 'rgba(74,96,138,.04)',
+      rake: 0.012,
+      castWarm: 'rgba(255,238,200,.04)', castCool: 'rgba(74,96,138,.02)',
       lit: '#f0e2c2', shade: '#b8ac95', trim: '#948b78',
       leaf: '#5d8848', cloud: '#fdf6ea', keel: '#c4c8ca',
       lamps: false, birds: 2,
@@ -97,8 +105,10 @@ const DAY = (() => {
       hi: '#3f6fae', mid: '#c99a72', lo: '#ffd08a',
       sun: '#ffcf72', sunY: 0.78, sunA: 0.22,
       shaftA: 0.40,
-      lift: 'rgba(176,124,80,.48)',
-      warm: 'rgba(255,186,110,.13)', cool: 'rgba(90,70,120,.16)',
+      lift: 'rgba(170,120,78,.26)',
+      warm: 'rgba(255,190,116,.09)', cool: 'rgba(90,70,120,.05)',
+      rake: 0.026,
+      castWarm: 'rgba(255,190,116,.07)', castCool: 'rgba(90,70,120,.04)',
       lit: '#ffd9a2', shade: '#a98a78', trim: '#8a6d5e',
       leaf: '#6b8a3f', cloud: '#ffcfa0', keel: '#b07c72',
       lamps: false, birds: 4,
@@ -108,8 +118,10 @@ const DAY = (() => {
       hi: '#1e2a52', mid: '#4c4a78', lo: '#b4708a',
       sun: '#ff9a68', sunY: 0.93, sunA: 0.18,
       shaftA: 0.13,
-      lift: 'rgba(74,72,104,.26)',
-      warm: 'rgba(255,150,110,.09)', cool: 'rgba(38,44,84,.24)',
+      lift: 'rgba(70,68,98,.20)',
+      warm: 'rgba(255,155,115,.07)', cool: 'rgba(38,44,84,.16)',
+      rake: 0.018,
+      castWarm: 'rgba(255,155,115,.05)', castCool: 'rgba(38,44,84,.09)',
       lit: '#b49a94', shade: '#7a6c76', trim: '#5f5566',
       leaf: '#3f5a42', cloud: '#a08098', keel: '#5c4a68',
       lamps: true, birds: 2,
@@ -119,8 +131,10 @@ const DAY = (() => {
       hi: '#0b1024', mid: '#151c3a', lo: '#2b2f52',
       sun: '#dbe4ff', sunY: 0.22, sunA: 0.07,
       shaftA: 0,
-      lift: 'rgba(30,36,64,.10)',
-      warm: 'rgba(120,150,220,.04)', cool: 'rgba(14,18,44,.30)',
+      lift: 'rgba(28,34,60,.10)',
+      warm: 'rgba(120,150,220,.03)', cool: 'rgba(14,18,44,.22)',
+      rake: 0,
+      castWarm: 'rgba(120,150,220,.02)', castCool: 'rgba(14,18,44,.14)',
       lit: '#6f6f7e', shade: '#4a4a58', trim: '#3a3a46',
       leaf: '#26382c', cloud: '#2a3050', keel: '#181d34',
       lamps: true, birds: 0,
@@ -198,21 +212,22 @@ const DAY = (() => {
   }
   function rgb(a) { const c = hex(a); return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
 
-  /* a stepped ramp between two colours, with a dither row on each seam */
-  function ramp(c, x, y, w, h, top, bot, steps) {
-    const n = Math.max(2, steps || 7);
+  /* ============================================================
+     A RAMP.
+
+     ONE STEP PER ROW, no dither. The first version drew half a
+     dozen fat bands and then ran a checker along each seam, which
+     at two hundred rows tall and four hundred wide came out as a
+     stack of stripes with a dotted line under each one — banding
+     with extra steps. A row at a time is both simpler and smooth:
+     two hundred rows is two hundred shades, which is more than
+     the eye can pick apart, and there is no seam to hide.
+     ============================================================ */
+  function ramp(c, x, y, w, h, top, bot) {
     const a = hex(top), b = hex(bot);
+    const n = Math.max(1, Math.round(h));
     for (let i = 0; i < n; i++) {
-      const t = i / (n - 1);
-      const y0 = y + Math.round((i / n) * h);
-      const y1 = y + Math.round(((i + 1) / n) * h);
-      px(c, x, y0, w, Math.max(1, y1 - y0), rgb(mix(a, b, t)));
-      /* the dither: every other pixel of the seam takes the step below,
-         so the joins read as texture instead of as banding */
-      if (i && y1 - y0 > 1) {
-        const d = rgb(mix(a, b, (i - 0.5) / (n - 1)));
-        for (let k = (i % 2); k < w; k += 2) px(c, x + k, y0, 1, 1, d);
-      }
+      px(c, x, y + i, w, 1, rgb(mix(a, b, i / Math.max(1, n - 1))));
     }
   }
 
@@ -264,52 +279,65 @@ const DAY = (() => {
     const hi = mix(hex(b.hi), hex(nb.hi), t * 0.45);
     const mi = mix(hex(b.mid), hex(nb.mid), t * 0.45);
     const lo = mix(hex(b.lo), hex(nb.lo), t * 0.45);
-    ramp(c, x, y, w, Math.round(h * 0.55), hi, mi, 6);
-    ramp(c, x, y + Math.round(h * 0.55), w, h - Math.round(h * 0.55), mi, lo, 7);
+    const split = Math.round(h * 0.58);
+    ramp(c, x, y, w, split, hi, mi);
+    ramp(c, x, y + split, w, h - split, mi, lo);
 
     /* THE SUN. Its height is the band's, walked across the band, and it
        blooms in stepped rings rather than a radial gradient. */
     const sy = y + Math.round(h * U.clamp(b.sunY + (nb.sunY - b.sunY) * t * 0.5, 0.04, 0.97));
     const sx = x + Math.round(w * (0.18 + 0.62 * ((b.from / 60 + t * 2) % 12) / 12));
     if (b.sunA > 0.02) {
-      /* THE BLOOM IS RINGS, NOT RECTS. Stacked rectangles round a sun
-         read as a white bar with a lump in it — the first pass at this
-         looked like a logo somebody had pasted on the sky. Discs. */
-      for (let r = 30; r > 7; r -= 3) {
+      /* THE SUN SCALES WITH THE SKY IT IS IN. At a fixed four-pixel radius
+         it was a pinhead in a two-hundred-row sky. And the bloom is RINGS,
+         not stacked rectangles — the first pass at that read as a logo
+         somebody had pasted on. */
+      const R = Math.max(4, Math.round(h * 0.032));
+      for (let r = R * 6; r > R; r -= Math.max(1, Math.round(R * 0.4))) {
         PIX.disc(c, sx, sy, r,
-          'rgba(255,242,206,' + (b.sunA * (1 - r / 34) * 0.32).toFixed(3) + ')');
+          'rgba(255,242,206,' + (b.sunA * (1 - r / (R * 7)) * 0.26).toFixed(3) + ')');
       }
-      PIX.disc(c, sx, sy, 6, 'rgba(255,248,222,' + Math.min(0.85, b.sunA * 2.6).toFixed(3) + ')');
-      PIX.disc(c, sx, sy, 4, b.sun);
+      PIX.disc(c, sx, sy, Math.round(R * 1.5),
+        'rgba(255,248,222,' + Math.min(0.8, b.sunA * 2.2).toFixed(3) + ')');
+      PIX.disc(c, sx, sy, R, b.sun);
+      /* and the little bright core, so it is not a flat disc */
+      PIX.disc(c, sx, sy, Math.max(1, Math.round(R * 0.45)), '#ffffff');
     }
 
     /* TWO BANKS OF CLOUD, the far one slower, both wrapped so a wide
        view never runs out of sky. Weather thickens them. */
     const wx = (typeof CITY !== 'undefined' && CITY.sky) ? CITY.sky() : { drops: 0 };
     const thick = 1 + Math.min(1.4, (wx.drops || 0) * 0.55);
-    for (let lane = 0; lane < 2; lane++) {
-      const span = 150 + lane * 90;
-      const drift = (tt * (2.4 + lane * 3.1)) % span;
-      const cy = y + Math.round(h * (lane ? 0.30 : 0.14));
-      const cw = Math.round((lane ? 40 : 58) * thick);
-      const ch = Math.round((lane ? 8 : 12) * thick);
-      const body = lane ? b.keel : b.cloud;
-      const crown = lane ? b.cloud : '#ffffff';
+    /* THREE BANKS, and every measurement in them comes off the height of
+       the sky rather than a constant: at two hundred rows the old
+       fixed-size clouds were a row of dumplings along the top. */
+    const U0 = Math.max(6, h * 0.075);            // the unit a cloud is built from
+    for (let lane = 0; lane < 3; lane++) {
+      const span = Math.round(U0 * (10 + lane * 5));
+      const drift = (tt * (1.6 + lane * 2.4)) % span;
+      const cy = y + Math.round(h * (0.10 + lane * 0.17));
+      const cw = Math.round(U0 * (5.6 - lane * 1.2) * thick);
+      const ch = Math.round(U0 * (1.5 - lane * 0.28) * thick);
+      /* the far bank is hazier: it takes the keel colour as its body */
+      const body = lane === 2 ? b.keel : b.cloud;
+      const crown = lane === 0 ? '#ffffff' : b.cloud;
       for (let k = -1; k * span < w + span; k++) {
         const jig = ((s + k * 37 + lane * 11) % 23) - 11;
-        cloud(c, x + Math.round(k * span - drift + span * 0.4), cy + jig,
-          cw + (jig % 7) * 2, ch, body, crown, b.keel);
+        cloud(c, x + Math.round(k * span - drift + span * 0.4),
+          cy + Math.round(jig * U0 * 0.14),
+          cw + (jig % 7) * Math.round(U0 * 0.2), ch, body, crown, b.keel);
       }
     }
 
     /* BIRDS. Three pixels each, which is all a bird is at this distance. */
-    for (let i = 0; i < b.birds; i++) {
+    for (let i = 0; i < b.birds * 2; i++) {
       const bx = x + Math.round(((i * 137 + s * 13) % 100) / 100 * w + tt * (9 + i * 3)) % (w + 40) - 20;
-      const by = y + Math.round(h * (0.10 + ((i * 29 + s) % 40) / 100));
+      const by = y + Math.round(h * (0.08 + ((i * 29 + s) % 46) / 100));
       const flap = Math.sin(tt * 6 + i) > 0 ? 1 : 0;
-      px(c, bx, by, 1, 1, 'rgba(30,34,50,.55)');
-      px(c, bx - 2, by - flap, 2, 1, 'rgba(30,34,50,.45)');
-      px(c, bx + 1, by - flap, 2, 1, 'rgba(30,34,50,.45)');
+      const bw2 = 1 + (i % 2);
+      px(c, bx, by, bw2, 1, 'rgba(30,34,50,.60)');
+      px(c, bx - bw2 * 2, by - flap, bw2 * 2, 1, 'rgba(30,34,50,.50)');
+      px(c, bx + bw2, by - flap, bw2 * 2, 1, 'rgba(30,34,50,.50)');
     }
   }
 
@@ -321,38 +349,79 @@ const DAY = (() => {
      golden hour, which is the point of the whole thing — a band
      of low sun raking across the bottom of the frame.
      --------------------------------------------------------- */
-  function wash(c, x, y, w, h, indoor) {
+  /* ============================================================
+     BAKE — the hour, painted INTO a room, once.
+
+     This used to be a per-frame wash over the whole frame: a screen
+     pass at fifty-five percent to lift the night-painted interiors,
+     then a cool and a warm on top. Three translucent sheets over
+     everything, every frame, and the result was exactly what it
+     sounds like — a light filter laid over the game, flattening
+     every contrast in it.
+
+     A room is repainted whenever you walk into it and whenever the
+     hour turns over, so the honest place for all of that is the
+     paint itself. Baked in, the pixels ARE the hour: full contrast,
+     no sheet, nothing between the art and the screen.
+
+     The one hard part is that a room canvas is TRANSPARENT where
+     the sky shows through, and a blend mode against nothing paints
+     the sky. So the original is kept as a mask and stamped back
+     over the result with destination-in at the end, which restores
+     every transparent pixel exactly.
+     ============================================================ */
+  function bake(cv, indoor) {
     const b = band();
-    /* ============================================================
-       THE LIFT, and only indoors.
+    const c = cv.getContext('2d');
+    if (!c) return;
+    /* the mask: what was actually painted */
+    const mask = document.createElement('canvas');
+    mask.width = cv.width; mask.height = cv.height;
+    const mc = mask.getContext('2d');
+    mc.imageSmoothingEnabled = false;
+    mc.drawImage(cv, 0, 0);
 
-       The five working stops were painted for a night shift: a laundry
-       at eleven at night is nearly black, and no amount of warm tint
-       laid ON TOP of black makes it daylight — additive tinting a dark
-       room just makes a dark room with a colour cast.
-
-       So indoors gets one SCREEN pass first, which is the one blend a
-       2d context will do for us that actually raises a black. That
-       turns the cellar into a room with the shutters open, and then the
-       normal grade puts the hour back on top of it.
-       ============================================================ */
+    c.save();
+    c.imageSmoothingEnabled = false;
+    /* INDOORS, LIFT THE BLACKS. The five working stops were painted for a
+       night shift and no amount of warm tint laid on top of black makes it
+       daylight; screen is the one blend that actually raises a black. */
     if (indoor && b.lift) {
-      const prev = c.globalCompositeOperation;
       c.globalCompositeOperation = 'screen';
-      px(c, x, y, w, h, b.lift);
-      c.globalCompositeOperation = prev;
+      px(c, 0, 0, cv.width, cv.height, b.lift);
     }
-    if (b.cool) px(c, x, y, w, h, b.cool);
-    if (b.warm) px(c, x, y, w, h, b.warm);
-    if (b.id === 'gold' || b.id === 'dusk') {
-      /* the rake: brighter at the bottom, in steps */
-      for (let i = 0; i < 10; i++) {
-        const a = (b.id === 'gold' ? 0.030 : 0.020) * (i / 9);
-        px(c, x, y + h - Math.round(h * 0.42) + Math.round(i * h * 0.042), w,
-          Math.max(1, Math.round(h * 0.042)),
-          'rgba(255,' + (b.id === 'gold' ? 186 : 140) + ',110,' + a.toFixed(3) + ')');
+    c.globalCompositeOperation = 'source-over';
+    if (b.cool) px(c, 0, 0, cv.width, cv.height, b.cool);
+    if (b.warm) px(c, 0, 0, cv.width, cv.height, b.warm);
+    /* and the low sun raking the bottom of the room */
+    if (b.rake) {
+      const h = cv.height;
+      for (let i = 0; i < 12; i++) {
+        const a = b.rake * (i / 11);
+        px(c, 0, h - Math.round(h * 0.34) + Math.round(i * h * 0.028),
+          cv.width, Math.max(1, Math.round(h * 0.028)),
+          'rgba(255,' + (b.id === 'gold' ? 186 : 150) + ',110,' + a.toFixed(3) + ')');
       }
     }
+    /* put the transparency back */
+    c.globalCompositeOperation = 'destination-in';
+    c.drawImage(mask, 0, 0);
+    c.restore();
+  }
+
+  /* ============================================================
+     WASH — what is left of it.
+
+     The room carries the hour in its own pixels now. What still
+     needs telling is the CAST: sprites are cached band-agnostic,
+     so without a whisper of the hour over them a frog at six in
+     the evening is lit like a frog at noon. A whisper is all it
+     is — a fifth of what this used to be.
+     ============================================================ */
+  function wash(c, x, y, w, h) {
+    const b = band();
+    if (b.castCool) px(c, x, y, w, h, b.castCool);
+    if (b.castWarm) px(c, x, y, w, h, b.castWarm);
   }
 
   /* ---------------------------------------------------------
@@ -430,7 +499,7 @@ const DAY = (() => {
   return {
     BANDS, byId,
     bandAt, band, nextBand, through, pal, lamps, side, stone,
-    sky, wash, shaft, ramp, cloud, mix, hex, rgb,
+    sky, wash, bake, shaft, ramp, cloud, mix, hex, rgb,
     /* the word for the corner of the screen */
     word() { return band().word; },
     is(id) { return band().id === id; },

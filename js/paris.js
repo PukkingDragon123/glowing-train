@@ -78,11 +78,31 @@ const PARIS = (() => {
     px(c, x, y, w, 2, stoneLit);
     px(c, x, y, 2, h, stoneLit);            // the sunny return, on the left
     px(c, x + w - 3, y, 3, h, stoneDk);
-    /* the mansard, on top */
+    /* THE MANSARD, ON TOP — and the right way up.
+
+       This was drawn widest at the ridge and narrowest where it meets the
+       wall, which is a funnel, not a roof. At the old building height it
+       was six rows and nobody noticed; at sixty it made a street of
+       inverted grey hoppers. A roof narrows as it goes UP. */
     const rh = Math.max(6, Math.round(h * 0.2));
     for (let i = 0; i < rh; i++) {
-      px(c, x + Math.round(i * 0.55), y - rh + i, w - Math.round(i * 1.1), 1,
-        i < 2 ? roofLit : roof);
+      const back = rh - 1 - i;                   // 0 at the eaves, rh-1 at the ridge
+      px(c, x + Math.round(back * 0.55), y - rh + i, w - Math.round(back * 1.1), 1,
+        back > rh - 3 ? roofLit : roof);
+    }
+    /* the ridge, and the zinc seams down the slope */
+    px(c, x + Math.round((rh - 1) * 0.55), y - rh, w - Math.round((rh - 1) * 1.1), 1, '#cfd6de');
+    for (let sx = x + 5; sx < x + w - 4; sx += 9) {
+      px(c, sx, y - rh + 2, 1, rh - 2, 'rgba(80,90,102,.45)');
+    }
+    /* CHIMNEY POTS. A Paris roofline is more pot than roof. */
+    for (let k = 0; k < 2 + (seed % 3); k++) {
+      const cx2 = x + 5 + Math.floor(rng() * Math.max(1, w - 12));
+      const chh = 5 + Math.floor(rng() * 5);
+      px(c, cx2, y - rh - chh, 4, chh, '#b08a72');
+      px(c, cx2, y - rh - chh, 4, 1, '#d2ac90');
+      px(c, cx2 + 3, y - rh - chh, 1, chh, '#8a6a56');
+      px(c, cx2, y - rh - chh - 2, 4, 2, '#6f5a4a');
     }
     /* string courses: this city is made of horizontal lines */
     for (let ly = y + 12; ly < y + h - 6; ly += 16) {
@@ -119,19 +139,31 @@ const PARIS = (() => {
         }
       }
     }
-    /* THE SHOPFRONT at the bottom: an awning, a fascia and a window with
-       something in it, because a shuttered black slot is a night street */
+    /* THE SHOPFRONT at the bottom: a fascia, a window with something in
+       it, and — on about half of them — an awning.
+
+       NOT ON EVERY BUILDING. Every block used to get an awning two pixels
+       wider than itself, so a terrace of them merged into one continuous
+       red ribbon running the whole length of the street. Half of them, and
+       inset, so the ribbon breaks. */
     const aw = ['#b8384a', '#3f6b45', '#2f4a70', '#8a6a44'][seed % 4];
-    px(c, x, y + h - 13, w, 13, L.woodDk);
-    px(c, x + 1, y + h - 12, w - 2, 5, L.cream);       // the fascia
-    px(c, x + 1, y + h - 12, w - 2, 1, '#ffffff');
-    px(c, x + 2, y + h - 10, w - 6, 2, L.woodDk);      // the lettering, unreadable
-    /* the awning, scalloped along the bottom edge */
-    px(c, x - 2, y + h - 7, w + 4, 4, aw);
-    px(c, x - 2, y + h - 7, w + 4, 1, 'rgba(255,255,255,.35)');
-    for (let sx = x - 2; sx < x + w + 2; sx += 4) px(c, sx, y + h - 3, 2, 2, aw);
-    /* and the glass under it */
-    px(c, x + 2, y + h - 3, w - 4, 3, L.glassDk);
+    px(c, x + 2, y + h - 13, w - 4, 13, L.woodDk);
+    px(c, x + 3, y + h - 12, w - 6, 5, L.cream);       // the fascia
+    px(c, x + 3, y + h - 12, w - 6, 1, '#ffffff');
+    px(c, x + 5, y + h - 10, w - 12, 2, L.woodDk);     // the lettering, unreadable
+    /* the glass, and whatever is standing in the window */
+    px(c, x + 4, y + h - 7, w - 8, 7, L.glassDk);
+    px(c, x + 5, y + h - 6, w - 10, 5, L.glass);
+    px(c, x + 5, y + h - 6, w - 10, 2, L.glassLit);
+    for (let gx = x + 7; gx < x + w - 8; gx += 7) {
+      px(c, gx, y + h - 4, 3, 3, ['#b8384a', '#e0a63c', '#5f8f45'][(gx + seed) % 3]);
+    }
+    /* and the awning, on the ones that have one */
+    if (seed % 2) {
+      px(c, x + 1, y + h - 8, w - 2, 4, aw);
+      px(c, x + 1, y + h - 8, w - 2, 1, 'rgba(255,255,255,.35)');
+      for (let sx = x + 1; sx < x + w - 2; sx += 4) px(c, sx, y + h - 4, 2, 2, aw);
+    }
   }
 
   /* the double-globe cast iron lamp post this whole city is lit by */
@@ -306,7 +338,11 @@ const PARIS = (() => {
   /* LA TOUR EIFFEL. Four legs, two platforms, a lattice you can see the
      sky through, and the gold light they wash it with after dark. */
   function eiffel(c, cx, baseY, topY) {
-    const iron = '#7d6647', ironLit = '#a68d63', ironDk = '#513f2b';
+    /* IRON, NOT TIMBER. The real thing is painted a warm bronze-brown, but
+       at a warm enough brown with a soft lattice it came out as scaffolding
+       poles: cooler, darker in the shadow, and a lattice with real contrast
+       in it is what makes a hundred metres of wrought iron read as metal. */
+    const iron = '#6f5c46', ironLit = '#a3906c', ironDk = '#3f3324';
     const H2 = baseY - topY;
     /* THE PROFILE. The real curve: an exponential taper, which is why the
        thing does not read as a pyramid. Get this wrong and you have drawn
@@ -340,15 +376,15 @@ const PARIS = (() => {
         const xa = Math.round(h0 + (h1 - h0) * f);
         const xb = Math.round(h0 + (h1 - h0) * (1 - f));
         /* left bay */
-        px(c, cx - xa, y, 1, 1, 'rgba(166,141,99,.55)');
-        px(c, cx - Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.40)');
+        px(c, cx - xa, y, 1, 1, 'rgba(196,176,138,.62)');
+        px(c, cx - Math.round(xb * 0.42), y, 1, 1, 'rgba(90,74,52,.55)');
         /* right bay */
-        px(c, cx + xa - 1, y, 1, 1, 'rgba(166,141,99,.55)');
-        px(c, cx + Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.40)');
+        px(c, cx + xa - 1, y, 1, 1, 'rgba(196,176,138,.62)');
+        px(c, cx + Math.round(xb * 0.42), y, 1, 1, 'rgba(90,74,52,.55)');
       }
       /* the horizontal girder at each stage */
       const hh = halfAt(t0);
-      px(c, cx - hh, baseY - i, hh * 2, 1, 'rgba(166,141,99,.42)');
+      px(c, cx - hh, baseY - i, hh * 2, 1, 'rgba(196,176,138,.48)');
     }
 
     /* THE FIRST ARCH. It springs from the legs and hangs, and it is the
@@ -624,10 +660,13 @@ const PARIS = (() => {
         px(c, 0, FY - BAND - 30 + i, W, 1,
           'rgba(238,230,208,' + (0.02 + i * 0.011).toFixed(3) + ')');
       }
-      /* the far bank: rooftops, small, and the river between */
+      /* THE FAR BANK. There is vertical room in the frame now — the old
+         twenty-six-row blocks were a garden wall along the bottom of a
+         mostly-blue picture. These are buildings. */
       for (let i = 0; i < 22; i++) {
         const bx = (i * 41 + seed % 23) % (W - 40);
-        haussmann(c, bx, FY - BAND - 30 - (i % 3) * 6, 38, 26 + (i % 3) * 6, seed + i);
+        const bh = 52 + (i % 4) * 11;
+        haussmann(c, bx, FY - BAND - 4 - bh, 38, bh, seed + i);
       }
       /* THE TOWER, over everything, cut off by the top of the frame */
       eiffel(c, 372, FY - BAND + 4, -58);
@@ -743,7 +782,8 @@ const PARIS = (() => {
       for (let i = 0; i < 9; i++) {
         const bx = i * 84 + (seed % 17);
         if (i === 4) continue;                       // the arch stands in this gap
-        haussmann(c, bx, FY - BAND - 44, 74, 44, seed + i * 3);
+        const bh = 66 + (i % 3) * 9;
+        haussmann(c, bx, FY - BAND - bh, 74, bh, seed + i * 3);
       }
       /* THE ARCH, dead centre, too big for the frame */
       arc(c, 360, FY - BAND + 2, 88);

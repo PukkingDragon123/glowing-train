@@ -22,6 +22,23 @@ revolver between you.
 
 That is the whole game, and it is the two endings.
 
+### It is drawn at the size it is drawn at
+
+Every room is a canvas of world pixels blown up by a whole number, and that
+number is **three** — which sounds like a detail and is the difference
+between a game and a magnified game. It used to be six: every room pixel six
+screen pixels across, two hundred and fourteen pixels of a seven-hundred-and-
+eighty-pixel room in frame, and a camera inside somebody's coat. At three you
+see twice the city, the pixels are half the size, and the cast lands at
+**1:1** — every pixel a frog is drawn with is a pixel on your screen, with no
+resampling filter anywhere between the two.
+
+The rooms paint above their own top edge now, too, so the Eiffel Tower goes
+all the way up instead of stopping in mid-air, and an interior's wall carries
+on to a ceiling instead of meeting a black bar.
+
+![The whole tower](docs/screen-tower.png)
+
 ### The light is the clock
 
 Nothing in here tells you the time as insistently as the sky does. The shift
@@ -136,6 +153,8 @@ Paris, and they are why you took this job:
 ![The drive out](docs/screen-drive.png)
 
 ![La Butte](docs/screen-butte.png)
+
+![Le Musee](docs/screen-museum.png)
 
 ![Les Catacombes](docs/screen-catacombs.png)
 

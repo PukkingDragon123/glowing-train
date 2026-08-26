@@ -20,6 +20,7 @@ const SCENE = (() => {
   const H = 132;                 // world height, px
   let def = null;                // the room definition in play
   let back = null;               // painted backdrop canvas
+  let backBand = '';             // the hour it was painted at
   let cv, ctx, K = 4;            // display canvas + integer scale
   let raf = null, t0 = 0, last = 0;
   let cam = 0, camWant = 0, drag = null;
@@ -148,22 +149,70 @@ const SCENE = (() => {
   let mouse = { x: 0, y: 0, on: false };
   let hoverRat = null;
 
-  const CEIL_MAX = 38;           // world px of headroom, at most
+  /* PAINTABLE ROWS ABOVE ROOM ROW 0. Declared up here rather than beside
+     paintBack because the headroom cap below reads it, and a const read
+     before its own declaration throws on the way in. */
+  const PAD = 150;
+
+  /* HOW MUCH HEADROOM A ROOM GETS.
+
+     Outdoors it is sky and there is no such thing as too much of it, so
+     the frame fills — capped only by how far above row 0 the paint
+     actually goes. Indoors it is a ceiling, and a ceiling a hundred and
+     thirty rows tall is a cathedral, so interiors take a band and let the
+     surround do the rest. */
+  /* Outdoors, enough sky that the tower has air over it and no more: at
+     the full PAD there were seventy-six empty rows above the top platform
+     and the street was a strip along the bottom of a mostly blue frame.
+     Indoors, a tall ceiling rather than a cathedral. */
+  const CEIL_OUT = 62;
+  const CEIL_IN = 54;
+  function ceilMax() { return (def && def.outdoor) ? CEIL_OUT : CEIL_IN; }
 
   function scale() {
     const host = document.getElementById('scene-root');
     const w = window.innerWidth;
     const h = host ? host.clientHeight || (window.innerHeight - 66) : window.innerHeight - 66;
-    /* Fill the height first — a room with more ceiling than room in it reads
-       as a bug — but never show less than about 200 world px across, or the
-       camera is inside somebody's coat. */
-    let k = Math.max(2, Math.floor(h / H));
-    /* A FRAME SCALE THAT IS A MULTIPLE OF THREE pays for itself: it is the
-       only one where the full-detail rig blows up by a whole number, so the
-       cast gets three times the pixels. If stepping up to one only costs a
-       few rows off the foreground floor, take it. */
-    if ((k + 1) % 3 === 0 && h / (k + 1) >= H) k += 1;
-    while (k > 2 && w / k < 200) k--;
+    /* ============================================================
+       HOW BIG IS A ROOM PIXEL.
+
+       This used to fill the height and then step UP to the nearest
+       multiple of three, which on an ordinary desktop landed on
+       SIX: every room pixel six screen pixels across, and only two
+       hundred and fourteen pixels of a seven-hundred-and-eighty
+       pixel room in frame. That is what "low resolution" looks
+       like — not blur, just enormous pixels and a camera inside
+       somebody's coat.
+
+       So: take the SMALLEST multiple of FOOT that still fills the
+       frame properly. Three instead of six means
+
+         - a room pixel is three screen pixels, not six,
+         - twice as much of the room is in frame,
+         - the full-detail rig lands at 1:1, so every pixel the
+           cast is drawn with is a pixel you see, and
+         - there is room above the walls for actual sky.
+
+       It has to be a multiple of FOOT either way: any other scale
+       makes the rig downscale by three through a smoothing filter,
+       and THAT is blur.
+       ============================================================ */
+    const fits = (k) => {
+      if (k < 2) return false;
+      if (w / k < 190) return false;                 // camera inside a coat
+      /* the floor line has to be on screen or he is standing off the
+         bottom of the frame: 122 rows keeps the deepest floor (118) plus
+         a strip of foreground under it */
+      return Math.floor(h / k) >= 122;
+    };
+    let k = 0;
+    for (let m = FOOT; m <= 12; m += FOOT) if (fits(m)) { k = m; break; }
+    if (!k) {
+      /* nothing FOOT-friendly fits — a short landscape phone. Fall back to
+         filling the height and accept the softer rig. */
+      k = Math.max(2, Math.floor(h / H));
+      while (k > 2 && w / k < 190) k--;
+    }
     K = k;
     cv.width = Math.ceil(w / K) * K;
     /* How many world rows the frame can actually hold. More than the room
@@ -171,7 +220,7 @@ const SCENE = (() => {
        foreground floor goes over the edge, which nobody misses — cropping
        the TOP would take the lamps, the signs and the arches with it. */
     const rows = Math.max(60, Math.floor(h / K));
-    const worldH = Math.min(rows, H + CEIL_MAX);
+    const worldH = Math.min(rows, H + ceilMax());
     cv.height = worldH * K;
     cv.style.width = cv.width + 'px';
     cv.style.height = cv.height + 'px';
@@ -229,9 +278,35 @@ const SCENE = (() => {
     def = null; back = null;
   }
 
+  /* ============================================================
+     THE ROOM CANVAS HAS SKY ABOVE IT NOW.
+
+     Every room is authored in a coordinate space where row 0 is
+     the top of the frame and the landmarks are deliberately drawn
+     off it — the Eiffel Tower's first platform is at row minus
+     fifty-eight, because the point of the tower is that the frame
+     cannot hold it.
+
+     That was true when the frame was 132 rows. At half the pixel
+     size the frame holds two hundred and sixty, and the extra rows
+     were coming out as empty sky over a tower that stopped in
+     mid-air. So the canvas is PAD rows taller than the room and
+     the paint is translated down into it: room coordinate 0 is
+     still room coordinate 0, negative rows now land on canvas
+     instead of being clipped, and everything the builders already
+     draw up there simply appears.
+     ============================================================ */
   function paintBack(d) {
-    const o = ART.cv(d.w, H);
+    const o = ART.cv(d.w, H + PAD);
+    o.c.save();
+    o.c.translate(0, PAD);
     d.paint(o.c, d.w, H);
+    o.c.restore();
+    /* AND THE HOUR GOES IN THE PAINT. Not over the frame every frame — in
+       the pixels, once, so the room is at full contrast with nothing
+       between it and the screen. */
+    if (typeof DAY !== 'undefined' && DAY.bake) DAY.bake(o.cv, !d.outdoor);
+    backBand = (typeof DAY !== 'undefined') ? DAY.band().id : '';
     return o.cv;
   }
 
@@ -1268,6 +1343,13 @@ const SCENE = (() => {
 
   function draw(now) {
     const T = (now - t0) / 1000;
+    /* THE HOUR TURNED OVER WHILE YOU WERE IN HERE. Searching a room costs
+       eighteen minutes a prop, so an afternoon walked in can be a golden
+       hour walked out of — repaint rather than let the room lie about the
+       light coming through its own windows. */
+    if (def && typeof DAY !== 'undefined' && DAY.band().id !== backBand) {
+      back = paintBack(def);
+    }
     const c = ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.imageSmoothingEnabled = false;
@@ -1295,20 +1377,46 @@ const SCENE = (() => {
       const sh = oy + (def.skyTo === undefined ? 0 : def.skyTo);
       if (sh > 0) DAY.sky(c, 0, 0, vw2, sh, T, seedOf(def));
     } else if (oy > 0) {
-      ART.px(c, 0, 0, vw2, oy + 2, '#0b0d14');
-      ART.px(c, 0, 0, vw2, Math.max(1, Math.round(oy * 0.35)), '#080a10');
-      /* joists across, in perspective: closer together toward the top */
+      /* ============================================================
+         THE WALL GOES UP.
+
+         The headroom over an interior used to be a flat navy slab
+         with a brick vault sliding across it, and at half the pixel
+         size that came out as a black bar nailed over the top of the
+         room — the same mistake the outdoor rooms had, in a
+         different colour.
+
+         A room has a wall. So take the top ten rows of the room's
+         OWN paint and tile them upward: the brick, the tile, the
+         boarding, whatever this place is made of, carries on up to
+         the ceiling and gets darker as it goes, the way a wall
+         actually does. Then the joists and the lamp cords go over
+         the top of it.
+         ============================================================ */
       const camr = Math.round(cam);
+      const bandH = 10;
+      for (let y2 = oy - bandH; y2 > -bandH; y2 -= bandH) {
+        const hh = Math.min(bandH, oy - Math.max(0, y2));
+        if (hh <= 0) continue;
+        c.drawImage(back, 0, PAD, back.width, bandH,
+          -camr, Math.max(0, y2), back.width, bandH);
+      }
+      /* it gets darker toward the ceiling, and cooler */
+      for (let i = 0; i < oy; i++) {
+        const t = 1 - i / oy;
+        ART.px(c, 0, i, vw2, 1, 'rgba(16,14,22,' + (0.62 * t * t).toFixed(3) + ')');
+      }
+      /* joists across, in perspective: closer together toward the top */
       for (let i = 1; i * i < oy * 3; i++) {
         const y = oy - Math.round(i * i * 0.9);
         if (y < 1) break;
-        ART.px(c, 0, y, vw2, 1, 'rgba(255,255,255,.035)');
-        ART.px(c, 0, y + 1, vw2, 1, 'rgba(0,0,0,.3)');
+        ART.px(c, 0, y, vw2, 1, 'rgba(255,244,220,.06)');
+        ART.px(c, 0, y + 1, vw2, 1, 'rgba(0,0,0,.34)');
       }
       /* the beams running the other way, tied to world x so they scroll */
       for (let x = -(camr % 46); x < vw2; x += 46) {
-        ART.px(c, x, 0, 3, oy, 'rgba(0,0,0,.35)');
-        ART.px(c, x, 0, 1, oy, 'rgba(255,255,255,.03)');
+        ART.px(c, x, 0, 3, oy, 'rgba(0,0,0,.30)');
+        ART.px(c, x, 0, 1, oy, 'rgba(255,244,220,.05)');
       }
       /* the cords of whatever hangs in this room, going up into it */
       for (const L of (def.lights || [])) {
@@ -1316,18 +1424,14 @@ const SCENE = (() => {
         if (lx < -4 || lx > vw2 + 4) continue;
         ART.px(c, lx, 0, 1, oy + 2, '#2a2d38');
       }
-      ART.px(c, 0, oy, vw2, 2, '#05060a');
-    }
-    /* THE VAULT, over the room, going by at less than half the rate.
-       Indoors only: outdoors that headroom is sky. */
-    if (oy > 2 && !def.outdoor) {
-      const vau = vaultCv(def, oy, vw2);
-      c.drawImage(vau, -Math.round(cam * 0.4) % Math.max(1, vau.width - vw2), 0);
+      /* the picture rail where the wall meets the room proper */
+      ART.px(c, 0, oy - 1, vw2, 1, 'rgba(255,244,220,.10)');
+      ART.px(c, 0, oy, vw2, 2, 'rgba(0,0,0,.45)');
     }
 
     c.translate(-Math.round(cam), oy);
-    /* the painted room */
-    c.drawImage(back, 0, 0);
+    /* the painted room, pulled up so its row 0 lands on the frame's row 0 */
+    c.drawImage(back, 0, -PAD);
 
     /* ---- THE BACKGROUND, seen through the holes in the room ----
        A wall with nothing behind it is a flat. Every room declares the
@@ -1497,7 +1601,7 @@ const SCENE = (() => {
     if (typeof CITY !== 'undefined' && G.phase !== 'title') {
       const w = viewW();
       const sky = CITY.sky();
-      if (typeof DAY !== 'undefined') DAY.wash(c, cam, -oy, w, H + oy, !def.outdoor);
+      if (typeof DAY !== 'undefined') DAY.wash(c, cam, -oy, w, H + oy);
       if (def.outdoor) {
         /* RAIN. Real drops with their own x, or a linear sequence folds
            them into a handful of columns and it reads as prison bars. */
@@ -1781,6 +1885,11 @@ const SCENE = (() => {
   return {
     H, open, close, walkTo, rig, rigH, rigPic,
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
+    /* what the frame is actually rendering at, for the resolution probe */
+    debugRes() {
+      return { K, H, FOOT, down: lodFor(), oy, viewW: viewW(), viewH: viewH(),
+        floorY: def ? def.floorY : null, roomW: def ? def.w : null };
+    },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
     debugRatCount() { return rats.length; },
     debugRatsWhere() { return rats.map(r => ({ x: Math.round(r.x), d: r.dir, v: Math.round(r.v) })); },

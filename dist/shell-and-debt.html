@@ -2745,9 +2745,9 @@ body.in-scene #app { overflow: hidden; }
 /* the pin sits on a pale disc so a dark glyph reads on dark paper */
 .map-pin::before {
   content: ''; position: absolute; left: 50%; top: 1px;
-  width: 22px; height: 22px; margin-left: -11px;
-  background: rgba(244,236,214,.86);
-  box-shadow: 0 0 0 2px rgba(74,61,40,.55);
+  width: 15px; height: 15px; margin-left: -7px;
+  background: rgba(246,238,216,.90);
+  box-shadow: 0 0 0 2px rgba(66,54,31,.65);
   z-index: -1;
 }
 .map-pin.hot::before { background: #ffe9a8; box-shadow: 0 0 0 2px #8a5a10; }
@@ -2878,6 +2878,8 @@ body.in-scene #app { overflow: hidden; }
   pointer-events: none;
   padding: calc(10px + var(--sa-t)) calc(10px + var(--sa-r)) calc(10px + var(--sa-b)) calc(10px + var(--sa-l));
   display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+  /* the frame is letterboxed now, so the furniture rides the safe area
+     rather than the very edge of the glass */
 }
 /* pixel art at its own size: a stretched canvas is a blurred canvas */
 .corner-ui canvas {
@@ -2893,8 +2895,8 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .obj-plate {
   pointer-events: auto; cursor: pointer;
   display: flex; align-items: center; gap: 10px;
-  max-width: min(56vw, 520px);
-  padding: 7px 14px 8px 10px;
+  max-width: min(46vw, 460px);
+  padding: 5px 11px 6px 8px;
   background: linear-gradient(180deg, var(--hide-hi), var(--hide) 45%, var(--hide-lo));
   border: var(--bd-thick) solid var(--hide-ink);
   /* a brass rule down the left edge, which is what says "this is the job" */
@@ -2932,7 +2934,7 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   box-shadow: inset 0 0 0 2px rgba(255,236,196,.07),
               inset 0 2px 0 rgba(255,236,196,.10),
               0 5px 0 rgba(14,9,5,.55);
-  padding: 6px 10px; cursor: pointer; min-height: 44px;
+  padding: 4px 8px; cursor: pointer; min-height: 38px;
 }
 /* WHAT IS IN YOUR HAND IS BRASS. The old on-state was a slab of mint
    green, which was the single loudest thing on a screen full of Paris. */
@@ -2968,15 +2970,15 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   box-shadow: inset 0 0 0 2px rgba(255,236,196,.07),
               inset 0 2px 0 rgba(255,236,196,.10),
               0 5px 0 rgba(14,9,5,.55);
-  padding: 8px 12px; cursor: pointer;
-  min-height: 48px;
+  padding: 6px 10px; cursor: pointer;
+  min-height: 40px;
 }
 .big-btn:active {
   transform: translateY(2px);
   box-shadow: inset 0 0 0 2px rgba(255,236,196,.07), 0 3px 0 rgba(14,9,5,.55);
 }
-.big-btn.sq { min-width: 48px; justify-content: center; padding: 8px; }
-.phone-btn { padding: 8px 14px 8px 10px; }
+.big-btn.sq { min-width: 40px; justify-content: center; padding: 6px; }
+.phone-btn { padding: 6px 12px 6px 8px; }
 .phone-btn canvas:first-child { filter: drop-shadow(0 2px 0 rgba(0,0,0,.5)); }
 
 .corner-chip {
@@ -3200,7 +3202,7 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .pin-story { position: absolute; top: -7px; left: -6px; z-index: 2; }
 .map-pin.story::before { background: #ffd0c8; box-shadow: 0 0 0 2px #8a2434; }
 .pin-shut {
-  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
   background: rgba(28,22,12,.88); padding: 0 2px; white-space: nowrap;
 }
 .map-pin.shut { opacity: .5; }
@@ -10677,8 +10679,10 @@ const DAY = (() => {
       hi: '#2c3a63', mid: '#6a6a92', lo: '#c99a86',
       sun: '#ffd9a8', sunY: 0.86, sunA: 0.16,
       shaftA: 0.05,
-      lift: 'rgba(96,104,140,.30)',
-      warm: 'rgba(255,190,150,.06)', cool: 'rgba(40,50,90,.20)',
+      lift: 'rgba(70,78,110,.22)',
+      warm: 'rgba(255,190,150,.05)', cool: 'rgba(40,50,90,.14)',
+      rake: 0,
+      castWarm: 'rgba(255,190,150,.03)', castCool: 'rgba(40,50,90,.07)',
       lit: '#b9b0a0', shade: '#8a8478', trim: '#6d6860',
       leaf: '#3c5a44', cloud: '#8e8ca8', keel: '#5a5878',
       lamps: true, birds: 1,
@@ -10688,8 +10692,10 @@ const DAY = (() => {
       hi: '#5b8fd0', mid: '#93bde4', lo: '#d6e6f2',
       sun: '#fff6dc', sunY: 0.60, sunA: 0.13,
       shaftA: 0.30,
-      lift: 'rgba(168,158,128,.54)',
-      warm: 'rgba(255,244,214,.05)', cool: 'rgba(70,100,150,.13)',
+      lift: 'rgba(150,146,124,.30)',
+      warm: 'rgba(255,246,220,.05)', cool: 'rgba(70,100,150,.05)',
+      rake: 0,
+      castWarm: 'rgba(255,246,220,.03)', castCool: 'rgba(70,100,150,.03)',
       lit: '#e6ddc8', shade: '#b3ab99', trim: '#8d8676',
       leaf: '#4e7c4a', cloud: '#f4f6f8', keel: '#b9c6d4',
       lamps: false, birds: 3,
@@ -10699,8 +10705,10 @@ const DAY = (() => {
       hi: '#4f8ada', mid: '#8dc0ec', lo: '#e4eef6',
       sun: '#ffffff', sunY: 0.16, sunA: 0.10,
       shaftA: 0.26,
-      lift: 'rgba(176,170,146,.58)',
-      warm: 'rgba(255,252,236,.04)', cool: 'rgba(60,90,140,.10)',
+      lift: 'rgba(160,158,140,.32)',
+      warm: 'rgba(255,253,240,.05)', cool: 'rgba(60,90,140,.03)',
+      rake: 0,
+      castWarm: 'rgba(255,253,240,.03)', castCool: 'rgba(60,90,140,.02)',
       lit: '#f2ead4', shade: '#bdb5a2', trim: '#96907f',
       leaf: '#5a8c4e', cloud: '#ffffff', keel: '#c8d4de',
       lamps: false, birds: 2,
@@ -10710,8 +10718,10 @@ const DAY = (() => {
       hi: '#4d84c8', mid: '#9dc0dd', lo: '#f0e8d6',
       sun: '#fff2c8', sunY: 0.42, sunA: 0.13,
       shaftA: 0.34,
-      lift: 'rgba(184,162,126,.56)',
-      warm: 'rgba(255,236,196,.07)', cool: 'rgba(74,96,138,.12)',
+      lift: 'rgba(172,154,122,.30)',
+      warm: 'rgba(255,238,200,.06)', cool: 'rgba(74,96,138,.04)',
+      rake: 0.012,
+      castWarm: 'rgba(255,238,200,.04)', castCool: 'rgba(74,96,138,.02)',
       lit: '#f0e2c2', shade: '#b8ac95', trim: '#948b78',
       leaf: '#5d8848', cloud: '#fdf6ea', keel: '#c4c8ca',
       lamps: false, birds: 2,
@@ -10721,8 +10731,10 @@ const DAY = (() => {
       hi: '#3f6fae', mid: '#c99a72', lo: '#ffd08a',
       sun: '#ffcf72', sunY: 0.78, sunA: 0.22,
       shaftA: 0.40,
-      lift: 'rgba(176,124,80,.48)',
-      warm: 'rgba(255,186,110,.13)', cool: 'rgba(90,70,120,.16)',
+      lift: 'rgba(170,120,78,.26)',
+      warm: 'rgba(255,190,116,.09)', cool: 'rgba(90,70,120,.05)',
+      rake: 0.026,
+      castWarm: 'rgba(255,190,116,.07)', castCool: 'rgba(90,70,120,.04)',
       lit: '#ffd9a2', shade: '#a98a78', trim: '#8a6d5e',
       leaf: '#6b8a3f', cloud: '#ffcfa0', keel: '#b07c72',
       lamps: false, birds: 4,
@@ -10732,8 +10744,10 @@ const DAY = (() => {
       hi: '#1e2a52', mid: '#4c4a78', lo: '#b4708a',
       sun: '#ff9a68', sunY: 0.93, sunA: 0.18,
       shaftA: 0.13,
-      lift: 'rgba(74,72,104,.26)',
-      warm: 'rgba(255,150,110,.09)', cool: 'rgba(38,44,84,.24)',
+      lift: 'rgba(70,68,98,.20)',
+      warm: 'rgba(255,155,115,.07)', cool: 'rgba(38,44,84,.16)',
+      rake: 0.018,
+      castWarm: 'rgba(255,155,115,.05)', castCool: 'rgba(38,44,84,.09)',
       lit: '#b49a94', shade: '#7a6c76', trim: '#5f5566',
       leaf: '#3f5a42', cloud: '#a08098', keel: '#5c4a68',
       lamps: true, birds: 2,
@@ -10743,8 +10757,10 @@ const DAY = (() => {
       hi: '#0b1024', mid: '#151c3a', lo: '#2b2f52',
       sun: '#dbe4ff', sunY: 0.22, sunA: 0.07,
       shaftA: 0,
-      lift: 'rgba(30,36,64,.10)',
-      warm: 'rgba(120,150,220,.04)', cool: 'rgba(14,18,44,.30)',
+      lift: 'rgba(28,34,60,.10)',
+      warm: 'rgba(120,150,220,.03)', cool: 'rgba(14,18,44,.22)',
+      rake: 0,
+      castWarm: 'rgba(120,150,220,.02)', castCool: 'rgba(14,18,44,.14)',
       lit: '#6f6f7e', shade: '#4a4a58', trim: '#3a3a46',
       leaf: '#26382c', cloud: '#2a3050', keel: '#181d34',
       lamps: true, birds: 0,
@@ -10822,21 +10838,22 @@ const DAY = (() => {
   }
   function rgb(a) { const c = hex(a); return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
 
-  /* a stepped ramp between two colours, with a dither row on each seam */
-  function ramp(c, x, y, w, h, top, bot, steps) {
-    const n = Math.max(2, steps || 7);
+  /* ============================================================
+     A RAMP.
+
+     ONE STEP PER ROW, no dither. The first version drew half a
+     dozen fat bands and then ran a checker along each seam, which
+     at two hundred rows tall and four hundred wide came out as a
+     stack of stripes with a dotted line under each one — banding
+     with extra steps. A row at a time is both simpler and smooth:
+     two hundred rows is two hundred shades, which is more than
+     the eye can pick apart, and there is no seam to hide.
+     ============================================================ */
+  function ramp(c, x, y, w, h, top, bot) {
     const a = hex(top), b = hex(bot);
+    const n = Math.max(1, Math.round(h));
     for (let i = 0; i < n; i++) {
-      const t = i / (n - 1);
-      const y0 = y + Math.round((i / n) * h);
-      const y1 = y + Math.round(((i + 1) / n) * h);
-      px(c, x, y0, w, Math.max(1, y1 - y0), rgb(mix(a, b, t)));
-      /* the dither: every other pixel of the seam takes the step below,
-         so the joins read as texture instead of as banding */
-      if (i && y1 - y0 > 1) {
-        const d = rgb(mix(a, b, (i - 0.5) / (n - 1)));
-        for (let k = (i % 2); k < w; k += 2) px(c, x + k, y0, 1, 1, d);
-      }
+      px(c, x, y + i, w, 1, rgb(mix(a, b, i / Math.max(1, n - 1))));
     }
   }
 
@@ -10888,52 +10905,65 @@ const DAY = (() => {
     const hi = mix(hex(b.hi), hex(nb.hi), t * 0.45);
     const mi = mix(hex(b.mid), hex(nb.mid), t * 0.45);
     const lo = mix(hex(b.lo), hex(nb.lo), t * 0.45);
-    ramp(c, x, y, w, Math.round(h * 0.55), hi, mi, 6);
-    ramp(c, x, y + Math.round(h * 0.55), w, h - Math.round(h * 0.55), mi, lo, 7);
+    const split = Math.round(h * 0.58);
+    ramp(c, x, y, w, split, hi, mi);
+    ramp(c, x, y + split, w, h - split, mi, lo);
 
     /* THE SUN. Its height is the band's, walked across the band, and it
        blooms in stepped rings rather than a radial gradient. */
     const sy = y + Math.round(h * U.clamp(b.sunY + (nb.sunY - b.sunY) * t * 0.5, 0.04, 0.97));
     const sx = x + Math.round(w * (0.18 + 0.62 * ((b.from / 60 + t * 2) % 12) / 12));
     if (b.sunA > 0.02) {
-      /* THE BLOOM IS RINGS, NOT RECTS. Stacked rectangles round a sun
-         read as a white bar with a lump in it — the first pass at this
-         looked like a logo somebody had pasted on the sky. Discs. */
-      for (let r = 30; r > 7; r -= 3) {
+      /* THE SUN SCALES WITH THE SKY IT IS IN. At a fixed four-pixel radius
+         it was a pinhead in a two-hundred-row sky. And the bloom is RINGS,
+         not stacked rectangles — the first pass at that read as a logo
+         somebody had pasted on. */
+      const R = Math.max(4, Math.round(h * 0.032));
+      for (let r = R * 6; r > R; r -= Math.max(1, Math.round(R * 0.4))) {
         PIX.disc(c, sx, sy, r,
-          'rgba(255,242,206,' + (b.sunA * (1 - r / 34) * 0.32).toFixed(3) + ')');
+          'rgba(255,242,206,' + (b.sunA * (1 - r / (R * 7)) * 0.26).toFixed(3) + ')');
       }
-      PIX.disc(c, sx, sy, 6, 'rgba(255,248,222,' + Math.min(0.85, b.sunA * 2.6).toFixed(3) + ')');
-      PIX.disc(c, sx, sy, 4, b.sun);
+      PIX.disc(c, sx, sy, Math.round(R * 1.5),
+        'rgba(255,248,222,' + Math.min(0.8, b.sunA * 2.2).toFixed(3) + ')');
+      PIX.disc(c, sx, sy, R, b.sun);
+      /* and the little bright core, so it is not a flat disc */
+      PIX.disc(c, sx, sy, Math.max(1, Math.round(R * 0.45)), '#ffffff');
     }
 
     /* TWO BANKS OF CLOUD, the far one slower, both wrapped so a wide
        view never runs out of sky. Weather thickens them. */
     const wx = (typeof CITY !== 'undefined' && CITY.sky) ? CITY.sky() : { drops: 0 };
     const thick = 1 + Math.min(1.4, (wx.drops || 0) * 0.55);
-    for (let lane = 0; lane < 2; lane++) {
-      const span = 150 + lane * 90;
-      const drift = (tt * (2.4 + lane * 3.1)) % span;
-      const cy = y + Math.round(h * (lane ? 0.30 : 0.14));
-      const cw = Math.round((lane ? 40 : 58) * thick);
-      const ch = Math.round((lane ? 8 : 12) * thick);
-      const body = lane ? b.keel : b.cloud;
-      const crown = lane ? b.cloud : '#ffffff';
+    /* THREE BANKS, and every measurement in them comes off the height of
+       the sky rather than a constant: at two hundred rows the old
+       fixed-size clouds were a row of dumplings along the top. */
+    const U0 = Math.max(6, h * 0.075);            // the unit a cloud is built from
+    for (let lane = 0; lane < 3; lane++) {
+      const span = Math.round(U0 * (10 + lane * 5));
+      const drift = (tt * (1.6 + lane * 2.4)) % span;
+      const cy = y + Math.round(h * (0.10 + lane * 0.17));
+      const cw = Math.round(U0 * (5.6 - lane * 1.2) * thick);
+      const ch = Math.round(U0 * (1.5 - lane * 0.28) * thick);
+      /* the far bank is hazier: it takes the keel colour as its body */
+      const body = lane === 2 ? b.keel : b.cloud;
+      const crown = lane === 0 ? '#ffffff' : b.cloud;
       for (let k = -1; k * span < w + span; k++) {
         const jig = ((s + k * 37 + lane * 11) % 23) - 11;
-        cloud(c, x + Math.round(k * span - drift + span * 0.4), cy + jig,
-          cw + (jig % 7) * 2, ch, body, crown, b.keel);
+        cloud(c, x + Math.round(k * span - drift + span * 0.4),
+          cy + Math.round(jig * U0 * 0.14),
+          cw + (jig % 7) * Math.round(U0 * 0.2), ch, body, crown, b.keel);
       }
     }
 
     /* BIRDS. Three pixels each, which is all a bird is at this distance. */
-    for (let i = 0; i < b.birds; i++) {
+    for (let i = 0; i < b.birds * 2; i++) {
       const bx = x + Math.round(((i * 137 + s * 13) % 100) / 100 * w + tt * (9 + i * 3)) % (w + 40) - 20;
-      const by = y + Math.round(h * (0.10 + ((i * 29 + s) % 40) / 100));
+      const by = y + Math.round(h * (0.08 + ((i * 29 + s) % 46) / 100));
       const flap = Math.sin(tt * 6 + i) > 0 ? 1 : 0;
-      px(c, bx, by, 1, 1, 'rgba(30,34,50,.55)');
-      px(c, bx - 2, by - flap, 2, 1, 'rgba(30,34,50,.45)');
-      px(c, bx + 1, by - flap, 2, 1, 'rgba(30,34,50,.45)');
+      const bw2 = 1 + (i % 2);
+      px(c, bx, by, bw2, 1, 'rgba(30,34,50,.60)');
+      px(c, bx - bw2 * 2, by - flap, bw2 * 2, 1, 'rgba(30,34,50,.50)');
+      px(c, bx + bw2, by - flap, bw2 * 2, 1, 'rgba(30,34,50,.50)');
     }
   }
 
@@ -10945,38 +10975,79 @@ const DAY = (() => {
      golden hour, which is the point of the whole thing — a band
      of low sun raking across the bottom of the frame.
      --------------------------------------------------------- */
-  function wash(c, x, y, w, h, indoor) {
+  /* ============================================================
+     BAKE — the hour, painted INTO a room, once.
+
+     This used to be a per-frame wash over the whole frame: a screen
+     pass at fifty-five percent to lift the night-painted interiors,
+     then a cool and a warm on top. Three translucent sheets over
+     everything, every frame, and the result was exactly what it
+     sounds like — a light filter laid over the game, flattening
+     every contrast in it.
+
+     A room is repainted whenever you walk into it and whenever the
+     hour turns over, so the honest place for all of that is the
+     paint itself. Baked in, the pixels ARE the hour: full contrast,
+     no sheet, nothing between the art and the screen.
+
+     The one hard part is that a room canvas is TRANSPARENT where
+     the sky shows through, and a blend mode against nothing paints
+     the sky. So the original is kept as a mask and stamped back
+     over the result with destination-in at the end, which restores
+     every transparent pixel exactly.
+     ============================================================ */
+  function bake(cv, indoor) {
     const b = band();
-    /* ============================================================
-       THE LIFT, and only indoors.
+    const c = cv.getContext('2d');
+    if (!c) return;
+    /* the mask: what was actually painted */
+    const mask = document.createElement('canvas');
+    mask.width = cv.width; mask.height = cv.height;
+    const mc = mask.getContext('2d');
+    mc.imageSmoothingEnabled = false;
+    mc.drawImage(cv, 0, 0);
 
-       The five working stops were painted for a night shift: a laundry
-       at eleven at night is nearly black, and no amount of warm tint
-       laid ON TOP of black makes it daylight — additive tinting a dark
-       room just makes a dark room with a colour cast.
-
-       So indoors gets one SCREEN pass first, which is the one blend a
-       2d context will do for us that actually raises a black. That
-       turns the cellar into a room with the shutters open, and then the
-       normal grade puts the hour back on top of it.
-       ============================================================ */
+    c.save();
+    c.imageSmoothingEnabled = false;
+    /* INDOORS, LIFT THE BLACKS. The five working stops were painted for a
+       night shift and no amount of warm tint laid on top of black makes it
+       daylight; screen is the one blend that actually raises a black. */
     if (indoor && b.lift) {
-      const prev = c.globalCompositeOperation;
       c.globalCompositeOperation = 'screen';
-      px(c, x, y, w, h, b.lift);
-      c.globalCompositeOperation = prev;
+      px(c, 0, 0, cv.width, cv.height, b.lift);
     }
-    if (b.cool) px(c, x, y, w, h, b.cool);
-    if (b.warm) px(c, x, y, w, h, b.warm);
-    if (b.id === 'gold' || b.id === 'dusk') {
-      /* the rake: brighter at the bottom, in steps */
-      for (let i = 0; i < 10; i++) {
-        const a = (b.id === 'gold' ? 0.030 : 0.020) * (i / 9);
-        px(c, x, y + h - Math.round(h * 0.42) + Math.round(i * h * 0.042), w,
-          Math.max(1, Math.round(h * 0.042)),
-          'rgba(255,' + (b.id === 'gold' ? 186 : 140) + ',110,' + a.toFixed(3) + ')');
+    c.globalCompositeOperation = 'source-over';
+    if (b.cool) px(c, 0, 0, cv.width, cv.height, b.cool);
+    if (b.warm) px(c, 0, 0, cv.width, cv.height, b.warm);
+    /* and the low sun raking the bottom of the room */
+    if (b.rake) {
+      const h = cv.height;
+      for (let i = 0; i < 12; i++) {
+        const a = b.rake * (i / 11);
+        px(c, 0, h - Math.round(h * 0.34) + Math.round(i * h * 0.028),
+          cv.width, Math.max(1, Math.round(h * 0.028)),
+          'rgba(255,' + (b.id === 'gold' ? 186 : 150) + ',110,' + a.toFixed(3) + ')');
       }
     }
+    /* put the transparency back */
+    c.globalCompositeOperation = 'destination-in';
+    c.drawImage(mask, 0, 0);
+    c.restore();
+  }
+
+  /* ============================================================
+     WASH — what is left of it.
+
+     The room carries the hour in its own pixels now. What still
+     needs telling is the CAST: sprites are cached band-agnostic,
+     so without a whisper of the hour over them a frog at six in
+     the evening is lit like a frog at noon. A whisper is all it
+     is — a fifth of what this used to be.
+     ============================================================ */
+  function wash(c, x, y, w, h) {
+    const b = band();
+    if (b.castCool) px(c, x, y, w, h, b.castCool);
+    if (b.castWarm) px(c, x, y, w, h, b.castWarm);
   }
 
   /* ---------------------------------------------------------
@@ -11054,7 +11125,7 @@ const DAY = (() => {
   return {
     BANDS, byId,
     bandAt, band, nextBand, through, pal, lamps, side, stone,
-    sky, wash, shaft, ramp, cloud, mix, hex, rgb,
+    sky, wash, bake, shaft, ramp, cloud, mix, hex, rgb,
     /* the word for the corner of the screen */
     word() { return band().word; },
     is(id) { return band().id === id; },
@@ -13808,6 +13879,7 @@ const SCENE = (() => {
   const H = 132;                 // world height, px
   let def = null;                // the room definition in play
   let back = null;               // painted backdrop canvas
+  let backBand = '';             // the hour it was painted at
   let cv, ctx, K = 4;            // display canvas + integer scale
   let raf = null, t0 = 0, last = 0;
   let cam = 0, camWant = 0, drag = null;
@@ -13936,22 +14008,70 @@ const SCENE = (() => {
   let mouse = { x: 0, y: 0, on: false };
   let hoverRat = null;
 
-  const CEIL_MAX = 38;           // world px of headroom, at most
+  /* PAINTABLE ROWS ABOVE ROOM ROW 0. Declared up here rather than beside
+     paintBack because the headroom cap below reads it, and a const read
+     before its own declaration throws on the way in. */
+  const PAD = 150;
+
+  /* HOW MUCH HEADROOM A ROOM GETS.
+
+     Outdoors it is sky and there is no such thing as too much of it, so
+     the frame fills — capped only by how far above row 0 the paint
+     actually goes. Indoors it is a ceiling, and a ceiling a hundred and
+     thirty rows tall is a cathedral, so interiors take a band and let the
+     surround do the rest. */
+  /* Outdoors, enough sky that the tower has air over it and no more: at
+     the full PAD there were seventy-six empty rows above the top platform
+     and the street was a strip along the bottom of a mostly blue frame.
+     Indoors, a tall ceiling rather than a cathedral. */
+  const CEIL_OUT = 62;
+  const CEIL_IN = 54;
+  function ceilMax() { return (def && def.outdoor) ? CEIL_OUT : CEIL_IN; }
 
   function scale() {
     const host = document.getElementById('scene-root');
     const w = window.innerWidth;
     const h = host ? host.clientHeight || (window.innerHeight - 66) : window.innerHeight - 66;
-    /* Fill the height first — a room with more ceiling than room in it reads
-       as a bug — but never show less than about 200 world px across, or the
-       camera is inside somebody's coat. */
-    let k = Math.max(2, Math.floor(h / H));
-    /* A FRAME SCALE THAT IS A MULTIPLE OF THREE pays for itself: it is the
-       only one where the full-detail rig blows up by a whole number, so the
-       cast gets three times the pixels. If stepping up to one only costs a
-       few rows off the foreground floor, take it. */
-    if ((k + 1) % 3 === 0 && h / (k + 1) >= H) k += 1;
-    while (k > 2 && w / k < 200) k--;
+    /* ============================================================
+       HOW BIG IS A ROOM PIXEL.
+
+       This used to fill the height and then step UP to the nearest
+       multiple of three, which on an ordinary desktop landed on
+       SIX: every room pixel six screen pixels across, and only two
+       hundred and fourteen pixels of a seven-hundred-and-eighty
+       pixel room in frame. That is what "low resolution" looks
+       like — not blur, just enormous pixels and a camera inside
+       somebody's coat.
+
+       So: take the SMALLEST multiple of FOOT that still fills the
+       frame properly. Three instead of six means
+
+         - a room pixel is three screen pixels, not six,
+         - twice as much of the room is in frame,
+         - the full-detail rig lands at 1:1, so every pixel the
+           cast is drawn with is a pixel you see, and
+         - there is room above the walls for actual sky.
+
+       It has to be a multiple of FOOT either way: any other scale
+       makes the rig downscale by three through a smoothing filter,
+       and THAT is blur.
+       ============================================================ */
+    const fits = (k) => {
+      if (k < 2) return false;
+      if (w / k < 190) return false;                 // camera inside a coat
+      /* the floor line has to be on screen or he is standing off the
+         bottom of the frame: 122 rows keeps the deepest floor (118) plus
+         a strip of foreground under it */
+      return Math.floor(h / k) >= 122;
+    };
+    let k = 0;
+    for (let m = FOOT; m <= 12; m += FOOT) if (fits(m)) { k = m; break; }
+    if (!k) {
+      /* nothing FOOT-friendly fits — a short landscape phone. Fall back to
+         filling the height and accept the softer rig. */
+      k = Math.max(2, Math.floor(h / H));
+      while (k > 2 && w / k < 190) k--;
+    }
     K = k;
     cv.width = Math.ceil(w / K) * K;
     /* How many world rows the frame can actually hold. More than the room
@@ -13959,7 +14079,7 @@ const SCENE = (() => {
        foreground floor goes over the edge, which nobody misses — cropping
        the TOP would take the lamps, the signs and the arches with it. */
     const rows = Math.max(60, Math.floor(h / K));
-    const worldH = Math.min(rows, H + CEIL_MAX);
+    const worldH = Math.min(rows, H + ceilMax());
     cv.height = worldH * K;
     cv.style.width = cv.width + 'px';
     cv.style.height = cv.height + 'px';
@@ -14017,9 +14137,35 @@ const SCENE = (() => {
     def = null; back = null;
   }
 
+  /* ============================================================
+     THE ROOM CANVAS HAS SKY ABOVE IT NOW.
+
+     Every room is authored in a coordinate space where row 0 is
+     the top of the frame and the landmarks are deliberately drawn
+     off it — the Eiffel Tower's first platform is at row minus
+     fifty-eight, because the point of the tower is that the frame
+     cannot hold it.
+
+     That was true when the frame was 132 rows. At half the pixel
+     size the frame holds two hundred and sixty, and the extra rows
+     were coming out as empty sky over a tower that stopped in
+     mid-air. So the canvas is PAD rows taller than the room and
+     the paint is translated down into it: room coordinate 0 is
+     still room coordinate 0, negative rows now land on canvas
+     instead of being clipped, and everything the builders already
+     draw up there simply appears.
+     ============================================================ */
   function paintBack(d) {
-    const o = ART.cv(d.w, H);
+    const o = ART.cv(d.w, H + PAD);
+    o.c.save();
+    o.c.translate(0, PAD);
     d.paint(o.c, d.w, H);
+    o.c.restore();
+    /* AND THE HOUR GOES IN THE PAINT. Not over the frame every frame — in
+       the pixels, once, so the room is at full contrast with nothing
+       between it and the screen. */
+    if (typeof DAY !== 'undefined' && DAY.bake) DAY.bake(o.cv, !d.outdoor);
+    backBand = (typeof DAY !== 'undefined') ? DAY.band().id : '';
     return o.cv;
   }
 
@@ -15056,6 +15202,13 @@ const SCENE = (() => {
 
   function draw(now) {
     const T = (now - t0) / 1000;
+    /* THE HOUR TURNED OVER WHILE YOU WERE IN HERE. Searching a room costs
+       eighteen minutes a prop, so an afternoon walked in can be a golden
+       hour walked out of — repaint rather than let the room lie about the
+       light coming through its own windows. */
+    if (def && typeof DAY !== 'undefined' && DAY.band().id !== backBand) {
+      back = paintBack(def);
+    }
     const c = ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.imageSmoothingEnabled = false;
@@ -15083,20 +15236,46 @@ const SCENE = (() => {
       const sh = oy + (def.skyTo === undefined ? 0 : def.skyTo);
       if (sh > 0) DAY.sky(c, 0, 0, vw2, sh, T, seedOf(def));
     } else if (oy > 0) {
-      ART.px(c, 0, 0, vw2, oy + 2, '#0b0d14');
-      ART.px(c, 0, 0, vw2, Math.max(1, Math.round(oy * 0.35)), '#080a10');
-      /* joists across, in perspective: closer together toward the top */
+      /* ============================================================
+         THE WALL GOES UP.
+
+         The headroom over an interior used to be a flat navy slab
+         with a brick vault sliding across it, and at half the pixel
+         size that came out as a black bar nailed over the top of the
+         room — the same mistake the outdoor rooms had, in a
+         different colour.
+
+         A room has a wall. So take the top ten rows of the room's
+         OWN paint and tile them upward: the brick, the tile, the
+         boarding, whatever this place is made of, carries on up to
+         the ceiling and gets darker as it goes, the way a wall
+         actually does. Then the joists and the lamp cords go over
+         the top of it.
+         ============================================================ */
       const camr = Math.round(cam);
+      const bandH = 10;
+      for (let y2 = oy - bandH; y2 > -bandH; y2 -= bandH) {
+        const hh = Math.min(bandH, oy - Math.max(0, y2));
+        if (hh <= 0) continue;
+        c.drawImage(back, 0, PAD, back.width, bandH,
+          -camr, Math.max(0, y2), back.width, bandH);
+      }
+      /* it gets darker toward the ceiling, and cooler */
+      for (let i = 0; i < oy; i++) {
+        const t = 1 - i / oy;
+        ART.px(c, 0, i, vw2, 1, 'rgba(16,14,22,' + (0.62 * t * t).toFixed(3) + ')');
+      }
+      /* joists across, in perspective: closer together toward the top */
       for (let i = 1; i * i < oy * 3; i++) {
         const y = oy - Math.round(i * i * 0.9);
         if (y < 1) break;
-        ART.px(c, 0, y, vw2, 1, 'rgba(255,255,255,.035)');
-        ART.px(c, 0, y + 1, vw2, 1, 'rgba(0,0,0,.3)');
+        ART.px(c, 0, y, vw2, 1, 'rgba(255,244,220,.06)');
+        ART.px(c, 0, y + 1, vw2, 1, 'rgba(0,0,0,.34)');
       }
       /* the beams running the other way, tied to world x so they scroll */
       for (let x = -(camr % 46); x < vw2; x += 46) {
-        ART.px(c, x, 0, 3, oy, 'rgba(0,0,0,.35)');
-        ART.px(c, x, 0, 1, oy, 'rgba(255,255,255,.03)');
+        ART.px(c, x, 0, 3, oy, 'rgba(0,0,0,.30)');
+        ART.px(c, x, 0, 1, oy, 'rgba(255,244,220,.05)');
       }
       /* the cords of whatever hangs in this room, going up into it */
       for (const L of (def.lights || [])) {
@@ -15104,18 +15283,14 @@ const SCENE = (() => {
         if (lx < -4 || lx > vw2 + 4) continue;
         ART.px(c, lx, 0, 1, oy + 2, '#2a2d38');
       }
-      ART.px(c, 0, oy, vw2, 2, '#05060a');
-    }
-    /* THE VAULT, over the room, going by at less than half the rate.
-       Indoors only: outdoors that headroom is sky. */
-    if (oy > 2 && !def.outdoor) {
-      const vau = vaultCv(def, oy, vw2);
-      c.drawImage(vau, -Math.round(cam * 0.4) % Math.max(1, vau.width - vw2), 0);
+      /* the picture rail where the wall meets the room proper */
+      ART.px(c, 0, oy - 1, vw2, 1, 'rgba(255,244,220,.10)');
+      ART.px(c, 0, oy, vw2, 2, 'rgba(0,0,0,.45)');
     }
 
     c.translate(-Math.round(cam), oy);
-    /* the painted room */
-    c.drawImage(back, 0, 0);
+    /* the painted room, pulled up so its row 0 lands on the frame's row 0 */
+    c.drawImage(back, 0, -PAD);
 
     /* ---- THE BACKGROUND, seen through the holes in the room ----
        A wall with nothing behind it is a flat. Every room declares the
@@ -15285,7 +15460,7 @@ const SCENE = (() => {
     if (typeof CITY !== 'undefined' && G.phase !== 'title') {
       const w = viewW();
       const sky = CITY.sky();
-      if (typeof DAY !== 'undefined') DAY.wash(c, cam, -oy, w, H + oy, !def.outdoor);
+      if (typeof DAY !== 'undefined') DAY.wash(c, cam, -oy, w, H + oy);
       if (def.outdoor) {
         /* RAIN. Real drops with their own x, or a linear sequence folds
            them into a handful of columns and it reads as prison bars. */
@@ -15569,6 +15744,11 @@ const SCENE = (() => {
   return {
     H, open, close, walkTo, rig, rigH, rigPic,
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
+    /* what the frame is actually rendering at, for the resolution probe */
+    debugRes() {
+      return { K, H, FOOT, down: lodFor(), oy, viewW: viewW(), viewH: viewH(),
+        floorY: def ? def.floorY : null, roomW: def ? def.w : null };
+    },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
     debugRatCount() { return rats.length; },
     debugRatsWhere() { return rats.map(r => ({ x: Math.round(r.x), d: r.dir, v: Math.round(r.v) })); },
@@ -16115,11 +16295,31 @@ const PARIS = (() => {
     px(c, x, y, w, 2, stoneLit);
     px(c, x, y, 2, h, stoneLit);            // the sunny return, on the left
     px(c, x + w - 3, y, 3, h, stoneDk);
-    /* the mansard, on top */
+    /* THE MANSARD, ON TOP — and the right way up.
+
+       This was drawn widest at the ridge and narrowest where it meets the
+       wall, which is a funnel, not a roof. At the old building height it
+       was six rows and nobody noticed; at sixty it made a street of
+       inverted grey hoppers. A roof narrows as it goes UP. */
     const rh = Math.max(6, Math.round(h * 0.2));
     for (let i = 0; i < rh; i++) {
-      px(c, x + Math.round(i * 0.55), y - rh + i, w - Math.round(i * 1.1), 1,
-        i < 2 ? roofLit : roof);
+      const back = rh - 1 - i;                   // 0 at the eaves, rh-1 at the ridge
+      px(c, x + Math.round(back * 0.55), y - rh + i, w - Math.round(back * 1.1), 1,
+        back > rh - 3 ? roofLit : roof);
+    }
+    /* the ridge, and the zinc seams down the slope */
+    px(c, x + Math.round((rh - 1) * 0.55), y - rh, w - Math.round((rh - 1) * 1.1), 1, '#cfd6de');
+    for (let sx = x + 5; sx < x + w - 4; sx += 9) {
+      px(c, sx, y - rh + 2, 1, rh - 2, 'rgba(80,90,102,.45)');
+    }
+    /* CHIMNEY POTS. A Paris roofline is more pot than roof. */
+    for (let k = 0; k < 2 + (seed % 3); k++) {
+      const cx2 = x + 5 + Math.floor(rng() * Math.max(1, w - 12));
+      const chh = 5 + Math.floor(rng() * 5);
+      px(c, cx2, y - rh - chh, 4, chh, '#b08a72');
+      px(c, cx2, y - rh - chh, 4, 1, '#d2ac90');
+      px(c, cx2 + 3, y - rh - chh, 1, chh, '#8a6a56');
+      px(c, cx2, y - rh - chh - 2, 4, 2, '#6f5a4a');
     }
     /* string courses: this city is made of horizontal lines */
     for (let ly = y + 12; ly < y + h - 6; ly += 16) {
@@ -16156,19 +16356,31 @@ const PARIS = (() => {
         }
       }
     }
-    /* THE SHOPFRONT at the bottom: an awning, a fascia and a window with
-       something in it, because a shuttered black slot is a night street */
+    /* THE SHOPFRONT at the bottom: a fascia, a window with something in
+       it, and — on about half of them — an awning.
+
+       NOT ON EVERY BUILDING. Every block used to get an awning two pixels
+       wider than itself, so a terrace of them merged into one continuous
+       red ribbon running the whole length of the street. Half of them, and
+       inset, so the ribbon breaks. */
     const aw = ['#b8384a', '#3f6b45', '#2f4a70', '#8a6a44'][seed % 4];
-    px(c, x, y + h - 13, w, 13, L.woodDk);
-    px(c, x + 1, y + h - 12, w - 2, 5, L.cream);       // the fascia
-    px(c, x + 1, y + h - 12, w - 2, 1, '#ffffff');
-    px(c, x + 2, y + h - 10, w - 6, 2, L.woodDk);      // the lettering, unreadable
-    /* the awning, scalloped along the bottom edge */
-    px(c, x - 2, y + h - 7, w + 4, 4, aw);
-    px(c, x - 2, y + h - 7, w + 4, 1, 'rgba(255,255,255,.35)');
-    for (let sx = x - 2; sx < x + w + 2; sx += 4) px(c, sx, y + h - 3, 2, 2, aw);
-    /* and the glass under it */
-    px(c, x + 2, y + h - 3, w - 4, 3, L.glassDk);
+    px(c, x + 2, y + h - 13, w - 4, 13, L.woodDk);
+    px(c, x + 3, y + h - 12, w - 6, 5, L.cream);       // the fascia
+    px(c, x + 3, y + h - 12, w - 6, 1, '#ffffff');
+    px(c, x + 5, y + h - 10, w - 12, 2, L.woodDk);     // the lettering, unreadable
+    /* the glass, and whatever is standing in the window */
+    px(c, x + 4, y + h - 7, w - 8, 7, L.glassDk);
+    px(c, x + 5, y + h - 6, w - 10, 5, L.glass);
+    px(c, x + 5, y + h - 6, w - 10, 2, L.glassLit);
+    for (let gx = x + 7; gx < x + w - 8; gx += 7) {
+      px(c, gx, y + h - 4, 3, 3, ['#b8384a', '#e0a63c', '#5f8f45'][(gx + seed) % 3]);
+    }
+    /* and the awning, on the ones that have one */
+    if (seed % 2) {
+      px(c, x + 1, y + h - 8, w - 2, 4, aw);
+      px(c, x + 1, y + h - 8, w - 2, 1, 'rgba(255,255,255,.35)');
+      for (let sx = x + 1; sx < x + w - 2; sx += 4) px(c, sx, y + h - 4, 2, 2, aw);
+    }
   }
 
   /* the double-globe cast iron lamp post this whole city is lit by */
@@ -16343,7 +16555,11 @@ const PARIS = (() => {
   /* LA TOUR EIFFEL. Four legs, two platforms, a lattice you can see the
      sky through, and the gold light they wash it with after dark. */
   function eiffel(c, cx, baseY, topY) {
-    const iron = '#7d6647', ironLit = '#a68d63', ironDk = '#513f2b';
+    /* IRON, NOT TIMBER. The real thing is painted a warm bronze-brown, but
+       at a warm enough brown with a soft lattice it came out as scaffolding
+       poles: cooler, darker in the shadow, and a lattice with real contrast
+       in it is what makes a hundred metres of wrought iron read as metal. */
+    const iron = '#6f5c46', ironLit = '#a3906c', ironDk = '#3f3324';
     const H2 = baseY - topY;
     /* THE PROFILE. The real curve: an exponential taper, which is why the
        thing does not read as a pyramid. Get this wrong and you have drawn
@@ -16377,15 +16593,15 @@ const PARIS = (() => {
         const xa = Math.round(h0 + (h1 - h0) * f);
         const xb = Math.round(h0 + (h1 - h0) * (1 - f));
         /* left bay */
-        px(c, cx - xa, y, 1, 1, 'rgba(166,141,99,.55)');
-        px(c, cx - Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.40)');
+        px(c, cx - xa, y, 1, 1, 'rgba(196,176,138,.62)');
+        px(c, cx - Math.round(xb * 0.42), y, 1, 1, 'rgba(90,74,52,.55)');
         /* right bay */
-        px(c, cx + xa - 1, y, 1, 1, 'rgba(166,141,99,.55)');
-        px(c, cx + Math.round(xb * 0.42), y, 1, 1, 'rgba(125,104,72,.40)');
+        px(c, cx + xa - 1, y, 1, 1, 'rgba(196,176,138,.62)');
+        px(c, cx + Math.round(xb * 0.42), y, 1, 1, 'rgba(90,74,52,.55)');
       }
       /* the horizontal girder at each stage */
       const hh = halfAt(t0);
-      px(c, cx - hh, baseY - i, hh * 2, 1, 'rgba(166,141,99,.42)');
+      px(c, cx - hh, baseY - i, hh * 2, 1, 'rgba(196,176,138,.48)');
     }
 
     /* THE FIRST ARCH. It springs from the legs and hangs, and it is the
@@ -16661,10 +16877,13 @@ const PARIS = (() => {
         px(c, 0, FY - BAND - 30 + i, W, 1,
           'rgba(238,230,208,' + (0.02 + i * 0.011).toFixed(3) + ')');
       }
-      /* the far bank: rooftops, small, and the river between */
+      /* THE FAR BANK. There is vertical room in the frame now — the old
+         twenty-six-row blocks were a garden wall along the bottom of a
+         mostly-blue picture. These are buildings. */
       for (let i = 0; i < 22; i++) {
         const bx = (i * 41 + seed % 23) % (W - 40);
-        haussmann(c, bx, FY - BAND - 30 - (i % 3) * 6, 38, 26 + (i % 3) * 6, seed + i);
+        const bh = 52 + (i % 4) * 11;
+        haussmann(c, bx, FY - BAND - 4 - bh, 38, bh, seed + i);
       }
       /* THE TOWER, over everything, cut off by the top of the frame */
       eiffel(c, 372, FY - BAND + 4, -58);
@@ -16780,7 +16999,8 @@ const PARIS = (() => {
       for (let i = 0; i < 9; i++) {
         const bx = i * 84 + (seed % 17);
         if (i === 4) continue;                       // the arch stands in this gap
-        haussmann(c, bx, FY - BAND - 44, 74, 44, seed + i * 3);
+        const bh = 66 + (i % 3) * 9;
+        haussmann(c, bx, FY - BAND - bh, 74, bh, seed + i * 3);
       }
       /* THE ARCH, dead centre, too big for the frame */
       arc(c, 360, FY - BAND + 2, 88);
@@ -18513,28 +18733,35 @@ const PHONE = (() => {
      sepia ink on it, because that is what you would actually be
      holding.
      ============================================================ */
-  const MW = 220, MH = 140;
+  /* TWICE THE PAPER.
+
+     This was 220 x 140 blown up by two, which is a map at half
+     resolution with the magnification turned up — every street a
+     fat bar, every landmark a lozenge. Same size on screen, four
+     times the pixels: a street can be three px wide with a kerb on
+     it, a block can be individual buildings, and a landmark can be
+     a drawing of the landmark. */
+  const MW = 440, MH = 280;
 
   /* the paper, the ink, and the water */
   const M = {
-    paper: '#e9dcbc', paperLit: '#f4ead0', paperDk: '#d8c8a4',
+    paper: '#e9dcbc', paperLit: '#f6eed6', paperDk: '#d6c69f',
     grain: '#dfd0ae', crease: '#c9b795',
-    ink: '#6b5a3c', inkLo: '#8a7754', inkHi: '#4a3d28',
-    block: '#ddceac', blockDk: '#cdbc98', roof: '#c2ae88',
-    water: '#8fb6c8', waterLo: '#6f9aae', waterHi: '#b3d2df',
-    park: '#9aac72', parkDk: '#7d9058', parkLit: '#b4c489',
-    road: '#f2e8ce', roadEdge: '#c4b28c',
+    ink: '#6b5a3c', inkLo: '#8a7754', inkHi: '#42361f',
+    block: '#ddceac', blockDk: '#c9b791', blockLit: '#efe3c4', roof: '#c2ae88',
+    water: '#8fb6c8', waterLo: '#6b96ac', waterHi: '#bcd8e4',
+    park: '#9aac72', parkDk: '#778b52', parkLit: '#b8c78d',
+    road: '#f6efdb', roadEdge: '#bfad86',
     rail: '#9a8a6a', red: '#b8384a', gold: '#c98a2a',
   };
 
-  /* THE SEINE. Sampled off the real thing: in from the south-east,
-     the big westward arc through the middle, out to the west. x,y in
-     map units, and the width of the river at that point. */
+  /* THE SEINE, at the new scale: in from the south-east, the long
+     westward arc through the middle, out to the west. */
   const SEINE = [
-    [222, 118], [204, 112], [188, 104], [172, 96], [158, 88],
-    [146, 82], [134, 78], [122, 76], [110, 76], [100, 77],
-    [92, 79], [84, 80], [76, 80], [68, 78], [60, 74],
-    [52, 70], [44, 67], [36, 66], [26, 67], [14, 70], [-4, 74],
+    [452, 236], [420, 226], [392, 212], [352, 196], [320, 180],
+    [292, 168], [268, 158], [244, 154], [220, 152], [200, 154],
+    [184, 158], [168, 161], [152, 161], [136, 157], [120, 149],
+    [104, 141], [88, 135], [72, 132], [52, 134], [28, 140], [-8, 148],
   ];
 
   function polyBand(c, pts, w, col, edge) {
@@ -18554,42 +18781,71 @@ const PHONE = (() => {
     }
   }
 
+  /* ---- the little drawings that sit on a stop ---- */
+  function glyphTower(c, x, y) {
+    for (let i = 0; i < 14; i++) {
+      const hw = Math.max(1, Math.round(6 * Math.pow(1 - i / 14, 1.8)));
+      ART.px(c, x - hw, y - 14 + i, 1, 1, M.inkHi);
+      ART.px(c, x + hw, y - 14 + i, 1, 1, M.inkHi);
+    }
+    ART.px(c, x - 5, y - 6, 11, 1, M.inkHi);
+    ART.px(c, x - 3, y - 10, 7, 1, M.inkHi);
+    ART.px(c, x - 6, y, 13, 1, M.inkHi);
+  }
+  function glyphArch(c, x, y) {
+    ART.px(c, x - 6, y - 11, 13, 11, M.inkHi);
+    ART.px(c, x - 3, y - 6, 7, 6, M.paperLit);
+    for (let k = -3; k <= 3; k++) {
+      ART.px(c, x + k, y - 7 - Math.round(Math.cos(k / 3 * 1.4) * 2), 1, 2, M.paperLit);
+    }
+    ART.px(c, x - 7, y - 13, 15, 2, M.inkHi);
+  }
+  function glyphDome(c, x, y) {
+    ART.px(c, x - 7, y - 4, 15, 5, M.inkHi);
+    for (let i = 0; i < 6; i++) {
+      const hw = Math.round(5 * Math.pow(1 - i * i / 36, 0.6));
+      ART.px(c, x - hw, y - 5 - i, hw * 2 + 1, 1, M.inkHi);
+    }
+    ART.px(c, x, y - 13, 1, 3, M.inkHi);
+  }
+
   function drawMap() {
-    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v3';
+    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v5';
     return ART.cached(key, () => {
       const o = ART.cv(MW, MH), c = o.c;
       const rng = U.mulberry32(U.hashSeed((G.seedStr || 'CITY') + ':map'));
 
       /* ---------- THE PAPER ---------- */
       ART.px(c, 0, 0, MW, MH, M.paper);
-      for (let i = 0; i < 900; i++) {
+      for (let i = 0; i < 3400; i++) {
         ART.px(c, Math.floor(rng() * MW), Math.floor(rng() * MH), 1, 1,
           rng() < 0.5 ? M.grain : M.paperLit);
       }
       /* the foxing round the edges of anything kept in a pocket */
-      for (let i = 0; i < 120; i++) {
+      for (let i = 0; i < 420; i++) {
         const e = Math.floor(rng() * 4);
-        const x = e === 0 ? Math.floor(rng() * MW) : e === 1 ? MW - 1 - Math.floor(rng() * 9)
-          : e === 2 ? Math.floor(rng() * MW) : Math.floor(rng() * 9);
-        const y = e === 0 ? Math.floor(rng() * 9) : e === 1 ? Math.floor(rng() * MH)
-          : e === 2 ? MH - 1 - Math.floor(rng() * 9) : Math.floor(rng() * MH);
+        const x = e === 0 ? Math.floor(rng() * MW) : e === 1 ? MW - 1 - Math.floor(rng() * 16)
+          : e === 2 ? Math.floor(rng() * MW) : Math.floor(rng() * 16);
+        const y = e === 0 ? Math.floor(rng() * 16) : e === 1 ? Math.floor(rng() * MH)
+          : e === 2 ? MH - 1 - Math.floor(rng() * 16) : Math.floor(rng() * MH);
         ART.px(c, x, y, 1 + Math.floor(rng() * 2), 1, M.paperDk);
       }
 
       /* ---------- THE BUILT CITY ----------
-         Blocks, denser toward the middle, with the grain of the street
-         running through them. Nothing random about the density: a plan
-         of Paris is solid in the centre and breaks up at the wall. */
-      const cx0 = 106, cy0 = 74;
-      for (let i = 0; i < 520; i++) {
-        const bw = 3 + Math.floor(rng() * 9), bh = 3 + Math.floor(rng() * 7);
+         Individual buildings, not blocks: at this resolution a block can
+         have houses in it, which is the whole difference between a plan
+         and a diagram. Density falls off toward the wall. */
+      const cx0 = 212, cy0 = 148;
+      for (let i = 0; i < 2600; i++) {
+        const bw = 3 + Math.floor(rng() * 7), bh = 3 + Math.floor(rng() * 6);
         const bx = Math.floor(rng() * (MW - bw)), by = Math.floor(rng() * (MH - bh));
-        /* how far out of town this is, 0 at the islands and 1 at the wall */
         const d = Math.hypot((bx - cx0) / (MW * 0.52), (by - cy0) / (MH * 0.52));
         if (rng() < d * 0.95) continue;
-        ART.px(c, bx, by, bw, bh, rng() < 0.34 ? M.roof : M.block);
-        ART.px(c, bx, by, bw, 1, M.paperLit);
+        const t = rng();
+        ART.px(c, bx, by, bw, bh, t < 0.28 ? M.roof : t < 0.6 ? M.blockDk : M.block);
+        ART.px(c, bx, by, bw, 1, M.blockLit);
         ART.px(c, bx, by + bh - 1, bw, 1, M.blockDk);
+        ART.px(c, bx + bw - 1, by, 1, bh, M.blockDk);
       }
 
       /* ---------- THE PARKS ---------- */
@@ -18597,180 +18853,185 @@ const PHONE = (() => {
         ART.px(c, x, y, w, h, M.park);
         ART.px(c, x, y, w, 1, M.parkLit);
         ART.px(c, x, y + h - 1, w, 1, M.parkDk);
-        for (let i = 0; i < w * h / 7; i++) {
+        for (let i = 0; i < w * h / 5; i++) {
           ART.px(c, x + Math.floor(rng() * w), y + Math.floor(rng() * h), 1, 1,
             rng() < 0.5 ? M.parkDk : M.parkLit);
         }
-        if (wild) {                     /* the two woods get real canopy */
-          for (let i = 0; i < w * h / 14; i++) {
-            PIX.disc(c, x + Math.floor(rng() * w), y + Math.floor(rng() * h), 2, M.parkDk);
+        if (wild) {
+          for (let i = 0; i < w * h / 22; i++) {
+            PIX.disc(c, x + Math.floor(rng() * w), y + Math.floor(rng() * h),
+              2 + Math.floor(rng() * 2), M.parkDk);
           }
+        } else {
+          /* a formal garden has paths through it */
+          for (let gx = x + 6; gx < x + w - 4; gx += 12) ART.px(c, gx, y + 1, 1, h - 2, M.road);
+          ART.px(c, x + 1, y + Math.floor(h / 2), w - 2, 1, M.road);
         }
       };
-      park(2, 46, 26, 34, true);          // the Bois, off west
-      park(196, 58, 24, 30, true);        // and the other one, off east
-      park(88, 62, 20, 8);                // the Tuileries, along the river
-      park(84, 96, 16, 14);               // the Luxembourg
-      park(172, 40, 18, 12);              // Buttes-Chaumont
-      park(180, 74, 16, 12);              // Pere Lachaise
-      /* the Champ de Mars, which is where the tower is */
-      park(38, 62, 12, 16);
+      park(4, 92, 52, 68, true);            // the Bois, off west
+      park(392, 116, 48, 60, true);         // and the other one, off east
+      park(176, 124, 40, 16);               // the Tuileries, along the river
+      park(168, 192, 32, 28);               // the Luxembourg
+      park(344, 80, 36, 24, true);          // Buttes-Chaumont
+      park(360, 148, 32, 24, true);         // Pere Lachaise
+      park(76, 124, 24, 32);                // the Champ de Mars
 
-      /* ---------- THE RIVER ----------
-         Quays first, then the water inside them, so the water has banks. */
-      polyBand(c, SEINE, 9, M.waterLo, M.roadEdge);
-      polyBand(c, SEINE, 7, M.water, M.waterHi);
-      polyBand(c, SEINE, 3, M.waterHi, null);
+      /* ---------- THE RIVER ---------- */
+      polyBand(c, SEINE, 17, M.waterLo, M.roadEdge);
+      polyBand(c, SEINE, 13, M.water, M.waterHi);
+      polyBand(c, SEINE, 5, M.waterHi, null);
+      /* the quays, a pale line either side of the whole length */
+      polyBand(c, SEINE, 19, 'rgba(191,173,134,.5)', null);
+      polyBand(c, SEINE, 17, M.waterLo, null);
+      polyBand(c, SEINE, 13, M.water, M.waterHi);
+      polyBand(c, SEINE, 4, M.waterHi, null);
       /* THE TWO ISLANDS, which is where this city started */
-      [[104, 76, 18, 5], [126, 77, 11, 4]].forEach(([ix, iy, iw, ih]) => {
+      [[206, 150, 38, 10], [252, 152, 24, 8]].forEach(([ix, iy, iw, ih]) => {
         ART.px(c, ix, iy, iw, ih, M.block);
-        ART.px(c, ix, iy, iw, 1, M.paperLit);
+        ART.px(c, ix, iy, iw, 1, M.blockLit);
         ART.px(c, ix, iy + ih - 1, iw, 1, M.blockDk);
         ART.px(c, ix - 1, iy + 1, 1, ih - 2, M.waterHi);
         ART.px(c, ix + iw, iy + 1, 1, ih - 2, M.waterHi);
+        /* and the one church on the bigger of them */
+        if (iw > 30) { ART.px(c, ix + 8, iy + 2, 8, 6, M.roof); ART.px(c, ix + 11, iy, 2, 3, M.inkHi); }
       });
       /* the bridges: a lot of them, and all of them short */
-      for (let i = 0; i < SEINE.length - 1; i += 2) {
+      for (let i = 0; i < SEINE.length - 1; i += 1) {
         const [bx, by] = SEINE[i];
-        if (bx < 4 || bx > MW - 6) continue;
-        ART.px(c, bx, by - 6, 2, 13, M.rail);
-        ART.px(c, bx, by - 6, 2, 1, M.paperLit);
+        if (bx < 8 || bx > MW - 12) continue;
+        ART.px(c, bx, by - 11, 3, 23, M.rail);
+        ART.px(c, bx, by - 11, 3, 1, M.paperLit);
+        ART.px(c, bx + 1, by - 10, 1, 21, 'rgba(120,106,78,.5)');
       }
 
       /* ---------- THE STREETS ----------
-         A road here is PALE: on a printed plan the streets are the paper
-         showing through and the blocks are the ink, not the other way
-         round. Drawing them dark is what made the old map read as a
-         circuit board. */
+         Pale: on a printed plan the streets are the paper showing through
+         and the blocks are the ink, never the other way round. */
       const road = (x, y, w, h) => {
         ART.px(c, x, y, w, h, M.road);
         ART.px(c, x, y, w, 1, '#ffffff');
-        if (h > 1) ART.px(c, x, y + h - 1, w, 1, M.roadEdge);
-        else ART.px(c, x, y + 1, w, 1, M.roadEdge);
+        ART.px(c, x, y + h - 1, w, 1, M.roadEdge);
       };
-      /* Rivoli and Saint-Germain, either side of the water */
-      road(60, 66, 120, 2);
-      road(52, 88, 130, 2);
+      road(120, 132, 240, 4);              // Rivoli
+      road(104, 176, 260, 4);              // Saint-Germain
       /* the grands boulevards, in a shallow arc across the right bank */
-      for (let x = 56; x < 190; x++) {
-        const y = Math.round(52 + Math.sin((x - 56) / 134 * Math.PI) * -9);
-        ART.px(c, x, y, 1, 2, M.road);
+      for (let x = 112; x < 380; x++) {
+        const y = Math.round(104 + Math.sin((x - 112) / 268 * Math.PI) * -18);
+        ART.px(c, x, y, 1, 4, M.road);
         ART.px(c, x, y, 1, 1, '#ffffff');
+        ART.px(c, x, y + 3, 1, 1, M.roadEdge);
       }
-      /* the long verticals */
-      [72, 118, 158].forEach(x => road(x, 8, 2, MH - 16));
-      [96, 140].forEach(x => road(x, 78, 2, MH - 86));
+      /* the long verticals, with kerbs */
+      [144, 236, 316].forEach(x => road(x, 16, 4, MH - 32));
+      [192, 280].forEach(x => road(x, 156, 3, MH - 172));
 
-      /* ---------- THE ETOILE ----------
-         Twelve avenues out of one point, which is the single most
-         recognisable piece of street plan in the world. */
-      const ex = 54, ey = 40;
+      /* ---------- THE ETOILE ---------- */
+      const ex = 108, ey = 80;
       for (let a = 0; a < 12; a++) {
         const th = (a / 12) * Math.PI * 2 + 0.26;
-        for (let r = 3; r < 34; r++) {
+        for (let r = 6; r < 68; r++) {
           const x = Math.round(ex + Math.cos(th) * r);
           const y = Math.round(ey + Math.sin(th) * r * 0.8);
           if (x < 0 || x >= MW || y < 0 || y >= MH) break;
-          ART.px(c, x, y, 1, 1, r < 26 ? M.road : M.roadEdge);
+          ART.px(c, x, y, 2, 2, r < 52 ? M.road : M.roadEdge);
         }
       }
-      PIX.disc(c, ex, ey, 4, M.road);
-      PIX.disc(c, ex, ey, 3, M.paperLit);
-      PIX.disc(c, ex, ey, 1, M.ink);
+      PIX.disc(c, ex, ey, 9, M.road);
+      PIX.disc(c, ex, ey, 7, M.paperLit);
+      glyphArch(c, ex, ey + 6);
       /* the Champs-Elysees, from the star down to the gardens */
-      for (let i = 0; i < 40; i++) {
-        ART.px(c, ex + 4 + i, 40 + Math.round(i * 0.52), 1, 3, M.road);
-        ART.px(c, ex + 4 + i, 40 + Math.round(i * 0.52), 1, 1, '#ffffff');
+      for (let i = 0; i < 78; i++) {
+        ART.px(c, ex + 8 + i, 80 + Math.round(i * 0.52), 1, 5, M.road);
+        ART.px(c, ex + 8 + i, 80 + Math.round(i * 0.52), 1, 1, '#ffffff');
       }
 
-      /* ---------- MONTMARTRE ----------
-         The one piece of relief in the city, so it gets contours. */
-      for (let r = 16; r > 3; r -= 4) {
-        for (let a = 0; a < 64; a++) {
-          const th = (a / 64) * Math.PI * 2;
-          ART.px(c, Math.round(122 + Math.cos(th) * r),
-            Math.round(20 + Math.sin(th) * r * 0.62), 1, 1, M.inkLo);
+      /* ---------- MONTMARTRE ---------- */
+      for (let r = 34; r > 6; r -= 7) {
+        for (let a = 0; a < 120; a++) {
+          const th = (a / 120) * Math.PI * 2;
+          ART.px(c, Math.round(244 + Math.cos(th) * r),
+            Math.round(42 + Math.sin(th) * r * 0.62), 1, 1,
+            a % 7 < 5 ? M.inkLo : M.paperDk);
         }
       }
-      ART.px(c, 120, 17, 5, 2, M.paperLit);
-      ART.px(c, 121, 15, 3, 2, M.paperLit);
+      glyphDome(c, 244, 44);
+      /* and the tower, over on the Champ de Mars */
+      glyphTower(c, 88, 140);
 
-      /* ---------- THE WALL ----------
-         The old fortifications, coming down all through the thirties and
-         still what everybody means by the edge of Paris. */
-      for (let a = 0; a < 260; a++) {
-        const th = (a / 260) * Math.PI * 2;
+      /* ---------- THE WALL ---------- */
+      for (let a = 0; a < 520; a++) {
+        const th = (a / 520) * Math.PI * 2;
         const x = Math.round(cx0 + Math.cos(th) * (MW * 0.47));
         const y = Math.round(cy0 + Math.sin(th) * (MH * 0.44));
-        if (x < 1 || x >= MW - 1 || y < 1 || y >= MH - 1) continue;
-        ART.px(c, x, y, 1, 1, a % 6 < 4 ? M.inkLo : M.paperDk);
+        if (x < 2 || x >= MW - 2 || y < 2 || y >= MH - 2) continue;
+        ART.px(c, x, y, 2, 2, a % 8 < 5 ? M.inkLo : M.paperDk);
       }
 
       /* ---------- WHAT THE WEATHER IS DOING TO THE PAPER ---------- */
       const sk = CITY.sky();
       if (sk.drops > 0.6) {
-        for (let i = 0; i < 40 * sk.drops; i++) {
-          const x = Math.floor(rng() * MW), y = Math.floor(rng() * MH);
-          PIX.disc(c, x, y, 1 + Math.floor(rng() * 2), 'rgba(150,140,110,.16)');
+        for (let i = 0; i < 90 * sk.drops; i++) {
+          PIX.disc(c, Math.floor(rng() * MW), Math.floor(rng() * MH),
+            1 + Math.floor(rng() * 3), 'rgba(150,140,110,.14)');
         }
       }
       if (sk.haze) {
-        for (let i = 0; i < MH; i += 3) ART.px(c, 0, i, MW, 1, 'rgba(240,232,208,.14)');
+        for (let i = 0; i < MH; i += 4) ART.px(c, 0, i, MW, 1, 'rgba(240,232,208,.12)');
       }
 
-      /* ---------- THE FOLDS ----------
-         Two verticals and one horizontal, which is how a map this size
-         goes into a coat. */
+      /* ---------- THE FOLDS ---------- */
       [Math.round(MW / 3), Math.round(MW * 2 / 3)].forEach(fx => {
-        ART.px(c, fx, 0, 1, MH, 'rgba(160,146,112,.34)');
-        ART.px(c, fx + 1, 0, 1, MH, 'rgba(255,250,232,.30)');
+        ART.px(c, fx, 0, 1, MH, 'rgba(160,146,112,.30)');
+        ART.px(c, fx + 1, 0, 1, MH, 'rgba(255,250,232,.26)');
       });
-      ART.px(c, 0, Math.round(MH / 2), MW, 1, 'rgba(160,146,112,.30)');
-      ART.px(c, 0, Math.round(MH / 2) + 1, MW, 1, 'rgba(255,250,232,.26)');
+      ART.px(c, 0, Math.round(MH / 2), MW, 1, 'rgba(160,146,112,.26)');
+      ART.px(c, 0, Math.round(MH / 2) + 1, MW, 1, 'rgba(255,250,232,.22)');
 
       /* ---------- THE CARTOUCHE, THE ROSE AND THE SCALE ---------- */
-      /* the title, bottom left, on its own panel */
-      ART.px(c, 4, MH - 27, 62, 18, M.paperLit);
-      ART.px(c, 4, MH - 27, 62, 1, '#ffffff');
-      ART.px(c, 4, MH - 10, 62, 1, M.inkLo);
-      ART.px(c, 4, MH - 27, 1, 18, M.inkLo);
-      ART.px(c, 65, MH - 27, 1, 18, M.inkLo);
-      const t1 = PIXFONT.render('PLAN DE PARIS', { scale: 1, color: M.inkHi, shadow: null });
-      c.drawImage(t1, 7, MH - 24);
-      const t2 = PIXFONT.render('JUDICIAIRE', { scale: 1, color: M.inkLo, shadow: null });
-      c.drawImage(t2, 7, MH - 16);
-      /* the scale bar, over on the other side so it is not sharing rows
-         with the title — the first pass had them printed on top of
-         each other and it read as a smudge */
-      const sbx = MW - 54;
+      ART.px(c, 8, MH - 56, 132, 40, M.paperLit);
+      ART.px(c, 8, MH - 56, 132, 2, '#ffffff');
+      ART.px(c, 8, MH - 18, 132, 2, M.inkLo);
+      ART.px(c, 8, MH - 56, 2, 40, M.inkLo);
+      ART.px(c, 138, MH - 56, 2, 40, M.inkLo);
+      const t1 = PIXFONT.render('PLAN DE PARIS', { scale: 2, color: M.inkHi, shadow: null });
+      c.drawImage(t1, 14, MH - 51);
+      const t2 = PIXFONT.render('POLICE JUDICIAIRE', { scale: 1, color: M.inkLo, shadow: null });
+      c.drawImage(t2, 14, MH - 33);
+      const t2b = PIXFONT.render('BRIGADE CRIMINELLE', { scale: 1, color: M.inkLo, shadow: null });
+      c.drawImage(t2b, 14, MH - 25);
+      /* the scale bar, over on the other side */
+      const sbx = MW - 118;
       for (let i = 0; i < 5; i++) {
-        ART.px(c, sbx + i * 6, MH - 14, 6, 3, i % 2 ? M.paperLit : M.inkHi);
+        ART.px(c, sbx + i * 12, MH - 30, 12, 6, i % 2 ? M.paperLit : M.inkHi);
       }
-      ART.px(c, sbx, MH - 15, 30, 1, M.inkHi);
-      ART.px(c, sbx, MH - 11, 30, 1, M.inkHi);
-      const t3 = PIXFONT.render('1 KM', { scale: 1, color: M.inkHi, shadow: null });
-      c.drawImage(t3, sbx + 33, MH - 15);
+      ART.px(c, sbx, MH - 32, 60, 2, M.inkHi);
+      ART.px(c, sbx, MH - 24, 60, 2, M.inkHi);
+      const t3 = PIXFONT.render('1 KM', { scale: 2, color: M.inkHi, shadow: null });
+      c.drawImage(t3, sbx + 66, MH - 32);
       /* the compass rose, top right */
-      const rx = MW - 16, ry = 15;
-      PIX.disc(c, rx, ry, 10, M.paperLit);
-      for (let a = 0; a < 48; a++) {
-        const th = (a / 48) * Math.PI * 2;
-        ART.px(c, Math.round(rx + Math.cos(th) * 9), Math.round(ry + Math.sin(th) * 9), 1, 1, M.inkLo);
+      const rx = MW - 30, ry = 30;
+      PIX.disc(c, rx, ry, 20, M.paperLit);
+      for (let a = 0; a < 96; a++) {
+        const th = (a / 96) * Math.PI * 2;
+        ART.px(c, Math.round(rx + Math.cos(th) * 18), Math.round(ry + Math.sin(th) * 18), 1, 1, M.inkLo);
+        if (a % 8 === 0) {
+          ART.px(c, Math.round(rx + Math.cos(th) * 15), Math.round(ry + Math.sin(th) * 15), 2, 2, M.inkLo);
+        }
       }
       [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(([dx, dy], i) => {
-        for (let r = 0; r < 8; r++) {
-          const wdt = Math.max(1, 3 - Math.floor(r / 3));
+        for (let r = 0; r < 16; r++) {
+          const wdt = Math.max(1, 5 - Math.floor(r / 4));
           ART.px(c, rx + dx * r - (dx ? 0 : Math.floor(wdt / 2)),
             ry + dy * r - (dy ? 0 : Math.floor(wdt / 2)),
             dx ? 1 : wdt, dy ? 1 : wdt, i === 0 ? M.red : M.inkHi);
         }
       });
-      const tn = PIXFONT.render('N', { scale: 1, color: M.red, shadow: null });
-      c.drawImage(tn, rx - 2, ry - 19);
+      const tn = PIXFONT.render('N', { scale: 2, color: M.red, shadow: null });
+      c.drawImage(tn, rx - 5, ry - 38);
 
       /* ---------- THE EDGE OF THE SHEET ---------- */
-      for (let i = 0; i < 2; i++) {
-        const a = (0.22 - i * 0.10).toFixed(2);
+      for (let i = 0; i < 3; i++) {
+        const a = (0.20 - i * 0.06).toFixed(2);
         ART.px(c, 0, i, MW, 1, 'rgba(90,78,54,' + a + ')');
         ART.px(c, 0, MH - 1 - i, MW, 1, 'rgba(90,78,54,' + a + ')');
         ART.px(c, i, 0, 1, MH, 'rgba(90,78,54,' + a + ')');
@@ -18801,19 +19062,19 @@ const PHONE = (() => {
       const tx = Math.round(to.x / 100 * MW), ty = Math.round(to.y / 100 * MH);
       const n = Math.max(1, Math.round(Math.hypot(tx - fx, ty - fy)));
       for (let k = 0; k <= n; k++) {
-        if ((k >> 1) % 2) continue;                 /* dashed */
+        if ((k >> 2) % 2) continue;                 /* dashed, longer dashes */
         const t = k / n;
         const x = Math.round(fx + (tx - fx) * t);
         const y = Math.round(fy + (ty - fy) * t);
-        ART.px(c, x, y, 1, 1, hot ? M.red : 'rgba(107,90,60,.55)');
-        if (hot) ART.px(c, x, y + 1, 1, 1, 'rgba(255,255,255,.35)');
+        ART.px(c, x, y, 2, 2, hot ? M.red : 'rgba(107,90,60,.55)');
+        if (hot) ART.px(c, x, y + 2, 2, 1, 'rgba(255,255,255,.30)');
       }
     });
     /* and a ring round where you are standing */
-    for (let a = 0; a < 30; a++) {
-      const th = (a / 30) * Math.PI * 2;
-      ART.px(c, Math.round(fx + Math.cos(th) * 6), Math.round(fy + Math.sin(th) * 6), 1, 1,
-        a % 4 < 3 ? '#2f7f6a' : 'rgba(0,0,0,0)');
+    for (let a = 0; a < 60; a++) {
+      const th = (a / 60) * Math.PI * 2;
+      if (a % 5 >= 4) continue;
+      ART.px(c, Math.round(fx + Math.cos(th) * 12), Math.round(fy + Math.sin(th) * 12), 2, 2, '#2f7f6a');
     }
     return o.cv;
   }
@@ -19108,8 +19369,11 @@ const PHONE = (() => {
   /* ---------- FROGGOMAP ---------- */
   function mapApp(k) {
     const wrap = U.el('div', 'ph-app');
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.86 / MW,
-      window.innerHeight * 0.50 / MH)), 1, 6);
+    /* AT THIS RESOLUTION THE PAPER WANTS TO BE 1:1. Four times the pixels
+       in the same space on screen is the whole point; blowing it up again
+       would throw that straight back away. */
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.88 / MW,
+      window.innerHeight * 0.54 / MH)), 1, 4);
     const holder = U.el('div', 'map-holder');
     holder.appendChild(SPR.clone(drawMap(), K));
     /* the routes ride on their own layer over the paper: the paper is
@@ -19120,8 +19384,11 @@ const PHONE = (() => {
     holder.appendChild(rt);
     holder.style.width = (MW * K) + 'px';
     holder.style.height = (MH * K) + 'px';
-    CITY.board().forEach(e => holder.appendChild(pin(e, Math.max(2, k))));
-    holder.appendChild(pin({ place: CITY.PLACES.precinct, visited: true, left: 0 }, Math.max(2, k)));
+    /* THE PINS SHRINK WITH THE PAPER. At the old resolution a marker had
+       to be chunky to read at all; on a plan with individual buildings on
+       it the same marker covers half an arrondissement. */
+    CITY.board().forEach(e => holder.appendChild(pin(e, 1)));
+    holder.appendChild(pin({ place: CITY.PLACES.precinct, visited: true, left: 0 }, 1));
     wrap.appendChild(holder);
 
     const foot = U.el('div', 'ph-foot');
@@ -22946,7 +23213,16 @@ const UI = {
      big enough to hit with a thumb.
      ============================================================ */
   buildCorner(app, kind) {
-    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;         // icon scale
+    /* THE HUD IS DRAWN AT THE SAME RESOLUTION AS THE GAME.
+
+       It was scale three, which was right when a room pixel was six
+       screen pixels: chunky furniture in front of a chunky world. The
+       world renders at half that now, and scale three furniture in front
+       of it reads as a mobile game's buttons pasted over a painting. Two
+       everywhere, and three only on a screen big enough that two would be
+       hard to read across the room. */
+    const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2
+      : (window.innerWidth > 1700 ? 3 : 2);
     const wrap = U.el('div', 'corner-ui corner-' + kind);
 
     if (kind === 'scene') {
@@ -22957,7 +23233,7 @@ const UI = {
       plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
       const col = U.el('div', 'obj-col');
       col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
-      col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+      col.appendChild(UI.wrap(ob.line, 34, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
       plate.appendChild(col);
       plate.onclick = () => PHONE.open('job');
 
