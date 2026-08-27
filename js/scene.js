@@ -162,6 +162,7 @@ const SCENE = (() => {
      BUILD
      ============================================================ */
 
+  let forceK = 0;                // the harness pinning a scale for a comparison
   let oy = 0;                    // how far down the room sits in the frame
   let mouse = { x: 0, y: 0, on: false };
   let hoverRat = null;
@@ -216,14 +217,40 @@ const SCENE = (() => {
        ============================================================ */
     const fits = (k) => {
       if (k < 2) return false;
-      if (w / k < 190) return false;                 // camera inside a coat
+      /* two hundred room pixels is about six metres of street: enough to
+         see who is coming, which is the floor for playability */
+      if (w / k < 200) return false;
       /* the floor line has to be on screen or he is standing off the
          bottom of the frame: 122 rows keeps the deepest floor (118) plus
          a strip of foreground under it */
       return Math.floor(h / k) >= 122;
     };
+    /* ============================================================
+       AND HOW CLOSE THE CAMERA STANDS.
+
+       FOOT is three, so the only scales that keep the rig at full
+       detail are three and six — there is nothing clean in
+       between, and any other number downscales the rig through a
+       filter, which is real blur.
+
+       THREE was the old default and it puts four hundred and
+       twenty-seven room pixels in frame: most of a room, and a
+       cast eighty screen pixels tall in the middle of it. SIX
+       halves what is in frame and doubles the cast, and it used to
+       look bad — but that was the milky cast over the frame, which
+       has been measured out of existence. With the frame clean,
+       six is the better shot for a game about faces.
+
+       So six is the default where it fits, three is what a short
+       or narrow window gets, and Z switches between them for
+       anybody who would rather see the whole room.
+       ============================================================ */
+    const wide = (typeof META !== 'undefined' && META.load)
+      ? !!META.load().wideShot : false;
     let k = 0;
-    for (let m = FOOT; m <= 12; m += FOOT) if (fits(m)) { k = m; break; }
+    if (forceK && fits(forceK)) k = forceK;
+    else if (!wide && fits(FOOT * 2)) k = FOOT * 2;
+    else for (let m = FOOT; m <= 12; m += FOOT) if (fits(m)) { k = m; break; }
     if (!k) {
       /* nothing FOOT-friendly fits — a short landscape phone. Fall back to
          filling the height and accept the softer rig. */
@@ -670,6 +697,28 @@ const SCENE = (() => {
     if (me.land > 0) me.land = Math.max(0, me.land - dt * 4.5);
     /* the earned expression, running out */
     if (warmT > 0) { warmT = Math.max(0, warmT - dt); if (!warmT) warmKind = null; }
+
+    /* ------------------------------------------------------------
+       AND THE ONES WHO PACE.
+
+       Everybody else works on the spot. A frog with the job 'pace'
+       walks a short beat and turns round at the end of it, which is
+       the only behaviour that has to move him rather than move his
+       arms — so it happens here rather than in the draw.
+       ------------------------------------------------------------ */
+    for (const a of (def.actors || [])) {
+      if (a.job !== 'pace' || a.gone || a.talking) continue;
+      if (a._home === undefined) { a._home = a.x; a._dir = 1; a._wait = 0; }
+      if (a._wait > 0) { a._wait -= dt; a.frame = 0; continue; }
+      a.x += a._dir * 13 * dt;
+      a.face = a._dir;
+      a.frame = Math.floor((a._pw = (a._pw || 0) + dt * 7)) % 8;
+      const span = a.beat || 22;
+      if ((a._dir > 0 && a.x > a._home + span) || (a._dir < 0 && a.x < a._home - span)) {
+        a._dir = -a._dir;
+        a._wait = 0.7 + (Math.abs(Math.round(a._home)) % 5) * 0.2;
+      }
+    }
     if (me.reach > 0) me.reach = Math.max(0, me.reach - dt * 1.6);
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p2 = puffs[i];
@@ -1808,6 +1857,97 @@ const SCENE = (() => {
     return { hop: Math.round(hop), drop, tip };
   }
 
+  /* ============================================================
+     WHAT SOMEBODY IS DOING WHILE YOU ARE NOT TALKING TO THEM.
+
+     Everybody in every room used to breathe, and that was the
+     whole of it: nine frogs standing perfectly still with their
+     chests going up and down. At the old camera distance you
+     could not tell. The camera is closer now and you can.
+
+     So an actor gets a JOB, and a job is three things: a loop
+     with its own period, what the body does on that loop, and
+     the thing in his hands while he does it. The clerk types, the
+     one at the next desk turns a page, the barman wipes down the
+     counter he has wiped a thousand times, the watchman smokes,
+     somebody eats at the cafe, and the frog with nothing to do
+     walks four steps one way and four steps back.
+
+     Props are drawn at the hand: six to ten room pixels, which at
+     the close camera is enough to read as a cup or a pencil.
+     ============================================================ */
+  const DOING = {
+    /* job      period  what the body does           prop */
+    /* THE DESK ALREADY HAS A TYPEWRITER ON IT. Drawing a second one at
+       hand height put a machine through the middle of the clerk; the peck
+       of the shoulders is what reads as typing anyway. */
+    type:   { per: 0.34, body: 'peck', prop: null },
+    notes:  { per: 2.60, body: 'lean', prop: 'pad' },
+    read:   { per: 3.40, body: 'lean', prop: 'paper' },
+    drink:  { per: 3.80, body: 'raise', prop: 'glass' },
+    eat:    { per: 2.20, body: 'raise', prop: 'bite' },
+    smoke:  { per: 4.60, body: 'raise', prop: 'cig' },
+    wipe:   { per: 1.20, body: 'swing', prop: 'rag' },
+    sweep:  { per: 1.70, body: 'swing', prop: 'broom' },
+    sort:   { per: 1.50, body: 'peck', prop: null },
+    pace:   { per: 7.00, body: 'walk', prop: null },
+    watch:  { per: 5.20, body: 'turn', prop: null },
+  };
+
+  /* the little things they hold, all drawn facing `dir` */
+  function prop(c, kind, x, y, dir, T, ph) {
+    const px = (a, b, w, h, col) => ART.px(c, a, b, w, h, col);
+    if (kind === 'keys') {
+      /* the machine, not the hands: a carriage and a stack of paper */
+      px(x - 7, y + 1, 15, 5, '#3a3d48');
+      px(x - 7, y + 1, 15, 1, '#565b6c');
+      px(x - 5, y - 3, 11, 4, '#2a2d38');
+      px(x - 4, y - 2, 9, 2, '#e2d7b8');
+      for (let i = 0; i < 5; i++) {
+        px(x - 5 + i * 3, y + 3, 2, 1, (Math.floor(ph * 5) === i) ? '#c9c0a8' : '#8d8672');
+      }
+    } else if (kind === 'pad') {
+      px(x - 4 * dir, y, 9, 7, '#e2d7b8');
+      px(x - 4 * dir, y, 9, 1, '#f2e9cf');
+      px(x - 3 * dir, y + 2, 7, 1, 'rgba(34,32,28,.5)');
+      px(x - 3 * dir, y + 4, 5, 1, 'rgba(34,32,28,.5)');
+      /* the pencil, moving down the page */
+      px(x + 4 * dir, y + 1 + Math.round(ph * 4), 4, 1, '#c9a24a');
+      px(x + 7 * dir, y + 1 + Math.round(ph * 4), 1, 1, '#22201c');
+    } else if (kind === 'paper') {
+      const turn = ph > 0.86;
+      px(x - 6 * dir, y - 1, 13, 10, '#e2d7b8');
+      px(x - 6 * dir, y - 1, 13, 1, '#f2e9cf');
+      for (let i = 0; i < 4; i++) px(x - 5 * dir, y + 1 + i * 2, 10 - (i % 2) * 3, 1, 'rgba(34,32,28,.45)');
+      if (turn) px(x + 3 * dir, y - 2, 5, 11, '#f2e9cf');
+    } else if (kind === 'glass') {
+      px(x, y, 5, 6, 'rgba(200,225,235,.55)');
+      px(x, y, 5, 1, '#e8f2f6');
+      px(x + 1, y + 2, 3, 4, '#8a5a1a');
+      px(x, y + 6, 5, 1, 'rgba(0,0,0,.35)');
+    } else if (kind === 'bite') {
+      px(x, y, 7, 5, '#c9a24a');
+      px(x, y, 7, 1, '#e2c274');
+      px(x + 1, y + 2, 5, 2, '#8a5a2a');
+      if (ph > 0.5) px(x + 5, y, 2, 2, '#e2d7b8');   /* a piece gone */
+    } else if (kind === 'cig') {
+      px(x, y + 2, 6, 1, '#efe6cc');
+      px(x + 6, y + 2, 1, 1, '#e0631e');
+      for (let i = 0; i < 3; i++) {
+        px(x + 6, y - 1 - i * 2 - Math.round(ph * 3), 1, 1,
+          'rgba(206,202,190,' + (0.30 - i * 0.08).toFixed(2) + ')');
+      }
+    } else if (kind === 'rag') {
+      px(x, y + 2, 8, 3, '#c2cbd4');
+      px(x, y + 2, 8, 1, '#e2e8ee');
+      px(x + 2, y + 5, 4, 1, 'rgba(0,0,0,.28)');
+    } else if (kind === 'broom') {
+      px(x, y - 8, 1, 12, '#8a6a44');
+      px(x - 3, y + 4, 8, 4, '#b8963c');
+      px(x - 3, y + 4, 8, 1, '#d8b45c');
+    }
+  }
+
   function drawActor(c, a, T) {
     /* HE LOOKS AT YOU WHEN YOU GET CLOSE. A frog who keeps facing the wall
        while a detective walks up to him is furniture; turning his head is
@@ -1829,8 +1969,19 @@ const SCENE = (() => {
     /* AND WHAT HE IS DOING WITH HIS HANDS. A witness at a counter is
        working: wiping it down, sorting a rack, turning a page. One bob
        and one lean on their own slow loops is enough to sell it. */
-    let work = 0;
-    if (a.busyAt) {
+    let work = 0, lift = 0;
+    const job = DOING[a.job];
+    if (job) {
+      /* his own phase, so two clerks at two desks are never in step */
+      const ph = ((T / job.per) + (Math.abs(Math.round(a.x)) % 17) * 0.11) % 1;
+      const sw = Math.sin(ph * Math.PI * 2);
+      if (job.body === 'peck') work = Math.round(sw * 1.2);
+      else if (job.body === 'lean') { work = Math.round(sw); lift = Math.round(Math.abs(sw)); }
+      else if (job.body === 'raise') lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
+      else if (job.body === 'swing') work = Math.round(sw * 4);
+      else if (job.body === 'turn') work = sw > 0 ? 1 : -1;
+      a._ph = ph;
+    } else if (a.busyAt) {
       const wp = (T * a.busyAt + (a.x % 11) * 0.3) % 1;
       work = Math.round(Math.sin(wp * Math.PI * 2) * 2);
     }
@@ -1839,6 +1990,13 @@ const SCENE = (() => {
     ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
       Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
+    /* AND WHAT IS IN HIS HANDS, over the top of him, at hand height */
+    if (job && job.prop) {
+      /* held OUT, at the end of an arm, not buried in his chest */
+      const hy = Math.round(fy - h * 0.42) - lift;
+      const hx = Math.round(a.x + (w * 0.52) * face);
+      prop(c, job.prop, hx, hy, face, T, a._ph || 0);
+    }
   }
 
   /* ============================================================
@@ -2006,6 +2164,18 @@ const SCENE = (() => {
 
   return {
     H, open, close, walkTo, rig, rigH, rigPic, beat,
+    /* Z: the whole room, or close enough to see a face */
+    toggleZoom() {
+      if (typeof META === 'undefined') return false;
+      const m = META.load();
+      m.wideShot = !m.wideShot;
+      META.save();
+      scale();
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall(m.wideShot ? 'CAMERA: THE WHOLE ROOM' : 'CAMERA: CLOSE IN');
+      }
+      return !m.wideShot;
+    },
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
     /* what the frame is actually rendering at, for the resolution probe */
     debugRes() {
@@ -2013,6 +2183,8 @@ const SCENE = (() => {
         floorY: def ? def.floorY : null, roomW: def ? def.w : null };
     },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
+    /* the harness compares the shot at both available scales */
+    debugForceK(k) { forceK = k || 0; scale(); },
     /* the harness asks what is under a point, so the egg rules can be
        asserted rather than eyeballed */
     debugPick(x, y) { return pick(x, y === undefined ? (def ? def.floorY - 10 : 100) : y); },

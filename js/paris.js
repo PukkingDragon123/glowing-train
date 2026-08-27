@@ -1096,7 +1096,7 @@ const PARIS = (() => {
         tag: 'THE CUP MAN', tagCol: PIX.PAL.R, job: 'cups' },
       { id: 'wit', x: 600, z: 0.1, key: 'waiter',
         def: typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null, face: -1,
-        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased', busyAt: 0.65 },
+        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased', job: 'wipe' },
     ];
 
     const eggs = [
@@ -1225,7 +1225,7 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 480, z: 0.12, key: 'guard',
         def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
-        tag: 'THE GALLERY GUARD', tagCol: PIX.PAL.L, witness: true, mood: 'watch' },
+        job: 'pace', tag: 'THE GALLERY GUARD', tagCol: PIX.PAL.L, witness: true, mood: 'watch' },
     ];
 
     return {
@@ -1621,7 +1621,7 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 400, z: 0.14, key: 'usher',
         def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
-        tag: 'THE HOUSE MANAGER', tagCol: PIX.PAL.g, witness: true, mood: 'watch' },
+        job: 'read', tag: 'THE HOUSE MANAGER', tagCol: PIX.PAL.g, witness: true, mood: 'watch' },
     ];
 
     return {
@@ -1822,7 +1822,7 @@ const PARIS = (() => {
       { id: 'wit', x: 240, z: 0.13, key: 'keeper2',
         def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
           : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
-        tag: 'THE GARDENER', tagCol: PIX.PAL.F, witness: true, mood: 'weary' },
+        job: 'sweep', tag: 'THE GARDENER', tagCol: PIX.PAL.F, witness: true, mood: 'weary' },
     ];
 
     return {
@@ -1993,7 +1993,7 @@ const PARIS = (() => {
       { id: 'wit', x: 130, z: 0.11, key: 'zone',
         def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
           : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
-        tag: 'THE MAN AT THE FIRE', tagCol: PIX.PAL.r, witness: true, mood: 'watch' },
+        job: 'smoke', tag: 'THE MAN AT THE FIRE', tagCol: PIX.PAL.r, witness: true, mood: 'watch' },
     ];
 
     return {

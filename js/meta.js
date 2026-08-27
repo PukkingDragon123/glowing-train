@@ -25,6 +25,8 @@ const META = {
       tells: {},      // trait id -> true, once you've looted a frog that had it
       tutor: {},      // which of the captain's lines you have already heard
       trust: 0,       // Officer Maybelle. It adds up slowly, like anything real.
+      /* how close the camera stands. Default is close; Z opens it out. */
+      wideShot: false,
     };
   },
 
@@ -38,6 +40,7 @@ const META = {
         Object.assign(META.d.stats, saved.stats || {});
         Object.assign(META.d.bossSeen, saved.bossSeen || {});
         Object.assign(META.d.gunsOwned, saved.gunsOwned || {});
+        if (saved.wideShot !== undefined) META.d.wideShot = !!saved.wideShot;
         Object.assign(META.d.tells, saved.tells || {});
         Object.assign(META.d.tutor, saved.tutor || {});
         if (typeof saved.trust === 'number') META.d.trust = saved.trust;

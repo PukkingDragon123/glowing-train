@@ -1541,6 +1541,9 @@ const UI = {
       const k = e.key.toLowerCase();
       if (k === 'm') { document.getElementById('btn-mute') ? document.getElementById('btn-mute').click() : SFX.toggleMute(); return; }
       if (k === 'h' || e.key === '?') { UI.modalOpen() ? UI.closeModal() : UI.showHelp(); return; }
+      /* Z: how close the camera stands. Two scales, both of them crisp. */
+      if (k === 'z' && typeof SCENE !== 'undefined' && SCENE.toggleZoom
+        && UI.isScene(G.phase)) { SCENE.toggleZoom(); return; }
       /* the phone, out of your coat, anywhere you can walk */
       if (k === 'p' && typeof PHONE !== 'undefined' && UI.isScene(G.phase)) {
         PHONE.toggle('map'); return;

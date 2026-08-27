@@ -304,7 +304,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 402, y: FY, key: 'launder', def: LAUNDER_DEF, face: -1, still: true,
-        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty', busyAt: 0.55 },
+        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty', job: 'sort' },
     ];
 
     const eggs = [
@@ -509,11 +509,13 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 322, y: FY, key: 'watch', def: WATCH_DEF, face: -1,
-        tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true, mood: 'bored' },
+        job: 'smoke', tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true, mood: 'bored' },
     ];
 
     const eggs = [
-      egg({ id: 'ball', x: 130, y: FY - 66, art: 'eg_ball',
+      /* ON the crate, not above it: at the close camera an easter egg
+         hanging eight pixels off the top of a stack is a balloon */
+      egg({ id: 'ball', x: 134, y: FY - 50, art: 'eg_ball',
         label: 'SOMETHING RED AND WHITE',
         look: 'A RED AND WHITE BALL WITH A BUTTON ON IT. THE CRATE SAYS KANTO.' }),
     ];
@@ -602,7 +604,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 288, y: FY, key: 'pawn', def: PAWN_DEF, face: -1, still: true,
-        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch', busyAt: 0.4 },
+        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch', job: 'notes' },
     ];
 
     /* the glass case and its counter are painted over him, so he is behind
@@ -718,7 +720,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 246, y: FY, key: 'waitress', def: WAITRESS_DEF, face: -1, still: true,
-        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased', busyAt: 0.7 },
+        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased', job: 'wipe' },
       { id: 'cook', x: 300, y: FY, key: 'cook', def: COOK_DEF, face: -1, still: true,
         tag: 'THE COOK', tagCol: PIX.PAL.N },
     ];
@@ -782,17 +784,45 @@ const PLACES = (() => {
       px(c, 44, 70, 3, 5, p.h);
       sign(c, 8, 20, 52, 'THE LAMP', '#2e7d5b');
 
-      /* the back bar: bottles, the tarnished mirror, the green lamp */
-      for (let i = 0; i < 14; i++) {
-        const bx = 84 + i * 9, h2 = 8 + (i % 3) * 4;
-        px(c, bx, 54 - h2, 5, h2, ['#2e7d5b', '#8c2230', '#a5741f', '#3f89c4'][i % 4]);
-        px(c, bx, 54 - h2, 1, h2, 'rgba(255,255,255,.2)');
-        px(c, bx + 1, 56 - h2, 3, 2, '#12101d');
+      /* ------------------------------------------------------------
+         THE BACK BAR.
+
+         Fourteen five-pixel tabs of colour along a shelf read as a row
+         of postage stamps, which is what a bottle looks like when the
+         camera is far enough away not to care. It is not far away any
+         more. A bottle is a shoulder, a neck, a cap and a label, and it
+         catches the light down one side.
+         ------------------------------------------------------------ */
+      px(c, 80, 38, 130, 3, p.K); px(c, 81, 38, 128, 1, '#6b4426');
+      px(c, 82, 40, 126, 14, '#171b22');               /* the mirror behind */
+      ART.dither(c, 82, 40, 126, 14, 'rgba(200,220,235,.05)', 0.2, 5);
+      for (let i = 0; i < 16; i++) {
+        const bx = 84 + i * 8;
+        const h2 = 13 + (i % 4) * 3;                    /* how tall this one is */
+        const top = 54 - h2;
+        const glass = ['#2e7d5b', '#8c2230', '#a5741f', '#3f89c4', '#6b4426'][i % 5];
+        const lit = ['#4fae82', '#c2465a', '#d8a23c', '#6fb2e0', '#9a6f42'][i % 5];
+        /* the body, three wide, with a lit edge down the left of it */
+        px(c, bx, top + 4, 6, h2 - 4, glass);
+        px(c, bx, top + 4, 1, h2 - 4, lit);
+        px(c, bx + 5, top + 4, 1, h2 - 4, 'rgba(0,0,0,.34)');
+        /* the shoulder, stepping in to the neck */
+        px(c, bx + 1, top + 2, 4, 2, glass);
+        px(c, bx + 1, top + 2, 1, 2, lit);
+        px(c, bx + 2, top, 2, 3, glass);
+        px(c, bx + 2, top, 1, 3, lit);
+        /* the cap, and a foil collar on the tall ones */
+        px(c, bx + 2, top - 2, 2, 2, i % 3 ? '#c9a24a' : '#8d8672');
+        if (h2 > 18) px(c, bx + 1, top + 1, 4, 1, '#c9a24a');
+        /* the label, which is the only thing you actually read */
+        px(c, bx, top + 8, 6, 4, '#e2d7b8');
+        px(c, bx, top + 8, 6, 1, '#f2e9cf');
+        px(c, bx + 1, top + 9, 4, 1, 'rgba(34,32,28,.55)');
+        /* and what is left in it */
+        if (i % 3 === 1) px(c, bx + 1, top + 4, 4, 3, 'rgba(12,14,18,.45)');
       }
       px(c, 80, 54, 130, 3, p.K); px(c, 81, 54, 128, 1, '#6b4426');
-      px(c, 80, 38, 130, 3, p.K); px(c, 81, 38, 128, 1, '#6b4426');
-      px(c, 82, 40, 126, 12, '#1b2028');
-      ART.dither(c, 82, 40, 126, 12, 'rgba(200,220,235,.06)', 0.2, 5);
+      px(c, 81, 53, 128, 1, 'rgba(255,240,210,.14)');   /* the shelf's lit lip */
       /* the lamp the place is named after */
       px(c, 140, 12, 4, 10, p.K);
       PIX.disc(c, 142, 26, 10, p.K);
@@ -862,7 +892,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 168, y: FY, key: 'barman', def: BARMAN_DEF, face: 1, still: true,
-        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard', busyAt: 0.5 },
+        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard', job: 'wipe' },
       { id: 'drunk', x: 300, y: FY, key: 'drunk', def: DRUNK_DEF, face: -1, still: true,
         tag: 'A REGULAR', tagCol: PIX.PAL.d },
     ];

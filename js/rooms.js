@@ -208,6 +208,8 @@ const ROOMS = (() => {
     /* --- Maybelle, at her desk --- */
     actors.push({
       id: 'may', x: 164, y: FY, key: MAY_RIG.key, def: MAY_RIG.def, face: -1,
+      /* she is on the front desk and the front desk is a typewriter */
+      job: 'type', mood: 'pleased',
       label: 'OFFICER MAYBELLE',
       hint: () => (G.mayTalked ? 'ALREADY SAID YOUR PIECE' : 'TALK'),
       onUse: () => STORY.talkMaybelle(),
@@ -215,15 +217,35 @@ const ROOMS = (() => {
     /* --- the captain, outside his own door --- */
     actors.push({
       id: 'cap', x: 272, y: FY, key: CAP_RIG.key, def: CAP_RIG.def, face: -1,
+      /* he stands outside his own door with a cigar and reads the room */
+      job: 'smoke', mood: 'hard',
       label: 'CAPTAIN ROOK',
       hint: () => (STORY.capHasBrief() ? 'HE HAS SOMETHING' : 'TALK'),
       onUse: () => STORY.talkCaptain(),
     });
     /* --- a uniform typing up an assault, and a drunk in the cell --- */
     actors.push({ id: 'uni', x: 344, y: FY, key: UNI_RIG.key, def: UNI_RIG.def, face: -1, still: false,
+      job: 'type', mood: 'bored',
       label: 'PATROLMAN DILL', hint: 'TALK', onUse: () => STORY.smallTalk('dill') });
     actors.push({ id: 'drunk', x: 566, y: FY, key: DRUNK_RIG.key, def: DRUNK_RIG.def, face: -1, still: true,
+      job: 'drink', mood: 'bored',
       label: 'THE DRUNK TANK', hint: 'TALK', onUse: () => STORY.smallTalk('drunk') });
+    /* AND THE REST OF A WORKING BULLPEN. Two more at the desks behind —
+       one typing up somebody else's night, one going through a file — and a
+       sergeant walking the length of the room because he always is. */
+    actors.push({ id: 'clerk1', x: 408, y: FY, key: 'clerk1',
+      def: Object.assign({}, DILL_DEF, { skin: ['N', 'n', 'n'], flatcap: false }),
+      face: -1, job: 'type', mood: 'bored', profile: false,
+      label: 'A CLERK', hint: 'HE IS BUSY', onUse: () => STORY.smallTalk('dill') });
+    actors.push({ id: 'clerk2', x: 462, y: FY, key: 'clerk2',
+      def: Object.assign({}, DILL_DEF, { skin: ['G', 'g', 'h'], glasses: 'round' }),
+      face: -1, job: 'read', mood: 'watch',
+      label: 'A CLERK', hint: 'HE IS READING', onUse: () => STORY.smallTalk('dill') });
+    actors.push({ id: 'sarge', x: 100, y: FY, key: 'sarge',
+      def: Object.assign({}, DILL_DEF, { skin: ['e', 'e', 'K'], fat: true }),
+      face: 1, job: 'pace', beat: 40, mood: 'hard',
+      label: 'THE DUTY SERGEANT', hint: 'HE IS WALKING IT OFF',
+      onUse: () => STORY.smallTalk('dill') });
 
     /* --- the board --- */
     spots.push({
