@@ -1284,11 +1284,168 @@ SPR.costumeOf = function (d) {
 };
 
 /* ============================================================
+   THE CLOSED HAND — the one that hangs off a sleeve.
+
+   Nine pixels across and ten down, which at room scale is about
+   a fifth of the width of his head: the size a hand actually is.
+   Built the way a hand is built rather than as a blob with lines
+   on it — a squarish back with four knuckles across the top of
+   it, four digits curling under, a pad on the end of each, and a
+   thumb crossing the front. Every pose below is the same hand
+   with the digits moved, so a fist and a pointing finger are
+   recognisably the same frog's hand.
+   ============================================================ */
+SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
+  const P = PIX.PAL;
+  opts = opts || {};
+  const skin = P[(d.skin && d.skin[0]) || 'F'] || P.F;
+  const shade = P[(d.skin && d.skin[1]) || 'f'] || P.f;
+  const dark = P[(d.skin && d.skin[2]) || 'e'] || P.e;
+  const INK = P.K;
+  const LIT = 'rgba(255,255,255,.20)';
+  const f = sgn < 0 ? -1 : 1;            // outward: away from his body
+
+  if (!opts.noCuff) {                    // the sleeve the wrist comes out of
+    const cuffC = SPR.cuffColor ? SPR.cuffColor(d) : (P[d.shirt] || P.W);
+    PIX.rect(ctx, x - 4, y - 6, 8, 5, INK);
+    PIX.rect(ctx, x - 3, y - 6, 6, 4, cuffC);
+    PIX.rect(ctx, x - 3, y - 6, 6, 1, 'rgba(255,255,255,.18)');
+    PIX.rect(ctx, x - 3, y - 3, 6, 1, 'rgba(0,0,0,.30)');
+    if (opts.link) PIX.rect(ctx, x + f * 2 - 1, y - 5, 2, 2, P.G);
+  }
+
+  /* ROW TABLES, not a loop of digits.
+     Each entry is [inward, outward] in pixels from the wrist centre, so the
+     whole hand mirrors on f and every silhouette is deliberate. At this size
+     — nine across, ten down, about a fifth of the width of his head — a hand
+     is a rounded mass with three grooves in it and a thumb on the near side.
+     Anything more detailed than that turns to soup the moment the room
+     scales it, and anything less is the cabbage this used to be. */
+  const SIL = {
+    hang:  [[2, 2], [3, 3], [4, 4], [4, 4], [4, 4], [4, 4], [3, 4], [3, 3], [2, 2]],
+    fist:  [[2, 2], [3, 4], [4, 5], [4, 5], [4, 5], [4, 4], [3, 3]],
+    point: [[2, 2], [3, 3], [4, 9], [4, 10], [4, 4], [4, 4], [3, 3]],
+    grip:  [[2, 3], [3, 5], [4, 6], [4, 6], [4, 6], [3, 5], [2, 3]],
+  };
+  const rows = SIL[pose] || SIL.hang;
+  const N = rows.length;
+  const lo = (i) => x - f * rows[i][0], hi = (i) => x + f * rows[i][1];
+  const at = (i) => {
+    const a = Math.min(lo(i), hi(i)), b = Math.max(lo(i), hi(i));
+    return { a, w: b - a + 1 };
+  };
+
+  /* the ink pass: one row taller and one wider all round, so the hand keeps
+     its own outline even against a black coat */
+  for (let i = -1; i <= N; i++) {
+    const r = at(U.clamp(i, 0, N - 1));
+    PIX.rect(ctx, r.a - 1, y + i, r.w + 2, 1, INK);
+  }
+  /* the fill, shaded down the length: the back of the hand catches the lamp,
+     the curled digits underneath are in its shadow */
+  for (let i = 0; i < N; i++) {
+    const r = at(i), t = i / (N - 1);
+    PIX.rect(ctx, r.a, y + i, r.w, 1, t > 0.62 ? shade : skin);
+    if (i === 0) PIX.rect(ctx, r.a, y + i, r.w, 1, LIT);
+    PIX.rect(ctx, f < 0 ? r.a : r.a + r.w - 1, y + i, 1,
+      1, t > 0.5 ? dark : shade);                     /* the far edge rolls off */
+  }
+
+  if (pose === 'hang' || pose === 'fist') {
+    /* THE KNUCKLES, four bumps along the outward edge, and the grooves
+       between the digits curling under them. This is the whole read: a fist
+       is knuckles-then-grooves, a relaxed hand is the same thing softer. */
+    const kx = x + f * (pose === 'fist' ? 4 : 3);
+    for (let k = 0; k < 4; k++) {
+      const ky = y + 1 + k * 2;
+      PIX.rect(ctx, kx, ky, 1, 1, pose === 'fist' ? 'rgba(255,255,255,.30)' : LIT);
+      PIX.rect(ctx, kx, ky + 1, 1, 1, dark);
+    }
+    const g0 = pose === 'fist' ? y + 4 : y + 5;
+    for (let g = 0; g < 3; g++) {
+      PIX.rect(ctx, x + f * (g * 2 - 2), g0, 1, N - (g0 - y) - 1, dark);
+    }
+    /* the pads on the ends of the curled digits */
+    for (let g = 0; g < 3; g++) {
+      PIX.rect(ctx, x + f * (g * 2 - 1), y + N - 2, 1, 1, shade);
+    }
+  } else if (pose === 'point') {
+    /* one digit out level, a pad on the end of it, the rest folded away */
+    PIX.rect(ctx, x + f * 5, y + 2, 1, 2, LIT);
+    PIX.rect(ctx, x + f * 9, y + 2, 1, 2, 'rgba(255,255,255,.28)');
+    PIX.rect(ctx, x + f * 4, y + 4, 1, 3, dark);
+    PIX.rect(ctx, x - f, y + 4, 1, 3, dark);
+    PIX.rect(ctx, x + f, y + 4, 1, 3, dark);
+  } else {
+    /* GRIP: the digits run across the front of whatever he is holding, so
+       what you see is four stacked bands with the gaps between them */
+    for (let k = 0; k < 4; k++) {
+      const ky = y + 1 + k * 2;
+      PIX.rect(ctx, x, ky, f * 6, 1, shade);
+      PIX.rect(ctx, x, ky + 1, f * 6, 1, dark);
+      PIX.rect(ctx, x + f * 5, ky, 1, 1, LIT);
+    }
+  }
+
+  /* THE THUMB, on the near side, crossing the front of the hand. Two pixels
+     wide with a pad on it: the one part of a hand that is unmistakable at
+     any size, and the reason a mitten reads as a mitten. */
+  const tx = x - f * (rows[2][0] + 1);
+  const ty = y + (pose === 'grip' ? 1 : 2);
+  PIX.rect(ctx, tx - 1, ty - 1, 3, 6, INK);
+  PIX.rect(ctx, tx - (f < 0 ? 1 : 0), ty, 2, 4, skin);
+  PIX.rect(ctx, tx - (f < 0 ? 1 : 0), ty, 1, 4, LIT);
+  PIX.rect(ctx, tx - 1, ty + 4, 3, 2, INK);
+  PIX.rect(ctx, tx - (f < 0 ? 1 : 0), ty + 4, 2, 1, shade);
+
+  /* the freckling the rest of him has, seeded the same way */
+  const hr = SPR.defRng(d);
+  for (let i = 0; i < 3; i++) {
+    PIX.rect(ctx, x + Math.round((hr() - 0.5) * 5), y + 1 + Math.floor(hr() * 4), 1, 1, shade);
+  }
+
+  if (opts.dim) {
+    /* A HAND AT HIS SIDE IS IN HIS SHADOW. Left at full skin value it is the
+       brightest thing on a noir figure and reads as a green blob at hip
+       height, which is exactly what it looked like. */
+    for (let i = -1; i <= N; i++) {
+      const r = at(U.clamp(i, 0, N - 1));
+      PIX.rect(ctx, r.a, y + i, r.w, 1, 'rgba(0,0,0,' + opts.dim + ')');
+    }
+  }
+
+  if (d.rings) {
+    PIX.rect(ctx, x - f * 2, y + 4, 2, 2, INK);
+    PIX.rect(ctx, x - f * 2, y + 4, 2, 1, P.G);
+  }
+  if (d.knuckles) {                      /* brass, over the knuckle row */
+    for (let k = 0; k < 4; k++) {
+      PIX.rect(ctx, x + f * 3 - (f < 0 ? 1 : 0), y + 1 + k * 2, 2, 2, INK);
+      PIX.rect(ctx, x + f * 3 - (f < 0 ? 1 : 0), y + 1 + k * 2, 2, 1, P.G);
+    }
+  }
+};
+
+/* ============================================================
    THE FROG HAND — four fingers, each ending in a fat round toe
    pad, webbing between them. Drawn splayed on the felt, seen
    from the player's low angle. Used by the seated mark, the
    corpse and the cops.
    sgn: -1 left hand, +1 right hand (thumb side flips)
+
+   POSES. The splayed fan is a hand lying ON something: it was
+   the only pose there was, and hung off the end of a standing
+   frog's sleeve it read as a cabbage — a bright green fan of
+   digits at hip height on every body in the game. A hand that is
+   not resting on anything is CLOSED, and it is small: about a
+   fifth of the width of his head. So the fan stays for the felt
+   and everything else gets a real one.
+
+     splay  flat on the felt, digits fanned      (the default)
+     hang   at his side, loosely curled          (standing rig)
+     fist   shut, knuckles out                   (angry, punching)
+     point  index out, the rest curled           (accusing)
+     grip   wrapped round something              (a glass, a gun)
    ============================================================ */
 SPR.frogHand = function (ctx, x, y, d, sgn, opts) {
   const P = PIX.PAL;
@@ -1297,7 +1454,12 @@ SPR.frogHand = function (ctx, x, y, d, sgn, opts) {
   const shade = P[d.skin[1]] || P.f;
   const dark = P[d.skin[2]] || P.e;
   const INK = P.K;
-  const grip = !!opts.grip;          // curled around something instead of splayed
+  const pose = opts.pose || (opts.grip ? 'grip' : 'splay');
+  const grip = pose === 'grip' || !!opts.grip;
+  if (pose !== 'splay') {
+    SPR.handPose(ctx, x, y, d, sgn, pose, opts);
+    return;
+  }
 
   /* sleeve cuff the wrist comes out of */
   if (!opts.noCuff) {
@@ -3487,22 +3649,48 @@ SPR.buildBody = function (d, o) {
        slide; the arm coming across also lifts while the trailing one hangs,
        and that vertical difference is what sells it at room size. */
     const lift = Math.round(sgn * swing * 2);
-    const elX  = cx + sgn * (baseHw - (armIn ? 8 : 1)) + Math.round(sw * 0.45);
+    const elX0 = cx + sgn * (baseHw - (armIn ? 8 : 1)) + Math.round(sw * 0.45);
     const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw;   // wrist leads the swing
     /* seated, the sleeve head starts BELOW the coat's shoulder line, so the
        arm grows out of the jacket instead of notching a step into it */
-    const y0 = seated ? 13 : 8, yEl = 30;
+    const y0 = seated ? 13 : 8;
     const y2 = seated ? H : 57 - Math.round(Math.abs(sw) * 0.35) - lift;
+    /* HOW BENT THE ELBOW IS, this frame. The arm coming across the body is
+       folded; the one trailing behind is nearly straight. Without this the
+       limb is a pipe that slides about, which is exactly what it looked
+       like: no elbow, no forearm, no arm. */
+    const fold = seated ? 0.34
+      : U.clamp(0.40 + sgn * swing * 0.46, 0.06, 0.92);
+    /* a folded arm's elbow rides UP as well as out — the joint is the thing
+       that takes up the slack when the hand comes in */
+    const yEl = (seated ? 30 : 29) - Math.round(fold * 3) - Math.round(lift * 0.5);
+    const elX = elX0 + sgn * Math.round(fold * 4);
     const centerAt = (y) => {
       const t = y < yEl ? (y - y0) / (yEl - y0) : (y - yEl) / (y2 - yEl);
       const a = y < yEl ? shoX : elX, b = y < yEl ? elX : haX;
       return Math.round((a + (b - a) * t) / 2) * 2;   // 2px stair steps
     };
+    /* TWO BONES, NOT A TUBE. The old arm ran 12 wide from the shoulder cap
+       to the cuff with one pixel of taper in it, and a body drawn that way
+       has no joints anywhere: it reads as furniture. A real limb is widest
+       at the deltoid, narrows into the elbow, swells again over the top of
+       the forearm and pinches to a wrist half the width of the shoulder. */
     const widthAt = (y) => {
-      const el = Math.abs(y - yEl) < 4;
-      let w = el ? 13 : 12;
-      if (y > yEl) w = 12 - Math.round((y - yEl) / 12);   // forearm tapers to the wrist
-      return w + (y <= (rolled ? 26 : y2) ? bulky : 0);
+      let w;
+      if (y <= yEl) {
+        const t = U.clamp((y - y0) / Math.max(1, yEl - y0), 0, 1);
+        w = 14 - 4 * (t * 0.55 + t * t * 0.45);
+      } else if (seated) {
+        /* hanging under a table there is no wrist to taper to, and a point
+           on the end of the arm reads as a stick */
+        const t = U.clamp((y - yEl) / Math.max(1, y2 - yEl), 0, 1);
+        w = 11 - 2 * t;
+      } else {
+        const t = U.clamp((y - yEl) / Math.max(1, y2 - yEl), 0, 1);
+        w = 11 - 4.4 * (t * 0.35 + t * t * 0.65)
+          + 2 * Math.sin(Math.min(1, t * 2.4) * Math.PI);
+      }
+      return Math.round(w) + (y <= (rolled ? 26 : y2) ? bulky : 0);
     };
     const rollY = rolled ? 26 : y2 + 1;
 
@@ -3556,10 +3744,21 @@ SPR.buildBody = function (d, o) {
       }
       if (bare && (y & 3) === 0) PIX.rect(fctx, c - 1, y, 2, 1, skShade);
     }
-    /* elbow crease where the sleeve bends onto the table */
+    /* THE ELBOW IS A JOINT, not a crease drawn on a pipe. The two tapered
+       bones meet in a rounded knob: light on the point of it, shadow in
+       the crook, and the cloth creasing away from the fold. */
     const ec = centerAt(yEl);
-    PIX.rect(fctx, ec - 4, yEl - 1, 8, 1, SH3);
-    PIX.rect(fctx, ec - 3, yEl + 1, 6, 1, SH2);
+    const bareEl = yEl > rollY;
+    PIX.disc(fctx, ec, yEl, 6, INK);
+    PIX.disc(fctx, ec, yEl, 5, bareEl ? skin : sleeveC);
+    PIX.disc(fctx, ec + sgn * 2, yEl - 1, 2, 'rgba(255,255,255,.17)');
+    PIX.rect(fctx, ec - sgn * 4 - 1, yEl - 2, 3, 5, SH3);
+    PIX.rect(fctx, ec - 3, yEl + 3, 6, 1, SH2);
+    PIX.rect(fctx, ec - 2, yEl - 4, 5, 1, SH3);
+    if (fold > 0.55) {                        /* creases fan out of a hard fold */
+      PIX.rect(fctx, ec - sgn * 3 - 1, yEl + 1, 4, 1, SH2);
+      PIX.rect(fctx, ec - sgn * 2 - 1, yEl - 2, 3, 1, SH2);
+    }
 
     /* the sleeve head, rounded, so the shoulder is a shoulder and not a step */
     const shc = centerAt(y0);
@@ -3593,30 +3792,35 @@ SPR.buildBody = function (d, o) {
        this. Seated, there is no wrist to show: the arm is under the table. */
     if (!seated) {
       const wc = centerAt(y2 - 1);
-      PIX.rect(ctx, wc - 6, y2 - 4, 12, 5, INK);
-      PIX.rect(ctx, wc - 5, y2 - 4, 10, 4, cuffC);
-      PIX.rect(ctx, wc - 5, y2 - 4, 10, 1, 'rgba(255,255,255,.16)');
-      PIX.rect(ctx, wc - 5, y2 - 1, 10, 1, SH1);
+      /* the cuff is a band round the wrist, so it is only a shade wider
+         than the wrist now is — 12 across on a 7px wrist was a bracelet */
+      PIX.rect(ctx, wc - 5, y2 - 4, 10, 5, INK);
+      PIX.rect(ctx, wc - 4, y2 - 4, 8, 4, cuffC);
+      PIX.rect(ctx, wc - 4, y2 - 4, 8, 1, 'rgba(255,255,255,.16)');
+      PIX.rect(ctx, wc - 4, y2 - 1, 8, 1, SH1);
       if (!gown && !rolled) {                        // cuff link
-        PIX.rect(ctx, wc + (sgn < 0 ? -4 : 2), y2 - 3, 2, 2, P.G);
+        PIX.rect(ctx, wc + (sgn < 0 ? -3 : 1), y2 - 3, 2, 2, P.G);
       }
     }
 
     /* sleeve accessories, on the forearm where you can see them */
+    /* both of these are bands ROUND the arm, so they take their width from
+       the arm at the height they sit at — a fixed 14 was wider than the
+       forearm it was supposed to be strapped to */
     if (acc.armGarters) {
       const gc = L(acc.armGarters, P.d);
-      const gy = 34, gcx = centerAt(gy);
-      PIX.rect(ctx, gcx - 7, gy - 1, 14, 7, INK);
-      PIX.rect(ctx, gcx - 6, gy, 12, 5, gc);
-      PIX.rect(ctx, gcx - 6, gy, 12, 1, 'rgba(255,255,255,.2)');
-      PIX.rect(ctx, gcx - 6, gy + 4, 12, 1, SH1);
+      const gy = yEl + 5, gcx = centerAt(gy), gw = widthAt(gy) + 1;
+      PIX.rect(ctx, gcx - (gw >> 1) - 1, gy - 1, gw + 2, 7, INK);
+      PIX.rect(ctx, gcx - (gw >> 1), gy, gw, 5, gc);
+      PIX.rect(ctx, gcx - (gw >> 1), gy, gw, 1, 'rgba(255,255,255,.2)');
+      PIX.rect(ctx, gcx - (gw >> 1), gy + 4, gw, 1, SH1);
     }
     if (acc.gloves) {                                // glove top above the elbow
       const gl = L(acc.gloves, P.W);
-      const gy = 24, gcx = centerAt(gy);
-      PIX.rect(ctx, gcx - 7, gy - 1, 14, 5, INK);
-      PIX.rect(ctx, gcx - 6, gy, 12, 3, L(DARKER[acc.gloves], P.w));
-      PIX.rect(ctx, gcx - 6, gy, 12, 1, gl);
+      const gy = 24, gcx = centerAt(gy), gw = widthAt(gy) + 1;
+      PIX.rect(ctx, gcx - (gw >> 1) - 1, gy - 1, gw + 2, 5, INK);
+      PIX.rect(ctx, gcx - (gw >> 1), gy, gw, 3, L(DARKER[acc.gloves], P.w));
+      PIX.rect(ctx, gcx - (gw >> 1), gy, gw, 1, gl);
     }
   });
 
@@ -4770,6 +4974,30 @@ SPR.mugshot = function (key, def, k) {
    ============================================================ */
 SPR.WALK_FRAMES = 8;
 
+/* ============================================================
+   ARM POSES — what he is doing with the near arm.
+
+   A body that only ever hangs its arms at its sides has one
+   thing to say. These are the poses the rooms actually need: a
+   hand out to take something, a hand up by the head, a finger
+   pointed at somebody, a hand held in against the chest, a rag
+   going back and forth, two hands down on a typewriter. The
+   near arm is redrawn over the torso from the shoulder to the
+   wrist, which is how a 2D drawing gestures.
+
+   Positions are fractions of the rig box: wx/ex are signed from
+   the centre line, wy/ey are measured down from the top.
+   ============================================================ */
+SPR.ARM_POSE = {
+  reach: { ex: 0.20, ey: 0.62, wx: 0.40, wy: 0.58, hand: 'grip' },
+  up:    { ex: 0.20, ey: 0.58, wx: 0.26, wy: 0.38, hand: 'hang' },
+  point: { ex: 0.20, ey: 0.60, wx: 0.44, wy: 0.53, hand: 'point' },
+  hold:  { ex: 0.18, ey: 0.62, wx: 0.16, wy: 0.58, hand: 'grip' },
+  wipe:  { ex: 0.20, ey: 0.62, wx: 0.36, wy: 0.66, hand: 'grip' },
+  type:  { ex: 0.17, ey: 0.62, wx: 0.24, wy: 0.66, hand: 'grip' },
+  fist:  { ex: 0.20, ey: 0.60, wx: 0.34, wy: 0.50, hand: 'fist' },
+};
+
 /* the phase of the cycle, -1..1, as a smooth curve rather than a table */
 SPR.walkPhase = function (frame) {
   const n = SPR.WALK_FRAMES;
@@ -4830,8 +5058,10 @@ SPR.frogWhole = function (key, def, opts) {
      which is what he actually is for most of the time he is on screen:
      walking along a street is walking sideways. */
   const side = !!opts.side && !back;
+  /* AND WHAT HIS NEAR ARM IS DOING — see SPR.ARM_POSE. */
+  const armP = SPR.ARM_POSE[opts.arm] ? opts.arm : '';
   return SPR.cached('whole_' + key + ':' + frame + ':' + ex
-    + (back ? ':b' : '') + (side ? ':s' : ''), () => {
+    + (back ? ':b' : '') + (side ? ':s' : '') + (armP ? ':a' + armP : ''), () => {
     const P = PIX.PAL;
     const ph = SPR.walkPhase(frame);
     /* THE HEAD. Front-on and back-on share one canvas — the back view
@@ -4848,11 +5078,13 @@ SPR.frogWhole = function (key, def, opts) {
        stumps under it. So the head comes down, the bust comes in, and the
        legs take the height back — roughly a third head, a third body, a
        third leg, and taller than he is wide. */
-    const hs = 1.12, BS = 0.86, NECK = 8, LEGS = 38;
+    const hs = 1.12, BS = 0.86, NECK = 8, LEGS = 38, RISE = 2;
     const hw = Math.round(head.width * hs), hh = Math.round(head.height * hs);
     const bw = Math.round(body.width * BS), bh = Math.round(body.height * BS);
     const W = Math.max(bw, hw) + 2;
-    const H = hh + bh - NECK + LEGS;
+    /* two spare rows at the top: the torso now rises off planted feet
+       rather than the whole frog sliding up and down together */
+    const H = hh + bh - NECK + LEGS + RISE;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
@@ -4862,10 +5094,18 @@ SPR.frogWhole = function (key, def, opts) {
        passing beats. The bob is twice the stride frequency, because you go
        up once per step and there are two steps in a cycle. */
     const swing = Math.round(ph * 6);
-    const bob = -Math.round((1 - Math.cos(((frame % SPR.WALK_FRAMES) /
-      SPR.WALK_FRAMES) * Math.PI * 4)) * 1.1);
+    /* THE BOB WAS UPSIDE DOWN, and it moved the feet with it. You are at
+       your TALLEST at the passing beat, when the supporting leg is straight
+       under you, and lowest at the stride ends, where both legs are out at
+       an angle. And the foot on the ground does not move at all: the hips
+       rise and fall over it. So the torso bobs and the sole stays on
+       groundY, which is a fixed row of the canvas. */
+    const bobU = (1 + Math.cos(((frame % SPR.WALK_FRAMES) /
+      SPR.WALK_FRAMES) * Math.PI * 4)) / 2;          // 1 passing, 0 at full stride
+    const bob = RISE - Math.round(bobU * RISE);
     const bodyTop = hh - NECK + bob;
     const cx = Math.round(W / 2);
+    const groundY = H - 6;                            // where the soles rest
 
     /* legs first, so the coat hem sits over them */
     const C = SPR.costumeOf(def);
@@ -4877,23 +5117,87 @@ SPR.frogWhole = function (key, def, opts) {
        a side-on head stuck on it, which is the single thing that stops
        the turn reading. */
     const spread = side ? 3 : (def.fat ? 10 : 8);
-    [-1, 1].forEach(sgn => {
-      /* the leading leg is the one the swing is carrying toward */
-      const lead = sgn * swing > 0;
-      const lx = cx + sgn * spread + Math.round(swing * 0.9);
-      const len = LEGS - (lead ? Math.abs(swing) * 0.55 : 0);
-      PIX.rect(c, lx - 7, hipY, 14, len, P.K);
-      PIX.rect(c, lx - 6, hipY, 12, len - 2, legC);
-      PIX.rect(c, lx - 6, hipY, 2, len - 2, 'rgba(255,255,255,.07)');
-      PIX.rect(c, lx + 2, hipY, 4, len - 2, 'rgba(0,0,0,.28)');
-      /* trouser crease + cuff */
-      PIX.rect(c, lx - 6, hipY + len - 9, 12, 2, 'rgba(0,0,0,.3)');
-      PIX.rect(c, lx - 1, hipY + 4, 1, len - 14, 'rgba(255,255,255,.05)');
-      /* the shoe, pointed out, lifting on the beat this leg is swinging */
-      const sh = hipY + len - 4 - (lead ? Math.round(Math.abs(swing) * 0.5) : 0);
-      PIX.rect(c, lx - 8 + sgn * 2, sh, 16, 6, P.K);
-      PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 4, '#1c1a2c');
-      PIX.rect(c, lx - 7 + sgn * 2, sh + 1, 14, 1, 'rgba(255,255,255,.16)');
+    const shoeC = '#1c1a2c';
+
+    /* ONE TAPERED BONE between two points, stepped down y so it can lean
+       without ever laying down a soft edge. Ink pass, fill pass, rim down
+       the lit side, shadow down the other. Every limb below is two of
+       these and a joint — which is the whole of the fix. The old leg was
+       a single 14-wide slab from the hip to the shoe with a crease painted
+       across it: a table leg in a trouser, and it is why he read as solid. */
+    const bone = (x0, ya, x1, yb, w0, w1, col, bulge, lift) => {
+      const n = Math.max(1, yb - ya);
+      const at = (y) => {
+        const t = U.clamp((y - ya) / n, 0, 1);
+        let w = w0 + (w1 - w0) * t;
+        if (bulge) w += bulge * Math.sin(Math.min(1, t * 2.1) * Math.PI);
+        return { x: Math.round(x0 + (x1 - x0) * t), w: Math.max(4, Math.round(w)) };
+      };
+      for (let y = ya - 1; y <= yb + 1; y++) {
+        const a = at(y);
+        PIX.rect(c, a.x - (a.w >> 1) - 1, y, a.w + 2, 1, P.K);
+      }
+      for (let y = ya; y <= yb; y++) {
+        const a = at(y), lo = a.x - (a.w >> 1);
+        PIX.rect(c, lo, y, a.w, 1, col);
+        if (lift) PIX.rect(c, lo, y, a.w, 1, lift);
+        PIX.rect(c, lo, y, 2, 1, 'rgba(255,255,255,.07)');
+        PIX.rect(c, lo + a.w - 3, y, 3, 1, 'rgba(0,0,0,.28)');
+      }
+    };
+
+    /* WHICH WAY THE LEG IS GOING, not just where it is. Sine says where in
+       the stride it sits; cosine says the direction of travel. Moving
+       forward it is in the air with the knee folded; moving back it is on
+       the ground taking the weight with the knee locked. Four frames of
+       this and a walk stops being a slide. */
+    const co = Math.cos(((frame % SPR.WALK_FRAMES) / SPR.WALK_FRAMES) * Math.PI * 2);
+    const order = side ? [-1, 1] : (swing >= 0 ? [-1, 1] : [1, -1]);
+    order.forEach(sgn => {
+      const st = sgn * ph;                  // -1 behind him .. +1 out in front
+      const air = Math.max(0, sgn * co);    // >0 while it is swinging through
+      const fold = air * 0.9 + Math.max(0, -st) * 0.3;
+      const lift = Math.round(air * 4);
+      const hx = cx + sgn * spread;
+      const ax = hx + Math.round(st * (side ? 6 : 4));   // the ankle leads
+      const solY = groundY - lift;          // the sole; planted unless airborne
+      const ankY = solY - 5;
+      /* the knee breaks FORWARD out of the hip-ankle line as it folds. Head
+         on there is nowhere forward to go, so the fold reads in the shin
+         and the rising heel instead. */
+      const kneeY = hipY + Math.round((ankY - hipY) * 0.48) - Math.round(fold * 2);
+      const kx = Math.round(hx + (ax - hx) * 0.42)
+        + (side ? Math.round(fold * 5) : sgn * Math.round(fold * 1.5));
+
+      bone(hx, hipY, kx, kneeY, def.fat ? 17 : 15, 11, legC, 0);
+      /* the knee: a knob with cloth pulling over it */
+      PIX.disc(c, kx, kneeY, 6, P.K);
+      PIX.disc(c, kx, kneeY, 5, legC);
+      PIX.rect(c, kx - 3, kneeY - 3, 4, 2, 'rgba(255,255,255,.14)');
+      PIX.rect(c, kx - 4, kneeY + 3, 8, 1, 'rgba(0,0,0,.34)');
+      /* the crease the cloth takes down the front of the shin */
+      PIX.rect(c, Math.round((kx + ax) / 2) - 1, kneeY + 5, 1,
+        Math.max(0, ankY - kneeY - 7), 'rgba(255,255,255,.06)');
+      /* the shin, with the calf swelling under the knee */
+      bone(kx, kneeY, ax, ankY, 11, 8, legC, 1.8);
+      PIX.rect(c, ax - 5, ankY - 2, 10, 2, 'rgba(0,0,0,.34)');   // the trouser breaks
+
+      /* THE FOOT ROLLS. Flat through the stance, toe down as it pushes off,
+         toe up as it comes in to land. Two pixels of pitch across fifteen
+         columns, and the shoe tapers to the toe so it is a shoe and not a
+         brick. */
+      const toe = st > 0.5 ? -1 : (st < -0.5 ? 1 : 0);
+      const face = side ? 1 : sgn;
+      for (let i = 0; i <= 14; i++) {
+        const tt = i / 14;
+        const xx = ax - face * 5 + face * i;
+        const dy = Math.round(toe * tt * 2);
+        const hgt = 6 - Math.round(tt * 2);
+        PIX.rect(c, xx, ankY + dy, 1, hgt + 1, P.K);
+        PIX.rect(c, xx, ankY + dy, 1, hgt, shoeC);
+        PIX.rect(c, xx, ankY + dy, 1, 1, 'rgba(255,255,255,.16)');
+        PIX.rect(c, xx, ankY + dy + hgt - 1, 1, 1, 'rgba(0,0,0,.5)');
+      }
     });
 
     /* THE COAT CARRIES ON PAST THE HIP. Without this the bust stops dead at
@@ -4927,8 +5231,13 @@ SPR.frogWhole = function (key, def, opts) {
     if (wr && !side) {
       const bx = Math.round((W - sbw) / 2);
       wr.forEach(w => {
+        /* the near arm is posed below, so it does not also get a hand
+           hanging at his hip — that is how you end up with three */
+        if (armP && w.sgn > 0) return;
+        /* HANGING, NOT SPLAYED. The felt pose put a fan of four green digits
+           at hip height on every standing frog in the game. */
         SPR.frogHand(c, bx + Math.round(w.x * BS), bodyTop + Math.round(w.y * BS),
-          def, w.sgn, { noCuff: true, grip: true });
+          def, w.sgn, { noCuff: true, pose: 'hang', dim: 0.44 });
       });
     }
 
@@ -5051,23 +5360,86 @@ SPR.frogWhole = function (key, def, opts) {
       /* ---- ONE ARM IN FRONT, ONE BEHIND ----
          The far arm is a sliver of sleeve showing past the back of him;
          the near one swings across his front with the hand on the end. */
-      const wr2 = body.wristAt;
-      if (wr2 && wr2.length) {
-        const near = wr2.reduce((a, b) => (b.x > a.x ? b : a), wr2[0]);
-        const far = wr2.reduce((a, b) => (b.x < a.x ? b : a), wr2[0]);
-        /* the far sleeve, behind the torso */
-        PIX.rect(c, px0 - 3, py0 + 6, 4, Math.round(ph * 0.62), coatD);
-        PIX.rect(c, px0 - 3, py0 + 6, 1, Math.round(ph * 0.62), 'rgba(0,0,0,.30)');
-        SPR.frogHand(c, px0 - 4, bodyTop + Math.round(far.y * BS), def, -1,
-          { noCuff: true, grip: true });
-        /* the near sleeve, across the front */
-        const nx = px0 + Math.round(pw * 0.62);
-        PIX.rect(c, nx, py0 + 5, 7, Math.round(ph * 0.60), coatC);
-        PIX.rect(c, nx, py0 + 5, 7, 1, 'rgba(255,255,255,.10)');
-        PIX.rect(c, nx + 5, py0 + 5, 2, Math.round(ph * 0.60), 'rgba(0,0,0,.24)');
-        SPR.frogHand(c, nx + 1, bodyTop + Math.round(near.y * BS), def, 1,
-          { noCuff: true, grip: true });
+      /* ---- THE ARMS, IN PROFILE ----
+         These were two slivers of rect down the sides of the coat, which is
+         what an arm looks like on a shop dummy. Turned sideways the arm is
+         the most legible limb he has and it wants the full treatment: a
+         shoulder knob, an upper arm running back, an elbow that breaks, a
+         forearm coming forward and a hand on the end of it. The two swing
+         in opposite phase, and against the legs. */
+      {
+        const shY = py0 + 5;
+        const elY = shY + Math.round(bh * 0.30);
+        const haY = shY + Math.round(bh * 0.60);
+        const cuffC = SPR.cuffColor(def);
+        const arm = (aph, sx, col, hsgn, near) => {
+          const fold = U.clamp(0.32 + aph * 0.42, 0.05, 0.88);
+          const ex = sx - Math.round(aph * 2) - Math.round(fold * 3);
+          const hx2 = sx + Math.round(aph * 4);
+          /* THE ARM HAS TO COME OUT OF THE COAT. Filled in the coat's own
+             colour all you see is the ink round it, and an ink ring is a
+             bubble, not a limb: the first go at this read as a row of dark
+             discs stuck on his side. So the near arm is lifted a shade and
+             the far one dropped, and the joints are SMALLER than the bones
+             they join — a knuckle that overhangs its own limb is a balloon. */
+          const tone = near ? 'rgba(255,255,255,.11)' : 'rgba(0,0,0,.30)';
+          bone(sx, shY, ex, elY, 10, 8, col, 0, tone);
+          bone(ex, elY, hx2, haY - 4, 8, 6, col, 1.2, tone);
+          PIX.disc(c, ex, elY, 4, col);
+          PIX.disc(c, ex, elY, 4, tone);
+          if (near) {
+            PIX.rect(c, ex + 1, elY - 2, 2, 3, 'rgba(255,255,255,.14)');
+            PIX.rect(c, ex - 4, elY + 1, 3, 3, 'rgba(0,0,0,.34)');
+          }
+          PIX.rect(c, hx2 - 4, haY - 6, 8, 5, P.K);          // the cuff
+          PIX.rect(c, hx2 - 3, haY - 6, 6, 4, cuffC);
+          PIX.rect(c, hx2 - 3, haY - 6, 6, 1, 'rgba(255,255,255,.16)');
+          if (!near) PIX.rect(c, hx2 - 4, haY - 6, 8, 5, 'rgba(0,0,0,.34)');
+          SPR.frogHand(c, hx2, haY - 1, def, hsgn, {
+            noCuff: true, pose: 'hang', dim: near ? 0.22 : 0.42 });
+        };
+        /* the far one goes UNDERNEATH everything already on the canvas, which
+           is the only way an arm behind a body can be drawn after it */
+        c.save();
+        c.globalCompositeOperation = 'destination-over';
+        /* the walk phase, NOT the local ph — which in this block is the
+           height of the coat panel */
+        const aw = swing / 6;
+        arm(-aw, px0 - 1, coatD, -1, false);
+        c.restore();
+        arm(aw, px0 + Math.round(pw * 0.62) + 3, coatC, 1, true);
       }
+    }
+
+    /* ------------------------------------------------------------
+       THE POSED ARM.
+
+       Drawn last, over the coat, from the near shoulder to wherever
+       the pose puts the wrist — and it reports where the hand ended
+       up, so whatever he is holding can be put IN it instead of
+       floating at a guessed height near his chest.
+       ------------------------------------------------------------ */
+    if (armP) {
+      const A = SPR.ARM_POSE[armP];
+      const shX = cx + Math.round((side ? sbw : bw) * 0.26);
+      const shY = bodyTop + Math.round(bh * 0.20);
+      const exx = cx + Math.round(W * A.ex);
+      const eyy = Math.round(H * A.ey);
+      const wxx = cx + Math.round(W * A.wx);
+      const wyy = Math.round(H * A.wy);
+      const tone = 'rgba(255,255,255,.10)';
+      bone(shX, shY, exx, eyy, 11, 9, coatC, 0, tone);
+      bone(exx, eyy, wxx, wyy - 4, 9, 6, coatC, 1.2, tone);
+      PIX.disc(c, exx, eyy, 4, coatC);
+      PIX.disc(c, exx, eyy, 4, tone);
+      PIX.disc(c, shX, shY + 2, 6, P.K);
+      PIX.disc(c, shX, shY + 2, 5, coatC);
+      PIX.rect(c, shX - 5, shY, 10, 2, 'rgba(255,255,255,.09)');
+      PIX.rect(c, wxx - 4, wyy - 6, 8, 5, P.K);
+      PIX.rect(c, wxx - 3, wyy - 6, 6, 4, SPR.cuffColor(def));
+      PIX.rect(c, wxx - 3, wyy - 6, 6, 1, 'rgba(255,255,255,.16)');
+      SPR.frogHand(c, wxx, wyy - 1, def, 1, { noCuff: true, pose: A.hand, dim: 0.18 });
+      cv.hand = { x: wxx, y: wyy + 3 };
     }
 
     /* and one hard line all the way round him, with a rim light on it */
@@ -5108,7 +5480,7 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    the frame sizes where that does not come out even, plus mugshots
    and pins.
    ============================================================ */
-SPR.rigLOD = function (key, def, frame, face, down, back, expr, side) {
+SPR.rigLOD = function (key, def, frame, face, down, back, expr, side, arm) {
   down = down || 3;
   /* EIGHT FRAMES, NOT FOUR. This used to fold the frame number modulo four,
      which quietly threw away half of the walk cycle the rig had drawn. */
@@ -5116,10 +5488,24 @@ SPR.rigLOD = function (key, def, frame, face, down, back, expr, side) {
   const f = (((frame | 0) % NF) + NF) % NF;
   const fc = face < 0 ? -1 : 1;
   const ex = expr || 'neutral';
+  const ap = SPR.ARM_POSE[arm] ? arm : '';
   return SPR.cached('lod_' + key + ':' + f + ':' + fc + ':' + down + ':' + ex
-    + (back ? ':b' : '') + (side ? ':s' : ''), () => {
-    const src = SPR.frogWhole(key, def, { frame: f, back: !!back, expr: ex, side: !!side });
-    if (down === 1 && fc > 0) return src;
+    + (back ? ':b' : '') + (side ? ':s' : '') + (ap ? ':a' + ap : ''), () => {
+    const src = SPR.frogWhole(key, def, {
+      frame: f, back: !!back, expr: ex, side: !!side, arm: ap });
+    /* where the posed hand is, in the coordinates of whatever comes back,
+       flipped with him — the rooms put the rag or the glass there */
+    const hand = src.hand ? { x: src.hand.x, y: src.hand.y } : null;
+    const carry = (out) => {
+      if (hand) {
+        out.hand = {
+          x: fc < 0 ? out.width - Math.round(hand.x / down) : Math.round(hand.x / down),
+          y: Math.round(hand.y / down),
+        };
+      }
+      return out;
+    };
+    if (down === 1 && fc > 0) return carry(src);
     const w = Math.max(1, Math.round(src.width / down));
     const h = Math.max(1, Math.round(src.height / down));
 
@@ -5139,7 +5525,7 @@ SPR.rigLOD = function (key, def, frame, face, down, back, expr, side) {
       oc.imageSmoothingEnabled = false;
       oc.translate(w, 0); oc.scale(-1, 1);
       oc.drawImage(src, 0, 0);
-      return out;
+      return carry(out);
     }
 
     /* 2. harden it: cut the fringe, then ink the edge one pixel deep */
@@ -5176,7 +5562,7 @@ SPR.rigLOD = function (key, def, frame, face, down, back, expr, side) {
     tmp.width = w; tmp.height = h;
     tmp.getContext('2d').putImageData(img, 0, 0);
     c.drawImage(tmp, 0, 0);
-    return cv;
+    return carry(cv);
   });
 };
 

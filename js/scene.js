@@ -91,10 +91,10 @@ const SCENE = (() => {
   }
 
   /* { cv, w, h } — the picture, and the room-space box it goes in */
-  function rig(d, frame, face, back, expr, side) {
+  function rig(d, frame, face, back, expr, side, arm) {
     const down = lodFor();
     const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : '') + (side ? ':s' : ''),
-      d.def || d, frame, face, down, back, expr, side);
+      d.def || d, frame, face, down, back, expr, side, arm);
     return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
   }
 
@@ -1885,15 +1885,19 @@ const SCENE = (() => {
     /* THE DESK ALREADY HAS A TYPEWRITER ON IT. Drawing a second one at
        hand height put a machine through the middle of the clerk; the peck
        of the shoulders is what reads as typing anyway. */
-    type:   { per: 0.34, body: 'peck', prop: null },
-    notes:  { per: 2.60, body: 'lean', prop: 'pad' },
-    read:   { per: 3.40, body: 'lean', prop: 'paper' },
+    /* arm: which of SPR.ARM_POSE the near arm holds. The whole body used
+       to shuffle a pixel or two sideways and a prop floated at chest
+       height beside it; now the arm is actually in the pose and the prop
+       is in the hand the rig reports. */
+    type:   { per: 0.34, body: 'peck', prop: null, arm: 'type' },
+    notes:  { per: 2.60, body: 'lean', prop: 'pad', arm: 'hold' },
+    read:   { per: 3.40, body: 'lean', prop: 'paper', arm: 'hold' },
     drink:  { per: 3.80, body: 'raise', prop: 'glass' },
     eat:    { per: 2.20, body: 'raise', prop: 'bite' },
     smoke:  { per: 4.60, body: 'raise', prop: 'cig' },
     wipe:   { per: 1.20, body: 'swing', prop: 'rag' },
     sweep:  { per: 1.70, body: 'swing', prop: 'broom' },
-    sort:   { per: 1.50, body: 'peck', prop: null },
+    sort:   { per: 1.50, body: 'peck', prop: null, arm: 'reach' },
     pace:   { per: 7.00, body: 'walk', prop: null },
     watch:  { per: 5.20, body: 'turn', prop: null },
   };
@@ -1966,39 +1970,51 @@ const SCENE = (() => {
        of the time — which is what somebody minding their own business at a
        counter looks like from across a room. */
     const aside = !a.back && !close && a.profile !== false;
-    const r = rig(a, a.frame || 0, face, a.back, ex, aside);
     const fy = a.y === undefined ? floorAt(a.z) : a.y;
     const id = a.still ? { rise: 0, lean: 0, roll: 0 } : idleOf(T, Math.round(a.x));
     const sc = scaleAt(a.z);
     /* AND WHAT HE IS DOING WITH HIS HANDS. A witness at a counter is
-       working: wiping it down, sorting a rack, turning a page. One bob
-       and one lean on their own slow loops is enough to sell it. */
-    let work = 0, lift = 0;
+       working: wiping it down, sorting a rack, turning a page. The arm
+       goes into a real pose and alternates between two of them, which is
+       how a hand-drawn cycle has always done it. */
+    let work = 0, lift = 0, arm = '';
     const job = DOING[a.job];
     if (job) {
       /* his own phase, so two clerks at two desks are never in step */
       const ph = ((T / job.per) + (Math.abs(Math.round(a.x)) % 17) * 0.11) % 1;
       const sw = Math.sin(ph * Math.PI * 2);
+      arm = job.arm || '';
       if (job.body === 'peck') work = Math.round(sw * 1.2);
       else if (job.body === 'lean') { work = Math.round(sw); lift = Math.round(Math.abs(sw)); }
-      else if (job.body === 'raise') lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
-      else if (job.body === 'swing') work = Math.round(sw * 4);
-      else if (job.body === 'turn') work = sw > 0 ? 1 : -1;
+      else if (job.body === 'raise') {
+        lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
+        arm = ph > 0.20 && ph < 0.62 ? 'up' : 'reach';
+      } else if (job.body === 'swing') {
+        work = Math.round(sw * 4);
+        arm = sw > 0 ? 'wipe' : 'reach';
+      } else if (job.body === 'turn') work = sw > 0 ? 1 : -1;
       a._ph = ph;
     } else if (a.busyAt) {
       const wp = (T * a.busyAt + (a.x % 11) * 0.3) % 1;
       work = Math.round(Math.sin(wp * Math.PI * 2) * 2);
     }
+    if (a.arm) arm = a.arm;                 /* a script can hold a pose */
+    const r = rig(a, a.frame || 0, face, a.back, ex, aside, arm);
     const w = Math.max(1, Math.round(r.w * sc));
     const h = Math.max(1, Math.round(r.h * sc) - id.rise);
     ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
       Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
-    /* AND WHAT IS IN HIS HANDS, over the top of him, at hand height */
+    /* AND WHAT IS IN HIS HANDS — in the hand the rig reports, so the glass
+       arrives at his mouth and the rag arrives on the counter. */
     if (job && job.prop) {
-      /* held OUT, at the end of an arm, not buried in his chest */
-      const hy = Math.round(fy - h * 0.42) - lift;
-      const hx = Math.round(a.x + (w * 0.52) * face);
+      const dx = Math.round(a.x - w / 2) + id.lean + work;
+      const dy = Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0));
+      const hd = r.cv.hand;
+      const hx = hd ? Math.round(dx + hd.x * (w / r.cv.width))
+        : Math.round(a.x + (w * 0.52) * face);
+      const hy = hd ? Math.round(dy + hd.y * (h / r.cv.height))
+        : Math.round(fy - h * 0.42) - lift;
       prop(c, job.prop, hx, hy, face, T, a._ph || 0);
     }
   }
