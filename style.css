@@ -3450,3 +3450,28 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 @media (prefers-reduced-motion: reduce) {
   .note-card { transition: none; }
 }
+
+/* ============================================================
+   THE CUTSCENE FADE.
+
+   One pane of black over everything, with a transition duration
+   the script sets per shot. The card-rack wipe is for changing
+   screens; going to black at the end of a shot is punctuation,
+   and it should not sound like a deck being shuffled.
+   ============================================================ */
+#cut-fade {
+  position: fixed;
+  inset: 0;
+  background: #05060a;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 78;
+  transition: opacity 520ms linear;
+}
+#cut-fade.on { opacity: 1; }
+
+/* while a cutscene is running the HUD is not yours to poke */
+body.in-cut #obj-plate,
+body.in-cut #tool-belt,
+body.in-cut #note-rail,
+body.in-cut #phone-tab { opacity: 0; pointer-events: none; }

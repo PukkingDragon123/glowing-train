@@ -32,6 +32,7 @@ const SCENE = (() => {
   let me = { x: 60, v: 0, z: 0.12, vz: 0, tz: null, frame: 0, face: 1, faceZ: 0,
     walk: 0, land: 0, target: null, act: null };
   let hover = null, near = null, busy = false;
+  let fore = null;                 // what is in FRONT of the cast, if anything
   const keys = {};
   const puffs = [];                 // dust off his heels
   /* the rain field: one set of drops, reused by every outdoor room */
@@ -297,6 +298,7 @@ const SCENE = (() => {
     host.appendChild(cv);
     scale();
     back = paintBack(d);
+    fore = d.fore ? paintFore(d) : null;
     rats.length = 0; drips.length = 0; mark = null;
     spawnPets();
     spawnCrowd();
@@ -319,7 +321,7 @@ const SCENE = (() => {
     const host = document.getElementById('scene-root');
     if (host) { host.innerHTML = ''; host.className = 'hidden'; }
     unbind();
-    def = null; back = null;
+    def = null; back = null; fore = null;
   }
 
   /* ============================================================
@@ -351,6 +353,19 @@ const SCENE = (() => {
        between it and the screen. */
     if (typeof DAY !== 'undefined' && DAY.bake) DAY.bake(o.cv, !d.outdoor);
     backBand = (typeof DAY !== 'undefined') ? DAY.band().id : '';
+    return o.cv;
+  }
+
+  /* the same treatment for whatever is in FRONT of the cast: same
+     coordinate space, same bake, so a counter is lit like the wall it
+     stands against */
+  function paintFore(d) {
+    const o = ART.cv(d.w, H + PAD);
+    o.c.save();
+    o.c.translate(0, PAD);
+    d.fore(o.c, d.w, H);
+    o.c.restore();
+    if (typeof DAY !== 'undefined' && DAY.bake) DAY.bake(o.cv, !d.outdoor);
     return o.cv;
   }
 
@@ -706,8 +721,29 @@ const SCENE = (() => {
        the only behaviour that has to move him rather than move his
        arms — so it happens here rather than in the draw.
        ------------------------------------------------------------ */
+    /* ------------------------------------------------------------
+       AND THE ONES A SCRIPT IS DRIVING.
+
+       A cutscene is a room with somebody walking across it, so an
+       actor needs to be able to be told to go somewhere and then
+       get on with it -- same walk cycle, same feet, same rig as
+       when you are playing. See CUT.
+       ------------------------------------------------------------ */
     for (const a of (def.actors || [])) {
-      if (a.job !== 'pace' || a.gone || a.talking) continue;
+      if (a._goto === undefined || a.gone) continue;
+      const dx = a._goto - a.x;
+      const sp = a._gspeed || 26;
+      if (Math.abs(dx) <= sp * dt) {
+        a.x = a._goto; a._goto = undefined; a.frame = 0;
+        if (a._gthen) { const f = a._gthen; a._gthen = null; f(); }
+        continue;
+      }
+      a.x += Math.sign(dx) * sp * dt;
+      a.face = Math.sign(dx);
+      a.frame = Math.floor((a._gw = (a._gw || 0) + dt * (sp * 0.29))) % (SPR.WALK_FRAMES || 8);
+    }
+    for (const a of (def.actors || [])) {
+      if (a.job !== 'pace' || a.gone || a.talking || a._goto !== undefined) continue;
       if (a._home === undefined) { a._home = a.x; a._dir = 1; a._wait = 0; }
       if (a._wait > 0) { a._wait -= dt; a.frame = 0; continue; }
       a.x += a._dir * 13 * dt;
@@ -1604,10 +1640,23 @@ const SCENE = (() => {
       if (a.gone) continue;
       cast.push({ y: a.y === undefined ? floorAt(a.z) : a.y, draw: () => drawActor(c, a, T) });
     }
-    cast.push({ y: floorAt(me.z) + 0.5, draw: () => drawMe(c, T) });
+    /* a cutscene can take him out of his own shot */
+    if (!me.hidden) cast.push({ y: floorAt(me.z) + 0.5, draw: () => drawMe(c, T) });
     drawMark(c, T);
     drawCritters(c, T);
     cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
+
+    /* ------------------------------------------------------------
+       THE FOREGROUND.
+
+       Everything above is behind the cast, which is right for a
+       wall and wrong for a counter: a clerk standing BEHIND a bar
+       came out standing on top of it. A room can declare a fore()
+       painter for the things that are in front of everybody --
+       counters, rails, the near edge of a bench -- and it is
+       cached and drawn exactly like the room art, over the top.
+       ------------------------------------------------------------ */
+    if (fore) c.drawImage(fore, 0, -PAD);
 
     /* ============================================================
        WHERE THE JOB IS.
@@ -1706,7 +1755,7 @@ const SCENE = (() => {
          counter throws its pool on the counter; sending every pool to the
          floor hid half of them behind the furniture. */
       cone(c, L.x, L.y, L.r || 46, (L.a || 0.14) * flick,
-        L.fy === undefined ? def.floorY : L.fy);
+        L.fy === undefined ? def.floorY : L.fy, L.bare);
     }
     /* dust in the air, cheap and constant */
     motes(c, T);
@@ -2070,7 +2119,10 @@ const SCENE = (() => {
        in profile, because that is what walking sideways looks like. */
     const back = me.faceZ < 0;
     const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
-    const r = rig(SCENE.meDef(), me.frame, me.face, back, myFace(T), side);
+    /* a cutscene can pin his face and put his arm in a pose — reaching for
+       the ashtray, handing the iron over the counter */
+    const r = rig(SCENE.meDef(), me.frame, me.face, back,
+      me.expr || myFace(T), side, me.arm);
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
@@ -2122,7 +2174,7 @@ const SCENE = (() => {
        THE POOL      an ellipse on the floor under it
        THE BOUNCE    what the wall behind it does about all that
      ============================================================ */
-  function cone(c, x, y, r, a, fy) {
+  function cone(c, x, y, r, a, fy, bare) {
     const drop = Math.max(8, fy - y);
     /* THE BOUNCE: the wall around the lamp lifts, and only there */
     for (let i = 1; i <= 5; i++) {
@@ -2130,15 +2182,23 @@ const SCENE = (() => {
         Math.round(r * i / 5 + 12), Math.round(6 + i * 3),
         'rgba(255,226,158,' + (a * (0.34 - i * 0.05)).toFixed(4) + ')');
     }
-    /* THE CONE, in steps, widening and thinning as it falls */
-    const steps = Math.max(6, Math.round(drop / 5));
-    for (let i = 0; i < steps; i++) {
-      const t = i / steps;
+    /* THE CONE. ROW BY ROW, WITH A SOFT EDGE.
+
+       This used to be a dozen stacked rectangles, each one wider than the
+       last, and at any decent scale the width jumps read as a staircase:
+       the light under a hall pendant came out as a stepped pyramid sitting
+       on the floor. One row at a time and two nested widths per row costs
+       a few hundred fills a frame and gives it an edge that falls off
+       instead of a flight of stairs. */
+    for (let i = 0; i < drop; i++) {
+      const t = i / drop;
       const hw = 4 + t * r * 0.62;
-      const fall = 1 - t * 0.62;
-      ART.px(c, Math.round(x - hw), Math.round(y + t * drop),
-        Math.round(hw * 2), Math.ceil(drop / steps) + 1,
-        'rgba(255,231,163,' + (a * 0.62 * fall).toFixed(4) + ')');
+      const fall = 1 - t * 0.58;
+      const yy = Math.round(y + i);
+      ART.px(c, Math.round(x - hw), yy, Math.round(hw * 2), 1,
+        'rgba(255,231,163,' + (a * 0.26 * fall).toFixed(4) + ')');
+      ART.px(c, Math.round(x - hw * 0.62), yy, Math.round(hw * 1.24), 1,
+        'rgba(255,234,176,' + (a * 0.28 * fall).toFixed(4) + ')');
     }
     /* THE POOL on the floor: an ellipse, brightest at the middle */
     for (let i = 0; i < 7; i++) {
@@ -2147,7 +2207,11 @@ const SCENE = (() => {
       ART.px(c, x - hw, fy - 5 + i, hw * 2, 1,
         'rgba(255,236,178,' + (a * (2.1 - t * 1.5)).toFixed(4) + ')');
     }
-    /* THE BLOOM at the bulb itself, which is the only hot thing */
+    /* THE BLOOM at the bulb itself, which is the only hot thing — and only
+       if there IS a bulb there. A light with nothing drawn at the source
+       (a shaft through a window, the spill from the next room) blooms into
+       a white star floating on the wall, which is worse than no light. */
+    if (bare) return;
     for (let i = 4; i >= 1; i--) {
       PIX.disc(c, Math.round(x), Math.round(y + 2), i * 3,
         'rgba(255,244,208,' + (a * (0.5 - i * 0.08)).toFixed(4) + ')');
@@ -2305,5 +2369,70 @@ const SCENE = (() => {
     /* hold on whoever is talking, then give the room back */
     focus(x) { busy = true; SCENE.look(x); },
     unfocus() { busy = false; drag = null; },
+
+    /* ============================================================
+       WHAT A CUTSCENE NEEDS FROM A ROOM.
+
+       A cutscene in this game is a ROOM with a script over it, not
+       a painted card: same rig, same lamps, same floor, same
+       parallax, and the camera doing the work. Everything below is
+       the handle a script needs to hold on it. See js/cut.js.
+       ============================================================ */
+
+    /* take the detective out of his own shot, or put him back */
+    hideMe(v) { me.hidden = !!v; },
+    /* pin his face and his near arm for a beat, or hand them back */
+    meFace(k) { me.expr = k || null; },
+    meArm(k) { me.arm = k || ''; },
+    /* where his posed hand is, in room pixels, so a script can put a thing
+       in it — the cigarette, the tray, the passport */
+    meHand() {
+      const back = me.faceZ < 0;
+      const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
+      const r = rig(SCENE.meDef(), me.frame, me.face, back,
+        me.expr || 'neutral', side, me.arm);
+      const h = r.cv.hand;
+      if (!h) return null;
+      const sc = scaleAt(me.z), w = r.w * sc, hh = r.h * sc;
+      return { x: me.x - w / 2 + h.x * (w / r.cv.width),
+        y: floorAt(me.z) - hh + h.y * (hh / r.cv.height) };
+    },
+    /* park him, facing whichever way, without a walk */
+    place(x, face, z) {
+      me.x = x; me.target = null; me.act = null; me.walk = 0; me.frame = 0;
+      if (face) me.face = face;
+      if (z !== undefined) { me.z = z; me.tz = null; }
+    },
+    /* somebody by id, so a script can talk about them by name */
+    actor(id) { return (def && def.actors || []).find(a => a.id === id) || null; },
+    /* send somebody walking, and tell me when they arrive */
+    send(id, x, speed) {
+      const a = typeof id === 'string' ? SCENE.actor(id) : id;
+      if (!a) return Promise.resolve();
+      a._goto = x; a._gspeed = speed || 26;
+      return new Promise(res => { a._gthen = res; });
+    },
+    /* and the same for him: walk there, resolve when the feet stop */
+    async meTo(x, z) {
+      walkTo(x, z);
+      for (let i = 0; i < 700; i++) {
+        if (me.target === null) break;
+        await U.sleep(28);
+      }
+      mark = null;
+    },
+    /* A HARD CUT, not a zoom. The world is drawn on an integer pixel
+       grid: easing between scales would put him on half a pixel and
+       turn the whole room to mush, so the close-up is a cut, which is
+       what a cut is for. */
+    cutIn(on) {
+      forceK = on ? 6 : 3;
+      scale();
+      if (back && def) { back = paintBack(def); fore = def.fore ? paintFore(def) : null; }
+    },
+    cutFree() {
+      forceK = 0; scale();
+      if (def) { back = paintBack(def); fore = def.fore ? paintFore(def) : null; }
+    },
   };
 })();

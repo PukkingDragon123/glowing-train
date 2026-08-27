@@ -272,33 +272,43 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForTimeout(1200);
 
     /* ---------- the opening, which a first run now plays ----------
-       Two beats of it for real — the house, and the room with its three
-       hot spots — so the harness proves the cards paint and the spots
-       answer. Then Escape, which skips the whole rest of it including
-       the exam, because thirteen beats and a minigame is not a smoke
-       test. */
-    if (await page.locator('#cine-stage.intro-on').count() > 0) {
+       IT IS NOT CARDS ANY MORE. The opening is three ROOMS played
+       through the SCENE runtime (js/cut.js), so the harness proves it
+       the way it proves any other room: the scene canvas is up, the
+       room has the id the script says it should, and the interactive
+       beat answers when its spots are used. Two beats for real -- the
+       house and its three places -- then Escape, which drops out of
+       the whole rest of it including the exam, because five rooms and
+       a minigame is not a smoke test. */
+    if (await page.locator('body.in-cut').count() > 0) {
       await shot('02b-intro');
-      /* the house is two beats before the room, so tap until the spots
-         show up rather than guessing how many taps that is */
-      let spots = 0;
-      for (let i = 0; i < 5 && !spots; i++) {
-        await page.mouse.click(720, 780);
-        await page.waitForTimeout(800);
-        spots = await page.locator('.intro-spot').count();
+      const room = await page.evaluate(() => (SCENE.def || {}).id || null);
+      if (room !== 'cut_house') errors.push('[intro] the opening is not in the house: ' + room);
+      /* the three places arrive a few plates in, so tap until they do */
+      let spots = [];
+      for (let i = 0; i < 22 && spots.length < 3; i++) {
+        await clearPlates(3);
+        await page.waitForTimeout(320);
+        spots = await page.evaluate(() =>
+          (typeof CUT !== 'undefined' && CUT.debugSpots) ? CUT.debugSpots() : []);
       }
-      if (!spots) errors.push('[intro] the room beat has no hot spots on it');
+      if (spots.length !== 3) errors.push('[intro] the house has no three places: ' + spots.join(','));
       else {
         await shot('02c-intro-room');
-        await page.locator('.intro-spot').last().click({ timeout: 6000 });
-        await page.waitForTimeout(900);
+        /* look at one that is not the ashtray, then the ashtray, which is
+           the one that moves the scene on */
+        await page.evaluate(() => { CUT.debugUse('chair'); });
+        await page.waitForTimeout(600);
+        await clearPlates();
+        await page.evaluate(() => { CUT.debugUse('table'); });
+        await page.waitForTimeout(600);
         await clearPlates();
       }
       await page.keyboard.press('Escape');
       await page.waitForTimeout(900);
       await page.evaluate(() => { if (typeof INTRO !== 'undefined') INTRO.skip(); });
       /* and the exam folds up with it, so the badge is still signed */
-      await page.waitForFunction(() => !document.querySelector('#cine-stage.intro-on'),
+      await page.waitForFunction(() => !document.body.classList.contains('in-cut'),
         null, { timeout: 25000 })
         .catch(() => errors.push('[intro] the opening would not skip'));
       await clearPlates();

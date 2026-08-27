@@ -5237,7 +5237,7 @@ SPR.frogWhole = function (key, def, opts) {
         /* HANGING, NOT SPLAYED. The felt pose put a fan of four green digits
            at hip height on every standing frog in the game. */
         SPR.frogHand(c, bx + Math.round(w.x * BS), bodyTop + Math.round(w.y * BS),
-          def, w.sgn, { noCuff: true, pose: 'hang', dim: 0.44 });
+          def, w.sgn, { noCuff: true, pose: 'hang', dim: 0.54 });
       });
     }
 

@@ -93,6 +93,26 @@ const UI = {
       ph === 'blind' || ph === 'place';
   },
 
+  /* ============================================================
+     A BARE STAGE.
+
+     A cutscene is a ROOM and nothing else: no HUD, no objective
+     card, no tool belt, no phone tab. The opening used to be a
+     full-screen overlay so it did not care what was under it;
+     now that it is a real room, it needs the screen to itself or
+     the title board sits behind it. See js/cut.js.
+     ============================================================ */
+  buildStage() {
+    const app = document.getElementById('app');
+    app.innerHTML = '';
+    document.body.classList.add('in-scene');
+    const host = U.el('div');
+    host.id = 'scene-root';
+    host.className = 'scene-root';
+    app.appendChild(host);
+    return host;
+  },
+
   /* a room you walk around in: the story HUD, then the scene */
   buildRoom(app, room) {
     const host = U.el('div'); host.id = 'scene-root'; host.className = 'scene-root';

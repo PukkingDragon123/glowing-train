@@ -24,41 +24,68 @@ That is the whole game, and it is the two endings.
 
 ## You play how you got here
 
-The game used to open on a slideshow. Eight painted panels with a caption
-under each, and then you were a detective in Paris with no account of why a
-frog with an American accent is working a Paris murder. Now you play it.
+The game used to open on a slideshow. Eight painted panels, two hundred and
+twenty pixels by a hundred and twenty-four, each held up while a caption
+typed itself underneath. They were decent drawings and they were still
+slides, and the game they introduced does not look anything like that: it
+looks like a lit room with a frog walking across it, seen from the side, with
+a camera that follows him.
 
-**The house.** You come home off shift at eleven and the front door is
-already open.
+**So the cutscenes are rooms.** Same `SCENE` runtime, same rig with its
+elbows and knees, same lamps, same floorboards, same dialogue plates. What a
+cutscene adds is that nobody is driving: a shot list walks him in, pans the
+camera across the wreckage, cuts in close on the thing that matters, and puts
+the lines over the top of it. Everything in the opening you will see again
+while you are playing, because it is the same machinery.
+
+**The house.** Black, then a hall out of the dark, then the front door
+standing open onto the rain with a street lamp four doors down and the lock
+plate split off the jamb. He walks in from the door. The camera goes with
+him, past the coat that is still on its hook and the telephone that is not on
+its table, and through the archway into the front room in one move.
 
 ![Six years ago](docs/screen-intro-house.png)
 
-**The room.** Three places to look, a bracket drawn round each of them, and
-one of them has the only thing the killer left behind in it. You can look at
-all three. You have to look at the right one.
+**The room.** Her chair on its side on the rug. The window sash pushed right
+up in November, throwing a shaft of street light across the boards. The
+wireless still on the sideboard, untouched, which is its own kind of wrong —
+nobody came here for the silver.
 
-![Three places, one of them matters](docs/screen-intro-room.png)
+![The front room](docs/screen-intro-room.png)
 
-**The ashtray.** A hundred and fifty pixels of cigarette end with GAULOISE
-printed on the paper and PARIS printed on the filter. Nobody in your state
-sells them. That is the whole reason the rest of the game is in France.
+**Three places, and you have to look.** Not a card with brackets painted on
+it: the room's own hotspots, the room's own markers, the room's own
+walk-over-and-use. This beat is not a cutscene at all any more. It is the
+game, six years early.
+
+![Three places, one of them matters](docs/screen-intro-look.png)
+
+**The ashtray.** Two cups on the low table and one of them is not yours. The
+camera cuts in, his arm goes out and comes up with the thing in his hand —
+the same arm pose the barman uses for a rag and the drinker uses for a glass.
+Half smoked. Still warm. GAULOISE, and nobody in this state sells them. That
+is the whole reason the rest of the game is in France.
 
 ![Gauloise. Paris.](docs/screen-intro-butt.png)
 
-**The departure.** A security line at the airport and a pistol you are not
-allowed to take with you. What you do about that is the first real decision
-in the game, and the machine does not care what you told it.
+**Orly, three weeks later.** A security hall with a split-flap board, a wall
+of glass with an aircraft parked behind it, and a counter you can walk up to
+with two officers behind it — behind it, because a room can now paint a
+foreground over its cast. Hand the iron over the counter or put it through
+the machine in your case. That is the first real decision in the game, and
+the machine does not care what you told it.
 
-![Anything on you?](docs/screen-intro-airport.png)
+![Metal in the tray](docs/screen-intro-airport.png)
 
-**The descent.** Nine hours over the water, and then Paris at four thousand
-feet with the wing across the bottom of the frame.
+**The cabin.** Rows of seats in profile, reading lights, the aisle. The
+camera walks the tube. Then the windows fill up with Paris and the card lands
+over the live room rather than over black.
 
-![Paris, at four thousand feet](docs/screen-intro-descent.png)
+![Paris out of the window](docs/screen-intro-descent.png)
 
-Thirteen beats, and every one of them is something you do rather than
-something you watch. It also has a **SKIP** on every card and Escape bound to
-the same thing, because nobody wants to play an opening twice.
+Every beat is something you do or something the camera does, and Escape drops
+out of all of it — a player who has seen the opening once should never have to
+sit through it again.
 
 ### And then the Brigade wants a form filled in
 
@@ -79,18 +106,15 @@ out with twenty francs and a captain who thinks you might be worth the desk.
 
 ### It is drawn at the size it is drawn at
 
-Every room is a canvas of world pixels blown up by a whole number, and that
-number is **three** — which sounds like a detail and is the difference
-between a game and a magnified game. It used to be six: every room pixel six
-screen pixels across, two hundred and fourteen pixels of a seven-hundred-and-
-eighty-pixel room in frame, and a camera inside somebody's coat. At three you
-see twice the city, the pixels are half the size, and the cast lands at
-**1:1** — every pixel a frog is drawn with is a pixel on your screen, with no
-resampling filter anywhere between the two.
+Every room is a canvas of world pixels blown up by a **whole number**, which
+sounds like a detail and is the difference between a game and a magnified
+game. There is no resampling filter anywhere between the pixels a frog is
+drawn with and the pixels on your screen. Which whole number is the camera's
+business, below.
 
-The rooms paint above their own top edge now, too, so the Eiffel Tower goes
-all the way up instead of stopping in mid-air, and an interior's wall carries
-on to a ceiling instead of meeting a black bar.
+The rooms paint above their own top edge, too, so the Eiffel Tower goes all
+the way up instead of stopping in mid-air, and an interior's wall carries on
+to a ceiling instead of meeting a black bar.
 
 ![The whole tower](docs/screen-tower.png)
 
@@ -127,6 +151,76 @@ narrow window still gets three, and **Z** switches between them and remembers
 which you chose.
 
 ![The bullpen, close in](docs/screen-bullpen-working.png)
+
+### The brightness filter was in the bake
+
+Third time. The CRT overlay went, then the cast over the frame went, and the
+last one was hiding somewhere worse: **inside the room art**. `DAY.bake` ran a
+screen pass with a per-band lift over every interior it painted, so the
+brightness was not on top of the picture, it *was* the picture, and there was
+nothing to turn off.
+
+Measured on the bar. The room as authored has a mean pixel of **37, 31, 28** —
+proper noir. After bake it was **84, 80, 73**: more than twice as bright, with
+every shadow in the room flattened on the way. The lift is gone and the indoor
+tints are clamped to three and a half per cent warm, four and a half cool.
+The same room now bakes to **45, 41, 39**.
+
+### And the lamps do the lighting instead
+
+Dark only works if something is lit. The room lights used to be a five per
+cent hint of a cone; each one is now four things — a bounce on the wall
+behind the bulb, a stepped cone falling through the room, an elliptical pool
+on the surface underneath, and a bloom at the source — at fourteen per cent,
+with an optional `fy` so a lamp pools on a counter instead of the floor, and a
+`bare` flag for the ones with no fitting to bloom on (moonlight through a
+sash, spill from the next room). A light with no lamp under it draws a white
+star on the wallpaper, which is worse than no light.
+
+The cone is drawn a row at a time with a soft edge, too. Twelve stacked
+rectangles of increasing width read as a **staircase**: the light under a hall
+pendant came out as a stepped pyramid standing on the floor.
+
+![The bar, lit by its own lamps](docs/screen-bar.png)
+
+### Everybody has an elbow and a knee
+
+The limbs were slabs. The arm ran twelve pixels wide from the shoulder cap to
+the cuff with one pixel of taper in it, and the leg was a single fourteen-wide
+rectangle from the hip to the shoe with a crease painted across it — a table
+leg in a trouser. Neither had a joint anywhere, which is the whole reason the
+cast read as furniture.
+
+Both are now **two tapered bones and a joint**. The arm is full at the
+deltoid, narrows into an elbow that folds through the stride, swells over the
+top of the forearm and pinches to a wrist half the width of the shoulder. The
+leg is a thigh, a knob of a knee, a shin with the calf under it, and a foot
+that rolls: flat through the stance, toe down at the push-off, toe up coming
+in to land.
+
+Direction drives it. Sine says where in the stride a leg is; **cosine says
+which way it is going** — so the leg in the air folds and the leg on the
+ground locks. The bob was upside down as well, and it moved the feet with it:
+you are tallest at the passing beat, and the foot on the ground does not move
+at all. The hips rise and fall over it now, and the soles rest on a fixed row.
+
+### And a hand the size of a hand
+
+There was one hand pose — splayed flat, drawn for a hand lying on the felt —
+and hung off the end of a standing frog's sleeve it was a bright green cabbage
+at hip height on every body in the game. The felt keeps that pose. Everything
+else gets a closed one: nine across and ten down, about a fifth of the width
+of his head, with knuckles along the outward edge, digits curling under with
+grooves between them, a thumb across the front, and a shadow on it, because a
+hand at somebody's side is in his own shade.
+
+Five poses, built from row tables rather than a loop of digits — `hang`,
+`fist`, `point`, `grip`, `splay` — and `SPR.ARM_POSE` on top of them, so a
+room can put an arm somewhere and get told where the hand ended up. The
+barman's rag is in his hand now and the drinker's glass reaches his mouth,
+instead of both floating at chest height beside them.
+
+![Everybody doing something with their hands](docs/screen-bar-work.png)
 
 ### The light is the clock
 
@@ -943,9 +1037,12 @@ js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
 js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
 js/places.js      the working stops, and the floors under and over them
 js/day.js         THE LIGHT: seven hours of the day, baked into the room
-js/intro.js       THE OPENING you play: the house, the room, the cigarette,
-                  the security line, the aircraft, the descent, and the
-                  form the Brigade makes you fill in
+js/cut.js         CUTSCENES THAT ARE ROOMS: the house you come home to,
+                  the security hall at Orly, the cabin, the captain's
+                  office -- all built as real SCENE rooms and driven by a
+                  shot list (camera pans, scripted walks, arm poses,
+                  dialogue over the live room)
+js/intro.js       the exam the Brigade makes you sit before it signs a card
 js/paris.js       the city itself: the Tower, the Arch, the Butte, the
                   Museum, the Catacombs, the Metro, the Opera, the
                   cemetery, the ring road, and the furniture of Paris —
@@ -990,6 +1087,9 @@ dev/smoke.js      full browser smoke test (node dev/smoke.js)
 - The quarters and what unlocks them — `CITY.ZONES` and each place's `lock`
   in `js/city.js`
 - The four questions on the form — `INTRO.PAPER` in `js/intro.js`
+- The opening, shot by shot — `CUT.opening` / `airport` / `flight` in
+  `js/cut.js`; the sets are `CUT.house()` / `orly()` / `cabin()` / `office()`
+- What an arm can be doing — `SPR.ARM_POSE` in `js/sprites.js`
 
 ### Dev checks
 
