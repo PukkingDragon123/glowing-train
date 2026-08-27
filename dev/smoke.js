@@ -272,38 +272,35 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForTimeout(1200);
 
     /* ---------- the opening, which a first run now plays ----------
-       IT IS NOT CARDS ANY MORE. The opening is three ROOMS played
-       through the SCENE runtime (js/cut.js), so the harness proves it
-       the way it proves any other room: the scene canvas is up, the
-       room has the id the script says it should, and the interactive
-       beat answers when its spots are used. Two beats for real -- the
-       house and its three places -- then Escape, which drops out of
-       the whole rest of it including the exam, because five rooms and
-       a minigame is not a smoke test. */
+       IT IS NOT CARDS ANY MORE. The opening is seven ROOMS played through
+       the SCENE runtime (js/cut.js) -- the family house at breakfast, the
+       school gate, his desk, the tabac, then the same house that night,
+       Orly and the cabin. The harness proves the first of them the way it
+       proves any other room (the scene canvas is up and the room has the
+       id the script says), plays two beats of the prologue for real, and
+       then Escapes, because seven rooms, two minigames and an exam is not
+       a smoke test. */
     if (await page.locator('body.in-cut').count() > 0) {
       await shot('02b-intro');
-      const room = await page.evaluate(() => (SCENE.def || {}).id || null);
-      if (room !== 'cut_house') errors.push('[intro] the opening is not in the house: ' + room);
-      /* the three places arrive a few plates in, so tap until they do */
-      let spots = [];
-      for (let i = 0; i < 22 && spots.length < 3; i++) {
+      const room = await page.evaluate(() => (SCENE.def || {}).id || '');
+      if (room.indexOf('cut_home') !== 0) {
+        errors.push('[intro] the prologue is not in the family house: ' + room);
+      }
+      /* the house has five things in it to use, and the first lesson is
+         over as soon as he walks anywhere */
+      const spots = await page.evaluate(() =>
+        (typeof CUT !== 'undefined' && CUT.debugSpots) ? CUT.debugSpots() : []);
+      if (spots.indexOf('stove') < 0 || spots.indexOf('sofa') < 0) {
+        errors.push('[intro] the kitchen has no stove and no sofa: ' + spots.join(','));
+      }
+      for (let i = 0; i < 12; i++) {
         await clearPlates(3);
-        await page.waitForTimeout(320);
-        spots = await page.evaluate(() =>
-          (typeof CUT !== 'undefined' && CUT.debugSpots) ? CUT.debugSpots() : []);
+        if (await page.evaluate(() => !SCENE.busy())) break;
+        await page.waitForTimeout(300);
       }
-      if (spots.length !== 3) errors.push('[intro] the house has no three places: ' + spots.join(','));
-      else {
-        await shot('02c-intro-room');
-        /* look at one that is not the ashtray, then the ashtray, which is
-           the one that moves the scene on */
-        await page.evaluate(() => { CUT.debugUse('chair'); });
-        await page.waitForTimeout(600);
-        await clearPlates();
-        await page.evaluate(() => { CUT.debugUse('table'); });
-        await page.waitForTimeout(600);
-        await clearPlates();
-      }
+      await page.evaluate(() => { SCENE.walkTo(SCENE.me.x + 44); });
+      await page.waitForTimeout(1200);
+      await shot('02c-intro-room');
       await page.keyboard.press('Escape');
       await page.waitForTimeout(900);
       await page.evaluate(() => { if (typeof INTRO !== 'undefined') INTRO.skip(); });
@@ -314,6 +311,9 @@ fs.mkdirSync(SHOTS, { recursive: true });
       await clearPlates();
       const badge = await page.evaluate(() => ({ b: !!G2().badge, a: !!G2().applied }));
       if (!badge.b || !badge.a) errors.push('[intro] skipped the opening without a badge');
+      /* the hour and the weather have to go back to the shift */
+      const pin = await page.evaluate(() => (typeof DAY !== 'undefined' && DAY.pinned) ? DAY.pinned() : null);
+      if (pin !== null) errors.push('[intro] the opening left the clock pinned at ' + pin);
       await page.waitForTimeout(700);
     }
     if (await page.locator('#cine-stage.anim-cut').count() > 0) await shot('04-drive');

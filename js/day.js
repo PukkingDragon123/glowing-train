@@ -150,15 +150,31 @@ const DAY = (() => {
     return BANDS[BANDS.length - 1];           // before first light: still dark
   }
 
+  /* ============================================================
+     A CUTSCENE CAN PIN THE HOUR.
+
+     The light is normally the shift clock, which is right while you
+     are working and wrong for a story beat: the prologue is a warm
+     morning six years ago and the house he comes home to is the
+     middle of the night, and neither of them cares what time it is
+     on the case you have not started yet. Pin it, play the scene,
+     unpin it. See js/cut.js.
+     ============================================================ */
+  let pinned = null;
+
+  function now() {
+    if (pinned !== null) return pinned;
+    return (typeof CITY !== 'undefined' && CITY.minutes) ? CITY.minutes() : 12 * 60;
+  }
+
   function band() {
-    const m = (typeof CITY !== 'undefined' && CITY.minutes) ? CITY.minutes() : 12 * 60;
-    return bandAt(m);
+    return bandAt(now());
   }
 
   /* how far through the current band we are, 0..1 — the sun slides
      across it instead of jumping at the boundary */
   function through() {
-    const m = (typeof CITY !== 'undefined' && CITY.minutes) ? CITY.minutes() : 12 * 60;
+    const m = now();
     const b = bandAt(m);
     const i = BANDS.indexOf(b);
     const next = BANDS[(i + 1) % BANDS.length];
@@ -510,6 +526,10 @@ const DAY = (() => {
   return {
     BANDS, byId,
     bandAt, band, nextBand, through, pal, lamps, side, stone,
+    /* hold the hour for a scene, then give it back to the clock */
+    pin(minutes) { pinned = minutes === null || minutes === undefined ? null : (minutes | 0); },
+    unpin() { pinned = null; },
+    pinned() { return pinned; },
     sky, wash, bake, shaft, ramp, cloud, mix, hex, rgb,
     /* the word for the corner of the screen */
     word() { return band().word; },

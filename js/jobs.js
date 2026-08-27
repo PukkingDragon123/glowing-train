@@ -247,6 +247,81 @@ const JOBS = (() => {
   }
 
   /* ---------------------------------------------------------
+     BREAKFAST.
+
+     The same needle and the same band as every other trade in
+     this game, which is the point: the first thing you ever do
+     with your hands is cook an egg for your son, and it is the
+     identical action you will spend the next six years doing to
+     locks, prints, taps and a pistol. Three eggs, and the plate
+     on the right fills up as they land.
+     --------------------------------------------------------- */
+  function drawPan(c, W, H, s) {
+    const P = PIX.PAL;
+    /* the kitchen, warm, out of focus behind it */
+    ART.px(c, 0, 0, W, H, '#8a7448');
+    for (let y = 2; y < 30; y += 10) {
+      for (let x = ((y / 10) % 2) ? 4 : 10; x < W; x += 12) {
+        ART.px(c, x, y, 1, 3, '#94804f');
+        ART.px(c, x - 2, y + 1, 5, 1, '#94804f');
+      }
+    }
+    ART.px(c, 0, 30, W, H - 30, '#2e2a2c');            /* the hob, from above */
+    ART.px(c, 0, 30, W, 2, '#585458');
+    ART.dither(c, 0, 32, W, H - 32, '#1e1c1e', 0.18, 7);
+    /* THE PAN, seen from over his shoulder: a black disc with butter in it */
+    PIX.disc(c, 58, 56, 30, '#1c1a1c');
+    PIX.disc(c, 58, 56, 28, '#3a3438');
+    PIX.disc(c, 58, 55, 26, '#4a4348');
+    ART.px(c, 84, 52, 30, 5, '#26232a');               /* the handle */
+    ART.px(c, 84, 52, 30, 1, '#4a4448');
+    /* the butter, sliding about with the needle */
+    const bx = 50 + Math.round(Math.sin(s.x * 5) * 6);
+    ART.px(c, bx, 62, 7, 3, 'rgba(255,222,140,.5)');
+    /* THE EGGS. One cooking, and the ones already done sitting on the plate. */
+    const done = s.hits;
+    const cook = Math.min(1, 0.25 + s.x * 0.9);
+    SPR.ellipse(c, 54, 54, Math.round(9 * cook) + 4, Math.round(6 * cook) + 3,
+      cook > 0.85 ? '#efe0a0' : '#f6efc8');
+    SPR.ellipse(c, 54, 54, Math.round(9 * cook) + 4, Math.round(6 * cook) + 3,
+      'rgba(255,255,255,.10)');
+    PIX.disc(c, 55, 54, 4, cook > 0.85 ? '#e08a24' : '#f0a83c');
+    PIX.disc(c, 55, 53, 2, '#f6c464');
+    if (cook > 0.92) {                                  /* catching, if he waits */
+      for (let i = 0; i < 5; i++) {
+        ART.px(c, 44 + i * 5, 48 - (i % 3), 2, 2, 'rgba(90,70,50,.5)');
+      }
+    }
+    /* the plate, and the boy's egg on it once it is out of the pan */
+    SPR.ellipse(c, 112, 66, 17, 7, '#c8bca0');
+    SPR.ellipse(c, 112, 65, 16, 6, '#f0e8d4');
+    SPR.ellipse(c, 112, 64, 14, 5, '#fbf7ec');
+    for (let i = 0; i < done; i++) {
+      const ex = 104 + i * 7;
+      SPR.ellipse(c, ex, 64, 6, 3, '#efe0a0');
+      PIX.disc(c, ex, 64, 2, '#f0a83c');
+    }
+    /* THE DIAL: the needle sweeps, the band is when the white has set and
+       the yolk has not */
+    const dx = 14, dy = 12, dw = 104;
+    ART.px(c, dx - 1, dy - 1, dw + 2, 10, P.K);
+    ART.px(c, dx, dy, dw, 8, '#241f18');
+    for (let i = 0; i < dw; i += 6) ART.px(c, dx + i, dy + 6, 1, 2, '#3e352a');
+    const cw = Math.round(dw * s.band), cxx = dx + Math.round(dw * s.centre);
+    ART.px(c, cxx - (cw >> 1), dy, cw, 8, 'rgba(255,215,94,.24)');
+    ART.px(c, cxx - 1, dy, 2, 8, '#ffd75e');
+    const nx = dx + Math.round(dw * s.x);
+    ART.px(c, nx - 1, dy - 3, 3, 14, P.K);
+    ART.px(c, nx, dy - 2, 1, 12, '#ff6a5e');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,226,150,' + (s.flash * 0.24).toFixed(3) + ')');
+    /* and the steam, because a warm kitchen is mostly steam */
+    for (let i = 0; i < 7; i++) {
+      const sy = 44 - i * 4, sx = 60 + Math.round(Math.sin(s.x * 3.4 + i) * (2 + i));
+      ART.px(c, sx, sy, 2, 2, 'rgba(250,244,230,' + (0.20 - i * 0.026).toFixed(3) + ')');
+    }
+  }
+
+  /* ---------------------------------------------------------
      THE DRUMS. A rat runs the pipe over the washers. You have one
      lid and you drop it when he is over the open drum. He is fast,
      he is fat, and there are three of him.
@@ -688,6 +763,18 @@ const JOBS = (() => {
         draw: drawCups,
       });
       return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, won: r.hits >= 2 };
+    },
+
+    /* three eggs, for a small frog who is going to be late */
+    async breakfast() {
+      const r = await meter({
+        head: 'BREAKFAST',
+        sub: 'THREE EGGS. TAKE THEM OFF WHEN THE WHITE SETS.',
+        key: 'TAP TO PLATE THE EGG',
+        rounds: 3, band: 0.24, speed: 0.72,
+        draw: drawPan,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, fed: r.hits >= 2 };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */

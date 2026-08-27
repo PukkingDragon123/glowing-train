@@ -22,7 +22,86 @@ revolver between you.
 
 That is the whole game, and it is the two endings.
 
-## You play how you got here
+## It opens on a Tuesday, and nothing happens
+
+Before any of the rest of it, you get one ordinary morning. It is the only
+bright set in the game and it has to earn that, because it is the room the
+whole of SHELL & DEBT is about losing — so it gets more detail than anything
+else in here and all of it is domestic. Butter paper with a sprig on it,
+honey wood, scrubbed boards, sun over the sink, a kettle going, a checked
+towel on the range rail, three coats on three hooks and **one of them is
+small**, two pairs of shoes and **one pair is small**, and a crayon drawing of
+four frogs holding hands under a smiling sun, stuck to the larder with a red
+magnet.
+
+![Ten past seven](docs/screen-home-kitchen.png)
+
+**And it is the tutorial.** Every game has to teach four things — how to
+move, how to use a thing, how to talk to somebody, how to look closely — and
+most teach them with a box of text in the corner of a grey room. This one
+teaches them by *needing* them:
+
+- **Tap the floor to walk.** He is standing in the wrong place and the room
+  is yours. That is the whole lesson.
+- **Use a thing.** The stove has a bracket round it and a word on it, same as
+  every door, drawer and body in the game. Using it cooks breakfast: three
+  eggs on the same sweeping needle every trade in this game runs on, and the
+  plate on the counter fills up as they land. The first thing you ever do
+  with your hands is make an egg for your son, and it is the identical action
+  you will spend six years doing to locks, prints, taps and a pistol.
+- **Talk to somebody.** The boy at the table cannot find his school reader.
+  He has looked everywhere. Twice.
+
+![Three at the table](docs/screen-home-table.png)
+
+- **Look closely.** The reader is under the left sofa cushion, and the only
+  way to find it is the eyeglass — the room five times closer in a brass
+  ring, with the lines under it. Which means the first case you ever work is
+  a missing library book in your own front room, and the game never once
+  calls it a case.
+
+![The cushions](docs/screen-home-glass.png)
+
+Then the bag off the hook, the shoes, the door, and the car. *Be back by six.
+It is your turn to cook properly.*
+
+![The hooks](docs/screen-home-hall.png)
+
+**The school gate.** Nine seconds, and one job: be the last completely
+ordinary thing that ever happens to him. Railings, a horse chestnut, a bell
+on a bracket, hopscotch chalked on the pavement, a bicycle against the fence.
+He waves from the gate. You do not go in.
+
+![Twenty past eight](docs/screen-school.png)
+
+### And then the post comes up from the desk
+
+An envelope with his name on it and **no stamp**, which is the first thing
+wrong with it. Somebody walked it in.
+
+*WE HAVE YOUR WIFE AND WE HAVE YOUR BOY. THEY ARE ALIVE THIS MORNING. DO NOT
+GO HOME. DO NOT TELL YOUR CAPTAIN. THERE IS NOTHING YOU CAN PAY US. THIS IS
+FOR SOMETHING YOU DID.*
+
+And there is something in the fold of it.
+
+![No stamp on it](docs/screen-letter.png)
+
+**The zoom right in** is not a camera move. It is the eyeglass — the same
+instrument the cushions taught you twenty minutes ago, held up to one
+cigarette end smoked down to the print and put out carefully. *GAULOISE.
+CAPORAL. And under that, in four point: PARIS.*
+
+Then the tabac on Sixth, who has been behind that counter for thirty years
+and has a wall of every brand sold within a hundred miles, with one gap in
+it. *I have not sold one of those in my life. Nor has anybody between here
+and the coast. Whoever put that out bought it in Paris.*
+
+![Thirty years behind that counter](docs/screen-tabac.png)
+
+## And then he goes home anyway
+
+He was told not to. He went.
 
 The game used to open on a slideshow. Eight painted panels, two hundred and
 twenty pixels by a hundred and twenty-four, each held up while a caption
@@ -38,18 +117,22 @@ camera across the wreckage, cuts in close on the thing that matters, and puts
 the lines over the top of it. Everything in the opening you will see again
 while you are playing, because it is the same machinery.
 
-**The house.** Black, then a hall out of the dark, then the front door
-standing open onto the rain with a street lamp four doors down and the lock
-plate split off the jamb. He walks in from the door. The camera goes with
-him, past the coat that is still on its hook and the telephone that is not on
-its table, and through the archway into the front room in one move.
+**The house, that night.** Black, then a hall out of the dark, then the front
+door with the lock plate split off the jamb and the screws out of the wood.
+He walks in. The camera goes with him, past the coat still on its hook and
+the telephone that is not on its table — *she got as far as picking it up* —
+and through the archway into the front room in one move.
+
+Every warm thing in the prologue has its cold twin in here: the same paper,
+the same chair, the same boards.
 
 ![Six years ago](docs/screen-intro-house.png)
 
 **The room.** Her chair on its side on the rug. The window sash pushed right
 up in November, throwing a shaft of street light across the boards. The
 wireless still on the sideboard, untouched, which is its own kind of wrong —
-nobody came here for the silver.
+nobody came here for the silver. And no blood anywhere: **nobody is dead in
+this house.**
 
 ![The front room](docs/screen-intro-room.png)
 
@@ -63,8 +146,9 @@ game, six years early.
 **The ashtray.** Two cups on the low table and one of them is not yours. The
 camera cuts in, his arm goes out and comes up with the thing in his hand —
 the same arm pose the barman uses for a rag and the drinker uses for a glass.
-Half smoked. Still warm. GAULOISE, and nobody in this state sells them. That
-is the whole reason the rest of the game is in France.
+Half smoked. Still warm. And through the glass it is **the second one that
+day**: same print, same four-point type. He stood in the front room and
+finished it while he waited.
 
 ![Gauloise. Paris.](docs/screen-intro-butt.png)
 
@@ -89,7 +173,7 @@ sit through it again.
 
 ### And then the Brigade wants a form filled in
 
-A foreign policeman with a dead family and a cigarette end does not get
+A foreign policeman with a missing family and a cigarette end does not get
 handed a case. He gets handed paperwork. Four questions, whose answers are
 the game's own rules — *a story you cannot break is a story that holds*, *you
 work a city in the order it closes*, *three minutes with a glass saves
@@ -1037,11 +1121,12 @@ js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
 js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
 js/places.js      the working stops, and the floors under and over them
 js/day.js         THE LIGHT: seven hours of the day, baked into the room
-js/cut.js         CUTSCENES THAT ARE ROOMS: the house you come home to,
-                  the security hall at Orly, the cabin, the captain's
-                  office -- all built as real SCENE rooms and driven by a
-                  shot list (camera pans, scripted walks, arm poses,
-                  dialogue over the live room)
+js/cut.js         CUTSCENES THAT ARE ROOMS: the family house at breakfast,
+                  the school gate, his desk, the tabac, the same house
+                  that night, the security hall at Orly, the cabin, the
+                  captain's office -- all built as real SCENE rooms and
+                  driven by a shot list (camera pans, scripted walks, arm
+                  poses, the eyeglass, dialogue over the live room)
 js/intro.js       the exam the Brigade makes you sit before it signs a card
 js/paris.js       the city itself: the Tower, the Arch, the Butte, the
                   Museum, the Catacombs, the Metro, the Opera, the
@@ -1087,8 +1172,12 @@ dev/smoke.js      full browser smoke test (node dev/smoke.js)
 - The quarters and what unlocks them — `CITY.ZONES` and each place's `lock`
   in `js/city.js`
 - The four questions on the form — `INTRO.PAPER` in `js/intro.js`
-- The opening, shot by shot — `CUT.opening` / `airport` / `flight` in
-  `js/cut.js`; the sets are `CUT.house()` / `orly()` / `cabin()` / `office()`
+- The opening, shot by shot — `CUT.prologue` / `opening` / `airport` /
+  `flight` in `js/cut.js`; the sets are `CUT.home()` / `school()` / `desk()` /
+  `tabac()` / `house()` / `orly()` / `cabin()` / `office()`
+- The hour and the weather a story beat runs in — `DAY.pin()` and the
+  script's own `S.hour()` / `S.weather()`
+- Breakfast — `JOBS.breakfast()`, on the same meter as every other trade
 - What an arm can be doing — `SPR.ARM_POSE` in `js/sprites.js`
 
 ### Dev checks

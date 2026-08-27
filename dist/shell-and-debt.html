@@ -3490,11 +3490,13 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 }
 #cut-fade.on { opacity: 1; }
 
-/* while a cutscene is running the HUD is not yours to poke */
+/* While a cutscene is running the HUD is not yours to poke -- EXCEPT in
+   the prologue, which is teaching you the belt, so the belt has to be
+   there. CUT.hudOn() puts .cut-hud on the body for those beats. */
 body.in-cut #obj-plate,
-body.in-cut #tool-belt,
 body.in-cut #note-rail,
 body.in-cut #phone-tab { opacity: 0; pointer-events: none; }
+body.in-cut:not(.cut-hud) #tool-belt { opacity: 0; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -11863,15 +11865,31 @@ const DAY = (() => {
     return BANDS[BANDS.length - 1];           // before first light: still dark
   }
 
+  /* ============================================================
+     A CUTSCENE CAN PIN THE HOUR.
+
+     The light is normally the shift clock, which is right while you
+     are working and wrong for a story beat: the prologue is a warm
+     morning six years ago and the house he comes home to is the
+     middle of the night, and neither of them cares what time it is
+     on the case you have not started yet. Pin it, play the scene,
+     unpin it. See js/cut.js.
+     ============================================================ */
+  let pinned = null;
+
+  function now() {
+    if (pinned !== null) return pinned;
+    return (typeof CITY !== 'undefined' && CITY.minutes) ? CITY.minutes() : 12 * 60;
+  }
+
   function band() {
-    const m = (typeof CITY !== 'undefined' && CITY.minutes) ? CITY.minutes() : 12 * 60;
-    return bandAt(m);
+    return bandAt(now());
   }
 
   /* how far through the current band we are, 0..1 — the sun slides
      across it instead of jumping at the boundary */
   function through() {
-    const m = (typeof CITY !== 'undefined' && CITY.minutes) ? CITY.minutes() : 12 * 60;
+    const m = now();
     const b = bandAt(m);
     const i = BANDS.indexOf(b);
     const next = BANDS[(i + 1) % BANDS.length];
@@ -12223,6 +12241,10 @@ const DAY = (() => {
   return {
     BANDS, byId,
     bandAt, band, nextBand, through, pal, lamps, side, stone,
+    /* hold the hour for a scene, then give it back to the clock */
+    pin(minutes) { pinned = minutes === null || minutes === undefined ? null : (minutes | 0); },
+    unpin() { pinned = null; },
+    pinned() { return pinned; },
     sky, wash, bake, shaft, ramp, cloud, mix, hex, rgb,
     /* the word for the corner of the screen */
     word() { return band().word; },
@@ -17015,8 +17037,12 @@ const SCENE = (() => {
     }
     if (a.arm) arm = a.arm;                 /* a script can hold a pose */
     const r = rig(a, a.frame || 0, face, a.back, ex, aside, arm);
-    const w = Math.max(1, Math.round(r.w * sc));
-    const h = Math.max(1, Math.round(r.h * sc) - id.rise);
+    /* AND HOW BIG HE IS. Depth already scales everybody, which is the right
+       rule for a room and the wrong one for a CHILD: a boy standing next to
+       his father is smaller without being further away. */
+    const sc2 = sc * (a.scale || 1);
+    const w = Math.max(1, Math.round(r.w * sc2));
+    const h = Math.max(1, Math.round(r.h * sc2) - id.rise);
     ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
       Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
@@ -22906,6 +22932,81 @@ const JOBS = (() => {
   }
 
   /* ---------------------------------------------------------
+     BREAKFAST.
+
+     The same needle and the same band as every other trade in
+     this game, which is the point: the first thing you ever do
+     with your hands is cook an egg for your son, and it is the
+     identical action you will spend the next six years doing to
+     locks, prints, taps and a pistol. Three eggs, and the plate
+     on the right fills up as they land.
+     --------------------------------------------------------- */
+  function drawPan(c, W, H, s) {
+    const P = PIX.PAL;
+    /* the kitchen, warm, out of focus behind it */
+    ART.px(c, 0, 0, W, H, '#8a7448');
+    for (let y = 2; y < 30; y += 10) {
+      for (let x = ((y / 10) % 2) ? 4 : 10; x < W; x += 12) {
+        ART.px(c, x, y, 1, 3, '#94804f');
+        ART.px(c, x - 2, y + 1, 5, 1, '#94804f');
+      }
+    }
+    ART.px(c, 0, 30, W, H - 30, '#2e2a2c');            /* the hob, from above */
+    ART.px(c, 0, 30, W, 2, '#585458');
+    ART.dither(c, 0, 32, W, H - 32, '#1e1c1e', 0.18, 7);
+    /* THE PAN, seen from over his shoulder: a black disc with butter in it */
+    PIX.disc(c, 58, 56, 30, '#1c1a1c');
+    PIX.disc(c, 58, 56, 28, '#3a3438');
+    PIX.disc(c, 58, 55, 26, '#4a4348');
+    ART.px(c, 84, 52, 30, 5, '#26232a');               /* the handle */
+    ART.px(c, 84, 52, 30, 1, '#4a4448');
+    /* the butter, sliding about with the needle */
+    const bx = 50 + Math.round(Math.sin(s.x * 5) * 6);
+    ART.px(c, bx, 62, 7, 3, 'rgba(255,222,140,.5)');
+    /* THE EGGS. One cooking, and the ones already done sitting on the plate. */
+    const done = s.hits;
+    const cook = Math.min(1, 0.25 + s.x * 0.9);
+    SPR.ellipse(c, 54, 54, Math.round(9 * cook) + 4, Math.round(6 * cook) + 3,
+      cook > 0.85 ? '#efe0a0' : '#f6efc8');
+    SPR.ellipse(c, 54, 54, Math.round(9 * cook) + 4, Math.round(6 * cook) + 3,
+      'rgba(255,255,255,.10)');
+    PIX.disc(c, 55, 54, 4, cook > 0.85 ? '#e08a24' : '#f0a83c');
+    PIX.disc(c, 55, 53, 2, '#f6c464');
+    if (cook > 0.92) {                                  /* catching, if he waits */
+      for (let i = 0; i < 5; i++) {
+        ART.px(c, 44 + i * 5, 48 - (i % 3), 2, 2, 'rgba(90,70,50,.5)');
+      }
+    }
+    /* the plate, and the boy's egg on it once it is out of the pan */
+    SPR.ellipse(c, 112, 66, 17, 7, '#c8bca0');
+    SPR.ellipse(c, 112, 65, 16, 6, '#f0e8d4');
+    SPR.ellipse(c, 112, 64, 14, 5, '#fbf7ec');
+    for (let i = 0; i < done; i++) {
+      const ex = 104 + i * 7;
+      SPR.ellipse(c, ex, 64, 6, 3, '#efe0a0');
+      PIX.disc(c, ex, 64, 2, '#f0a83c');
+    }
+    /* THE DIAL: the needle sweeps, the band is when the white has set and
+       the yolk has not */
+    const dx = 14, dy = 12, dw = 104;
+    ART.px(c, dx - 1, dy - 1, dw + 2, 10, P.K);
+    ART.px(c, dx, dy, dw, 8, '#241f18');
+    for (let i = 0; i < dw; i += 6) ART.px(c, dx + i, dy + 6, 1, 2, '#3e352a');
+    const cw = Math.round(dw * s.band), cxx = dx + Math.round(dw * s.centre);
+    ART.px(c, cxx - (cw >> 1), dy, cw, 8, 'rgba(255,215,94,.24)');
+    ART.px(c, cxx - 1, dy, 2, 8, '#ffd75e');
+    const nx = dx + Math.round(dw * s.x);
+    ART.px(c, nx - 1, dy - 3, 3, 14, P.K);
+    ART.px(c, nx, dy - 2, 1, 12, '#ff6a5e');
+    if (s.flash > 0) ART.px(c, 0, 0, W, H, 'rgba(255,226,150,' + (s.flash * 0.24).toFixed(3) + ')');
+    /* and the steam, because a warm kitchen is mostly steam */
+    for (let i = 0; i < 7; i++) {
+      const sy = 44 - i * 4, sx = 60 + Math.round(Math.sin(s.x * 3.4 + i) * (2 + i));
+      ART.px(c, sx, sy, 2, 2, 'rgba(250,244,230,' + (0.20 - i * 0.026).toFixed(3) + ')');
+    }
+  }
+
+  /* ---------------------------------------------------------
      THE DRUMS. A rat runs the pipe over the washers. You have one
      lid and you drop it when he is over the open drum. He is fast,
      he is fat, and there are three of him.
@@ -23347,6 +23448,18 @@ const JOBS = (() => {
         draw: drawCups,
       });
       return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, won: r.hits >= 2 };
+    },
+
+    /* three eggs, for a small frog who is going to be late */
+    async breakfast() {
+      const r = await meter({
+        head: 'BREAKFAST',
+        sub: 'THREE EGGS. TAKE THEM OFF WHEN THE WHITE SETS.',
+        key: 'TAP TO PLATE THE EGG',
+        rounds: 3, band: 0.24, speed: 0.72,
+        draw: drawPan,
+      });
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, fed: r.hits >= 2 };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */
@@ -25486,6 +25599,14 @@ const STORY = {
     const isProp = hit && place && CITY.propsAt(place).indexOf(hit.id) >= 0;
 
     if (hit && hit.look) lines.push(hit.look);
+    /* A SCRIPTED SCENE ANSWERS ITS OWN GLASS. The prologue hides a boy's
+       school reader under a sofa cushion and the only way to find it is to
+       hold the glass up to the cushions, which is the whole investigation
+       loop taught six years before the game calls it one. See js/cut.js. */
+    if (hit && hit.onLook) {
+      const extra = hit.onLook();
+      if (extra) lines.push(extra);
+    }
 
     /* ============================================================
        A SECRET IS WORTH SOMETHING.
@@ -32383,6 +32504,20 @@ const CUT = (() => {
       gate();
     },
     fade, rise, black,
+    /* the hour and the weather belong to the scene, not to the shift clock */
+    hour(m) { if (typeof DAY !== 'undefined') DAY.pin(m); },
+    weather(id) { if (typeof G !== 'undefined') G.weather = id; },
+    /* THE ZOOM RIGHT IN. Not a camera move -- the game's own eyeglass: the
+       room five times closer in a round window with the lines under it.
+       That is what a close-up is in this game, and it is the same
+       instrument the player will use on every clue for the next six
+       years, which is exactly why the story turns on it. */
+    async glass(x, y, title, lines) {
+      gate();
+      const cv = SCENE.magnify(x, y, 20, 5);
+      await CINE.glass({ cv, title: title, lines: lines });
+      gate();
+    },
     shake() { if (typeof UI !== 'undefined' && UI.shake) UI.shake(); },
     thud(f, l) { SFX.tone(f || 70, l || 0.16, 'sine', 0.09); },
     /* change the set, then rebuild the cached art so it shows */
@@ -32390,15 +32525,525 @@ const CUT = (() => {
   };
 
   /* ============================================================
-     THE HOUSE — the first thirty seconds of the game.
+     HOME, TEN PAST SEVEN, SIX YEARS AGO.
 
-     Read left to right, because that is the order you find it
-     in: the front door standing open onto the rain, the hall
-     with the telephone off its table, the archway, and then the
-     front room with her chair on its side, the window up, and an
-     ashtray with somebody else's cigarette in it.
+     The one bright set in the game, and it has to earn that: this
+     is the room the rest of SHELL & DEBT is about losing. So it
+     gets the most detail of anything in here and all of it is
+     domestic — the kettle going, the sun over the sink, three
+     coats on three hooks and one of them is small, two pairs of
+     shoes and one pair is small, a crayon drawing of a frog family
+     stuck to the larder with a magnet.
 
-     Nothing is described anywhere. The set is the exposition.
+     Warm means warm PIGMENT, not a warm filter. The paper is
+     butter with a little sprig on it, the wood is honey, the floor
+     is scrubbed board with a rag rug on it, and the only cool
+     thing in the room is the sky out of the window.
+
+     Laid out once, by name, because the last set I placed by
+     offsets put the sideboard inside the armchair:
+
+       SINK    the window, the sun, the washing-up
+       STOVE   the kettle and the pan
+       LARDER  the drawing, and the boy's height marked up the jamb
+       TABLE   three places laid, one of them low
+       SOFA    the reader is under the left cushion
+       HEARTH  the mantel, the clock, the photograph
+       HOOKS   three coats, two of them grown-up
+       DOOR    the glass panel, and the milk on the step
+
+     st: { pan, plate, book, satchel } — what the script has
+     changed about the set so far.
+     ============================================================ */
+  function home(st) {
+    st = st || {};
+    const W = 740, FY = 112;
+    /* MEASURED SO NOTHING LANDS ON ANYTHING. First pass had the satchel
+       inside the front door and the standing lamp inside the hall table;
+       these are the left and right edges of every piece, worked out once:
+         sink   22..102   stove 104..167   larder 170..220
+         table 224..328   sofa  352..458   hearth 466..552
+         hallt 562..596   hooks 606..668   door  684..732 */
+    const SINK = 30, STOVE = 110, LARDER = 176, TABLE = 272, SOFA = 392,
+      HEARTH = 496, HALLT = 562, HOOKS = 616, DOOR = 706;
+
+    const paint = (c) => {
+      const p = P();
+
+      /* ---- THE SHELL: butter paper, honey dado, scrubbed boards ---- */
+      px(c, 0, 0, W, FY, '#6b5a3c');
+      px(c, 0, 0, W, FY - 34, '#8a7448');
+      /* THE PAPER. A sprig every twelve by ten, and only two pixels of
+         contrast in it: on a four-by-six grid at full contrast the same
+         motif read as television static. */
+      for (let y = 4; y < FY - 40; y += 10) {
+        for (let x = ((y / 10) % 2) ? 4 : 10; x < W; x += 12) {
+          px(c, x, y, 1, 3, '#94804f');
+          px(c, x - 2, y + 1, 5, 1, '#94804f');
+          px(c, x - 1, y + 4, 3, 1, '#94804f');
+        }
+      }
+      ART.dither(c, 0, 0, W, FY - 34, '#826d45', 0.07, 5);
+      /* the picture rail and the honey dado under it */
+      px(c, 0, FY - 40, W, 3, '#a98a52');
+      px(c, 0, FY - 40, W, 1, '#c4a468');
+      px(c, 0, FY - 37, W, 2, 'rgba(70,48,24,.34)');
+      px(c, 0, FY - 34, W, 34, '#7a6038');
+      for (let x = 4; x < W; x += 26) {
+        px(c, x, FY - 30, 20, 26, '#856844');
+        px(c, x, FY - 30, 20, 1, '#a08050');
+        px(c, x, FY - 5, 20, 1, 'rgba(60,40,20,.40)');
+        px(c, x + 19, FY - 30, 1, 26, 'rgba(60,40,20,.30)');
+      }
+      px(c, 0, FY - 6, W, 6, '#5e4a2c');
+      px(c, 0, FY - 6, W, 1, '#7c6238');
+      /* the boards, and a rag rug over them in the middle of the room */
+      c.drawImage(ART.floor(W, SCENE.H - FY + 8, { tone: 'board', seed: 3 }), 0, FY - 2);
+      /* SCRUBBED, NOT SOOTED. ART.floor is a police-station board at
+         #2a2118; a kitchen floor with the sun on it is two shades up and
+         warm, so the whole thing gets a honey wash and a sheen. */
+      px(c, 0, FY - 2, W, SCENE.H - FY + 8, 'rgba(226,176,104,.20)');
+      px(c, 0, FY - 3, W, 2, '#4a3a20');
+      px(c, 0, FY - 1, W, 5, 'rgba(255,238,196,.10)');
+      for (let x = 0; x < W; x += 7) px(c, x, FY, 1, SCENE.H - FY + 6, 'rgba(120,84,40,.14)');
+      /* the ceiling: whitewash, warm, with a beam across it */
+      px(c, 0, -46, W, 46, '#3a2e1c');
+      px(c, 0, 0, W, 9, '#c8b489');
+      px(c, 0, 0, W, 2, '#e0cba0');
+      px(c, 0, 9, W, 3, 'rgba(70,48,24,.30)');
+      for (let x = 0; x < W; x += 96) {
+        px(c, x, 0, 6, 9, '#8a7048');
+        px(c, x, 0, 6, 1, '#a98a52');
+      }
+
+      /* ---- THE SINK, and the sun coming over it ---- */
+      const wx = SINK, wy = 20, ww = 62, wh = 42;
+      px(c, wx - 4, wy - 4, ww + 8, wh + 8, '#4a3a20');
+      px(c, wx - 3, wy - 3, ww + 6, wh + 6, '#c4a468');
+      px(c, wx, wy, ww, wh, '#b8d8ea');
+      /* a garden out of it: a hedge, a line of washing, a bright sky */
+      for (let y = wy; y < wy + 20; y++) {
+        px(c, wx, y, ww, 1, DAY.rgb(DAY.mix([150, 200, 232], [212, 234, 244],
+          (y - wy) / 20)));
+      }
+      px(c, wx, wy + 20, ww, 10, '#6d9450');
+      ART.dither(c, wx, wy + 20, ww, 10, '#578040', 0.3, 9);
+      px(c, wx, wy + 28, ww, wh - 28, '#7ea256');
+      for (let i = 0; i < 5; i++) {                    /* washing on a line */
+        px(c, wx + 8 + i * 11, wy + 14, 8, 9, ['#e8e2d0', '#d8c8e0', '#e8e2d0', '#cfe0e8', '#e8dcc4'][i]);
+        px(c, wx + 8 + i * 11, wy + 14, 8, 1, '#f4efe0');
+      }
+      px(c, wx + 2, wy + 13, ww - 4, 1, '#8a7448');
+      px(c, wx + 26, wy + 6, 7, 4, '#f4efe0');          /* a cloud */
+      px(c, wx + 30, wy + 4, 8, 3, '#fbf7ec');
+      /* the glazing bars, then the sun sitting IN the glass */
+      px(c, wx + Math.round(ww / 2) - 1, wy, 2, wh, '#c4a468');
+      px(c, wx, wy + Math.round(wh / 2) - 1, ww, 2, '#c4a468');
+      px(c, wx, wy, ww, 1, 'rgba(255,255,255,.34)');
+      /* the sill, a pot of herbs, and the washing-up */
+      px(c, wx - 6, wy + wh, ww + 12, 5, '#d0b478');
+      px(c, wx - 6, wy + wh, ww + 12, 1, '#eccf92');
+      px(c, wx + 4, wy + wh - 8, 11, 8, '#a85a3c');     /* the pot */
+      px(c, wx + 4, wy + wh - 8, 11, 1, '#c47048');
+      for (let i = 0; i < 6; i++) {
+        px(c, wx + 5 + i * 2, wy + wh - 13 + (i % 3), 2, 6, '#4e7c42');
+      }
+      px(c, wx - 8, FY - 30, ww + 18, 6, '#c8ac74');    /* the draining board */
+      px(c, wx - 8, FY - 30, ww + 18, 1, '#e4c88c');
+      px(c, wx - 4, FY - 24, ww + 10, 20, '#8a7048');   /* the cupboard under it */
+      px(c, wx - 4, FY - 24, ww + 10, 1, '#a4884c');
+      px(c, wx + 4, FY - 20, 24, 14, 'rgba(70,48,24,.26)');
+      px(c, wx + 32, FY - 20, 24, 14, 'rgba(70,48,24,.26)');
+      px(c, wx + 26, FY - 15, 4, 2, '#e8d49a');
+      px(c, wx + 34, FY - 15, 4, 2, '#e8d49a');
+      px(c, wx + 18, FY - 36, 30, 7, '#b0bcc4');        /* the basin */
+      px(c, wx + 18, FY - 36, 30, 1, '#ccd8de');
+      px(c, wx + 30, FY - 44, 3, 9, '#c8cfd4');         /* the tap */
+      px(c, wx + 30, FY - 45, 8, 3, '#c8cfd4');
+      for (let i = 0; i < 3; i++) {                     /* two cups on the board */
+        px(c, wx - 6 + i * 9, FY - 36, 7, 6, ['#f0e8d4', '#e8dcd0', '#f0e8d4'][i]);
+        px(c, wx - 6 + i * 9, FY - 36, 7, 1, '#fbf7ec');
+      }
+      /* and the shaft it throws across the floor, painted, warm */
+      for (let i = 0; i < 12; i++) {
+        const t = i / 11;
+        px(c, wx + 6 + Math.round(t * 44), wy + wh + 6 + Math.round(t * 44),
+          Math.round(ww * (0.6 + t * 0.5)), 5,
+          'rgba(255,238,176,' + (0.075 - t * 0.005).toFixed(3) + ')');
+      }
+
+      /* ---- THE STOVE. Cream enamel with a black hob and a brass rail:
+             a kitchen range, not the grey monolith this was. ---- */
+      px(c, STOVE - 4, FY - 36, 50, 34, '#4a3c2e');     /* the ink under it */
+      px(c, STOVE - 3, FY - 35, 48, 32, '#dcd0b4');
+      px(c, STOVE - 3, FY - 35, 48, 2, '#f0e6cc');
+      px(c, STOVE + 40, FY - 35, 5, 32, 'rgba(90,70,44,.24)');
+      px(c, STOVE - 4, FY - 39, 50, 4, '#2e2a2c');      /* the hob */
+      px(c, STOVE - 4, FY - 39, 50, 1, '#585458');
+      for (let i = 0; i < 3; i++) {
+        PIX.disc(c, STOVE + 6 + i * 14, FY - 37, 4, '#1e1c1e');
+        PIX.disc(c, STOVE + 6 + i * 14, FY - 37, 3, '#3a3638');
+      }
+      px(c, STOVE - 6, FY - 44, 54, 2, '#c8b06a');      /* the brass rail */
+      px(c, STOVE - 6, FY - 44, 54, 1, '#e8cc84');
+      px(c, STOVE - 6, FY - 44, 2, 6, '#c8b06a');
+      px(c, STOVE + 46, FY - 44, 2, 6, '#c8b06a');
+      /* a checked tea towel over the far end of the rail, because this is
+         somebody's house -- and off the pan, where it read as a flag */
+      for (let i = 0; i < 12; i++) {
+        px(c, STOVE + 34 + i, FY - 42, 1, 11 - Math.abs(6 - i), i % 3 ? '#c8524c' : '#e8e0cc');
+      }
+      px(c, STOVE + 2, FY - 28, 34, 18, '#c4b494');     /* the oven door */
+      px(c, STOVE + 2, FY - 28, 34, 1, '#e0d4b8');
+      px(c, STOVE + 6, FY - 24, 26, 11, '#3a3230');
+      px(c, STOVE + 8, FY - 22, 10, 7, 'rgba(255,170,60,.38)');   /* alight */
+      px(c, STOVE + 10, FY - 21, 6, 4, 'rgba(255,222,128,.46)');
+      px(c, STOVE + 6, FY - 9, 26, 3, '#c8b06a');       /* the handle */
+      px(c, STOVE + 6, FY - 9, 26, 1, '#e8cc84');
+      /* the kettle, going, on the near ring */
+      px(c, STOVE - 2, FY - 50, 17, 11, '#4a4448');
+      px(c, STOVE - 1, FY - 49, 15, 9, '#8e989e');
+      px(c, STOVE - 1, FY - 49, 15, 2, '#bcc4c8');
+      px(c, STOVE + 14, FY - 47, 6, 3, '#8e989e');      /* the spout */
+      px(c, STOVE + 15, FY - 48, 4, 2, '#4a4448');
+      px(c, STOVE + 2, FY - 53, 10, 4, '#4a4448');      /* the handle */
+      px(c, STOVE + 3, FY - 53, 8, 2, '#a8b0b6');
+      for (let i = 0; i < 8; i++) {
+        px(c, STOVE + 18 + Math.round(Math.sin(i * 0.85) * 3), FY - 52 - i * 3,
+          2, 2, 'rgba(252,246,232,' + (0.26 - i * 0.03).toFixed(3) + ')');
+      }
+      /* the pan, with the eggs in it if he has cooked them */
+      SPR.ellipse(c, STOVE + 24, FY - 42, 11, 4, '#26232a');
+      SPR.ellipse(c, STOVE + 24, FY - 43, 10, 3, '#48434c');
+      SPR.ellipse(c, STOVE + 24, FY - 44, 8, 2, '#5e5860');
+      px(c, STOVE + 34, FY - 45, 12, 3, '#26232a');     /* the handle */
+      px(c, STOVE + 34, FY - 45, 12, 1, '#4a4448');
+      if (st.pan) {
+        px(c, STOVE + 18, FY - 45, 7, 3, '#f6e8a8');
+        px(c, STOVE + 20, FY - 44, 3, 2, '#f0a83c');
+        px(c, STOVE + 26, FY - 45, 7, 3, '#f6e8a8');
+        px(c, STOVE + 28, FY - 44, 3, 2, '#f0a83c');
+      }
+
+      /* ---- THE LARDER, and the two best things in the room on it ---- */
+      px(c, LARDER, FY - 74, 44, 72, '#8e6e44');
+      px(c, LARDER, FY - 74, 44, 3, '#ac8a58');
+      px(c, LARDER + 40, FY - 74, 4, 72, 'rgba(60,40,20,.34)');
+      px(c, LARDER + 3, FY - 70, 34, 30, 'rgba(60,40,20,.22)');
+      px(c, LARDER + 3, FY - 70, 34, 1, 'rgba(255,236,190,.14)');
+      px(c, LARDER + 3, FY - 36, 34, 30, 'rgba(60,40,20,.22)');
+      px(c, LARDER + 34, FY - 52, 3, 6, '#e8d49a');     /* the handles */
+      px(c, LARDER + 34, FY - 30, 3, 6, '#e8d49a');
+      /* THE DRAWING. Four frogs in crayon, holding hands, under a yellow
+         sun with a smile on it, held on with a red magnet. This is the
+         whole prologue in twelve pixels. */
+      px(c, LARDER + 7, FY - 66, 26, 20, '#f4eeda');
+      px(c, LARDER + 7, FY - 66, 26, 1, '#fbf8ee');
+      px(c, LARDER + 8, FY - 65, 24, 1, 'rgba(0,0,0,.08)');
+      px(c, LARDER + 27, FY - 64, 4, 4, '#ffd447');     /* the sun */
+      px(c, LARDER + 28, FY - 63, 2, 1, '#a07a10');
+      for (let i = 0; i < 4; i++) {
+        const kx = LARDER + 10 + i * 5, kh = i === 2 ? 5 : (i === 3 ? 4 : 8);
+        px(c, kx, FY - 51 - kh, 3, kh, ['#5aa050', '#c86a92', '#5aa050', '#e0a84c'][i]);
+        px(c, kx, FY - 52 - kh, 3, 2, '#3e7c38');
+        px(c, kx + 3, FY - 50 - Math.round(kh * 0.6), 2, 1, '#3e7c38');
+      }
+      px(c, LARDER + 8, FY - 48, 24, 1, '#5aa050');    /* the ground line */
+      px(c, LARDER + 18, FY - 67, 3, 3, '#c03a2c');    /* the magnet */
+      /* and the boy's height, pencilled up the door jamb with the years */
+      for (let i = 0; i < 4; i++) {
+        const hy = FY - 22 - i * 7;
+        px(c, LARDER - 6, hy, 5, 1, '#6a5030');
+        px(c, LARDER - 6, hy - 3, 3, 2, '#6a5030');
+      }
+
+      /* ---- THE TABLE, three places laid, one of them low ---- */
+      /* the top of the table only: the cloth hanging off the near edge and
+         the legs under it are painted in FRONT of the cast, below, so that
+         the family is AT the table instead of standing on the floor in
+         front of it */
+      px(c, TABLE - 34, FY - 32, 74, 5, '#a88450');
+      px(c, TABLE - 34, FY - 32, 74, 1, '#c8a468');
+      /* two plates, a jug, a jam pot, and flowers */
+      px(c, TABLE - 28, FY - 35, 14, 3, '#f0e8d4');
+      px(c, TABLE - 28, FY - 35, 14, 1, '#fbf7ec');
+      px(c, TABLE + 2, FY - 35, 14, 3, '#f0e8d4');
+      px(c, TABLE + 2, FY - 35, 14, 1, '#fbf7ec');
+      if (st.plate) {                                   /* the boy's egg on it */
+        px(c, TABLE + 5, FY - 37, 8, 3, '#f6e8a8');
+        px(c, TABLE + 7, FY - 36, 3, 2, '#f0a83c');
+      }
+      px(c, TABLE - 10, FY - 42, 9, 7, '#dce4e8');      /* the milk jug */
+      px(c, TABLE - 10, FY - 42, 9, 1, '#f0f4f6');
+      px(c, TABLE - 1, FY - 40, 3, 3, '#dce4e8');
+      px(c, TABLE + 20, FY - 39, 7, 4, '#a8324c');      /* the jam */
+      px(c, TABLE + 20, FY - 40, 7, 2, '#e8dcc0');
+      px(c, TABLE + 30, FY - 44, 6, 9, '#9ab0c4');      /* the flowers */
+      px(c, TABLE + 30, FY - 44, 6, 1, '#c0d0dc');
+      px(c, TABLE + 32, FY - 50, 2, 7, '#4e7c42');
+      px(c, TABLE + 29, FY - 53, 4, 4, '#e8a0b8');
+      px(c, TABLE + 33, FY - 51, 3, 3, '#f0d060');
+      px(c, TABLE + 27, FY - 49, 3, 3, '#d8e0f0');
+      /* three chairs: two grown-up and one with a cushion on it */
+      const chair = (cxx, h, cushion) => {
+        px(c, cxx, FY - 20, 16, 4, '#8e6e44');
+        px(c, cxx, FY - 20, 16, 1, '#ac8a58');
+        px(c, cxx + 1, FY - 16, 3, 14, '#7a5c38');
+        px(c, cxx + 12, FY - 16, 3, 14, '#7a5c38');
+        px(c, cxx + 1, FY - 20 - h, 3, h, '#7a5c38');
+        px(c, cxx + 12, FY - 20 - h, 3, h, '#7a5c38');
+        px(c, cxx, FY - 22 - h, 16, 3, '#8e6e44');
+        px(c, cxx, FY - 22 - h, 16, 1, '#ac8a58');
+        for (let i = 0; i < 2; i++) px(c, cxx + 5 + i * 4, FY - 20 - h, 2, h, '#6e5230');
+        if (cushion) {
+          px(c, cxx + 1, FY - 24, 14, 5, '#c86a92');
+          px(c, cxx + 1, FY - 24, 14, 1, '#e08cae');
+          px(c, cxx + 1, FY - 20, 14, 1, 'rgba(80,30,50,.34)');
+        }
+      };
+      chair(TABLE - 48, 18, false);
+      chair(TABLE + 40, 18, false);
+      chair(TABLE - 12, 12, true);
+
+      /* ---- THE SOFA. The reader is under the left cushion. ---- */
+      px(c, SOFA - 34, FY - 40, 82, 38, '#4a6a58');
+      px(c, SOFA - 34, FY - 40, 82, 3, '#5e8068');
+      px(c, SOFA + 42, FY - 40, 6, 38, 'rgba(20,40,30,.34)');
+      px(c, SOFA - 34, FY - 26, 82, 3, 'rgba(20,40,30,.28)');   /* the back seam */
+      px(c, SOFA - 40, FY - 34, 10, 32, '#547660');             /* the arms */
+      px(c, SOFA - 40, FY - 34, 10, 2, '#6a8c74');
+      px(c, SOFA + 46, FY - 34, 10, 32, '#547660');
+      px(c, SOFA + 46, FY - 34, 10, 2, '#6a8c74');
+      /* two seat cushions, and the left one is sitting proud of the frame */
+      px(c, SOFA - 30, FY - 24 - (st.book === 'found' ? 0 : 2), 36, 10, '#5e8068');
+      px(c, SOFA - 30, FY - 24 - (st.book === 'found' ? 0 : 2), 36, 2, '#74987e');
+      px(c, SOFA + 8, FY - 24, 36, 10, '#5e8068');
+      px(c, SOFA + 8, FY - 24, 36, 2, '#74987e');
+      if (st.book === 'found') {                                /* a corner showing */
+        px(c, SOFA - 12, FY - 26, 10, 3, '#a8442c');
+        px(c, SOFA - 12, FY - 26, 10, 1, '#c4583c');
+      }
+      /* two scatter cushions, one of them embroidered */
+      px(c, SOFA - 26, FY - 36, 14, 12, '#c8a44c');
+      px(c, SOFA - 26, FY - 36, 14, 2, '#e0bc60');
+      px(c, SOFA - 22, FY - 32, 6, 5, '#a8842c');
+      px(c, SOFA + 26, FY - 36, 14, 12, '#a8687c');
+      px(c, SOFA + 26, FY - 36, 14, 2, '#c07c92');
+      px(c, SOFA + 30, FY - 33, 6, 2, '#e0c0cc');
+      /* a knitted blanket over the near arm */
+      for (let i = 0; i < 12; i++) {
+        px(c, SOFA + 46, FY - 32 + i, 10, 1, i % 3 ? '#b8543c' : '#c86848');
+      }
+      px(c, SOFA + 52, FY - 20, 5, 10, '#b8543c');
+      /* the rag rug in front of it */
+      px(c, SOFA - 30, FY - 1, 96, 9, '#8a5a48');
+      px(c, SOFA - 30, FY - 1, 96, 1, '#a4705a');
+      for (let x = SOFA - 26; x < SOFA + 62; x += 12) {
+        px(c, x, FY + 1, 8, 6, '#a06450');
+        px(c, x + 6, FY + 3, 6, 4, '#7c5040');
+      }
+
+      /* ---- THE HEARTH ---- */
+      px(c, HEARTH - 24, FY - 56, 52, 54, '#8a7c70');
+      px(c, HEARTH - 24, FY - 56, 52, 3, '#a89a8c');
+      px(c, HEARTH - 18, FY - 46, 40, 44, '#2a2220');           /* the opening */
+      px(c, HEARTH - 16, FY - 44, 36, 40, '#1c1614');
+      /* a fire laid but not lit, because it is July and it is morning */
+      for (let i = 0; i < 5; i++) {
+        px(c, HEARTH - 12 + i * 7, FY - 12, 6, 4, '#4a3628');
+        px(c, HEARTH - 10 + i * 5, FY - 16, 5, 3, '#3e2c20');
+      }
+      px(c, HEARTH - 14, FY - 6, 32, 4, '#3a3230');
+      /* the mantel, the clock, the photograph, two candlesticks */
+      px(c, HEARTH - 30, FY - 60, 64, 5, '#a98a52');
+      px(c, HEARTH - 30, FY - 60, 64, 1, '#c8a468');
+      px(c, HEARTH - 30, FY - 55, 64, 2, 'rgba(60,40,20,.34)');
+      px(c, HEARTH - 8, FY - 76, 18, 16, '#8e6e44');            /* the clock */
+      px(c, HEARTH - 8, FY - 76, 18, 2, '#ac8a58');
+      PIX.disc(c, HEARTH + 1, FY - 68, 6, '#f0e8d4');
+      PIX.disc(c, HEARTH + 1, FY - 68, 5, '#fbf7ec');
+      px(c, HEARTH + 1, FY - 71, 1, 4, '#3a2c1c');
+      px(c, HEARTH + 1, FY - 68, 4, 1, '#3a2c1c');
+      px(c, HEARTH - 26, FY - 74, 15, 14, '#a98a52');           /* the photograph */
+      px(c, HEARTH - 25, FY - 73, 13, 12, '#d8cdb4');
+      px(c, HEARTH - 23, FY - 71, 4, 6, '#6a8a96');
+      px(c, HEARTH - 18, FY - 70, 4, 5, '#96707c');
+      px(c, HEARTH - 14, FY - 68, 3, 3, '#8a9a70');
+      px(c, HEARTH + 16, FY - 72, 3, 12, '#c8b06a');            /* candlesticks */
+      px(c, HEARTH + 15, FY - 60, 5, 2, '#c8b06a');
+      px(c, HEARTH + 17, FY - 76, 1, 4, '#f0e8d4');
+      px(c, HEARTH + 24, FY - 70, 3, 10, '#c8b06a');
+      px(c, HEARTH + 23, FY - 60, 5, 2, '#c8b06a');
+      /* the standing lamp beside it, on, because the hall is still dim */
+      px(c, HEARTH + 40, FY - 8, 12, 6, '#8e6e44');
+      px(c, HEARTH + 45, FY - 58, 2, 50, '#a98a52');
+      px(c, HEARTH + 36, FY - 72, 20, 14, '#d8b060');
+      px(c, HEARTH + 36, FY - 72, 20, 2, '#f0cc80');
+      px(c, HEARTH + 38, FY - 58, 16, 2, 'rgba(255,224,150,.44)');
+
+      /* ---- THE HALL: three coats, two pairs of shoes ---- */
+      px(c, HOOKS - 10, FY - 68, 56, 5, '#8e6e44');
+      px(c, HOOKS - 10, FY - 68, 56, 1, '#ac8a58');
+      px(c, HOOKS - 10, FY - 63, 56, 2, 'rgba(60,40,20,.36)');
+      for (let i = 0; i < 4; i++) {
+        px(c, HOOKS - 4 + i * 15, FY - 62, 3, 5, '#c8b06a');
+        px(c, HOOKS - 4 + i * 15, FY - 58, 5, 2, '#d8c078');
+      }
+      /* his, hers, and one that comes up to your knee */
+      const coat = (cxx, w2, h2, col, hi, lo) => {
+        px(c, cxx, FY - 58, w2, h2, col);
+        px(c, cxx, FY - 58, w2, 2, hi);
+        px(c, cxx + w2 - 3, FY - 58, 3, h2, lo);
+        px(c, cxx + 2, FY - 54, w2 - 4, 1, 'rgba(255,255,255,.10)');
+        px(c, cxx, FY - 58 + h2 - 1, w2, 1, 'rgba(0,0,0,.30)');
+      };
+      coat(HOOKS - 8, 14, 40, '#3a4048', '#4e5660', '#242a30');
+      coat(HOOKS + 8, 14, 36, '#7c4458', '#96566c', '#542c3c');
+      coat(HOOKS + 24, 11, 22, '#c07038', '#d8884a', '#8e4e22');
+      /* the satchel on the fourth hook, or gone if he has taken it */
+      if (!st.satchel) {
+        px(c, HOOKS + 38, FY - 56, 14, 12, '#8e5a2c');
+        px(c, HOOKS + 38, FY - 56, 14, 2, '#a8703c');
+        px(c, HOOKS + 40, FY - 50, 10, 3, '#6e4420');
+        px(c, HOOKS + 44, FY - 58, 3, 3, '#8e5a2c');
+      }
+      /* two pairs of shoes, and one pair is small */
+      px(c, HOOKS - 8, FY - 8, 13, 6, '#3a2c22');
+      px(c, HOOKS - 8, FY - 8, 13, 1, '#54402e');
+      px(c, HOOKS + 6, FY - 8, 13, 6, '#3a2c22');
+      px(c, HOOKS + 6, FY - 8, 13, 1, '#54402e');
+      px(c, HOOKS + 22, FY - 6, 9, 4, '#8e3a2c');
+      px(c, HOOKS + 22, FY - 6, 9, 1, '#a84e3c');
+      px(c, HOOKS + 32, FY - 6, 9, 4, '#8e3a2c');
+      px(c, HOOKS + 32, FY - 6, 9, 1, '#a84e3c');
+      /* the hall table, his hat and his keys on it */
+      px(c, HALLT, FY - 30, 34, 4, '#8e6e44');
+      px(c, HALLT, FY - 30, 34, 1, '#ac8a58');
+      px(c, HALLT + 2, FY - 26, 3, 24, '#7a5c38');
+      px(c, HALLT + 29, FY - 26, 3, 24, '#7a5c38');
+      px(c, HALLT + 2, FY - 14, 30, 2, '#7a5c38');             /* the stretcher */
+      px(c, HALLT + 5, FY - 36, 18, 6, '#2c2a34');             /* the fedora */
+      px(c, HALLT + 3, FY - 31, 22, 2, '#2c2a34');
+      px(c, HALLT + 5, FY - 36, 18, 1, '#484654');
+      px(c, HALLT + 5, FY - 34, 18, 1, '#8e2c24');
+      px(c, HALLT + 26, FY - 33, 5, 3, '#c8b06a');             /* the keys */
+      px(c, HALLT + 29, FY - 32, 3, 1, '#c8b06a');
+
+      /* ---- THE FRONT DOOR, shut, with the morning behind the glass ---- */
+      px(c, DOOR - 22, 14, 48, FY - 14, '#7a5c38');
+      px(c, DOOR - 25, 12, 54, 4, '#a98a52');
+      px(c, DOOR - 25, 12, 54, 1, '#c8a468');
+      px(c, DOOR - 19, 20, 42, FY - 24, '#8e6e44');
+      px(c, DOOR - 19, 20, 42, 2, '#ac8a58');
+      px(c, DOOR - 15, 26, 34, 26, '#4a3a20');                 /* the glass panel */
+      px(c, DOOR - 14, 27, 32, 24, '#dcecf4');
+      for (let i = 0; i < 3; i++) px(c, DOOR - 14 + i * 11, 27, 1, 24, '#b8cfdc');
+      px(c, DOOR - 14, 35, 32, 1, '#b8cfdc');
+      px(c, DOOR - 12, 29, 12, 8, 'rgba(255,255,255,.5)');
+      px(c, DOOR - 15, 62, 34, 22, 'rgba(60,40,20,.22)');      /* the lower panel */
+      px(c, DOOR - 15, 62, 34, 1, 'rgba(255,236,190,.14)');
+      px(c, DOOR - 20, 66, 4, 4, '#c8b06a');                   /* the knob */
+      px(c, DOOR - 21, 74, 5, 8, '#c8b06a');                   /* the letter box */
+      px(c, DOOR - 20, 76, 3, 4, '#3a2c1c');
+      /* and the light it lays down on the boards inside */
+      for (let i = 0; i < 8; i++) {
+        const t = i / 7;
+        px(c, DOOR - 16 - Math.round(t * 26), 54 + Math.round(t * 54),
+          Math.round(34 * (0.7 + t * 0.6)), 5,
+          'rgba(255,244,206,' + (0.055 - t * 0.005).toFixed(3) + ')');
+      }
+    };
+
+    /* ---- and what is in FRONT of everybody ---- */
+    const fore = (c) => {
+      /* the near edge of the breakfast table: a checked cloth hanging over
+         it and two legs under. A frog standing behind this line has his
+         legs hidden by it, which is what sitting at a table looks like
+         from the side without a single frame of sitting animation. */
+      px(c, TABLE - 32, FY - 28, 68, 11, '#e8e0c8');
+      px(c, TABLE - 32, FY - 28, 68, 1, '#f8f2e0');
+      /* a red gingham check, which is the one pattern that says kitchen */
+      for (let x = TABLE - 30; x < TABLE + 34; x += 8) {
+        px(c, x, FY - 27, 4, 4, '#d8a08c');
+        px(c, x + 4, FY - 23, 4, 4, '#d8a08c');
+        px(c, x, FY - 27, 4, 1, '#e8b8a4');
+      }
+      for (let x = TABLE - 32; x < TABLE + 36; x += 4) {
+        px(c, x, FY - 28, 1, 11, 'rgba(180,120,100,.22)');
+      }
+      for (let y = FY - 27; y < FY - 17; y += 4) {
+        px(c, TABLE - 32, y, 68, 1, 'rgba(180,120,100,.22)');
+      }
+      /* and a scalloped hem, so it hangs instead of ending */
+      for (let i = 0; i < 17; i++) {
+        const hx = TABLE - 32 + i * 4;
+        px(c, hx, FY - 17, 4, 1, '#d0c4a8');
+        px(c, hx + 1, FY - 16, 2, 1, '#e8e0c8');
+        px(c, hx + 1, FY - 15, 2, 1, 'rgba(60,40,20,.30)');
+      }
+      px(c, TABLE - 32, FY - 17, 68, 1, 'rgba(60,40,20,.20)');
+      px(c, TABLE - 26, FY - 16, 5, 14, '#8e6e44');
+      px(c, TABLE - 26, FY - 16, 2, 14, '#a4804c');
+      px(c, TABLE + 28, FY - 16, 5, 14, '#8e6e44');
+      px(c, TABLE + 28, FY - 16, 2, 14, '#a4804c');
+      px(c, TABLE - 28, FY - 3, 66, 3, 'rgba(60,40,20,.26)');
+    };
+
+    const spots = [
+      { id: 'stove', x: STOVE + 20, w: 44, top: FY - 58, bot: FY - 14,
+        label: 'THE STOVE', hint: 'COOK' },
+      { id: 'sofa', x: SOFA - 12, w: 40, top: FY - 40, bot: FY - 12,
+        label: 'THE CUSHIONS', hint: 'LOOK' },
+      { id: 'hearth', x: HEARTH, w: 46, top: FY - 78, bot: FY - 6,
+        label: 'THE MANTEL', hint: 'LOOK' },
+      { id: 'hooks', x: HOOKS + 16, w: 60, top: FY - 68, bot: FY - 2,
+        label: 'THE HOOKS', hint: 'LOOK' },
+      { id: 'door', x: DOOR - 4, w: 44, top: 14, bot: FY - 2,
+        label: 'THE FRONT DOOR', hint: 'GO' },
+    ];
+
+    return {
+      id: 'cut_home:' + (st.pan ? 'p' : '') + (st.plate ? 'e' : '')
+        + (st.book || '') + (st.satchel ? 's' : ''),
+      w: W, floorY: FY, paint, fore, spots,
+      actors: [
+        { id: 'wife', x: TABLE - 62, y: FY, face: 1, key: 'cutWife',
+          def: WIFE_DEF, job: 'wipe', profile: false,
+          tag: 'CLEO', tagCol: PIX.PAL.P },
+        /* UP ON THE CUSHION. Stood on the floor at sixty-two per cent his
+           head came out below the tablecloth, which is a boy hiding under
+           the table rather than eating at it. Feet at FY-20 puts them
+           behind the cloth and his head a clear twenty rows above it --
+           and that IS the pose: a small frog kneeling up on a cushion to
+           reach his egg. */
+        { id: 'boy', x: TABLE - 6, y: FY - 20, face: -1, key: 'cutBoy',
+          def: BOY_DEF, scale: 0.66, still: true, profile: false,
+          tag: 'TOBIAS', tagCol: PIX.PAL.O },
+      ],
+      enterX: STOVE + 44, enterFace: 1,
+      lights: [
+        { x: SINK + 30, y: 44, r: 70, a: 0.17, fy: FY - 2, bare: true },
+        { x: HEARTH + 46, y: FY - 56, r: 40, a: 0.17, fy: FY - 4 },
+        { x: DOOR - 4, y: 40, r: 54, a: 0.13, fy: FY - 2, bare: true },
+      ],
+      marks: { SINK, STOVE, LARDER, TABLE, SOFA, HEARTH, HOOKS, DOOR },
+    };
+  }
+
+  /* ============================================================
+     THE HOUSE — the same house, that night.
+
+     He was told not to go home. He went home.
+
+     Read left to right, because that is the order he finds it
+     in: the front door forced off its lock, the hall with the
+     telephone off its table, the archway, and then the front room
+     with her chair on its side, the window up, and an ashtray
+     with a second one of those cigarettes in it.
+
+     Nothing is described anywhere. The set is the exposition,
+     and every warm thing in the prologue has its cold twin in
+     here: the same paper, the same chair, the same boards.
      ============================================================ */
   function house() {
     const W = 520, FY = 112;
@@ -32746,6 +33391,353 @@ const CUT = (() => {
         { x: TABLE + 24, y: FY - 54, r: 30, a: 0.11, fy: FY - 34, bare: true },
       ],
       marks: { DOOR, HALL, ARCH, ROOM: CHAIR + 20, TABLE: TABLE + 24 },
+    };
+  }
+
+  /* ============================================================
+     THE SCHOOL GATE, twenty past eight.
+
+     Nine seconds of screen time and it has one job: be the last
+     completely ordinary thing that ever happens to him. So it is
+     railings, a horse chestnut, a bell on a bracket, a hopscotch
+     grid chalked on the pavement, a bicycle leaning on the fence
+     and two other children going in.
+     ============================================================ */
+  function school() {
+    const W = 380, FY = 106;
+    const GATE = 196;
+
+    const paint = (c) => {
+      /* the sky, and the school behind the railings */
+      for (let y = -30; y < 46; y++) {
+        px(c, 0, y, W, 1, DAY.rgb(DAY.mix([120, 176, 216], [214, 230, 242],
+          (y + 30) / 76)));
+      }
+      px(c, 30, 6, 5, 3, 'rgba(255,255,255,.5)');
+      px(c, 36, 4, 9, 4, 'rgba(255,255,255,.62)');
+      px(c, 240, 10, 12, 4, 'rgba(255,255,255,.5)');
+      /* the building: red brick, tall sashes, a bell on a bracket. Started
+         six rows ABOVE the frame first time, which filled the top of the
+         shot with brick and threw the sky away. */
+      px(c, 60, 8, 260, 48, '#8a4438');
+      px(c, 60, 8, 260, 3, '#a4564a');
+      px(c, 56, 4, 268, 5, '#6e3630');
+      px(c, 56, 4, 268, 1, '#96504a');
+      for (let y = 12; y < 54; y += 5) {
+        px(c, 60, y, 260, 1, 'rgba(0,0,0,.20)');
+        for (let x = 60 + ((y / 5) % 2 ? 0 : 6); x < 320; x += 12) {
+          px(c, x, y, 1, 5, 'rgba(0,0,0,.16)');
+        }
+      }
+      for (let i = 0; i < 5; i++) {
+        const sx = 76 + i * 50;
+        px(c, sx - 2, 16, 30, 34, '#5e2e26');
+        px(c, sx, 18, 26, 30, '#b8cbd6');
+        px(c, sx, 18, 26, 1, '#dae6ec');
+        px(c, sx + 12, 18, 2, 30, '#5e2e26');
+        px(c, sx, 32, 26, 2, '#5e2e26');
+        px(c, sx + 2, 20, 9, 7, 'rgba(255,255,255,.34)');
+      }
+      px(c, 178, -8, 5, 13, '#5a5450');                  /* the bell bracket */
+      px(c, 176, -10, 12, 3, '#5a5450');
+      px(c, 180, -4, 8, 8, '#c8a848');
+      px(c, 181, -3, 6, 5, '#e8cc74');
+      px(c, 183, 3, 2, 3, '#8a7430');
+      /* the wall, the railings, and the gate standing open */
+      px(c, 0, 50, W, 6, '#7a6a58');
+      px(c, 0, 50, W, 1, '#96866e');
+      for (let x = 4; x < W; x += 9) {
+        if (x > GATE - 34 && x < GATE + 34) continue;
+        px(c, x, 12, 3, 40, '#2e3a34');
+        px(c, x, 12, 1, 40, '#46564c');
+        px(c, x, 8, 3, 4, '#2e3a34');
+        px(c, x + 1, 6, 1, 3, '#46564c');
+      }
+      px(c, GATE - 38, 6, 6, 48, '#2a3630');
+      px(c, GATE + 32, 6, 6, 48, '#2a3630');
+      px(c, GATE - 38, 2, 6, 5, '#c8a848');
+      px(c, GATE + 32, 2, 6, 5, '#c8a848');
+      for (let x = GATE - 30; x < GATE + 32; x += 8) px(c, x, 16, 2, 36, '#34423a');
+      px(c, GATE - 30, 16, 60, 2, '#34423a');
+      px(c, GATE - 30, 32, 60, 2, '#34423a');
+      /* a horse chestnut over the wall */
+      px(c, 316, 20, 8, 36, '#5a4630');
+      for (let i = 0; i < 26; i++) {
+        const a = i * 2.399, r = 8 + (i % 4) * 7;
+        PIX.disc(c, 320 + Math.round(Math.cos(a) * r),
+          12 + Math.round(Math.sin(a) * r * 0.6),
+          9 - (i % 3) * 2, i % 3 ? '#4e7c42' : '#3e6636');
+      }
+      PIX.disc(c, 326, 4, 8, '#5a8c4a');
+      /* the pavement, and hopscotch chalked on it */
+      c.drawImage(ART.floor(W, SCENE.H - FY + 8, { tone: 'lino', seed: 6 }), 0, FY - 2);
+      px(c, 0, 56, W, FY - 56, '#8e8478');
+      ART.dither(c, 0, 56, W, FY - 56, '#7e7468', 0.24, 3);
+      for (let x = 0; x < W; x += 26) px(c, x, 56, 1, FY - 56, 'rgba(0,0,0,.14)');
+      px(c, 0, 56, W, 2, '#a49a8c');
+      px(c, 0, FY - 3, W, 3, '#5e564c');
+      for (let i = 0; i < 5; i++) {
+        px(c, 60 + (i % 2) * 13, FY - 30 - i * 7, 13, 6, 'rgba(248,244,232,.34)');
+        px(c, 60 + (i % 2) * 13, FY - 30 - i * 7, 13, 1, 'rgba(255,255,255,.42)');
+      }
+      px(c, 62, FY - 22, 3, 3, 'rgba(248,244,232,.44)');
+      /* a milk crate and a bicycle against the railings, because a gate
+         with nothing leaning on it is a drawing of a gate */
+      px(c, 250, FY - 14, 20, 12, '#4a6a7c');
+      px(c, 250, FY - 14, 20, 2, '#5e8296');
+      for (let i = 0; i < 4; i++) px(c, 253 + i * 4, FY - 11, 3, 8, 'rgba(0,0,0,.24)');
+      if (PIX.ring) {
+        PIX.ring(c, 300, FY - 12, 10, '#2c2a2c');
+        PIX.ring(c, 328, FY - 12, 10, '#2c2a2c');
+      }
+      px(c, 306, FY - 26, 20, 3, '#8a2c24');
+      px(c, 300, FY - 22, 30, 2, '#2c2a2c');
+      px(c, 322, FY - 30, 3, 8, '#2c2a2c');
+    };
+
+    return {
+      id: 'cut_school', w: W, floorY: FY, paint, outdoor: true, skyTo: FY,
+      spots: [{ id: 'gate', x: GATE, w: 60, top: 6, bot: FY - 4,
+        label: 'THE GATE', hint: 'SEE HIM IN' }],
+      actors: [
+        { id: 'kid1', x: 96, y: FY, face: 1, key: 'cutKid1', def: KID1_DEF,
+          scale: 0.6, job: 'pace', beat: 16 },
+        { id: 'kid2', x: 300, y: FY, face: -1, key: 'cutKid2', def: KID2_DEF,
+          scale: 0.62, still: true },
+      ],
+      enterX: 40, enterFace: 1,
+      lights: [],
+      marks: { GATE },
+    };
+  }
+
+  /* ============================================================
+     HIS DESK, a quarter past nine, and the envelope on it.
+
+     Small-town homicide: two desks, a fan that does not help, a
+     coffee going cold, a spike of paper, and a window with the
+     water tower out of it. The turn in the whole game happens on
+     this blotter.
+     ============================================================ */
+  function desk(st) {
+    st = st || {};
+    const W = 340, FY = 108;
+    const DESK = 150;
+
+    const paint = (c) => {
+      const p = P();
+      c.drawImage(ART.wall(W, FY + 4, { tone: 'grey', railY: 72, seed: 11 }), 0, 0);
+      c.drawImage(ART.floor(W, SCENE.H - FY + 8, { tone: 'board', seed: 15 }), 0, FY - 2);
+      px(c, 0, FY - 3, W, 2, '#0d0f13');
+      px(c, 0, -40, W, 46, '#0e1014');
+      px(c, 0, 6, W, 3, '#20242c');
+      /* a hot flat morning out of the window, and a water tower in it */
+      const wx = 226, wy = 18, ww = 84, wh = 46;
+      px(c, wx - 4, wy - 4, ww + 8, wh + 8, p.K);
+      for (let y = wy; y < wy + wh; y++) {
+        px(c, wx, y, ww, 1, DAY.rgb(DAY.mix([132, 180, 214], [226, 226, 208],
+          (y - wy) / wh)));
+      }
+      px(c, wx, wy + wh - 12, ww, 12, '#8e8a6a');
+      px(c, wx + 20, wy + 8, 4, 24, '#5e5a50');
+      px(c, wx + 44, wy + 8, 4, 24, '#5e5a50');
+      px(c, wx + 16, wy + 2, 36, 10, '#6e6a5c');
+      px(c, wx + 16, wy + 2, 36, 2, '#8a8676');
+      px(c, wx + 22, wy - 2, 24, 4, '#6e6a5c');
+      px(c, wx + 14, wy + 12, 40, 2, '#4e4a42');
+      for (let i = 0; i < 4; i++) px(c, wx + 60 + i * 6, wy + wh - 18, 4, 6, '#7a7660');
+      px(c, wx + ww / 2 - 1, wy, 2, wh, '#3a3e46');
+      px(c, wx, wy + 22, ww, 2, '#3a3e46');
+      px(c, wx, wy, ww, 1, 'rgba(255,255,255,.24)');
+      px(c, wx - 6, wy + wh, ww + 12, 4, '#2e3238');
+      /* a blind half down over it, and a fan on the wall */
+      px(c, wx - 4, wy - 4, ww + 8, 8, '#5a5e64');
+      for (let i = 0; i < 9; i++) {
+        px(c, wx - 2, wy - 3 + i, ww + 4, 1,
+          i % 2 ? 'rgba(0,0,0,.18)' : 'rgba(255,255,255,.06)');
+      }
+      px(c, 40, 16, 3, 10, '#4a4e54');
+      PIX.disc(c, 41, 30, 9, '#3a3e44');
+      PIX.disc(c, 41, 30, 8, '#4e535a');
+      px(c, 33, 29, 17, 2, '#7c828a');
+      px(c, 36, 22, 10, 15, 'rgba(255,255,255,.06)');
+      /* THE DESK, side on, and the paper on it */
+      px(c, DESK - 40, FY - 34, 96, 6, '#4a3626');
+      px(c, DESK - 40, FY - 34, 96, 1, '#664c34');
+      px(c, DESK - 40, FY - 28, 96, 3, 'rgba(0,0,0,.40)');
+      px(c, DESK - 30, FY - 36, 52, 2, '#1e2a22');                /* the blotter */
+      px(c, DESK - 30, FY - 36, 52, 1, '#2c3c30');
+      c.drawImage(ART.art('typewriter', 1), DESK + 14, FY - 48);
+      px(c, DESK - 38, FY - 40, 14, 6, '#8e8a78');               /* a spike of paper */
+      for (let i = 0; i < 4; i++) px(c, DESK - 37, FY - 41 - i, 12, 1, '#d8d0b8');
+      px(c, DESK - 32, FY - 46, 2, 6, '#9aa0a8');
+      px(c, DESK - 6, FY - 42, 7, 6, '#e0d8c0');                 /* the coffee, cold */
+      px(c, DESK - 6, FY - 42, 7, 1, '#f4eeda');
+      px(c, DESK + 1, FY - 40, 2, 3, '#e0d8c0');
+      px(c, DESK - 5, FY - 41, 5, 2, '#4a3420');
+      /* THE ENVELOPE. No stamp on it, which is the first thing wrong. */
+      if (!st.opened) {
+        px(c, DESK - 27, FY - 40, 28, 5, '#e8dcc0');
+        px(c, DESK - 27, FY - 40, 28, 1, '#f6eed8');
+        px(c, DESK - 21, FY - 39, 15, 2, 'rgba(120,100,70,.5)');
+        px(c, DESK - 27, FY - 36, 28, 1, 'rgba(90,74,50,.44)');
+        px(c, DESK - 14, FY - 40, 2, 5, 'rgba(90,74,50,.30)');
+      } else {
+        /* opened: the letter flat on the blotter, the cigarette on top of it */
+        px(c, DESK - 29, FY - 42, 32, 8, '#f2ead2');
+        px(c, DESK - 29, FY - 42, 32, 1, '#fbf6e6');
+        px(c, DESK - 29, FY - 35, 32, 1, 'rgba(90,74,50,.34)');
+        /* HAND PRINTED, IN CAPITALS, BY SOMEBODY BEING CAREFUL. Four ruled
+           lines of ink and one of them red: a blank cream slab on a blotter
+           is a sheet of paper, and this has to read as a letter. */
+        px(c, DESK - 26, FY - 41, 18, 1, '#8a2418');
+        for (let i = 0; i < 4; i++) {
+          px(c, DESK - 26, FY - 39 + i, [26, 22, 25, 14][i], 1, '#4a4238');
+        }
+        px(c, DESK + 1, FY - 36, 2, 1, '#4a4238');
+        px(c, DESK - 29, FY - 44, 13, 2, '#e8dcc0');
+        px(c, DESK - 29, FY - 44, 13, 1, '#f6eed8');
+        px(c, DESK + 5, FY - 39, 9, 2, '#e8e0cc');               /* the cigarette */
+        px(c, DESK + 13, FY - 39, 3, 2, '#8a6a3c');
+        px(c, DESK + 5, FY - 39, 9, 1, '#f6f0e0');
+        px(c, DESK + 4, FY - 39, 2, 2, '#3a3028');
+      }
+      /* the second desk behind, and a board of notices */
+      px(c, 40, FY - 30, 62, 5, '#4a3626');
+      px(c, 40, FY - 30, 62, 1, '#664c34');
+      px(c, 44, FY - 25, 54, 14, '#40301f');
+      px(c, 52, FY - 36, 24, 6, '#8e8a78');
+      c.drawImage(ART.corkboard(56, 34, 3), 128, 22);
+    };
+
+    /* the desk front goes over the cast, so he stands AT it */
+    const fore = (c) => {
+      px(c, DESK - 42, FY - 27, 100, 4, '#3a2a1c');
+      px(c, DESK - 42, FY - 27, 100, 1, '#54402c');
+      px(c, DESK - 42, FY - 23, 100, 21, '#33261a');
+      px(c, DESK - 34, FY - 21, 34, 15, 'rgba(0,0,0,.30)');
+      px(c, DESK + 6, FY - 21, 34, 15, 'rgba(0,0,0,.30)');
+      px(c, DESK - 20, FY - 14, 8, 2, '#c8a848');
+      px(c, DESK + 20, FY - 14, 8, 2, '#c8a848');
+      px(c, DESK - 42, FY - 4, 100, 3, '#221a12');
+    };
+
+    return {
+      id: 'cut_desk' + (st.opened ? '_o' : ''), w: W, floorY: FY, paint, fore,
+      spots: [{ id: 'post', x: DESK - 13, w: 34, top: FY - 46, bot: FY - 30,
+        label: st.opened ? 'THE LETTER' : 'THE POST', hint: 'OPEN IT' }],
+      actors: [],
+      enterX: 60, enterFace: 1,
+      lights: [
+        { x: 150, y: 8, r: 70, a: 0.22, fy: FY, bare: true },
+        { x: 268, y: 40, r: 70, a: 0.22, fy: FY - 2, bare: true },
+        { x: DESK, y: FY - 40, r: 34, a: 0.13, fy: FY - 32, bare: true },
+      ],
+      marks: { DESK },
+    };
+  }
+
+  /* ============================================================
+     THE TABAC.
+
+     Six years before Paris, in a town where nobody sells them: a
+     counter, a wall of packets, a till with a bell on it, and a
+     frog who has been behind it for thirty years and knows every
+     brand in the state by the smell of it.
+     ============================================================ */
+  function tabac() {
+    const W = 320, FY = 106;
+    const COUNT = 168;
+    const CTOP = FY - 26;
+
+    const paint = (c) => {
+      px(c, 0, 0, W, FY, '#6a5440');
+      px(c, 0, 0, W, FY - 30, '#7e654b');
+      ART.dither(c, 0, 0, W, FY, '#5c4835', 0.14, 21);
+      px(c, 0, FY - 32, W, 3, '#9a7c50');
+      px(c, 0, FY - 32, W, 1, '#b6945e');
+      c.drawImage(ART.floor(W, SCENE.H - FY + 8, { tone: 'board', seed: 19 }), 0, FY - 2);
+      px(c, 0, FY - 3, W, 2, '#221a12');
+      px(c, 0, -40, W, 46, '#14100c');
+      px(c, 0, 6, W, 3, '#2c2418');
+      /* THE WALL OF PACKETS. Six shelves, fifteen a shelf, every one a
+         different two colours: that is what the back of a tobacconist is,
+         and it is the reason one gap in it means something. */
+      const bx = 66, by = 14;
+      px(c, bx - 4, by - 4, 190, 78, '#2e2418');
+      const A = ['#c8443c', '#3e6ea8', '#d8a83c', '#4e8a52', '#8a4a8e', '#c8763c', '#4a4a52', '#b8b0a0'];
+      const B = ['#e8645c', '#5e8ec8', '#f0c85c', '#6eaa72', '#aa6aae', '#e8965c', '#6a6a72', '#d8d0c0'];
+      for (let r = 0; r < 6; r++) {
+        const ry = by + r * 12;
+        px(c, bx - 2, ry + 9, 186, 3, '#6a5232');
+        px(c, bx - 2, ry + 9, 186, 1, '#86663e');
+        for (let i = 0; i < 15; i++) {
+          const cx0 = bx + i * 12, k = (r * 15 + i) % 8;
+          px(c, cx0, ry, 10, 9, A[k]);
+          px(c, cx0, ry, 10, 2, B[k]);
+          px(c, cx0 + 2, ry + 4, 6, 2, 'rgba(255,255,255,.30)');
+          px(c, cx0 + 9, ry, 1, 9, 'rgba(0,0,0,.28)');
+        }
+      }
+      /* the one gap on the shelf, and a price card under it */
+      px(c, bx + 84, by + 24, 10, 9, '#1e1810');
+      px(c, bx + 80, by + 34, 18, 5, '#e8dcc0');
+      px(c, bx + 82, by + 36, 12, 1, '#5a5040');
+      /* a hanging sign, and a calendar with the days crossed off */
+      px(c, 20, 12, 34, 20, '#8a2c24');
+      px(c, 20, 12, 34, 2, '#a84038');
+      for (let i = 0; i < 3; i++) px(c, 24, 17 + i * 5, 26 - i * 6, 2, '#e8dcc0');
+      px(c, 34, 4, 2, 9, '#3a2c1c');
+      px(c, 274, 18, 26, 34, '#d8cdb4');
+      px(c, 274, 18, 26, 8, '#8a2c24');
+      for (let r = 0; r < 4; r++) {
+        for (let i = 0; i < 6; i++) px(c, 276 + i * 4, 28 + r * 6, 3, 3, '#8a8272');
+      }
+      px(c, 288, 34, 3, 3, '#c8443c');
+    };
+
+    const fore = (c) => {
+      /* the counter: glass fronted, with cigars laid out in it */
+      px(c, COUNT - 118, CTOP, 250, 6, '#6a5232');
+      px(c, COUNT - 118, CTOP, 250, 2, '#8c6c42');
+      px(c, COUNT - 118, CTOP, 250, 1, '#a8834e');
+      px(c, COUNT - 118, CTOP + 6, 250, 18, '#3e3222');
+      px(c, COUNT - 112, CTOP + 9, 236, 12, '#2a3a34');
+      for (let i = 0; i < 21; i++) {
+        px(c, COUNT - 108 + i * 11, CTOP + 11, 8, 3, '#6e4a28');
+        px(c, COUNT - 108 + i * 11, CTOP + 11, 8, 1, '#8a5e34');
+        px(c, COUNT - 104 + i * 11, CTOP + 15, 3, 3, '#c8a848');
+      }
+      px(c, COUNT - 118, CTOP + 24, 250, 3, '#241c12');
+      /* the till, and a bell beside it */
+      px(c, COUNT + 62, CTOP - 20, 34, 20, '#5a4a3a');
+      px(c, COUNT + 62, CTOP - 20, 34, 2, '#7c6448');
+      px(c, COUNT + 66, CTOP - 16, 26, 9, '#2a2218');
+      for (let i = 0; i < 4; i++) px(c, COUNT + 68 + i * 6, CTOP - 14, 4, 5, '#c8a848');
+      px(c, COUNT + 74, CTOP - 24, 10, 4, '#8a7448');
+      PIX.disc(c, COUNT + 52, CTOP - 5, 5, '#c8a848');
+      PIX.disc(c, COUNT + 52, CTOP - 5, 4, '#e8cc74');
+      px(c, COUNT + 51, CTOP - 11, 3, 3, '#8a7430');
+      /* and the ashtray on the counter, which is where the cigarette goes */
+      c.drawImage(ART.art('ashtray', 1), COUNT - 26, CTOP - 8);
+    };
+
+    return {
+      id: 'cut_tabac', w: W, floorY: FY, paint, fore,
+      spots: [{ id: 'ask', x: COUNT - 14, w: 40, top: CTOP - 12, bot: CTOP + 6,
+        label: 'THE CIGARETTE', hint: 'SHOW HIM' }],
+      actors: [
+        { id: 'tabac', x: COUNT + 30, y: FY - 4, face: -1, still: true,
+          key: 'cutTabac', def: TABAC_DEF, job: 'smoke',
+          tag: 'THE TABAC', tagCol: PIX.PAL.B },
+      ],
+      enterX: 40, enterFace: 1,
+      lights: [
+        { x: 160, y: 8, r: 70, a: 0.28, fy: CTOP },
+        { x: 40, y: 10, r: 48, a: 0.20, fy: FY, bare: true },
+        { x: 268, y: 12, r: 44, a: 0.16, fy: CTOP, bare: true },
+      ],
+      marks: { COUNT },
     };
   }
 
@@ -33142,6 +34134,39 @@ const CUT = (() => {
   /* two faces for the counter, hand-drawn rather than synthesised: the
      costume system needs names, not flags, and a made-up combination comes
      out as headgear floating over an empty collar */
+  /* ============================================================
+     THE TWO PEOPLE THIS WHOLE GAME IS ABOUT.
+
+     Hand-drawn from the existing costume names, like everybody
+     else: a made-up combination comes out as headgear floating
+     over an empty collar. She is in an apron over shirtsleeves
+     because she is making breakfast; he is a small frog in a
+     jumper with a school cap on, drawn at sixty-two per cent, and
+     that number is the whole reason actors can be scaled.
+     ============================================================ */
+  const WIFE_DEF = {
+    skin: ['P', 'p', 'X'], fat: false, suit: 'l', shirt: 'l', tie: null,
+    costume: 'croupier', apron: true, lashes: true, lips: 'R',
+  };
+  const BOY_DEF = {
+    skin: ['F', 'f', 'e'], fat: false, suit: 'o', shirt: 'W', tie: null,
+    costume: 'shirtsleeves', cap: true, hatCol: 'o', spots: true, braces: true,
+  };
+
+  /* two other children going in, and the frog behind the counter */
+  const KID1_DEF = {
+    skin: ['N', 'n', 'f'], fat: false, suit: 'V', shirt: 'W', tie: null,
+    costume: 'shirtsleeves', cap: true, hatCol: 'v', lashes: true,
+  };
+  const KID2_DEF = {
+    skin: ['B', 'b', 'u'], fat: true, suit: 'S', shirt: 'W', tie: null,
+    costume: 'shirtsleeves', cap: true, hatCol: 's', spots: true,
+  };
+  const TABAC_DEF = {
+    skin: ['w', 'q', 't'], fat: true, suit: 'T', shirt: 'W', tie: 'd',
+    costume: 'threePiece', glasses: 'round', warts: true, cigar: true,
+  };
+
   const GUARD_DEF = {
     skin: ['h', 'g', 'e'], fat: false, suit: 'u', shirt: 'l', tie: null,
     costume: 'cop', flatcap: true, hatCol: 'u', scar: true,
@@ -33150,6 +34175,360 @@ const CUT = (() => {
     skin: ['F', 'f', 'e'], fat: true, suit: 'T', shirt: 'W', tie: 'u',
     costume: 'threePiece', glasses: 'round', warts: true,
   };
+
+  /* ============================================================
+     THE PROLOGUE — a Tuesday, and nothing happens.
+
+     Every game has to teach four things: how to move, how to use
+     a thing, how to talk to somebody, and how to look closely.
+     Most games teach them with a box of text in the corner of a
+     grey room. This one teaches them by needing them, in a warm
+     kitchen, cooking an egg for a small frog who is going to be
+     late — so that the first hour of SHELL & DEBT is the last
+     ordinary morning of his life and you PLAY it rather than
+     being told about it afterwards.
+
+       0:00  tap the floor to walk          -> the kitchen
+       0:20  use a thing                    -> the stove, three eggs
+       0:50  walk up to somebody, talk      -> the boy at the table
+       1:10  hold the glass up to something -> the missing reader
+       1:40  the satchel, the door, the car
+       2:00  the school gate. he waves.
+       2:20  the desk. an envelope with no stamp on it.
+
+     The last beat is the only one that is not a lesson, and by
+     then you have been taught everything you need to understand
+     exactly what it means.
+     ============================================================ */
+  async function prologue() {
+    const st = { pan: false, plate: false, book: 'sofa', satchel: false };
+    let H = home(st);
+    const M = H.marks;
+
+    /* the set changes as he does things to it, and a repaint is the only
+       way a cached room can show that */
+    const redress = (S, camX) => {
+      H = home(st);
+      SCENE.open(H);
+      SCENE.busy(true);
+      if (camX !== undefined) SCENE.look(camX);
+      wire(S);
+    };
+
+    /* every spot in the house answers, and what it answers changes */
+    let wired = null;
+    function wire(S) {
+      wired = S;
+      const d = SCENE.def;
+      if (!d) return;
+      d.spots.forEach(sp => {
+        if (sp.id === 'stove') {
+          sp.look = 'TWO RINGS, A KETTLE AND NO TIME.';
+          sp.onUse = async () => {
+            if (st.pan) { await S.say('YOU', 'THAT IS BREAKFAST DONE.', PIX.PAL.F); return; }
+            const r = await JOBS.breakfast();
+            st.pan = true;
+            st.plate = r.hits > 0;
+            redress(S, M.TABLE - 20);
+            await S.say('YOU', r.hits >= 3
+              ? 'THREE OUT OF THREE. HE WILL NOT EVEN NOTICE.'
+              : (r.hits ? 'CLOSE ENOUGH. HE PUTS KETCHUP ON IT ANYWAY.'
+                : 'I HAVE BURNED ALL THREE. THERE IS TOAST.'), PIX.PAL.F);
+          };
+        }
+        if (sp.id === 'sofa') {
+          sp.look = st.book === 'found'
+            ? 'ONE CORNER OF A SCHOOL READER, STICKING OUT.'
+            : 'THE LEFT ONE IS SITTING TWO INCHES PROUD OF THE FRAME.';
+          sp.onLook = () => {
+            if (st.book === 'found') return null;
+            st.book = 'found';
+            SFX.tone(880, 0.06, 'square', 0.05);
+            setTimeout(() => redress(S, M.SOFA + 10), 900);
+            return 'THERE IS SOMETHING UNDER IT. SQUARE, AND ABOUT AN INCH THICK.';
+          };
+          sp.onUse = async () => {
+            if (st.book !== 'found') {
+              await S.say('YOU', 'CUSHIONS. IF I START PULLING THE ROOM APART '
+                + 'I WILL BE HERE UNTIL LUNCH.', PIX.PAL.F);
+              await S.say('YOU', 'THERE IS A GLASS IN MY COAT. USE THE GLASS.', PIX.PAL.F);
+              return;
+            }
+            st.book = 'got';
+            redress(S, M.SOFA + 10);
+            await S.say('TOBIAS', 'THAT IS IT! THAT IS THE ONE WITH THE MAP IN IT.',
+              PIX.PAL.O);
+          };
+        }
+        if (sp.id === 'hearth') {
+          sp.look = 'A CLOCK SIX MINUTES FAST, WHICH IS THE ONLY REASON '
+            + 'ANYBODY IN THIS HOUSE IS EVER ON TIME.';
+          sp.onUse = async () => {
+            await S.say('YOU', 'TWENTY PAST SEVEN. BY THAT CLOCK, WHICH LIES.',
+              PIX.PAL.F);
+          };
+        }
+        if (sp.id === 'hooks') {
+          sp.look = 'THREE COATS. ONE OF THEM COMES UP TO MY KNEE.';
+          sp.onUse = async () => {
+            if (st.book !== 'got') {
+              await S.say('YOU', 'HIS BAG IS HERE. THE READER THAT GOES IN IT IS NOT.',
+                PIX.PAL.F);
+              return;
+            }
+            st.satchel = true;
+            redress(S, M.HOOKS);
+            SFX.tone(320, 0.06, 'square', 0.05);
+            await S.say('YOU', 'BAG. READER. SHOES. NOBODY IS LATE.', PIX.PAL.F);
+          };
+        }
+        if (sp.id === 'door') {
+          sp.look = 'A MORNING WITH NOTHING WRONG WITH IT.';
+          sp.onUse = async () => {
+            if (!st.satchel) {
+              await S.say('YOU', 'NOT WITHOUT HIS BAG.', PIX.PAL.F);
+              return;
+            }
+            st.done = true;
+          };
+        }
+      });
+    }
+
+    /* ---------------- 1. THE KITCHEN ---------------- */
+    await shot(H, async (S, def) => {
+      S.hour(7 * 60 + 20);
+      S.weather('fine');
+      S.black(true);
+      S.cam(M.SINK + 20);
+      S.place(M.STOVE + 40, -1, 0.10);
+      await S.wait(240);
+      await S.rise(1000);
+      await S.card('SIX YEARS AGO', 'A TUESDAY, AND NOTHING HAPPENS', 2100);
+      await S.say('CLEO', 'KETTLE IS ON. HE HAS NOT FOUND HIS SHOES YET.',
+        PIX.PAL.P);
+
+      /* --- TEACH: TAP THE FLOOR TO WALK. Not a tooltip; he is simply
+             standing in the wrong place and the room is yours. --- */
+      wire(S);
+      SCENE.busy(false);
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall('TAP THE FLOOR TO WALK');
+      }
+      const x0 = SCENE.me.x;
+      for (let i = 0; i < 500; i++) {
+        gate();
+        if (Math.abs(SCENE.me.x - x0) > 22) break;
+        await U.sleep(120);
+      }
+      SCENE.busy(true);
+      await S.say('YOU', 'ALL RIGHT. EGGS.', PIX.PAL.F);
+
+      /* --- TEACH: USE A THING. The stove has a bracket round it and a
+             word on it, same as every door and drawer in the game. --- */
+      SCENE.busy(false);
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall('WALK UP TO A THING AND TAP IT');
+      }
+      for (let i = 0; i < 900 && !st.pan; i++) { gate(); await U.sleep(120); }
+      SCENE.busy(true);
+
+      /* --- TEACH: TALK. The boy is a thing with a bracket round him too. */
+      await S.pan(SCENE.def ? M.STOVE : M.STOVE, M.TABLE - 10, 1800);
+      const boy = S.actor('boy');
+      if (boy) {
+        boy.label = 'TOBIAS';
+        boy.hint = 'TALK';
+        boy.onUse = async () => {
+          if (st.book === 'got') {
+            await S.say('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.', PIX.PAL.O);
+            return;
+          }
+          if (st.book === 'found') {
+            await S.say('TOBIAS', 'IT WAS UNDER THE CUSHION. I LOOKED THERE.',
+              PIX.PAL.O);
+            return;
+          }
+          await S.say('TOBIAS', 'I CANNOT FIND MY READER.', PIX.PAL.O);
+          await S.say('TOBIAS', 'I HAVE LOOKED EVERYWHERE. TWICE.', PIX.PAL.O);
+          await S.say('YOU', 'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.', PIX.PAL.F);
+          st.asked = true;
+        };
+      }
+      SCENE.busy(false);
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall('WALK UP TO SOMEBODY AND TAP THEM');
+      }
+      for (let i = 0; i < 900 && !st.asked; i++) { gate(); await U.sleep(120); }
+      SCENE.busy(true);
+
+      /* --- TEACH: THE GLASS. Three places to look and one of them is
+             holding a book. This is the whole game, in a living room. --- */
+      if (typeof TOOLS !== 'undefined') TOOLS.set('glass');
+      await S.say('YOU', 'THE HEARTH, THE HOOKS, THE CUSHIONS. '
+        + 'HOLD THE GLASS UP TO THEM.', PIX.PAL.F);
+      hudOn(true);
+      SCENE.busy(false);
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall('THE EYEGLASS: TAP A THING FROM WHERE YOU STAND');
+      }
+      for (let i = 0; i < 1400 && st.book !== 'got'; i++) { gate(); await U.sleep(120); }
+      if (typeof TOOLS !== 'undefined') TOOLS.set('hand');
+      SCENE.busy(true);
+      await S.say('CLEO', 'HE IS A POLICEMAN, TOBIAS. IT IS ALL HE DOES.',
+        PIX.PAL.P);
+
+      /* --- and out of the door --- */
+      SCENE.busy(false);
+      if (typeof UI !== 'undefined' && UI.stampSmall) UI.stampSmall('THE BAG, THEN THE DOOR');
+      for (let i = 0; i < 1400 && !st.done; i++) { gate(); await U.sleep(120); }
+      SCENE.busy(true);
+      hudOn(false);
+      await S.say('CLEO', 'BE BACK BY SIX. IT IS YOUR TURN TO COOK PROPERLY.',
+        PIX.PAL.P);
+      S.face('happy');
+      await S.say('YOU', 'I WILL BRING SOMETHING.', PIX.PAL.F);
+      S.face(null);
+      await S.fade(700);
+    });
+
+    /* ---------------- 2. THE DRIVE, AND THE GATE ---------------- */
+    if (typeof CINE !== 'undefined' && CINE.driveTo) await CINE.driveTo('THE SCHOOL');
+    await shot(school(), async (S, def) => {
+      S.hour(8 * 60 + 20);
+      S.weather('fine');
+      S.black(true);
+      S.cam(120);
+      S.place(70, 1, 0.14);
+      await S.wait(200);
+      await S.rise(760);
+      /* the boy walks himself in, which is the only thing in this whole
+         prologue that happens without you */
+      const b = { id: 'tob', x: 92, y: def.floorY, face: 1, key: 'cutBoyG',
+        def: BOY_DEF, scale: 0.66 };
+      def.actors.push(b);
+      await S.wait(300);
+      await S.say('TOBIAS', 'YOU DO NOT HAVE TO COME IN.', PIX.PAL.O);
+      S.face('happy');
+      await S.say('YOU', 'I AM NOT COMING IN. I AM WATCHING YOU GO IN.', PIX.PAL.F);
+      S.face(null);
+      await S.pan(120, def.marks.GATE + 20, 1700);
+      await S.send('tob', def.marks.GATE + 8, 22);
+      await S.wait(300);
+      b.face = -1;
+      b.arm = 'up';
+      SFX.tone(1180, 0.05, 'square', 0.05);
+      await S.wait(700);
+      await S.say('TOBIAS', 'BYE!', PIX.PAL.O);
+      b.arm = '';
+      await S.send('tob', def.marks.GATE + 40, 26);
+      b.gone = true;
+      await S.wait(500);
+      await S.fade(700);
+    });
+
+    /* ---------------- 3. THE DESK, AND THE ENVELOPE ---------------- */
+    if (typeof CINE !== 'undefined' && CINE.driveTo) await CINE.driveTo('THE STATION');
+    const D = { opened: false };
+    await shot(desk(D), async (S, def) => {
+      S.hour(9 * 60 + 15);
+      S.weather('haze');
+      S.black(true);
+      S.cam(110);
+      S.place(70, 1, 0.12);
+      await S.wait(200);
+      await S.rise(820);
+      await S.card('MONDAY, TEN DAYS LATER', 'AND THE POST CAME UP FROM THE DESK', 2100);
+      await S.pan(110, def.marks.DESK, 1900);
+      await S.say('YOU', 'NO STAMP ON IT. SOMEBODY WALKED IT IN.', PIX.PAL.F);
+
+      let opened = false;
+      def.spots.forEach(sp => {
+        sp.look = 'AN ENVELOPE WITH MY NAME ON IT AND NOTHING ELSE.';
+        sp.onUse = async () => { opened = true; };
+      });
+      SCENE.busy(false);
+      if (typeof UI !== 'undefined' && UI.stampSmall) UI.stampSmall('OPEN IT');
+      for (let i = 0; i < 900 && !opened; i++) { gate(); await U.sleep(120); }
+      SCENE.busy(true);
+
+      /* ---- the letter ---- */
+      D.opened = true;
+      const D2 = desk(D);
+      SCENE.open(D2);
+      SCENE.busy(true);
+      SCENE.look(def.marks.DESK + 6);
+      SCENE.place(def.marks.DESK - 34, 1, 0.12);
+      await S.wait(400);
+      S.shake();
+      S.thud(48, 0.34);
+      S.face('alarm');
+      await S.wait(600);
+      await S.say('THE LETTER', 'WE HAVE YOUR WIFE AND WE HAVE YOUR BOY.',
+        PIX.PAL.q);
+      await S.say('THE LETTER', 'THEY ARE ALIVE THIS MORNING. DO NOT GO HOME. '
+        + 'DO NOT TELL YOUR CAPTAIN.', PIX.PAL.q);
+      await S.say('THE LETTER', 'THERE IS NOTHING YOU CAN PAY US. '
+        + 'THIS IS FOR SOMETHING YOU DID.', PIX.PAL.q);
+      S.face('worry');
+      await S.say('YOU', 'THERE IS SOMETHING IN THE FOLD.', PIX.PAL.F);
+      S.face(null);
+
+      /* ---- AND THE ZOOM RIGHT IN. The eyeglass, on one cigarette end. */
+      S.cutIn(true);
+      SCENE.look(def.marks.DESK + 10);
+      await S.wait(500);
+      S.arm('reach');
+      await S.wait(560);
+      S.arm('up');
+      await S.glass(def.marks.DESK + 10, def.floorY - 39, 'IN THE FOLD OF THE LETTER', [
+        'ONE CIGARETTE END. SMOKED DOWN TO THE PRINT AND PUT OUT CAREFULLY.',
+        'GAULOISE. CAPORAL. AND UNDER THAT, IN FOUR POINT: PARIS.',
+        'NOBODY IN THIS STATE SELLS THEM.',
+      ]);
+      S.arm('');
+      S.free();
+      await S.fade(760);
+    });
+
+    /* ---------------- 4. THE TABAC, who confirms it ---------------- */
+    await shot(tabac(), async (S, def) => {
+      S.hour(10 * 60);
+      S.black(true);
+      S.cam(110);
+      S.place(60, 1, 0.12);
+      await S.wait(200);
+      await S.rise(760);
+      await S.card('THE TABAC ON SIXTH', 'THIRTY YEARS BEHIND THAT COUNTER', 1900);
+      await S.pan(110, def.marks.COUNT, 1700);
+      let asked = false;
+      def.spots.forEach(sp => {
+        sp.look = 'A WALL OF EVERY BRAND SOLD WITHIN A HUNDRED MILES. '
+          + 'AND ONE GAP IN IT.';
+        sp.onUse = async () => { asked = true; };
+      });
+      SCENE.busy(false);
+      if (typeof UI !== 'undefined' && UI.stampSmall) UI.stampSmall('SHOW HIM THE CIGARETTE');
+      for (let i = 0; i < 900 && !asked; i++) { gate(); await U.sleep(120); }
+      SCENE.busy(true);
+      await S.say('THE TABAC', 'I HAVE NOT SOLD ONE OF THOSE IN MY LIFE.',
+        PIX.PAL.B);
+      await S.say('THE TABAC', 'NOR HAS ANYBODY BETWEEN HERE AND THE COAST. '
+        + 'THAT IS A FRENCH CIGARETTE, FRIEND.', PIX.PAL.B);
+      await S.say('THE TABAC', 'WHOEVER PUT THAT OUT BOUGHT IT IN PARIS.',
+        PIX.PAL.B);
+      S.face('hard');
+      await S.say('YOU', 'THEN THAT IS WHERE THEY ARE.', PIX.PAL.F);
+      S.face(null);
+      await S.fade(800);
+    });
+  }
+
+  /* the HUD is the cutscene's to hand back: the prologue needs the tool
+     belt visible, because the belt is the thing it is teaching */
+  function hudOn(v) {
+    document.body.classList.toggle('cut-hud', !!v);
+  }
 
   /* ============================================================
      THE OPENING, AS A SHOT LIST.
@@ -33175,7 +34554,7 @@ const CUT = (() => {
       await S.wait(280);
       SFX.tone(46, 0.9, 'sine', 0.05);              /* the weather, low */
       await S.rise(1100);
-      await S.card('SIX YEARS AGO', 'YOU GOT OFF SHIFT AT ELEVEN', 2000);
+      await S.card('THAT NIGHT', 'HE HAD BEEN TOLD NOT TO GO HOME', 2000);
 
       /* --- 0:04 HE COMES IN THROUGH IT. Not placed in the room: he walks
              over the threshold out of the rain, which is the difference
@@ -33186,7 +34565,8 @@ const CUT = (() => {
       await S.wait(240);
       await S.meTo(M.DOOR + 26);
       await S.wait(320);
-      await S.say('YOU', 'THE DOOR WAS ALREADY OPEN.', PIX.PAL.F);
+      await S.say('YOU', 'THE LOCK WAS OFF THE JAMB. THEY DID NOT KNOCK.',
+        PIX.PAL.F);
       S.face(null);
 
       /* --- 0:09 THE HALL. He walks it; the camera goes with him. --- */
@@ -33194,8 +34574,8 @@ const CUT = (() => {
       await S.pan(M.DOOR + 10, M.HALL + 40, 2400);
       await walk;
       S.face('hard');
-      await S.say('YOU', 'THE TELEPHONE WAS OFF THE TABLE. NOBODY CALLED ANYBODY.',
-        PIX.PAL.F);
+      await S.say('YOU', 'THE TELEPHONE IS OFF THE TABLE. SHE GOT AS FAR AS '
+        + 'PICKING IT UP.', PIX.PAL.F);
       S.face(null);
 
       /* --- 0:16 THROUGH THE ARCH, and the room lands in one move --- */
@@ -33208,17 +34588,20 @@ const CUT = (() => {
       S.thud(58, 0.26);
       S.face('alarm');
       await S.wait(560);
-      await S.say('YOU', 'HER CHAIR WAS ON ITS SIDE.', PIX.PAL.F);
+      await S.say('YOU', 'HER CHAIR IS ON ITS SIDE. SHE FOUGHT THEM IN HERE.',
+        PIX.PAL.F);
       S.face('worry');
-      await S.say('YOU', 'AND THE WINDOW WAS UP. IN NOVEMBER.', PIX.PAL.F);
+      await S.say('YOU', 'AND THE WINDOW IS UP. IN NOVEMBER.', PIX.PAL.F);
+      await S.say('YOU', 'NO BLOOD. NOBODY IS DEAD IN THIS HOUSE.', PIX.PAL.F);
       S.face(null);
 
       /* --- three places, and you have to look. The room's own spots,
              the room's own markers, the room's own walk-and-use: this
              beat is not a cutscene at all any more, it is the game. --- */
       const SAID = {
-        chair: 'NOBODY IN IT. NOTHING UNDER IT. SHE NEVER LEFT IT UNTIDY.',
-        window: 'OPEN FROM THE INSIDE. SHE LET HIM IN.',
+        chair: 'HIS READER IS UNDER IT. HE WAS SITTING HERE AT SEVEN O CLOCK.',
+        window: 'UP FROM THE INSIDE, AND THE SILL IS SCUFFED BOTH WAYS. '
+          + 'THEY WENT OUT OF IT CARRYING SOMETHING.',
         table: 'TWO CUPS. ONE OF THEM IS NOT OURS. AND AN ASHTRAY.',
       };
       const seen = {};
@@ -33257,7 +34640,14 @@ const CUT = (() => {
       S.arm('up');
       await S.wait(420);
       await S.say('YOU', 'HALF SMOKED. STILL WARM.', PIX.PAL.F);
-      await S.say('YOU', 'GAULOISE. NOBODY IN THIS STATE SELLS THEM.', PIX.PAL.F);
+      await S.glass(M.TABLE + 8, def.floorY - 42, 'IN THE ASHTRAY', [
+        'THE SECOND ONE TODAY. SAME PRINT, SAME FOUR POINT TYPE.',
+        'HE STOOD IN MY FRONT ROOM AND FINISHED IT WHILE HE WAITED.',
+        'GAULOISE. CAPORAL. PARIS.',
+      ]);
+      S.face('hard');
+      await S.say('YOU', 'THEY ARE NOT IN THIS COUNTRY ANY MORE.', PIX.PAL.F);
+      S.face(null);
       S.arm('');
       S.face(null);
       S.free();
@@ -33376,7 +34766,9 @@ const CUT = (() => {
     CINE.letterbox(true);
     onKey = (ev) => { if (ev.key === 'Escape') skip(); };
     window.addEventListener('keydown', onKey);
+    const wasWeather = (typeof G !== 'undefined') ? G.weather : null;
     try {
+      await prologue();
       await opening();
       const kept = await airport();
       await flight(kept);
@@ -33388,6 +34780,11 @@ const CUT = (() => {
       onKey = null;
       CINE.letterbox(false);
       document.body.classList.remove('in-cut');
+      document.body.classList.remove('cut-hud');
+      /* the hour and the weather belong to the shift again */
+      if (typeof DAY !== 'undefined') DAY.unpin();
+      if (typeof G !== 'undefined' && wasWeather) G.weather = wasWeather;
+      if (typeof TOOLS !== 'undefined') TOOLS.set('hand');
       SCENE.close();
       /* THE LAST SHOT ENDS ON BLACK and the exam raises from it, so the
          black stays up unless the player walked out -- in which case
@@ -33416,11 +34813,11 @@ const CUT = (() => {
   }
 
   return {
-    play, skip, opening, airport, flight, stage, unstage,
+    play, skip, prologue, opening, airport, flight, stage, unstage,
     fade, rise, black,
     /* the exam is signed off short if the player walked out of the opening */
     wasSkipped() { return didSkip; },
-    house, orly, cabin, office,
+    home, school, desk, tabac, house, orly, cabin, office,
     get running() { return running; },
     /* the harness drives the interactive beats by id rather than by
        clicking at a guessed pixel */

@@ -3470,8 +3470,10 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 }
 #cut-fade.on { opacity: 1; }
 
-/* while a cutscene is running the HUD is not yours to poke */
+/* While a cutscene is running the HUD is not yours to poke -- EXCEPT in
+   the prologue, which is teaching you the belt, so the belt has to be
+   there. CUT.hudOn() puts .cut-hud on the body for those beats. */
 body.in-cut #obj-plate,
-body.in-cut #tool-belt,
 body.in-cut #note-rail,
 body.in-cut #phone-tab { opacity: 0; pointer-events: none; }
+body.in-cut:not(.cut-hud) #tool-belt { opacity: 0; pointer-events: none; }

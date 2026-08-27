@@ -1496,6 +1496,14 @@ const STORY = {
     const isProp = hit && place && CITY.propsAt(place).indexOf(hit.id) >= 0;
 
     if (hit && hit.look) lines.push(hit.look);
+    /* A SCRIPTED SCENE ANSWERS ITS OWN GLASS. The prologue hides a boy's
+       school reader under a sofa cushion and the only way to find it is to
+       hold the glass up to the cushions, which is the whole investigation
+       loop taught six years before the game calls it one. See js/cut.js. */
+    if (hit && hit.onLook) {
+      const extra = hit.onLook();
+      if (extra) lines.push(extra);
+    }
 
     /* ============================================================
        A SECRET IS WORTH SOMETHING.

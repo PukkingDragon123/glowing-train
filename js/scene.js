@@ -2049,8 +2049,12 @@ const SCENE = (() => {
     }
     if (a.arm) arm = a.arm;                 /* a script can hold a pose */
     const r = rig(a, a.frame || 0, face, a.back, ex, aside, arm);
-    const w = Math.max(1, Math.round(r.w * sc));
-    const h = Math.max(1, Math.round(r.h * sc) - id.rise);
+    /* AND HOW BIG HE IS. Depth already scales everybody, which is the right
+       rule for a room and the wrong one for a CHILD: a boy standing next to
+       his father is smaller without being further away. */
+    const sc2 = sc * (a.scale || 1);
+    const w = Math.max(1, Math.round(r.w * sc2));
+    const h = Math.max(1, Math.round(r.h * sc2) - id.rise);
     ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
       Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
