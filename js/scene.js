@@ -1702,7 +1702,11 @@ const SCENE = (() => {
     /* the lamps, over the cast, so people stand in the light */
     for (const L of (def.lights || [])) {
       const flick = L.flicker ? (Math.sin(T * 13 + L.x) > 0.86 ? 0.5 : 1) : 1;
-      cone(c, L.x, L.y, L.r || 46, (L.a || 0.055) * flick, def.floorY);
+      /* A LIGHT CAN POOL ON SOMETHING THAT IS NOT THE FLOOR. A lamp over a
+         counter throws its pool on the counter; sending every pool to the
+         floor hid half of them behind the furniture. */
+      cone(c, L.x, L.y, L.r || 46, (L.a || 0.14) * flick,
+        L.fy === undefined ? def.floorY : L.fy);
     }
     /* dust in the air, cheap and constant */
     motes(c, T);
@@ -2082,18 +2086,57 @@ const SCENE = (() => {
 
   /* A lamp cone. Kept faint on purpose: a visible triangle painted on a
      wall reads as a bug, so most of the light lands on the floor. */
+  /* ============================================================
+     A LAMP, NOW THAT IT HAS TO DO THE WORK.
+
+     There used to be a mid-grey screened over every interior to
+     raise its blacks, and while that was there a lamp only had to
+     suggest itself — five per cent of warm over a room that was
+     already flat. The lift is gone. The rooms are as dark as they
+     were painted, which is a mafia story in a city at night, and
+     the light has to come from the things in the room that make
+     light.
+
+     So a lamp is four things now, all of them LOCAL, because
+     local is the whole point: light in darkness rather than a
+     brighter darkness everywhere.
+
+       THE BLOOM     the air right at the bulb, hottest
+       THE CONE      the shaft down to the floor, narrowing off
+       THE POOL      an ellipse on the floor under it
+       THE BOUNCE    what the wall behind it does about all that
+     ============================================================ */
   function cone(c, x, y, r, a, fy) {
-    const steps = Math.max(4, Math.round((fy - y) / 8));
+    const drop = Math.max(8, fy - y);
+    /* THE BOUNCE: the wall around the lamp lifts, and only there */
+    for (let i = 1; i <= 5; i++) {
+      ART.px(c, Math.round(x - r * 0.5 * i / 5 - 6), Math.round(y - 10 - i * 2),
+        Math.round(r * i / 5 + 12), Math.round(6 + i * 3),
+        'rgba(255,226,158,' + (a * (0.34 - i * 0.05)).toFixed(4) + ')');
+    }
+    /* THE CONE, in steps, widening and thinning as it falls */
+    const steps = Math.max(6, Math.round(drop / 5));
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
-      const hw = 3 + t * r * 0.5;
-      ART.px(c, x - hw, y + i * 8, hw * 2, 8, 'rgba(255,231,163,' + (a * 0.4 * (1 - t * 0.5)) + ')');
+      const hw = 4 + t * r * 0.62;
+      const fall = 1 - t * 0.62;
+      ART.px(c, Math.round(x - hw), Math.round(y + t * drop),
+        Math.round(hw * 2), Math.ceil(drop / steps) + 1,
+        'rgba(255,231,163,' + (a * 0.62 * fall).toFixed(4) + ')');
     }
-    /* the pool it throws, and the hot line right under the bulb */
-    for (let i = 0; i < 4; i++) {
-      const hw = r * (0.4 + i * 0.2);
-      ART.px(c, x - hw, fy - 3 + i, hw * 2, 1, 'rgba(255,231,163,' + (a * (1.4 - i * 0.3)) + ')');
+    /* THE POOL on the floor: an ellipse, brightest at the middle */
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6;
+      const hw = Math.round(r * (0.34 + t * 0.74));
+      ART.px(c, x - hw, fy - 5 + i, hw * 2, 1,
+        'rgba(255,236,178,' + (a * (2.1 - t * 1.5)).toFixed(4) + ')');
     }
+    /* THE BLOOM at the bulb itself, which is the only hot thing */
+    for (let i = 4; i >= 1; i--) {
+      PIX.disc(c, Math.round(x), Math.round(y + 2), i * 3,
+        'rgba(255,244,208,' + (a * (0.5 - i * 0.08)).toFixed(4) + ')');
+    }
+    PIX.disc(c, Math.round(x), Math.round(y + 2), 2, 'rgba(255,250,226,' + Math.min(0.85, a * 6).toFixed(3) + ')');
   }
 
   let MOTES = null;

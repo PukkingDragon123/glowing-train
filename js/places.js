@@ -907,8 +907,13 @@ const PLACES = (() => {
       pets: [{ kind: 'cat', x: 300, name: 'THE BAR CAT' }],
       depth: [{ x: 250, y: 26, w: 66, h: 32 , sky: true }],
       enterX: 34, enterFace: 1,
-      lights: [{ x: 142, y: 26, r: 44 }, { x: 300, y: 16, r: 40, a: 0.06 },
-               { x: W - 47, y: 20, r: 34, flicker: true }] };
+      /* THE LAMP THE PLACE IS NAMED AFTER pools on the back bar, and the
+         two over the counter pool on the counter, not on a floor six
+         inches behind it where nobody can see them. */
+      lights: [{ x: 142, y: 26, r: 46, a: 0.20, fy: 56 },
+               { x: 150, y: 34, r: 52, a: 0.22, fy: 60 },
+               { x: 300, y: 16, r: 40, a: 0.18, fy: 60 },
+               { x: W - 47, y: 20, r: 34, a: 0.17, flicker: true }] };
   }
 
   /* ============================================================
@@ -987,8 +992,8 @@ const PLACES = (() => {
       pets: [{ kind: 'cat', x: 150, name: 'A CELLAR CAT' }],
       enterX: 30, enterFace: 1,
       stairs: { to: 'laundry', x: 16, label: 'BACK UP THE STEPS', hint: 'INTO THE NOISE' },
-      lights: [{ x: 100, y: 32, r: 34, a: 0.07, flicker: true },
-               { x: 250, y: 32, r: 30, a: 0.05 }] };
+      lights: [{ x: 100, y: 32, r: 34, a: 0.182, flicker: true },
+               { x: 250, y: 32, r: 30, a: 0.130 }] };
   }
 
   /* over the pawn shop: where the broker actually lives */
@@ -1042,7 +1047,7 @@ const PLACES = (() => {
       pets: [{ kind: 'cat', x: 210, name: 'HIS CAT' }],
       enterX: W - 30, enterFace: -1,
       stairs: { to: 'pawn', x: W - 16, label: 'BACK DOWN', hint: 'INTO THE SHOP' },
-      lights: [{ x: 170, y: 20, r: 38, a: 0.08 }] };
+      lights: [{ x: 170, y: 20, r: 38, a: 0.208 }] };
   }
 
   const BUILD = { laundry, docks, pawn, diner, bar, cellar: laundryCellar, above: pawnAbove };

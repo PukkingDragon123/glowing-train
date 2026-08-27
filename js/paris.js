@@ -792,7 +792,7 @@ const PARIS = (() => {
       pets: [{ kind: 'dog', x: 400, name: "A TOURIST'S DOG", fouls: true },
              { kind: 'cat', x: 700, name: 'A PARK CAT' }],
       enterX: 30, enterFace: 1,
-      lights: [{ x: 372, y: 30, r: 90, a: 0.05 }, { x: 635, y: FY - 30, r: 30, a: 0.09 }],
+      lights: [{ x: 372, y: 30, r: 90, a: 0.130 }, { x: 635, y: FY - 30, r: 30, a: 0.234 }],
     };
   }
 
@@ -912,8 +912,8 @@ const PARIS = (() => {
       pets: [{ kind: 'dog', x: 260, name: 'A DOG OFF ITS LEAD', fouls: true }],
       enterX: 30, enterFace: 1,
       stairs: { to: 'metro', x: 470, label: 'DOWN INTO THE METRO', hint: 'THE LAST TRAIN WENT' },
-      lights: [{ x: 360, y: FY - 20, r: 40, a: 0.08 },
-               { x: 470, y: FY - 46, r: 26, a: 0.07 }],
+      lights: [{ x: 360, y: FY - 20, r: 40, a: 0.208 },
+               { x: 470, y: FY - 46, r: 26, a: 0.182 }],
     };
   }
 
@@ -1116,9 +1116,9 @@ const PARIS = (() => {
       pets: [{ kind: 'dog', x: 480, name: "A PAINTER'S DOG", fouls: true },
              { kind: 'cat', x: 620, name: 'A ROOF CAT' }],
       enterX: 30, enterFace: 1,
-      lights: [{ x: 402, y: FY - BAND - 40, r: 80, a: 0.05 },
-               { x: 250, y: FY - 40, r: 34, a: 0.07 },
-               { x: 680, y: FY - 40, r: 30, a: 0.07 }],
+      lights: [{ x: 402, y: FY - BAND - 40, r: 80, a: 0.130 },
+               { x: 250, y: FY - 40, r: 34, a: 0.182 },
+               { x: 680, y: FY - 40, r: 30, a: 0.182 }],
     };
   }
 
@@ -1234,7 +1234,7 @@ const PARIS = (() => {
       depthBand: BAND, crowd: { n: 8, z0: 0.55, z1: 0.95 },
       pets: [{ kind: 'cat', x: 300, name: 'THE COURTYARD CAT' }],
       enterX: 30, enterFace: 1,
-      lights: [{ x: 350, y: FY - 30, r: 60, a: 0.07 }],
+      lights: [{ x: 350, y: FY - 30, r: 60, a: 0.182 }],
     };
   }
 
@@ -1340,8 +1340,8 @@ const PARIS = (() => {
       depthBand: BAND,
       pets: [{ kind: 'cat', x: 120, name: 'SOMETHING WHITE' }],
       enterX: 26, enterFace: 1,
-      lights: [{ x: 271, y: 24, r: 40, a: 0.08, flicker: true },
-               { x: 478, y: FY - 30, r: 22, a: 0.07 }],
+      lights: [{ x: 271, y: 24, r: 40, a: 0.208, flicker: true },
+               { x: 478, y: FY - 30, r: 22, a: 0.182 }],
     };
   }
 
@@ -1427,7 +1427,7 @@ const PARIS = (() => {
       pets: [{ kind: 'cat', x: 330, name: 'A PLATFORM CAT' }],
       enterX: 40, enterFace: 1,
       stairs: { to: 'arch', x: 20, label: 'BACK UP TO THE STREET', hint: 'INTO THE TRAFFIC' },
-      lights: [{ x: 120, y: 14, r: 40, a: 0.07 }, { x: 320, y: 14, r: 40, a: 0.07, flicker: true }],
+      lights: [{ x: 120, y: 14, r: 40, a: 0.182 }, { x: 320, y: 14, r: 40, a: 0.182, flicker: true }],
     };
   }
 
@@ -1634,7 +1634,7 @@ const PARIS = (() => {
       enterX: 24, enterFace: 1,
       eggs: [egg({ id: 'ticket', x: 330, y: FY - 26, art: 'card4',
         label: 'A TORN TICKET', look: 'ROW C, SEAT 14. THE DATE IS THE NIGHT HE DIED.' })],
-      lights: [{ x: 66, y: FY - 14, r: 30, a: 0.05 }],
+      lights: [{ x: 66, y: FY - 14, r: 30, a: 0.130 }],
     };
   }
 
@@ -2008,7 +2008,7 @@ const PARIS = (() => {
       eggs: [egg({ id: 'plate', x: 690, y: FY - 20, art: 'card2',
         label: 'A NUMBER PLATE', look: 'BENT DOUBLE AND THROWN. THE NUMBER IS STILL READABLE.' })],
       lights: [{ x: 105, y: FY - 30, r: 44, a: 0.10 },
-        { x: 352, y: FY - BAND - 34, r: 40, a: 0.07 }],
+        { x: 352, y: FY - BAND - 34, r: 40, a: 0.182 }],
     };
   }
 

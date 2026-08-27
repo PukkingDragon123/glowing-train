@@ -407,7 +407,7 @@ const ROOMS = (() => {
     return {
       id: 'board', w: W, floorY: FY, paint, onPaintOver, spots, actors: [],
       enterX: 40, enterFace: 1,
-      lights: [{ x: MID, y: 14, r: 56, a: 0.06 }],
+      lights: [{ x: MID, y: 14, r: 56, a: 0.156 }],
     };
   }
 
@@ -470,7 +470,7 @@ const ROOMS = (() => {
       id: 'ward', w: W, floorY: FY, paint, spots, actors,
       pets: [{ kind: 'cat', x: W - 70, name: 'THE WARD CAT' }],
       enterX: 62, enterFace: 1,
-      lights: [{ x: 150, y: 8, r: 70, a: 0.05 }],
+      lights: [{ x: 150, y: 8, r: 70, a: 0.130 }],
     };
   }
 

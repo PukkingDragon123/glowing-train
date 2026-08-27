@@ -53,8 +53,7 @@ const DAY = (() => {
       hi: '#2c3a63', mid: '#6a6a92', lo: '#c99a86',
       sun: '#ffd9a8', sunY: 0.86, sunA: 0.16,
       shaftA: 0.05,
-      lift: 'rgba(70,78,110,.22)',
-      warm: 'rgba(255,190,150,.05)', cool: 'rgba(40,50,90,.14)',
+      warm: 'rgba(255,190,150,0.035)', cool: 'rgba(40,50,90,0.045)',
       rake: 0,
       castWarm: 'rgba(255,190,150,.03)', castCool: 'rgba(40,50,90,.07)',
       lit: '#b9b0a0', shade: '#8a8478', trim: '#6d6860',
@@ -66,8 +65,7 @@ const DAY = (() => {
       hi: '#5b8fd0', mid: '#93bde4', lo: '#d6e6f2',
       sun: '#fff6dc', sunY: 0.60, sunA: 0.13,
       shaftA: 0.30,
-      lift: 'rgba(150,146,124,.30)',
-      warm: 'rgba(255,246,220,.05)', cool: 'rgba(70,100,150,.05)',
+      warm: 'rgba(255,246,220,0.035)', cool: 'rgba(70,100,150,0.045)',
       rake: 0,
       castWarm: 'rgba(255,246,220,.03)', castCool: 'rgba(70,100,150,.03)',
       lit: '#e6ddc8', shade: '#b3ab99', trim: '#8d8676',
@@ -79,8 +77,7 @@ const DAY = (() => {
       hi: '#4f8ada', mid: '#8dc0ec', lo: '#e4eef6',
       sun: '#ffffff', sunY: 0.16, sunA: 0.10,
       shaftA: 0.26,
-      lift: 'rgba(160,158,140,.32)',
-      warm: 'rgba(255,253,240,.05)', cool: 'rgba(60,90,140,.03)',
+      warm: 'rgba(255,253,240,0.035)', cool: 'rgba(60,90,140,0.030)',
       rake: 0,
       castWarm: 'rgba(255,253,240,.03)', castCool: 'rgba(60,90,140,.02)',
       lit: '#f2ead4', shade: '#bdb5a2', trim: '#96907f',
@@ -92,8 +89,7 @@ const DAY = (() => {
       hi: '#4d84c8', mid: '#9dc0dd', lo: '#f0e8d6',
       sun: '#fff2c8', sunY: 0.42, sunA: 0.13,
       shaftA: 0.34,
-      lift: 'rgba(172,154,122,.30)',
-      warm: 'rgba(255,238,200,.06)', cool: 'rgba(74,96,138,.04)',
+      warm: 'rgba(255,238,200,0.035)', cool: 'rgba(74,96,138,0.040)',
       rake: 0.012,
       castWarm: 'rgba(255,238,200,.04)', castCool: 'rgba(74,96,138,.02)',
       lit: '#f0e2c2', shade: '#b8ac95', trim: '#948b78',
@@ -105,8 +101,7 @@ const DAY = (() => {
       hi: '#3f6fae', mid: '#c99a72', lo: '#ffd08a',
       sun: '#ffcf72', sunY: 0.78, sunA: 0.22,
       shaftA: 0.40,
-      lift: 'rgba(170,120,78,.26)',
-      warm: 'rgba(255,190,116,.09)', cool: 'rgba(90,70,120,.05)',
+      warm: 'rgba(255,190,116,0.035)', cool: 'rgba(90,70,120,0.045)',
       rake: 0.026,
       castWarm: 'rgba(255,190,116,.07)', castCool: 'rgba(90,70,120,.04)',
       lit: '#ffd9a2', shade: '#a98a78', trim: '#8a6d5e',
@@ -118,8 +113,7 @@ const DAY = (() => {
       hi: '#1e2a52', mid: '#4c4a78', lo: '#b4708a',
       sun: '#ff9a68', sunY: 0.93, sunA: 0.18,
       shaftA: 0.13,
-      lift: 'rgba(70,68,98,.20)',
-      warm: 'rgba(255,155,115,.07)', cool: 'rgba(38,44,84,.16)',
+      warm: 'rgba(255,155,115,0.035)', cool: 'rgba(38,44,84,0.045)',
       rake: 0.018,
       castWarm: 'rgba(255,155,115,.05)', castCool: 'rgba(38,44,84,.09)',
       lit: '#b49a94', shade: '#7a6c76', trim: '#5f5566',
@@ -131,8 +125,7 @@ const DAY = (() => {
       hi: '#0b1024', mid: '#151c3a', lo: '#2b2f52',
       sun: '#dbe4ff', sunY: 0.22, sunA: 0.07,
       shaftA: 0,
-      lift: 'rgba(28,34,60,.10)',
-      warm: 'rgba(120,150,220,.03)', cool: 'rgba(14,18,44,.22)',
+      warm: 'rgba(120,150,220,0.030)', cool: 'rgba(14,18,44,0.045)',
       rake: 0,
       castWarm: 'rgba(120,150,220,.02)', castCool: 'rgba(14,18,44,.14)',
       lit: '#6f6f7e', shade: '#4a4a58', trim: '#3a3a46',
@@ -383,13 +376,31 @@ const DAY = (() => {
 
     c.save();
     c.imageSmoothingEnabled = false;
-    /* INDOORS, LIFT THE BLACKS. The five working stops were painted for a
-       night shift and no amount of warm tint laid on top of black makes it
-       daylight; screen is the one blend that actually raises a black. */
-    if (indoor && b.lift) {
-      c.globalCompositeOperation = 'screen';
-      px(c, 0, 0, cv.width, cv.height, b.lift);
-    }
+    /* ============================================================
+       NO LIFT. THIS WAS THE BRIGHTNESS FILTER OVER EVERYTHING.
+
+       There used to be a `screen` pass here, laying a mid-grey over
+       every interior to raise its blacks, on the argument that the
+       five working stops were painted for a night shift and needed
+       dragging into daylight.
+
+       Measured, on the bar: the room as authored has a mean pixel
+       of 37, 31, 28 — proper noir. After this function ran it was
+       84, 80, 73. MORE THAN TWICE AS BRIGHT, and the screen pass
+       was most of it: plus thirty-nine red, plus thirty-nine
+       green, plus thirty-three blue over every pixel that had
+       anything painted on it.
+
+       That is a brightness filter. It was not laid over the frame
+       so it did not show up when the frame was measured, it was
+       baked into the art, which is worse: it could not be turned
+       off and it flattened every shadow the rooms were drawn with.
+
+       The art was right all along. This game is a mafia story in
+       a city at night, the rooms are lit by their own lamps, and
+       the hour is a WHISPER of colour temperature over the top —
+       a few per cent, not a doubling.
+       ============================================================ */
     c.globalCompositeOperation = 'source-over';
     if (b.cool) px(c, 0, 0, cv.width, cv.height, b.cool);
     if (b.warm) px(c, 0, 0, cv.width, cv.height, b.warm);
