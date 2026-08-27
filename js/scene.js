@@ -119,6 +119,23 @@ const SCENE = (() => {
     hard:    ['angry', 'neutral', 'blink', 'squint'],
     sad:     ['sad', 'sad', 'blink', 'worry'],
     neutral: ['neutral', 'neutral', 'blink', 'think'],
+    /* ============================================================
+       AND THE ONE THE PLAYER ACTUALLY WEARS.
+
+       He came home off shift six years ago and the door was open.
+       He is in a foreign city with a cigarette end in an evidence
+       bag and a revolver he had to hand over at the airport. He
+       does not beam at people because his karma is good — which is
+       what he used to do, and what looked ridiculous.
+
+       Flat, tired, watchful, and hard when it is warranted. There
+       is no smile in this rotation at all. The warm face exists,
+       it just has to be EARNED by something specific happening,
+       it lasts a couple of seconds, and then he goes back to this.
+       ============================================================ */
+    grim:    ['neutral', 'bored', 'blink', 'neutral', 'squint', 'think'],
+    weary:   ['bored', 'neutral', 'blink', 'sad', 'bored'],
+    grimmer: ['angry', 'squint', 'blink', 'neutral', 'doubt'],
   };
 
   function faceOf(mood, T, seed) {
@@ -651,6 +668,8 @@ const SCENE = (() => {
     } else me.v = 0;
     /* the squash from the last landing, and the dust it kicked */
     if (me.land > 0) me.land = Math.max(0, me.land - dt * 4.5);
+    /* the earned expression, running out */
+    if (warmT > 0) { warmT = Math.max(0, warmT - dt); if (!warmT) warmKind = null; }
     if (me.reach > 0) me.reach = Math.max(0, me.reach - dt * 1.6);
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p2 = puffs[i];
@@ -1657,7 +1676,20 @@ const SCENE = (() => {
     if (typeof CITY !== 'undefined' && G.phase !== 'title') {
       const w = viewW();
       const sky = CITY.sky();
-      if (typeof DAY !== 'undefined') DAY.wash(c, cam, -oy, w, H + oy);
+      /* ============================================================
+         NO CAST OVER THE FRAME. NOT EVEN A WHISPER.
+
+         The hour is baked into the room canvas by DAY.bake when the
+         room is painted, which is the honest place for it. This used
+         to ALSO lay two translucent sheets over the finished frame
+         every tick — a warm one and a cool one, three or four per
+         cent each. Measured on a real room that came to plus four
+         red, plus five green, plus six blue on the mean pixel, blue
+         shifted, over every pixel in the picture: which is the
+         definition of a filter over the game, and it is exactly what
+         it looked like. If an hour needs more character it goes in
+         the bake, where it lands on the art once.
+         ============================================================ */
       if (def.outdoor) {
         /* RAIN. Real drops with their own x, or a linear sequence folds
            them into a handful of columns and it reads as prison bars. */
@@ -1817,15 +1849,37 @@ const SCENE = (() => {
      out of hearts, looks pleased when the city thinks well of
      him, and goes bored when there is nothing left to do here.
      ============================================================ */
+  /* ------------------------------------------------------------
+     A WARM FACE HAS TO BE EARNED, AND IT DOES NOT LAST.
+
+     Something good happens — the dog leans on him, an errand pays,
+     a story comes apart — and he allows himself about two seconds
+     of it. SCENE.beat('good') is what the rest of the game calls.
+     ------------------------------------------------------------ */
+  let warmT = 0, warmKind = null;
+  function beat(kind) {
+    warmKind = kind;
+    warmT = kind === 'good' ? 2.2 : kind === 'wry' ? 1.6 : 1.2;
+  }
+
   function myFace(T) {
     if (me.reach > 0) return 'squint';                 // hand in something
     if (typeof G === 'undefined') return 'neutral';
     if ((G.hearts || 6) <= 2) return 'wince';
+    /* the earned moment, while it lasts */
+    if (warmT > 0) {
+      if (warmKind === 'good') return (warmT % 0.9) > 0.45 ? 'happy' : 'grin';
+      if (warmKind === 'wry') return 'smug';
+      if (warmKind === 'bad') return 'angry';
+    }
     const k = (typeof STORY !== 'undefined' && STORY.karma) ? STORY.karma() : null;
-    const mood = !k ? 'neutral'
-      : k.band >= 2 ? 'happy'
-      : k.band <= -2 ? 'hard'
-      : Math.abs(me.v) > 4 ? 'neutral' : 'watch';
+    /* HE DOES NOT SMILE BECAUSE HIS PAPERWORK IS IN ORDER. Good standing
+       makes him steadier, not happier; bad standing makes him harder. */
+    const mood = !k ? 'grim'
+      : k.band <= -2 ? 'grimmer'
+      : k.band <= -1 ? 'hard'
+      : (CITY && CITY.minutesLeft && CITY.minutesLeft() < 120) ? 'weary'
+      : Math.abs(me.v) > 4 ? 'grim' : 'watch';
     return faceOf(mood, T, 3);
   }
 
@@ -1927,6 +1981,8 @@ const SCENE = (() => {
         foot: inRange ? (hint || 'TAP') : null,
         /* a plate that is half the width of a phone is a wall, not a label */
         maxW: Math.max(90, Math.min(190, window.innerWidth * 0.42)),
+        /* a label over a prop is a small card: no stamp, no punched holes */
+        small: true,
         rim: inRange ? PIX.PAL.g : PIX.PAL.t,
       }));
     }
@@ -1949,7 +2005,7 @@ const SCENE = (() => {
   }
 
   return {
-    H, open, close, walkTo, rig, rigH, rigPic,
+    H, open, close, walkTo, rig, rigH, rigPic, beat,
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
     /* what the frame is actually rendering at, for the resolution probe */
     debugRes() {

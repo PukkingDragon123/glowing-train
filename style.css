@@ -2456,16 +2456,11 @@ body.dread #dread-wash { opacity: 1; animation: dread-pulse 1.15s steps(6) infin
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   /* On a tall window the room is a band in the middle. The space around it
-     is lit like the inside of a cinema rather than left flat black. */
-  background:
-    radial-gradient(120% 70% at 50% 50%, #0d1016 0%, #06070a 70%, #040507 100%);
+     is flat, because a soft gradient over a picture made of hard pixels is
+     the thing that reads as a filter — and two 24px linear fades used to
+     sit over the top and bottom of the room itself. */
+  background: #06070a;
 }
-.scene-root::before, .scene-root::after {
-  content: ''; position: absolute; left: 0; right: 0; height: 24px;
-  pointer-events: none; z-index: 2;
-}
-.scene-root::before { top: 0; background: linear-gradient(#040507, transparent); }
-.scene-root::after { bottom: 0; background: linear-gradient(transparent, #040507); }
 .scene-cv {
   display: block;
   image-rendering: pixelated;
@@ -3006,29 +3001,47 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   transition: opacity .16s, transform .16s cubic-bezier(.2,1.6,.4,1);
 }
 .reply-rack.in { opacity: 1; transform: none; }
+/* ============================================================
+   WHAT YOU SAY BACK IS AN INDEX CARD.
+
+   The plate somebody talks on is a sheet out of the case file, so
+   the things you can say back are the cards you would write on
+   and hand over: buff stock, a red rule down the left edge like a
+   ruled card, the key number typed in the corner. They used to be
+   green glass buttons, which had nothing to do with the rest of
+   it and everything to do with looking like a menu.
+   ============================================================ */
 .reply-btn {
   display: flex; align-items: center; gap: 10px;
   text-align: left; cursor: pointer;
-  background: linear-gradient(180deg, rgba(20,34,28,.96), rgba(10,20,16,.96));
-  border: var(--bd-thick) solid #0a0d11; border-radius: 0;
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.14), 0 5px 0 rgba(0,0,0,.5);
+  background: #ded2b2;
+  border: 0; border-radius: 0;
+  border-left: 5px solid #8a2418;
+  box-shadow: inset 0 1px 0 rgba(255,250,232,.75),
+              inset -1px -1px 0 rgba(150,138,110,.55),
+              3px 4px 0 rgba(0,0,0,.45);
   padding: 10px 14px; min-height: 52px;
+  transition: background .1s ease, transform .08s ease;
 }
 .reply-btn:hover, .reply-btn:focus-visible {
-  background: linear-gradient(180deg, rgba(30,52,42,.98), rgba(14,28,22,.98));
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.55), 0 5px 0 rgba(0,0,0,.5);
+  background: #efe4c4;
+  box-shadow: inset 0 1px 0 rgba(255,255,246,.9),
+              inset 0 0 0 2px rgba(138,36,24,.35),
+              3px 4px 0 rgba(0,0,0,.5);
   outline: none;
 }
-.reply-btn:hover .reply-num { background: #6ff7d8; }
-/* the key that presses this, printed on it */
+/* the key that presses this, typed in the corner of the card */
 .reply-num {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 26px; min-height: 26px; padding: 2px 4px;
-  background: rgba(111,247,216,.16);
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.3);
+  min-width: 24px; min-height: 24px; padding: 2px 4px;
+  background: rgba(138,36,24,.10);
+  box-shadow: inset 0 0 0 2px rgba(34,32,28,.35);
 }
 .reply-num canvas { display: block; }
-.reply-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(111,247,216,.4), 0 3px 0 rgba(0,0,0,.5); }
+.reply-btn:active {
+  transform: translate(1px, 2px);
+  box-shadow: inset 0 1px 0 rgba(255,250,232,.6), 1px 2px 0 rgba(0,0,0,.45);
+}
 .reply-btn.dim { opacity: .72; }
 .reply-btn canvas { image-rendering: pixelated; display: block; width: auto; height: auto; flex: none; }
 .reply-col { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }

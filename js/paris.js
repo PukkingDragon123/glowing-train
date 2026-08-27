@@ -926,18 +926,59 @@ const PARIS = (() => {
 
     const paint = (c) => {
       const p = P();
-      /* THE CITY, A LONG WAY BELOW AND BEHIND. From the top of the Butte
-         you are looking over the whole of it, and in daylight that is not
-         a row of black boxes with lit windows in them: it is grey-blue
-         haze with roofs coming out of it, paler the further off it goes. */
-      for (let i = 0; i < 30; i++) {
-        const bx = (i * 27 + seed % 19) % (W - 24);
+      /* ============================================================
+         THE CITY, A LONG WAY BELOW AND BEHIND.
+
+         Thirty flat slabs with one white dot on each read as a row of
+         tombstones, and they were painted in fixed cold greys, so at
+         six in the evening the ground went gold and the whole of
+         Paris stayed the colour of a filing cabinet. Every block now
+         gets a mansard cap, a grid of windows and a chimney, and its
+         stone comes from the hour like everything else does.
+         ============================================================ */
+      const st = (typeof DAY !== 'undefined' && DAY.stone) ? DAY.stone() : null;
+      /* DISTANCE FADES INTO THE SKY IT IS STANDING IN, not into a fixed
+         cold grey — mixing everything 80% toward slate is how the whole
+         of Paris came out the colour of a filing cabinet at sunset. */
+      const hazeTo = (typeof DAY !== 'undefined' && DAY.band)
+        ? (DAY.band().lo || DAY.band().mid || '#c8d2da') : '#c8d2da';
+      const far4 = (n, base) => {
+        const t = 0.10 + n * 0.13;
+        return (typeof DAY !== 'undefined' && DAY.rgb)
+          ? DAY.rgb(DAY.mix(base, hazeTo, t)) : base;
+      };
+      for (let i = 0; i < 34; i++) {
+        const bx = (i * 24 + seed % 23) % (W - 26);
         const far = (i % 4);
-        const tone = ['#9fb0bd', '#93a5b4', '#a8b7c2', '#8b9dad'][far];
-        px(c, bx, FY - BAND - 52 - far * 3, 22, 20 + far * 3, tone);
-        px(c, bx, FY - BAND - 52 - far * 3, 22, 1, '#c2ceD6'.toLowerCase());
-        px(c, bx + 18, FY - BAND - 52 - far * 3, 4, 20 + far * 3, 'rgba(80,92,104,.25)');
-        if (i % 3 === 0) px(c, bx + 4, FY - BAND - 48, 3, 3, 'rgba(255,255,255,.45)');
+        const bw2 = 16 + (i % 4) * 7;
+        const top = FY - BAND - 42 - far * 5 - (i % 7) * 3;
+        const bot = FY - BAND - 26 + far * 3;
+        const face = far4(far, st ? st.mid : '#93a5b4');
+        const lit = far4(far, st ? st.lit : '#c2ced6');
+        const dark = far4(far, st ? st.shade : '#6f7f8d');
+        px(c, bx, top, bw2, bot - top, face);
+        px(c, bx, top, 2, bot - top, lit);
+        px(c, bx + bw2 - 3, top, 3, bot - top, dark);
+        /* THE MANSARD, which is the whole silhouette of this city, and it
+           is NARROW AT THE RIDGE. Drawn widest at the top it is a hat on
+           a post, and thirty of them are a row of mushrooms. */
+        for (let k = 0; k < 6; k++) {
+          px(c, bx + k, top - k, bw2 - k * 2, 1,
+            k < 2 ? far4(far, '#8f9aa6') : far4(far, '#6f7b86'));
+        }
+        px(c, bx + 2, top - 6, bw2 - 4, 1, far4(far, '#a8b2bc'));
+        /* the windows, in rows, dimmer the further off they are */
+        for (let wy = top + 4; wy < bot - 4; wy += 6) {
+          for (let wx = bx + 4; wx < bx + bw2 - 5; wx += 6) {
+            px(c, wx, wy, 3, 4, far4(far, '#5f6d7a'));
+            px(c, wx, wy, 3, 1, far4(far, '#8f9aa6'));
+          }
+        }
+        /* and a chimney or two on the ridge */
+        if (i % 2) {
+          px(c, bx + 4, top - 11, 3, 6, dark);
+          px(c, bx + bw2 - 8, top - 10, 3, 5, dark);
+        }
       }
       /* and the haze the distance sits in */
       for (let i = 0; i < 30; i++) {

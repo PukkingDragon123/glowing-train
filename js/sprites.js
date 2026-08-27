@@ -1842,23 +1842,28 @@ SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
    ============================================================ */
 
 /* ============================================================
-   THE HEAD, IN PROFILE.
+   A FROG'S HEAD, SIDE ON.
 
-   Drawn from nothing on its own canvas rather than repainted over
-   the front-facing one — that was the first attempt and it never
-   read, because the outline underneath still said "front": a snout
-   painted inside a head-on silhouette is a head-on head with a
-   snout painted on it.
+   The first attempt was a wedge with a long horizontal bill on
+   it and a gold ring for an eye: a duck with a bullseye. The
+   shapes that make a frog read in profile are these, in order of
+   how much they matter:
 
-   A frog turned sideways is mostly muzzle. So the silhouette here
-   is the whole point: the skull is a dome set well back, the jaw
-   runs out a long way in front of it and comes to a blunt tip, and
-   the single eye sits high and forward where the two bulges meet
-   the brow. Everything else — hat, collar, expression — hangs off
-   those three shapes.
+     THE EYE BULGE      A frog's eye sits on TOP of its skull and
+                        stands proud of it. In profile that bump
+                        breaking the head's top line is the single
+                        most recognisable thing about the animal.
+     THE MOUTH LINE     Enormous. It runs from the snout tip back
+                        past the eye, most of the head's length,
+                        and it turns up very slightly at the back.
+     THE SNOUT          Short and ROUNDED. Not a beak. It comes
+                        forward of the eye by about a third of the
+                        skull and drops away underneath.
+     THE THROAT         Soft, full, sloping back down to the neck,
+                        which is what stops the head floating off
+                        the collar.
 
-   Same canvas size as the front head so the rig can swap one for
-   the other without moving anything.
+   Drawn facing RIGHT. The rig flips the whole sprite for left.
    ============================================================ */
 SPR.profileHead = function (d, expr) {
   expr = expr || 'neutral';
@@ -1868,145 +1873,178 @@ SPR.profileHead = function (d, expr) {
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
+  const px = (x, y, w, h, col) => PIX.rect(c, x, y, w, h, col);
   const fat = !!d.fat;
-  /* he faces RIGHT; the rig flips the whole sprite when he faces left */
-  const bx = fat ? 12 : 14;              // back of the skull
-  const ty = 24;                         // the jaw line
-  const sk = fat ? 16 : 14;              // skull radius
-  const jaw = fat ? 30 : 28;             // how far the muzzle runs out
 
-  /* ---- THE SILHOUETTE, in ink, one pixel bigger all round ---- */
-  const ink = (col) => {
-    /* the skull */
-    SPR.ellipse(c, bx + 4, ty - 5, sk, sk - 3, col);
-    /* the jaw: a long wedge from under the skull out to the tip */
-    for (let i = 0; i < jaw; i++) {
-      const t = i / jaw;
-      const top = ty - 6 + Math.round(t * t * 5);
-      const bot = ty + 5 - Math.round(t * t * 3);
-      PIX.rect(c, bx + 2 + i, top, 1, bot - top, col);
+  /* the anatomy, in one place */
+  const BX = 6;                       // back of the skull
+  const CW = fat ? 26 : 24;           // cranium width
+  const CY = 12;                      // top of the cranium
+  const CH = fat ? 16 : 15;           // cranium height
+  const MOUTH = CY + CH - 2;          // the mouth line
+  const SN = fat ? 13 : 12;           // how far the snout runs past the cranium
+  const TIP = BX + CW + SN;           // the tip of the snout
+  const THR = MOUTH + (fat ? 9 : 7);  // the bottom of the throat
+
+  /* ------------------------------------------------------------
+     THE SILHOUETTE, painted twice: once a pixel bigger in ink,
+     then the skin inside it. Anything drawn as an outline of
+     separate strokes ends up with gaps in it at this size.
+     ------------------------------------------------------------ */
+  const body = (grow, col) => {
+    /* the cranium: a dome, flat-ish along the top */
+    for (let i = 0; i < CH + grow * 2; i++) {
+      const t = i / (CH + grow * 2 - 1);
+      /* narrow at the crown, full by a third of the way down */
+      const in0 = Math.round(Math.pow(Math.max(0, 1 - t * 3), 1.6) * (CW * 0.34));
+      px(BX - grow + in0, CY - grow + i, CW + grow * 2 - in0, 1, col);
     }
-    /* the throat, hanging under the back of the jaw */
-    SPR.ellipse(c, bx + 10, ty + 5, 12, 4, col);
+    /* the snout: forward of the cranium, rounded at the tip, dropping away */
+    for (let i = 0; i < SN + grow; i++) {
+      const t = i / (SN + grow);
+      const top = MOUTH - Math.round((1 - t) * (CH * 0.44)) - Math.round(grow * (1 - t));
+      const bot = MOUTH + 3 + Math.round((1 - t * t) * 2) + grow;
+      /* the tip is a curve, not a corner */
+      const cut = Math.round(Math.pow(t, 2.6) * 4);
+      px(BX + CW + i - 1, top + cut, 1, Math.max(1, bot - top - cut * 2), col);
+    }
+    /* the throat: full under the jaw, sloping back to the neck */
+    for (let i = 0; i < THR - MOUTH + grow; i++) {
+      const t = i / (THR - MOUTH + grow);
+      const x0 = BX - grow + Math.round(t * 3);
+      const x1 = BX + CW - 1 + grow - Math.round(t * t * (CW * 0.42));
+      px(x0, MOUTH + i, Math.max(1, x1 - x0), 1, col);
+    }
+    /* THE EYE BULGE, standing proud of the skull's top line — the one
+       shape that says frog before anything else does */
+    SPR.ellipse(c, BX + CW - (fat ? 9 : 8), CY + 1, (fat ? 8 : 7) + grow,
+      (fat ? 7 : 6) + grow, col);
   };
-  ink(P.K);
-  /* and the skin inside it, inset by one */
-  c.save();
-  c.translate(0, 0);
-  SPR.ellipse(c, bx + 4, ty - 5, sk - 1, sk - 4, skin);
-  for (let i = 1; i < jaw - 1; i++) {
-    const t = i / jaw;
-    const top = ty - 5 + Math.round(t * t * 5);
-    const bot = ty + 4 - Math.round(t * t * 3);
-    PIX.rect(c, bx + 2 + i, top, 1, bot - top, skin);
+  body(1, P.K);
+  body(0, skin);
+
+  /* ---- the modelling: lit along the top, shaded underneath ---- */
+  for (let i = 0; i < 4; i++) {
+    px(BX + 2 + i, CY + i, CW - 4 - i, 1, i < 2 ? P.W : skin);
   }
-  SPR.ellipse(c, bx + 10, ty + 4, 11, 3, shade);
-  c.restore();
-  /* the shading: the underside of the jaw and the back of the skull */
-  for (let i = 2; i < jaw - 2; i++) {
-    const t = i / jaw;
-    const bot = ty + 4 - Math.round(t * t * 3);
-    PIX.rect(c, bx + 2 + i, bot - 2, 1, 2, shade);
+  px(BX + 1, CY + 3, 3, CH - 4, shade);                 /* the back of the skull */
+  px(BX, MOUTH - 2, CW * 0.5, 2, shade);
+  for (let i = 0; i < THR - MOUTH - 1; i++) {           /* the throat, in shade */
+    const t = i / (THR - MOUTH);
+    px(BX + 1 + Math.round(t * 3), MOUTH + 2 + i,
+      Math.max(1, CW - 3 - Math.round(t * t * (CW * 0.42))), 1, i > 1 ? dark : shade);
   }
-  SPR.ellipse(c, bx - 1, ty - 4, 6, 9, shade);
-  /* the mottle a frog has, if this one has it */
-  if (d.spots) {
-    [[8, -10], [16, -4], [24, 0], [12, 2]].forEach(o =>
-      PIX.disc(c, bx + o[0], ty + o[1], 2, shade));
+  /* the loose fold of skin behind the jaw */
+  px(BX + 2, MOUTH + 1, CW - 8, 1, dark);
+
+  /* ------------------------------------------------------------
+     THE MOUTH. It runs nearly the whole head and the expression
+     is what its back end does: down for grim, up for pleased,
+     open for talking.
+     ------------------------------------------------------------ */
+  const OPEN = {
+    neutral: 0, talk: 3, talk2: 2, happy: 0, joy: 0, laugh: 4, grin: 0,
+    smug: 0, sad: 0, angry: 0, worry: 0, wince: 1, blink: 0, bored: 0,
+    squint: 0, think: 0, doubt: 0, sniff: 1, alarm: 4, pain: 3, dead: 2,
+  };
+  const CURL = {
+    happy: -2, joy: -2, laugh: -2, grin: -2, smug: -1, wink: -1, blush: -1,
+    sad: 2, worry: 1, angry: 1, wince: 2, pain: 2, doubt: 1, bored: 1, dead: 3,
+  };
+  const open = OPEN[expr] || 0;
+  const curl = CURL[expr] || 0;
+  const m0 = BX + 4, m1 = TIP - 1;
+  for (let x = m0; x < m1; x++) {
+    const t = (x - m0) / (m1 - m0);
+    /* the line dips forward and lifts at the back by the curl */
+    const y = MOUTH + Math.round(Math.sin(t * 2.2) * 1.2) - Math.round((1 - t) * curl);
+    px(x, y, 1, 1 + (open && t > 0.15 ? open : 0), P.K);
+    if (open && t > 0.2 && t < 0.9) px(x, y + 1, 1, Math.max(1, open - 1), P.r);
   }
+  /* the corner of the mouth, tucked in under the eye */
+  px(m0 - 1, MOUTH - Math.round(curl) - 1, 2, 3, P.K);
+  /* the nostril, up near the tip */
+  px(TIP - 5, MOUTH - Math.round(CH * 0.30), 2, 2, dark);
+
+  /* ------------------------------------------------------------
+     THE EYE. One of them, in the bulge, and SMALL: a pupil, a
+     lid over the top of it, and a catch of light. A ring the
+     width of the bulge is a target, not an eye.
+     ------------------------------------------------------------ */
+  const ex = BX + CW - (fat ? 12 : 11), ey = CY - 1;
+  const shut = expr === 'blink' || expr === 'joy' || expr === 'laugh' || expr === 'dead';
+  const narrow = expr === 'squint' || expr === 'angry' || expr === 'doubt'
+    || expr === 'smug' || expr === 'bored' || expr === 'think';
+  px(ex, ey, 7, 6, P.W);                                /* the white */
+  px(ex, ey, 7, 1, 'rgba(0,0,0,.22)');
+  if (shut) {
+    px(ex - 1, ey + 2, 9, 2, P.K);
+    px(ex, ey + 1, 7, 1, shade);
+  } else {
+    const lid = narrow ? 2 : (expr === 'alarm' || expr === 'wince' ? 0 : 1);
+    px(ex, ey, 7, lid + 1, shade);                      /* the lid */
+    px(ex, ey, 7, 1, dark);
+    px(ex + 3, ey + lid + 1, 3, 4 - lid, P.K);          /* the pupil, forward */
+    px(ex + 3, ey + lid + 1, 1, 1, P.W);                /* and the catch light */
+  }
+  /* the brow ridge over it */
+  px(ex - 2, ey - 2, 10, 2, shade);
+  px(ex - 2, ey - 2, 10, 1, skin);
+  if (expr === 'angry' || expr === 'hard') px(ex - 1, ey - 1, 9, 1, P.K);
+
+  /* the warts, if he has them, along the back of the skull */
   if (d.warts) {
-    [[6, -12], [18, -6], [26, -1]].forEach(o => {
-      PIX.disc(c, bx + o[0], ty + o[1], 2, shade);
-      PIX.disc(c, bx + o[0], ty + o[1] - 1, 1, skin);
+    [[BX + 3, CY + 5], [BX + 6, CY + 9], [BX + 2, CY + 11]].forEach(([wx, wy]) => {
+      px(wx, wy, 2, 2, dark);
     });
   }
+  /* a scar across the muzzle */
+  if (d.scar) px(BX + CW + 2, MOUTH - 5, 1, 5, P.d);
 
-  /* ---- THE MOUTH, the whole length of the jaw ---- */
-  const EX = {
-    neutral: 0, talk: -3, talk2: -1, happy: 2, joy: 3, laugh: 4, grin: 2,
-    smug: 1, sad: -2, angry: -1, worry: 0, wince: -1, blink: 0, bored: 0,
-    squint: 0, think: -1, doubt: 0, sniff: 0, alarm: -4, blush: 1,
-    pain: -2, dead: -4, wink: 2, thinkb: 0,
-  };
-  const open = EX[expr] === undefined ? 0 : EX[expr];
-  const lipY = ty + 1;
-  if (open < 0) {
-    /* the jaw is down: the mouth is a wedge of dark with a tongue in it */
-    for (let i = 4; i < jaw - 2; i++) {
-      const t = i / jaw;
-      const drop = Math.round(-open * (1 - t) * 1.2);
-      PIX.rect(c, bx + 2 + i, lipY - drop, 1, drop + 2, P.K);
-    }
-    PIX.rect(c, bx + 8, lipY - 1, 12, 2, P.r);
-  } else {
-    for (let i = 3; i < jaw - 1; i++) {
-      const t = i / jaw;
-      const up = Math.round(open * (1 - Math.abs(t - 0.75) * 2) * 0.9);
-      PIX.rect(c, bx + 2 + i, lipY - Math.round(t * t * 2) - up, 1, 2, P.K);
-    }
-  }
-  /* the corner of it, tucked under the eye */
-  PIX.rect(c, bx + 3, lipY - 1, 2, 3, P.K);
-  /* the nostril, near the tip */
-  PIX.rect(c, bx + jaw - 6, ty - 4, 2, 2, dark);
-
-  /* ---- ONE EYE, high and forward ---- */
-  const exx = bx + (fat ? 14 : 12), eyy = ty - 12;
-  const shut = expr === 'blink' || expr === 'joy' || expr === 'laugh' || expr === 'dead';
-  const lid = expr === 'squint' || expr === 'bored' ? 3
-    : expr === 'smug' || expr === 'wince' ? 2 : 0;
-  SPR.ellipse(c, exx, eyy + 1, 8, 7, P.K);
-  SPR.ellipse(c, exx, eyy + 1, 7, 6, skin);
-  if (shut) {
-    PIX.rect(c, exx - 5, eyy + 1, 11, 2, P.K);
-    PIX.rect(c, exx - 4, eyy + 3, 9, 1, dark);
-  } else if (expr === 'dead') {
-    PIX.rect(c, exx - 3, eyy - 1, 7, 1, P.K);
-  } else {
-    const iris = d.goldEyes ? P.G : d.spiral ? P.N : P.g;
-    SPR.ellipse(c, exx + 1, eyy + 1, 5, 4, P.W);
-    SPR.ellipse(c, exx + 1, eyy + 1, 4, 3, iris);
-    PIX.rect(c, exx, eyy + 1, 4, 2, P.K);            // the slot pupil
-    PIX.rect(c, exx - 1, eyy, 1, 1, P.W);            // the catchlight
-    if (lid) PIX.rect(c, exx - 6, eyy - 3, 13, lid, skin);
-  }
-  /* the brow, which is where the expression lives */
-  const brow = expr === 'angry' || expr === 'doubt' ? 2
-    : expr === 'sad' || expr === 'worry' || expr === 'alarm' ? -2 : 0;
-  for (let i = 0; i < 13; i++) {
-    PIX.rect(c, exx - 6 + i, eyy - 5 + Math.round(i * 0.18) + brow, 1, 2, P.K);
-  }
-
-  /* ---- THE HAT ---- */
-  const C = SPR.costumeOf(d);
-  if (d.flatcap || (C && C.cap)) {
-    const hc = P[d.hatCol] || P.t;
-    PIX.rect(c, bx - 4, eyy - 8, 26, 4, P.K);
-    PIX.rect(c, bx - 3, eyy - 7, 24, 3, hc);
-    PIX.rect(c, bx - 3, eyy - 7, 24, 1, 'rgba(255,255,255,.14)');
-    /* the peak, out over the eye */
-    PIX.rect(c, bx + 16, eyy - 5, 12, 3, P.K);
-    PIX.rect(c, bx + 16, eyy - 5, 11, 2, hc);
+  /* ------------------------------------------------------------
+     THE HAT, EDGE ON. A brim is a line with a crown behind it,
+     and both have to sit ON the skull rather than above it.
+     ------------------------------------------------------------ */
+  if (d.flatcap) {
+    const hy = CY - 4;
+    px(BX + 1, hy + 2, CW - 2, 4, P.t);
+    px(BX + 1, hy + 2, CW - 2, 1, P.s);
+    /* the peak, forward, over the eye */
+    px(BX + CW - 3, hy + 5, 9, 2, P.K);
+    px(BX + CW - 3, hy + 5, 9, 1, P.t);
+    for (let i = 0; i < 5; i++) px(BX + 3 + i * 4, hy, CW - 6 - i * 4, 2, P.t);
+    px(BX + 2, hy + 1, CW - 4, 1, P.s);
   } else if (d.hat) {
-    const hc = P[d.hatCol] || P.T, hb = P[d.band] || P.d;
-    PIX.rect(c, bx - 6, eyy - 7, 34, 4, P.K);          // the brim
-    PIX.rect(c, bx - 5, eyy - 6, 32, 2, hc);
-    PIX.rect(c, bx - 5, eyy - 6, 32, 1, 'rgba(255,255,255,.14)');
-    PIX.rect(c, bx - 1, eyy - 18, 20, 12, P.K);        // the crown
-    PIX.rect(c, bx, eyy - 17, 18, 11, hc);
-    PIX.rect(c, bx, eyy - 17, 3, 11, 'rgba(255,255,255,.10)');
-    PIX.rect(c, bx, eyy - 9, 18, 3, hb);               // the band
-    PIX.rect(c, bx + 2, eyy - 17, 12, 2, 'rgba(0,0,0,.30)');  // the pinch
+    const hy = CY - 9;
+    const col = P[d.hatCol] || P.T, band = P[d.band] || P.K;
+    /* the crown */
+    px(BX + 4, hy, CW - 8, 8, col);
+    px(BX + 4, hy, CW - 8, 1, 'rgba(255,255,255,.16)');
+    px(BX + 5, hy + 1, 3, 6, 'rgba(255,255,255,.10)');
+    /* the dent along the top of it */
+    px(BX + 8, hy, CW - 16, 2, 'rgba(0,0,0,.30)');
+    /* the band, and then the brim it sits on */
+    px(BX + 4, hy + 6, CW - 8, 2, band);
+    px(BX - 1, hy + 8, CW + SN - 4, 2, P.K);
+    px(BX - 1, hy + 8, CW + SN - 4, 1, col);
+    /* the brim tips down at the front, which is how a fedora is worn */
+    px(BX + CW + 2, hy + 9, 6, 2, P.K);
   }
 
-  /* ---- THE COLLAR, edge on ---- */
-  const CO = C && (C.overcoat || C.jacket);
-  const cc = P[(CO && CO.col) || d.suit] || P.T;
-  const shirt = P[(C && C.shirt && C.shirt.col) || d.shirt] || P.W;
-  PIX.rect(c, bx + 2, ty + 7, 20, 4, P.K);
-  PIX.rect(c, bx + 3, ty + 7, 18, 3, cc);
-  PIX.rect(c, bx + 12, ty + 7, 7, 3, shirt);
-  if (d.tie) PIX.rect(c, bx + 15, ty + 9, 4, 2, P[d.tie] || P.r);
+  /* ---- the cigar, clamped in the corner of the mouth ---- */
+  if (d.cigar) {
+    px(TIP - 2, MOUTH + 1, 8, 2, P.u);
+    px(TIP + 5, MOUTH + 1, 2, 2, P.R);
+    px(TIP - 2, MOUTH + 1, 8, 1, P.B);
+  }
+
+  /* ---- THE NECK, RUN ALL THE WAY DOWN. It has to reach the bottom edge
+     of the canvas: the rig sits the head box directly on the torso box, so
+     a neck that stops four pixels short leaves the head floating. ---- */
+  px(BX + 3, THR - 1, CW - 8, H - (THR - 1), shade);
+  px(BX + 3, THR - 1, CW - 8, 1, skin);
+  px(BX + 3, THR - 1, 2, H - (THR - 1), skin);
+  px(BX + CW - 7, THR - 1, 2, H - (THR - 1), dark);
   return cv;
 };
 
@@ -4381,35 +4419,63 @@ SPR.bloodSplat = function (seed, R) {
 };
 
 /* ============================================================
-   A SPEECH PLATE, DRAWN AND NOT STYLED.
-   Every panel in this game is pixels except the ones CSS was
-   making, and a gradient with a border-radius is not pixel art.
-   This builds the whole thing — frame, rivets, portrait well,
-   name bar, wrapped lines — onto one canvas at one scale.
+   THE PLATE PEOPLE TALK ON.
+
+   It used to be a dark green slab behind a chunky grey bezel with
+   rivets in the corners and scanlines over the fill — a pocket
+   calculator from 1994, in a game about a detective in 1937 Paris
+   who carries a case file everywhere he goes.
+
+   It is that case file now. A sheet of manila with a fibre tooth
+   to it, a red rule across the top, the speaker's name typed on
+   it in ink, and the words underneath in the same ink. The
+   portrait is a PHOTOGRAPH CLIPPED TO THE SHEET: white border,
+   its own shadow, a steel clip over the top edge. Anything that
+   is not a person — a lock, a print kit, the case log — gets no
+   photograph and a rubber stamp instead, because a lock does not
+   have a face and giving it one was half of what was wrong.
    ============================================================ */
 SPR.speech = function (o) {
   const P = PIX.PAL;
-  const pad = 6, gap = 5;
+  const pad = 7, gap = 6;
+
+  /* PAPER, INK, AND THE RED OF A CASE FILE. Not palette letters: this
+     surface is paper and paper is not in the palette. */
+  const PAPER = '#e2d7b8', PAPER_LIT = '#f2e9cf', PAPER_DK = '#c9bc99';
+  const TOOTH = '#d8cbaa', SHADE = '#b3a684';
+  const INK = '#22201c', INK_SOFT = '#4a463c', RED = '#8a2418';
 
   /* Everything inside is drawn at ONE pixel per pixel and the whole plate
      is blown up by an integer at the end. Render the text big and scale the
      canvas down in CSS instead and the letters go soft, which defeats the
      entire point of a pixel font. */
-  const name = o.name ? PIXFONT.render(o.name, { scale: 1, color: o.nameCol || P.G, shadow: null }) : null;
+  const name = o.name ? PIXFONT.render(o.name, { scale: 1, color: INK, shadow: null }) : null;
   const lines = (o.lines || []).map(l =>
-    PIXFONT.render(l, { scale: 1, color: P.W, shadow: null }));
-  const foot = o.foot ? PIXFONT.render(o.foot, { scale: 1, color: P.q, shadow: null }) : null;
+    PIXFONT.render(l, { scale: 1, color: INK, shadow: null }));
+  const foot = o.foot ? PIXFONT.render(o.foot, { scale: 1, color: INK_SOFT, shadow: null }) : null;
 
-  const pw = o.portrait ? o.portrait.width : 0;
-  const ph = o.portrait ? o.portrait.height : 0;
-  let tw = Math.max(name ? name.width : 0, foot ? foot.width : 0);
+  /* a photograph is bordered, so it needs more room than the head in it */
+  const BORD = 3;
+  const pw = o.portrait ? o.portrait.width + BORD * 2 : 0;
+  const ph = o.portrait ? o.portrait.height + BORD * 2 : 0;
+  let tw = Math.max(name ? name.width : 0, foot ? foot.width + 20 : 0);
   lines.forEach(l => { tw = Math.max(tw, l.width); });
-  let th = (name ? name.height + 3 : 0) + (foot ? foot.height + 3 : 0);
-  lines.forEach(l => { th += l.height + 2; });
+  let th = (name ? name.height + 5 : 0) + (foot ? foot.height + 4 : 0);
+  lines.forEach(l => { th += l.height + 3; });
 
-  const bodyW = pw + (pw ? gap : 0) + tw;
-  const W = bodyW + pad * 2 + 4;
-  const H = Math.max(ph, th) + pad * 2 + 4;
+  /* ---------- WHAT IS IN THE LEFT MARGIN ----------
+     A photograph, a rubber stamp, or nothing. Decided ONCE, before the
+     sheet is measured, because deciding it again while painting is how
+     the stamp came to be drawn into a margin the sheet had not reserved
+     and pushed the last word of the line off the right-hand edge. */
+  const STAMP_W = 26;
+  const bigEnough = !o.small && th > 20 && tw > 130;
+  const marg = o.portrait ? 'photo' : (bigEnough ? 'stamp' : 'none');
+  const gutter = marg === 'photo' ? pw + gap
+    : marg === 'stamp' ? STAMP_W + gap + 3 : 0;
+
+  const W = gutter + tw + pad * 2 + 4;
+  const H = Math.max(ph, th) + pad * 2 + 8;
 
   /* the blow-up factor is chosen from the room the plate has, not guessed */
   const K = U.clamp(Math.floor((o.maxW || 1200) / W), 2, 6);
@@ -4420,36 +4486,97 @@ SPR.speech = function (o) {
   c.imageSmoothingEnabled = false;
   c.save();
   c.scale(K, K);
+  const px = (x, y, w, h, col) => PIX.rect(c, x, y, w, h, col);
 
-  /* --- the box: ink, bevel, felt, and a rivet in every corner --- */
-  SPR.rrect(c, 0, 0, W, H, 4, P.K);
-  SPR.rrect(c, 1, 1, W - 2, H - 2, 3, o.rim || P.f);
-  SPR.rrect(c, 2, 2, W - 4, H - 4, 3, P.K);
-  SPR.rrect(c, 3, 3, W - 6, H - 6, 2, '#0d1a14');
-  PIX.rect(c, 3, 3, W - 6, 1, 'rgba(255,255,255,.10)');
-  PIX.rect(c, 3, H - 4, W - 6, 1, 'rgba(0,0,0,.5)');
-  [[3, 3], [W - 7, 3], [3, H - 7], [W - 7, H - 7]].forEach(([rx, ry]) => {
-    PIX.rect(c, rx, ry, 4, 4, P.K);
-    PIX.rect(c, rx + 1, ry + 1, 2, 2, o.rim || P.f);
-  });
-  /* a hatch of scanlines over the fill, so it is not a flat slab */
-  for (let y = 5; y < H - 5; y += 3) PIX.rect(c, 4, y, W - 8, 1, 'rgba(0,0,0,.22)');
+  /* ---------- THE SHEET ----------
+     A drop shadow under it, then the paper, then the tooth of the stock. */
+  px(2, 3, W - 2, H - 3, 'rgba(0,0,0,.45)');
+  px(0, 0, W - 2, H - 3, PAPER);
+  px(0, 0, W - 2, 1, PAPER_LIT);
+  px(0, 0, 1, H - 3, PAPER_LIT);
+  px(W - 3, 0, 1, H - 3, PAPER_DK);
+  px(0, H - 4, W - 2, 1, PAPER_DK);
+  /* THE TOOTH OF THE STOCK, and not much of it. Six per cent of the
+     sheet in two contrasting tones came out as sandpaper; paper is
+     mostly one colour with a suggestion of grain in it. */
+  const seed = U.hashSeed('sheet:' + W + ':' + H + ':' + ((o.lines || [])[0] || ''));
+  const rng = U.mulberry32(seed);
+  for (let i = 0; i < Math.round(W * H * 0.014); i++) {
+    px(Math.floor(rng() * (W - 2)), Math.floor(rng() * (H - 4)), 1, 1,
+      rng() < 0.6 ? TOOTH : 'rgba(242,233,207,.55)');
+  }
+  /* the crease down a sheet that has lived in a coat pocket — a whisper,
+     because at full strength it is a seam through the middle of the words */
+  const fold = Math.round(W * 0.62);
+  px(fold, 1, 1, H - 5, 'rgba(150,138,110,.12)');
+  px(fold + 1, 1, 1, H - 5, 'rgba(255,250,232,.14)');
 
-  /* --- the portrait, in its own well --- */
-  let tx = pad + 2;
-  if (o.portrait) {
-    PIX.rect(c, pad, pad, pw + 2, ph + 2, P.K);
-    PIX.rect(c, pad + 1, pad + 1, pw, ph, '#08120d');
-    c.drawImage(o.portrait, pad + 1, pad + 1);
-    PIX.rect(c, pad + pw + 3, pad, 1, ph + 2, 'rgba(0,0,0,.55)');
-    tx = pad + pw + 3 + gap;
+  /* ---------- THE HEAD OF THE FORM ---------- */
+  px(0, 0, W - 2, 2, RED);
+  px(0, 2, W - 2, 1, 'rgba(120,32,20,.35)');
+  /* two punched holes down the left margin, on a sheet with room for them */
+  if (!o.small && H > 34) {
+    [Math.round(H * 0.30), Math.round(H * 0.70)].forEach(hy => {
+      PIX.disc(c, 5, hy, 3, '#0f0d0b');
+      PIX.disc(c, 5, hy - 1, 2, '#3a352c');
+      px(3, hy + 2, 5, 1, 'rgba(255,250,232,.45)');
+    });
   }
 
-  /* --- the words --- */
-  let ty = pad + 2;
-  if (name) { c.drawImage(name, tx, ty); ty += name.height + 3; }
-  lines.forEach(l => { c.drawImage(l, tx, ty); ty += l.height + 2; });
-  if (foot) c.drawImage(foot, W - pad - 2 - foot.width, H - pad - 2 - foot.height);
+  /* ---------- THE PHOTOGRAPH, CLIPPED ON ---------- */
+  const tx = pad + 3 + gutter;
+  if (marg === 'photo') {
+    const bx = pad, by = pad + 1;
+    px(bx + 1, by + 2, pw, ph, 'rgba(0,0,0,.35)');
+    px(bx, by, pw, ph, '#f6f2e6');                  /* the white border */
+    px(bx, by, pw, 1, '#ffffff');
+    px(bx, by + ph - 1, pw, 1, '#c4bfae');
+    px(bx + BORD - 1, by + BORD - 1, pw - BORD * 2 + 2, ph - BORD * 2 + 2, '#1a1c22');
+    c.drawImage(o.portrait, bx + BORD, by + BORD);
+    /* the steel clip over the top edge of the photograph */
+    const cx = bx + Math.round(pw / 2) - 5;
+    px(cx, by - 3, 11, 3, '#8d94a0');
+    px(cx, by - 3, 11, 1, '#bfc6d2');
+    px(cx + 1, by, 2, 5, '#8d94a0');
+    px(cx + 8, by, 2, 5, '#8d94a0');
+    px(cx + 1, by, 2, 1, '#bfc6d2');
+  } else if (marg === 'stamp') {
+    /* NO FACE. A rubber stamp in the margin instead, on the slant — but
+       only on a sheet big enough to carry one: on the little objective
+       card it landed on top of the first two words. */
+    const sw = STAMP_W, sh = 12, sx = pad, sy = pad + 2;
+    for (let i = 0; i < sh; i++) {
+      const off = Math.round((i - sh / 2) * 0.25);
+      const edge = i === 0 || i === sh - 1;
+      px(sx + off, sy + i, sw, 1, edge ? 'rgba(138,36,24,.85)' : 'rgba(138,36,24,.10)');
+    }
+    px(sx - 3, sy, 2, sh, 'rgba(138,36,24,.85)');
+    px(sx + sw - 1, sy, 2, sh, 'rgba(138,36,24,.85)');
+    const st = PIXFONT.render('NOTE', { scale: 1, color: 'rgba(138,36,24,.9)', shadow: null });
+    c.drawImage(st, sx + Math.round((sw - st.width) / 2), sy + 3);
+  }
+
+  /* ---------- THE TYPING ----------
+     A typewriter does not print an even line: every glyph sits a pixel
+     high or low of the baseline and the ribbon is dry in places. That is
+     one row of jitter per line, which is the whole difference between
+     "text in a box" and "somebody typed this". */
+  let ty = pad + 3;
+  if (name) {
+    c.drawImage(name, tx, ty);
+    px(tx, ty + name.height + 1, Math.min(tw, name.width + 8), 1, 'rgba(34,32,28,.45)');
+    ty += name.height + 5;
+  }
+  lines.forEach((l, i) => {
+    c.drawImage(l, tx, ty + ((i % 2) ? 0 : 0));
+    ty += l.height + 3;
+  });
+  if (foot) {
+    /* the prompt, pencilled in the bottom corner */
+    const fx = W - pad - 4 - foot.width, fy = H - pad - 5 - foot.height;
+    c.drawImage(foot, fx, fy);
+    px(fx - 1, fy + foot.height + 1, foot.width + 2, 1, 'rgba(74,70,60,.40)');
+  }
 
   c.restore();
   return cv;
@@ -4879,9 +5006,23 @@ SPR.frogWhole = function (key, def, opts) {
       const sh = P[def.skin[1]] || P.f;
       const dk = P[def.skin[2]] || P.e;
 
-      /* ---- the torso, turned ---- */
+      /* ---- the torso, turned ----
+
+         FIRST, PAINT THE FRONT COLLAR OUT. The body underneath is the
+         front-facing rig and it has a white shirt V at the top of it; the
+         side dressing only covers the middle forty-four per cent of the
+         width, so the two outer wings of that V were left showing either
+         side of the head as a row of white blocks. It read as teeth. */
       const px0 = bx2 + Math.round(bw2 * 0.28), pw = Math.round(bw2 * 0.44);
       const py0 = bodyTop + Math.round(bh * 0.14), ph = Math.round(bh * 0.82);
+      /* JUST WHERE THE COLLAR IS. Masking the whole shoulder width put a
+         flat slab across him and turned the silhouette into a scarecrow;
+         the front shirt V is central, so only the centre needs covering. */
+      const mx = px0 - 3, mw = pw + 6, mh = Math.round(bh * 0.26);
+      PIX.rect(c, mx, bodyTop, mw, mh, coatC);
+      PIX.rect(c, mx, bodyTop, mw, 2, 'rgba(255,255,255,.05)');
+      PIX.rect(c, mx, bodyTop, 1, mh, 'rgba(0,0,0,.20)');
+      PIX.rect(c, mx + mw - 1, bodyTop, 1, mh, 'rgba(0,0,0,.20)');
       PIX.rect(c, px0, py0, pw, ph, coatC);
       PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.06)');
       /* the one lapel you can see, edge-on */
@@ -4890,9 +5031,16 @@ SPR.frogWhole = function (key, def, opts) {
       /* a sliver of collar at the throat, and a tie only if he wears one —
          the fallback used to paint a red bar down the shirt of every frog
          in the game who does not own a tie */
-      PIX.rect(c, px0 + pw - 5, py0 + 1, 4, 3, P.W);
+      /* the collar, edge on: a wedge that steps forward, not a row of blocks */
+      for (let i = 0; i < 4; i++) {
+        PIX.rect(c, px0 + pw - 6 + i, py0 + i, 6 - i, 2, i < 2 ? P.W : P.q);
+      }
+      PIX.rect(c, px0 + pw - 6, py0, 6, 1, P.K);
       if (def.tie) {
-        PIX.rect(c, px0 + pw - 4, py0 + 3, 2, Math.round(ph * 0.26), P[def.tie] || P.r);
+        /* the knot at the throat and the blade down the front edge */
+        PIX.rect(c, px0 + pw - 4, py0 + 3, 3, 3, P[def.tie] || P.r);
+        PIX.rect(c, px0 + pw - 3, py0 + 6, 2, Math.round(ph * 0.30), P[def.tie] || P.r);
+        PIX.rect(c, px0 + pw - 2, py0 + 6, 1, Math.round(ph * 0.30), 'rgba(0,0,0,.30)');
       }
       /* the far shoulder, dropped into shadow behind the near one */
       PIX.rect(c, bx2 + Math.round(bw2 * 0.16), py0 + 3,

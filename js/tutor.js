@@ -13,6 +13,110 @@
    marked in the save so a second run is silent.
    ============================================================ */
 
+/* ============================================================
+   WHOSE FACE IS ON THE PLATE.
+
+   A HUNDRED AND THIRTY-EIGHT LINES OF DIALOGUE IN THIS GAME AND
+   NOT ONE OF THEM PASSED A PORTRAIT, so every one of them —
+   including the twenty-five spoken as YOU — showed the captain.
+   You have been having conversations with yourself wearing
+   somebody else's face all game.
+
+   Fixing that at the call sites means editing a hundred and
+   thirty-eight of them and getting it wrong again next time a
+   line is added, so it is resolved from the name instead. The
+   name is already there, it is already right, and it is the one
+   thing every caller passes.
+
+   Anything that is not a person gets NO portrait: a lock, a
+   print kit, a case log and the pavement do not have faces, and
+   giving them one was half of why the plate looked wrong.
+   ============================================================ */
+const NOT_A_PERSON = [
+  'THE FILE', 'THE PAPER', 'THE LOCK', 'THE PRINT KIT', 'THE CASE LOG',
+  'YOUR CHART', 'YOUR IRON', 'YOUR BELT', 'THE PAVEMENT', 'WORK THE TAPS',
+  'THE BOARD', 'THE PLAN', 'THE CLOCK', 'THE MACHINE', 'THE LEDGER',
+];
+
+/* name -> the def to build a head from. Missing names fall through to a
+   frog seeded off the name itself, so an unnamed witness at least has
+   the SAME face every time he speaks. */
+const CAST = () => ({
+  'THE CAPTAIN': typeof HANDLER_DEF !== 'undefined' ? HANDLER_DEF : null,
+  'CAPTAIN ROOK': typeof HANDLER_DEF !== 'undefined' ? HANDLER_DEF : null,
+  'OFFICER MAYBELLE': typeof MAYBELLE_DEF !== 'undefined' ? MAYBELLE_DEF : null,
+  'THE BARMAN': typeof BARMAN_DEF !== 'undefined' ? BARMAN_DEF : null,
+  'THE COOK': typeof COOK_DEF !== 'undefined' ? COOK_DEF : null,
+  'THE NURSE': typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null,
+  'THE LAUNDERER': typeof LAUNDER_DEF !== 'undefined' ? LAUNDER_DEF : null,
+  'THE BROKER': typeof PAWN_DEF !== 'undefined' ? PAWN_DEF : null,
+  'THE WAITRESS': typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null,
+  'THE WATCHMAN': typeof WATCH_DEF !== 'undefined' ? WATCH_DEF : null,
+  'DILL': typeof DILL_DEF !== 'undefined' ? DILL_DEF : null,
+});
+
+function speakerArt(name) {
+  if (!name) return null;
+  const n = String(name).toUpperCase();
+  if (NOT_A_PERSON.indexOf(n) >= 0) return null;
+  /* YOU is you. This is the one that was most wrong. */
+  if (n === 'YOU' || n.indexOf('YOU') === 0) {
+    const d = (typeof DUEL !== 'undefined' && DUEL.myDef) ? DUEL.myDef() : null;
+    return d ? SPR.frogCustom('me', d) : null;
+  }
+  const known = CAST()[n];
+  if (known) return SPR.frogCustom('cast:' + n, known);
+  /* ------------------------------------------------------------
+     SOMEBODY THE GAME HAS NOT WRITTEN A FACE FOR.
+
+     A witness at the laverie, a hawker under the Tower, the man at
+     the fire. They need a face that is theirs, is the same face
+     every time that name speaks, and — this is the part the first
+     attempt got wrong — actually renders.
+
+     Synthesising a def from a hash does not render: `hat` is a
+     name and not a yes, `costume` is a name and not a flag, and
+     half the combinations of glasses, lashes and braces came out
+     as headgear floating over an empty collar. So nothing is
+     synthesised. There are fifteen hand-drawn faces in this game
+     that are known to work; an unwritten speaker is given one of
+     them by the hash of his own name, with only the SKIN moved,
+     which is three palette letters and cannot break a silhouette.
+     ------------------------------------------------------------ */
+  const spare = [];
+  [typeof BARMAN_DEF !== 'undefined' && BARMAN_DEF,
+    typeof COOK_DEF !== 'undefined' && COOK_DEF,
+    typeof DILL_DEF !== 'undefined' && DILL_DEF,
+    typeof DRUNK_DEF !== 'undefined' && DRUNK_DEF,
+    typeof LAUNDER_DEF !== 'undefined' && LAUNDER_DEF,
+    typeof NURSE_DEF !== 'undefined' && NURSE_DEF,
+    typeof PAWN_DEF !== 'undefined' && PAWN_DEF,
+    typeof WAITRESS_DEF !== 'undefined' && WAITRESS_DEF,
+    typeof WATCH_DEF !== 'undefined' && WATCH_DEF].forEach(d => { if (d) spare.push(d); });
+  /* NOT the casino cast. FROG_DEFS holds the old table players, and half
+     of them have their faces covered on purpose — the blindfold frog is
+     wearing a blindfold, the spinner has spirals for eyes. Pulled into a
+     dialogue portrait they read as two cream domes and no face. The nine
+     above are Paris civilians and all nine have faces. */
+  if (!spare.length) return null;
+  /* AND THE SKIN IS A RAMP, NOT THREE RANDOM LETTERS. A skin is a
+     light-mid-dark triple and the three have to belong together; picking
+     each one out of the whole palette independently gave several of them
+     a bone-white head, which with a pale pair of glasses on it read as
+     two cream domes and no face at all. These nine triples are lifted
+     off frogs that already render. */
+  const RAMPS = [
+    ['F', 'f', 'e'], ['N', 'n', 'n'], ['G', 'g', 'h'], ['P', 'p', 'p'],
+    ['e', 'e', 'K'], ['f', 'e', 'E'], ['B', 'b', 'u'], ['S', 's', 't'],
+    ['L', 'l', 'l'],
+  ];
+  const seed = U.hashSeed('speaker:' + n);
+  /* two independent draws, or nine names land on two faces */
+  const base = spare[(seed * 2654435761 >>> 8) % spare.length];
+  const skin = RAMPS[(seed * 40503 >>> 3) % RAMPS.length];
+  return SPR.frogCustom('speaker:' + n, Object.assign({}, base, { skin }));
+}
+
 const TUTOR = {
 
   /* ---------------- the opening, before the first board ---------------- */
@@ -113,9 +217,12 @@ const TUTOR = {
          portrait alone covered the board it was talking about. A line you
          have to answer gets a middling one, so the replies under it are
          not a mile wide. */
-      maxW: o.small ? Math.min(window.innerWidth - 40, 560)
-        : o.asking ? Math.min(window.innerWidth - 40, 860)
-          : Math.min(window.innerWidth - 28, 1180),
+      /* A SHEET OF PAPER, NOT A BANNER. Eleven hundred and eighty pixels
+         of plate across the bottom of the screen read as a strip; a page
+         out of a case file is about the width of a page. */
+      maxW: o.small ? Math.min(window.innerWidth - 40, 520)
+        : o.asking ? Math.min(window.innerWidth - 40, 780)
+          : Math.min(window.innerWidth - 28, 860),
       portrait: o.art,
       name: o.name,
       nameCol: o.nameCol,
@@ -150,7 +257,11 @@ const TUTOR = {
       if (hushed) TUTOR.hush(true);
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
-      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
+      /* A LOCK HAS NO FACE. speakerArt returns null for the things that
+         are not people, and falling through to the handler put the
+         captain's photograph on the print kit and the case log. */
+      const base = opts.art || speakerArt(opts.name)
+        || (opts.name ? null : SPR.frogCustom('handler', HANDLER_DEF));
       const build = (reveal) => {
         holder.innerHTML = '';
         /* HIS MOUTH MOVES WHILE HE IS TALKING. Three characters a flap,
@@ -243,7 +354,11 @@ const TUTOR = {
       const holder = U.el('div', 'tut-plate');
       const rack = U.el('div', 'reply-rack');
 
-      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
+      /* A LOCK HAS NO FACE. speakerArt returns null for the things that
+         are not people, and falling through to the handler put the
+         captain's photograph on the print kit and the case log. */
+      const base = opts.art || speakerArt(opts.name)
+        || (opts.name ? null : SPR.frogCustom('handler', HANDLER_DEF));
       const build = (reveal) => {
         holder.innerHTML = '';
         const art = reveal === null || reveal === undefined ? base
@@ -276,13 +391,16 @@ const TUTOR = {
              nothing said so; now the key is printed on the thing it
              presses, which is the only honest place for it. */
           const num = U.el('span', 'reply-num');
-          num.appendChild(PIXFONT.render(String(i + 1), { scale: k, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+          /* INK ON BUFF STOCK. Bone-white letters with a black drop shadow
+             are for a lit screen; these are cards, so the words are typed
+             in the same ink as the sheet they answer. */
+          num.appendChild(PIXFONT.render(String(i + 1), { scale: k, color: '#8a2418', shadow: null }));
           b.appendChild(num);
           const col = U.el('span', 'reply-col');
           UI.wrapLines(typeof r === 'string' ? r : r.label, 38).forEach(t => {
-            col.appendChild(PIXFONT.render(t, { scale: k, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+            col.appendChild(PIXFONT.render(t, { scale: k, color: '#22201c', shadow: null }));
           });
-          if (r.note) col.appendChild(PIXFONT.render(r.note, { scale: Math.max(1, k - 2), color: PIX.PAL.q, shadow: null }));
+          if (r.note) col.appendChild(PIXFONT.render(r.note, { scale: Math.max(1, k - 2), color: '#6b6454', shadow: null }));
           b.appendChild(col);
           b.onclick = () => finish(i);
           /* a mouse gets the same feedback a thumb does */

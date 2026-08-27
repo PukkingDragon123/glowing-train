@@ -520,6 +520,8 @@ const CASE = {
     const cl = c.clues.find(x => x.id === sus.alibi.lever);
     /* THE BEST BEAT IN THE GAME DESERVES A LINE ON THE PHONE, so it is
        still on the record an hour later when you are picking a name */
+    /* the closest thing to satisfaction this job offers */
+    if (typeof SCENE !== 'undefined' && SCENE.beat) SCENE.beat('wry');
     if (typeof PHONE !== 'undefined' && PHONE.notify) {
       PHONE.notify({ app: 'case', tone: 'good',
         head: sus.name + "'S STORY IS IN PIECES",

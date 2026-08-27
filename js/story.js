@@ -534,6 +534,7 @@ const STORY = {
       G.quests[id] = 'ready';
       STORY.note('ERRAND DONE. GO BACK TO ' + q.who + '.');
       UI.stampSmall('ERRAND DONE: SEE ' + q.who);
+      if (typeof SCENE !== 'undefined' && SCENE.beat) SCENE.beat('wry');
       if (typeof PHONE !== 'undefined' && PHONE.notify) {
         PHONE.notify({ app: 'map', tone: 'good',
           head: q.who + ' OWES YOU NOW',
@@ -1431,6 +1432,8 @@ const STORY = {
      station. Nothing in the case depends on any of them.
      ============================================================ */
   async petIt(a) {
+    /* the one moment in a shift he is allowed to look pleased */
+    if (typeof SCENE !== 'undefined' && SCENE.beat) SCENE.beat('good');
     if (CINE.busy) return;
     a.pet = 2.2;
     a.wait = 2.2;
