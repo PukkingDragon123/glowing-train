@@ -130,8 +130,9 @@ const UI = {
       plate.id = 'obj-plate';
       plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
       const col = U.el('div', 'obj-col');
-      col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
-      col.appendChild(UI.wrap(ob.line, 34, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+      /* ink on buff stock, like the sheet and the cards */
+      col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: '#8a2418', shadow: null }));
+      col.appendChild(UI.wrap(ob.line, 34, { scale: K, color: '#22201c', shadow: null }));
       plate.appendChild(col);
       plate.onclick = () => PHONE.open('job');
 
@@ -240,8 +241,8 @@ const UI = {
     plate.innerHTML = '';
     plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
     const col = U.el('div', 'obj-col');
-    col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
-    col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+    col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: '#8a2418', shadow: null }));
+    col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: '#22201c', shadow: null }));
     plate.appendChild(col);
     plate.classList.remove('bump'); void plate.offsetWidth; plate.classList.add('bump');
   },

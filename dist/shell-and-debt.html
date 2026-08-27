@@ -2476,16 +2476,11 @@ body.dread #dread-wash { opacity: 1; animation: dread-pulse 1.15s steps(6) infin
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   /* On a tall window the room is a band in the middle. The space around it
-     is lit like the inside of a cinema rather than left flat black. */
-  background:
-    radial-gradient(120% 70% at 50% 50%, #0d1016 0%, #06070a 70%, #040507 100%);
+     is flat, because a soft gradient over a picture made of hard pixels is
+     the thing that reads as a filter — and two 24px linear fades used to
+     sit over the top and bottom of the room itself. */
+  background: #06070a;
 }
-.scene-root::before, .scene-root::after {
-  content: ''; position: absolute; left: 0; right: 0; height: 24px;
-  pointer-events: none; z-index: 2;
-}
-.scene-root::before { top: 0; background: linear-gradient(#040507, transparent); }
-.scene-root::after { bottom: 0; background: linear-gradient(transparent, #040507); }
 .scene-cv {
   display: block;
   image-rendering: pixelated;
@@ -2895,26 +2890,38 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .corner-ui { transition: opacity .18s ease, transform .18s ease; }
 
 /* what you are supposed to be doing */
+/* ============================================================
+   THE JOB, ON A CARD.
+
+   The plate somebody talks on is a sheet out of the case file and
+   the things you say back are index cards, so the one line saying
+   what you are supposed to be doing is the card clipped to the
+   front of the folder: buff stock, a red rule down the left edge,
+   a punched hole, and a shadow under it. It used to be a leather
+   panel with a brass rule, which belonged to a different game.
+   ============================================================ */
 .obj-plate {
   pointer-events: auto; cursor: pointer;
   display: flex; align-items: center; gap: 10px;
   max-width: min(46vw, 460px);
-  padding: 5px 11px 6px 8px;
-  background: linear-gradient(180deg, var(--hide-hi), var(--hide) 45%, var(--hide-lo));
-  border: var(--bd-thick) solid var(--hide-ink);
-  /* a brass rule down the left edge, which is what says "this is the job" */
+  padding: 6px 12px 7px 12px;
+  background: #ded2b2;
+  border: 0; border-left: 5px solid #8a2418;
   box-shadow:
-    inset 3px 0 0 var(--trim),
-    inset 0 0 0 2px rgba(255,215,126,.14),
-    inset 0 2px 0 rgba(255,236,196,.10),
-    0 5px 0 rgba(14,9,5,.55);
+    inset 0 1px 0 rgba(255,250,232,.8),
+    inset -1px -1px 0 rgba(150,138,110,.5),
+    3px 4px 0 rgba(0,0,0,.5);
 }
+.obj-plate::before {
+  /* the punched hole in the margin */
+  content: ''; position: absolute; left: 2px; top: 50%;
+  width: 5px; height: 5px; margin-top: -3px; border-radius: 50%;
+  background: #0f0d0b; box-shadow: 0 1px 0 rgba(255,250,232,.5);
+}
+.obj-plate:hover { background: #ece0be; }
 .obj-plate:active {
-  transform: translateY(2px);
-  box-shadow:
-    inset 3px 0 0 var(--trim),
-    inset 0 0 0 2px rgba(255,215,126,.14),
-    0 3px 0 rgba(14,9,5,.55);
+  transform: translate(1px, 2px);
+  box-shadow: inset 0 1px 0 rgba(255,250,232,.7), 1px 2px 0 rgba(0,0,0,.5);
 }
 .obj-col { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 .obj-col .txt-lines { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
@@ -3026,29 +3033,47 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   transition: opacity .16s, transform .16s cubic-bezier(.2,1.6,.4,1);
 }
 .reply-rack.in { opacity: 1; transform: none; }
+/* ============================================================
+   WHAT YOU SAY BACK IS AN INDEX CARD.
+
+   The plate somebody talks on is a sheet out of the case file, so
+   the things you can say back are the cards you would write on
+   and hand over: buff stock, a red rule down the left edge like a
+   ruled card, the key number typed in the corner. They used to be
+   green glass buttons, which had nothing to do with the rest of
+   it and everything to do with looking like a menu.
+   ============================================================ */
 .reply-btn {
   display: flex; align-items: center; gap: 10px;
   text-align: left; cursor: pointer;
-  background: linear-gradient(180deg, rgba(20,34,28,.96), rgba(10,20,16,.96));
-  border: var(--bd-thick) solid #0a0d11; border-radius: 0;
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.14), 0 5px 0 rgba(0,0,0,.5);
+  background: #ded2b2;
+  border: 0; border-radius: 0;
+  border-left: 5px solid #8a2418;
+  box-shadow: inset 0 1px 0 rgba(255,250,232,.75),
+              inset -1px -1px 0 rgba(150,138,110,.55),
+              3px 4px 0 rgba(0,0,0,.45);
   padding: 10px 14px; min-height: 52px;
+  transition: background .1s ease, transform .08s ease;
 }
 .reply-btn:hover, .reply-btn:focus-visible {
-  background: linear-gradient(180deg, rgba(30,52,42,.98), rgba(14,28,22,.98));
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.55), 0 5px 0 rgba(0,0,0,.5);
+  background: #efe4c4;
+  box-shadow: inset 0 1px 0 rgba(255,255,246,.9),
+              inset 0 0 0 2px rgba(138,36,24,.35),
+              3px 4px 0 rgba(0,0,0,.5);
   outline: none;
 }
-.reply-btn:hover .reply-num { background: #6ff7d8; }
-/* the key that presses this, printed on it */
+/* the key that presses this, typed in the corner of the card */
 .reply-num {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 26px; min-height: 26px; padding: 2px 4px;
-  background: rgba(111,247,216,.16);
-  box-shadow: inset 0 0 0 2px rgba(111,247,216,.3);
+  min-width: 24px; min-height: 24px; padding: 2px 4px;
+  background: rgba(138,36,24,.10);
+  box-shadow: inset 0 0 0 2px rgba(34,32,28,.35);
 }
 .reply-num canvas { display: block; }
-.reply-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px rgba(111,247,216,.4), 0 3px 0 rgba(0,0,0,.5); }
+.reply-btn:active {
+  transform: translate(1px, 2px);
+  box-shadow: inset 0 1px 0 rgba(255,250,232,.6), 1px 2px 0 rgba(0,0,0,.45);
+}
 .reply-btn.dim { opacity: .72; }
 .reply-btn canvas { image-rendering: pixelated; display: block; width: auto; height: auto; flex: none; }
 .reply-col { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
@@ -3368,6 +3393,77 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   pointer-events: none;
 }
 .phone-badge.hidden { display: none; }
+
+/* ============================================================
+   LEANING OVER THE PLAN.
+
+   The paper is bigger than the window it is looked at through, so
+   the window clips and the paper slides inside it. Two whole-number
+   magnifications only: the sheet is made of pixels and half a pixel
+   is a smudge.
+   ============================================================ */
+.map-view {
+  position: relative; overflow: hidden;
+  margin: 0 auto; touch-action: none; cursor: grab;
+  box-shadow: inset 0 0 0 2px rgba(107,90,60,.5);
+}
+.map-view:active { cursor: grabbing; }
+.map-holder { position: relative; will-change: transform; }
+.map-zoom {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; justify-content: flex-end;
+}
+.map-zb {
+  min-width: 30px; min-height: 26px; cursor: pointer; border: 0;
+  background: rgba(20,34,28,.9);
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.28);
+  display: flex; align-items: center; justify-content: center;
+}
+.map-zb.on { background: #6ff7d8; box-shadow: inset 0 0 0 2px #0b1a14; }
+.map-zb:hover { box-shadow: inset 0 0 0 2px rgba(111,247,216,.7); }
+.map-zhint { margin-right: auto; padding-left: 4px; }
+
+/* ---- WIRE: a thread of short lines, his and yours ---- */
+.ph-thread { display: flex; flex-direction: column; gap: 5px; padding: 4px 6px; }
+.ph-bub {
+  max-width: 82%; padding: 5px 7px;
+  /* align-items MATTERS: a flex column stretches its children across the
+     cross axis, and a stretched canvas keeps its aspect ratio, so a
+     one-word line came out four times the height of the ones around it.
+     Same bug as the notification rail, same fix. */
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+}
+.ph-bub > canvas { max-width: 100%; }
+/* and the same guard everywhere else the phone stacks drawn lines */
+.ph-snapcap > canvas, .ph-cluecol > canvas, .ph-head > canvas,
+.ph-foot > canvas, .ph-lock > canvas { max-width: 100%; }
+.ph-snapcap, .ph-cluecol, .ph-head, .ph-foot { align-items: flex-start; }
+.ph-snapcap { align-items: center; }
+.ph-head { align-items: center; }
+.ph-bub.them {
+  align-self: flex-start; background: rgba(22,38,32,.92);
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.16);
+}
+.ph-bub.me {
+  align-self: flex-end; background: #6ff7d8;
+  box-shadow: inset 0 0 0 2px rgba(11,26,20,.35);
+}
+
+/* ---- ROLL: the evidence as photographs ---- */
+.ph-roll {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px; padding: 4px 6px;
+}
+.ph-snap {
+  background: #f2e9cf; padding: 4px 4px 2px;
+  box-shadow: 0 2px 0 rgba(0,0,0,.45);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.ph-snap canvas { image-rendering: pixelated; display: block; }
+.ph-snapcap {
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  padding-bottom: 2px;
+}
 @media (max-width: 560px) {
   #note-rail { top: 6px; right: 6px; left: 6px; max-width: none; }
 }
@@ -4492,6 +4588,8 @@ const META = {
       tells: {},      // trait id -> true, once you've looted a frog that had it
       tutor: {},      // which of the captain's lines you have already heard
       trust: 0,       // Officer Maybelle. It adds up slowly, like anything real.
+      /* how close the camera stands. Default is close; Z opens it out. */
+      wideShot: false,
     };
   },
 
@@ -4505,6 +4603,7 @@ const META = {
         Object.assign(META.d.stats, saved.stats || {});
         Object.assign(META.d.bossSeen, saved.bossSeen || {});
         Object.assign(META.d.gunsOwned, saved.gunsOwned || {});
+        if (saved.wideShot !== undefined) META.d.wideShot = !!saved.wideShot;
         Object.assign(META.d.tells, saved.tells || {});
         Object.assign(META.d.tutor, saved.tutor || {});
         if (typeof saved.trust === 'number') META.d.trust = saved.trust;
@@ -6400,23 +6499,28 @@ SPR.ellipse = function (ctx, cx, cy, rx, ry, col) {
    ============================================================ */
 
 /* ============================================================
-   THE HEAD, IN PROFILE.
+   A FROG'S HEAD, SIDE ON.
 
-   Drawn from nothing on its own canvas rather than repainted over
-   the front-facing one — that was the first attempt and it never
-   read, because the outline underneath still said "front": a snout
-   painted inside a head-on silhouette is a head-on head with a
-   snout painted on it.
+   The first attempt was a wedge with a long horizontal bill on
+   it and a gold ring for an eye: a duck with a bullseye. The
+   shapes that make a frog read in profile are these, in order of
+   how much they matter:
 
-   A frog turned sideways is mostly muzzle. So the silhouette here
-   is the whole point: the skull is a dome set well back, the jaw
-   runs out a long way in front of it and comes to a blunt tip, and
-   the single eye sits high and forward where the two bulges meet
-   the brow. Everything else — hat, collar, expression — hangs off
-   those three shapes.
+     THE EYE BULGE      A frog's eye sits on TOP of its skull and
+                        stands proud of it. In profile that bump
+                        breaking the head's top line is the single
+                        most recognisable thing about the animal.
+     THE MOUTH LINE     Enormous. It runs from the snout tip back
+                        past the eye, most of the head's length,
+                        and it turns up very slightly at the back.
+     THE SNOUT          Short and ROUNDED. Not a beak. It comes
+                        forward of the eye by about a third of the
+                        skull and drops away underneath.
+     THE THROAT         Soft, full, sloping back down to the neck,
+                        which is what stops the head floating off
+                        the collar.
 
-   Same canvas size as the front head so the rig can swap one for
-   the other without moving anything.
+   Drawn facing RIGHT. The rig flips the whole sprite for left.
    ============================================================ */
 SPR.profileHead = function (d, expr) {
   expr = expr || 'neutral';
@@ -6426,145 +6530,178 @@ SPR.profileHead = function (d, expr) {
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
+  const px = (x, y, w, h, col) => PIX.rect(c, x, y, w, h, col);
   const fat = !!d.fat;
-  /* he faces RIGHT; the rig flips the whole sprite when he faces left */
-  const bx = fat ? 12 : 14;              // back of the skull
-  const ty = 24;                         // the jaw line
-  const sk = fat ? 16 : 14;              // skull radius
-  const jaw = fat ? 30 : 28;             // how far the muzzle runs out
 
-  /* ---- THE SILHOUETTE, in ink, one pixel bigger all round ---- */
-  const ink = (col) => {
-    /* the skull */
-    SPR.ellipse(c, bx + 4, ty - 5, sk, sk - 3, col);
-    /* the jaw: a long wedge from under the skull out to the tip */
-    for (let i = 0; i < jaw; i++) {
-      const t = i / jaw;
-      const top = ty - 6 + Math.round(t * t * 5);
-      const bot = ty + 5 - Math.round(t * t * 3);
-      PIX.rect(c, bx + 2 + i, top, 1, bot - top, col);
+  /* the anatomy, in one place */
+  const BX = 6;                       // back of the skull
+  const CW = fat ? 26 : 24;           // cranium width
+  const CY = 12;                      // top of the cranium
+  const CH = fat ? 16 : 15;           // cranium height
+  const MOUTH = CY + CH - 2;          // the mouth line
+  const SN = fat ? 13 : 12;           // how far the snout runs past the cranium
+  const TIP = BX + CW + SN;           // the tip of the snout
+  const THR = MOUTH + (fat ? 9 : 7);  // the bottom of the throat
+
+  /* ------------------------------------------------------------
+     THE SILHOUETTE, painted twice: once a pixel bigger in ink,
+     then the skin inside it. Anything drawn as an outline of
+     separate strokes ends up with gaps in it at this size.
+     ------------------------------------------------------------ */
+  const body = (grow, col) => {
+    /* the cranium: a dome, flat-ish along the top */
+    for (let i = 0; i < CH + grow * 2; i++) {
+      const t = i / (CH + grow * 2 - 1);
+      /* narrow at the crown, full by a third of the way down */
+      const in0 = Math.round(Math.pow(Math.max(0, 1 - t * 3), 1.6) * (CW * 0.34));
+      px(BX - grow + in0, CY - grow + i, CW + grow * 2 - in0, 1, col);
     }
-    /* the throat, hanging under the back of the jaw */
-    SPR.ellipse(c, bx + 10, ty + 5, 12, 4, col);
+    /* the snout: forward of the cranium, rounded at the tip, dropping away */
+    for (let i = 0; i < SN + grow; i++) {
+      const t = i / (SN + grow);
+      const top = MOUTH - Math.round((1 - t) * (CH * 0.44)) - Math.round(grow * (1 - t));
+      const bot = MOUTH + 3 + Math.round((1 - t * t) * 2) + grow;
+      /* the tip is a curve, not a corner */
+      const cut = Math.round(Math.pow(t, 2.6) * 4);
+      px(BX + CW + i - 1, top + cut, 1, Math.max(1, bot - top - cut * 2), col);
+    }
+    /* the throat: full under the jaw, sloping back to the neck */
+    for (let i = 0; i < THR - MOUTH + grow; i++) {
+      const t = i / (THR - MOUTH + grow);
+      const x0 = BX - grow + Math.round(t * 3);
+      const x1 = BX + CW - 1 + grow - Math.round(t * t * (CW * 0.42));
+      px(x0, MOUTH + i, Math.max(1, x1 - x0), 1, col);
+    }
+    /* THE EYE BULGE, standing proud of the skull's top line — the one
+       shape that says frog before anything else does */
+    SPR.ellipse(c, BX + CW - (fat ? 9 : 8), CY + 1, (fat ? 8 : 7) + grow,
+      (fat ? 7 : 6) + grow, col);
   };
-  ink(P.K);
-  /* and the skin inside it, inset by one */
-  c.save();
-  c.translate(0, 0);
-  SPR.ellipse(c, bx + 4, ty - 5, sk - 1, sk - 4, skin);
-  for (let i = 1; i < jaw - 1; i++) {
-    const t = i / jaw;
-    const top = ty - 5 + Math.round(t * t * 5);
-    const bot = ty + 4 - Math.round(t * t * 3);
-    PIX.rect(c, bx + 2 + i, top, 1, bot - top, skin);
+  body(1, P.K);
+  body(0, skin);
+
+  /* ---- the modelling: lit along the top, shaded underneath ---- */
+  for (let i = 0; i < 4; i++) {
+    px(BX + 2 + i, CY + i, CW - 4 - i, 1, i < 2 ? P.W : skin);
   }
-  SPR.ellipse(c, bx + 10, ty + 4, 11, 3, shade);
-  c.restore();
-  /* the shading: the underside of the jaw and the back of the skull */
-  for (let i = 2; i < jaw - 2; i++) {
-    const t = i / jaw;
-    const bot = ty + 4 - Math.round(t * t * 3);
-    PIX.rect(c, bx + 2 + i, bot - 2, 1, 2, shade);
+  px(BX + 1, CY + 3, 3, CH - 4, shade);                 /* the back of the skull */
+  px(BX, MOUTH - 2, CW * 0.5, 2, shade);
+  for (let i = 0; i < THR - MOUTH - 1; i++) {           /* the throat, in shade */
+    const t = i / (THR - MOUTH);
+    px(BX + 1 + Math.round(t * 3), MOUTH + 2 + i,
+      Math.max(1, CW - 3 - Math.round(t * t * (CW * 0.42))), 1, i > 1 ? dark : shade);
   }
-  SPR.ellipse(c, bx - 1, ty - 4, 6, 9, shade);
-  /* the mottle a frog has, if this one has it */
-  if (d.spots) {
-    [[8, -10], [16, -4], [24, 0], [12, 2]].forEach(o =>
-      PIX.disc(c, bx + o[0], ty + o[1], 2, shade));
+  /* the loose fold of skin behind the jaw */
+  px(BX + 2, MOUTH + 1, CW - 8, 1, dark);
+
+  /* ------------------------------------------------------------
+     THE MOUTH. It runs nearly the whole head and the expression
+     is what its back end does: down for grim, up for pleased,
+     open for talking.
+     ------------------------------------------------------------ */
+  const OPEN = {
+    neutral: 0, talk: 3, talk2: 2, happy: 0, joy: 0, laugh: 4, grin: 0,
+    smug: 0, sad: 0, angry: 0, worry: 0, wince: 1, blink: 0, bored: 0,
+    squint: 0, think: 0, doubt: 0, sniff: 1, alarm: 4, pain: 3, dead: 2,
+  };
+  const CURL = {
+    happy: -2, joy: -2, laugh: -2, grin: -2, smug: -1, wink: -1, blush: -1,
+    sad: 2, worry: 1, angry: 1, wince: 2, pain: 2, doubt: 1, bored: 1, dead: 3,
+  };
+  const open = OPEN[expr] || 0;
+  const curl = CURL[expr] || 0;
+  const m0 = BX + 4, m1 = TIP - 1;
+  for (let x = m0; x < m1; x++) {
+    const t = (x - m0) / (m1 - m0);
+    /* the line dips forward and lifts at the back by the curl */
+    const y = MOUTH + Math.round(Math.sin(t * 2.2) * 1.2) - Math.round((1 - t) * curl);
+    px(x, y, 1, 1 + (open && t > 0.15 ? open : 0), P.K);
+    if (open && t > 0.2 && t < 0.9) px(x, y + 1, 1, Math.max(1, open - 1), P.r);
   }
+  /* the corner of the mouth, tucked in under the eye */
+  px(m0 - 1, MOUTH - Math.round(curl) - 1, 2, 3, P.K);
+  /* the nostril, up near the tip */
+  px(TIP - 5, MOUTH - Math.round(CH * 0.30), 2, 2, dark);
+
+  /* ------------------------------------------------------------
+     THE EYE. One of them, in the bulge, and SMALL: a pupil, a
+     lid over the top of it, and a catch of light. A ring the
+     width of the bulge is a target, not an eye.
+     ------------------------------------------------------------ */
+  const ex = BX + CW - (fat ? 12 : 11), ey = CY - 1;
+  const shut = expr === 'blink' || expr === 'joy' || expr === 'laugh' || expr === 'dead';
+  const narrow = expr === 'squint' || expr === 'angry' || expr === 'doubt'
+    || expr === 'smug' || expr === 'bored' || expr === 'think';
+  px(ex, ey, 7, 6, P.W);                                /* the white */
+  px(ex, ey, 7, 1, 'rgba(0,0,0,.22)');
+  if (shut) {
+    px(ex - 1, ey + 2, 9, 2, P.K);
+    px(ex, ey + 1, 7, 1, shade);
+  } else {
+    const lid = narrow ? 2 : (expr === 'alarm' || expr === 'wince' ? 0 : 1);
+    px(ex, ey, 7, lid + 1, shade);                      /* the lid */
+    px(ex, ey, 7, 1, dark);
+    px(ex + 3, ey + lid + 1, 3, 4 - lid, P.K);          /* the pupil, forward */
+    px(ex + 3, ey + lid + 1, 1, 1, P.W);                /* and the catch light */
+  }
+  /* the brow ridge over it */
+  px(ex - 2, ey - 2, 10, 2, shade);
+  px(ex - 2, ey - 2, 10, 1, skin);
+  if (expr === 'angry' || expr === 'hard') px(ex - 1, ey - 1, 9, 1, P.K);
+
+  /* the warts, if he has them, along the back of the skull */
   if (d.warts) {
-    [[6, -12], [18, -6], [26, -1]].forEach(o => {
-      PIX.disc(c, bx + o[0], ty + o[1], 2, shade);
-      PIX.disc(c, bx + o[0], ty + o[1] - 1, 1, skin);
+    [[BX + 3, CY + 5], [BX + 6, CY + 9], [BX + 2, CY + 11]].forEach(([wx, wy]) => {
+      px(wx, wy, 2, 2, dark);
     });
   }
+  /* a scar across the muzzle */
+  if (d.scar) px(BX + CW + 2, MOUTH - 5, 1, 5, P.d);
 
-  /* ---- THE MOUTH, the whole length of the jaw ---- */
-  const EX = {
-    neutral: 0, talk: -3, talk2: -1, happy: 2, joy: 3, laugh: 4, grin: 2,
-    smug: 1, sad: -2, angry: -1, worry: 0, wince: -1, blink: 0, bored: 0,
-    squint: 0, think: -1, doubt: 0, sniff: 0, alarm: -4, blush: 1,
-    pain: -2, dead: -4, wink: 2, thinkb: 0,
-  };
-  const open = EX[expr] === undefined ? 0 : EX[expr];
-  const lipY = ty + 1;
-  if (open < 0) {
-    /* the jaw is down: the mouth is a wedge of dark with a tongue in it */
-    for (let i = 4; i < jaw - 2; i++) {
-      const t = i / jaw;
-      const drop = Math.round(-open * (1 - t) * 1.2);
-      PIX.rect(c, bx + 2 + i, lipY - drop, 1, drop + 2, P.K);
-    }
-    PIX.rect(c, bx + 8, lipY - 1, 12, 2, P.r);
-  } else {
-    for (let i = 3; i < jaw - 1; i++) {
-      const t = i / jaw;
-      const up = Math.round(open * (1 - Math.abs(t - 0.75) * 2) * 0.9);
-      PIX.rect(c, bx + 2 + i, lipY - Math.round(t * t * 2) - up, 1, 2, P.K);
-    }
-  }
-  /* the corner of it, tucked under the eye */
-  PIX.rect(c, bx + 3, lipY - 1, 2, 3, P.K);
-  /* the nostril, near the tip */
-  PIX.rect(c, bx + jaw - 6, ty - 4, 2, 2, dark);
-
-  /* ---- ONE EYE, high and forward ---- */
-  const exx = bx + (fat ? 14 : 12), eyy = ty - 12;
-  const shut = expr === 'blink' || expr === 'joy' || expr === 'laugh' || expr === 'dead';
-  const lid = expr === 'squint' || expr === 'bored' ? 3
-    : expr === 'smug' || expr === 'wince' ? 2 : 0;
-  SPR.ellipse(c, exx, eyy + 1, 8, 7, P.K);
-  SPR.ellipse(c, exx, eyy + 1, 7, 6, skin);
-  if (shut) {
-    PIX.rect(c, exx - 5, eyy + 1, 11, 2, P.K);
-    PIX.rect(c, exx - 4, eyy + 3, 9, 1, dark);
-  } else if (expr === 'dead') {
-    PIX.rect(c, exx - 3, eyy - 1, 7, 1, P.K);
-  } else {
-    const iris = d.goldEyes ? P.G : d.spiral ? P.N : P.g;
-    SPR.ellipse(c, exx + 1, eyy + 1, 5, 4, P.W);
-    SPR.ellipse(c, exx + 1, eyy + 1, 4, 3, iris);
-    PIX.rect(c, exx, eyy + 1, 4, 2, P.K);            // the slot pupil
-    PIX.rect(c, exx - 1, eyy, 1, 1, P.W);            // the catchlight
-    if (lid) PIX.rect(c, exx - 6, eyy - 3, 13, lid, skin);
-  }
-  /* the brow, which is where the expression lives */
-  const brow = expr === 'angry' || expr === 'doubt' ? 2
-    : expr === 'sad' || expr === 'worry' || expr === 'alarm' ? -2 : 0;
-  for (let i = 0; i < 13; i++) {
-    PIX.rect(c, exx - 6 + i, eyy - 5 + Math.round(i * 0.18) + brow, 1, 2, P.K);
-  }
-
-  /* ---- THE HAT ---- */
-  const C = SPR.costumeOf(d);
-  if (d.flatcap || (C && C.cap)) {
-    const hc = P[d.hatCol] || P.t;
-    PIX.rect(c, bx - 4, eyy - 8, 26, 4, P.K);
-    PIX.rect(c, bx - 3, eyy - 7, 24, 3, hc);
-    PIX.rect(c, bx - 3, eyy - 7, 24, 1, 'rgba(255,255,255,.14)');
-    /* the peak, out over the eye */
-    PIX.rect(c, bx + 16, eyy - 5, 12, 3, P.K);
-    PIX.rect(c, bx + 16, eyy - 5, 11, 2, hc);
+  /* ------------------------------------------------------------
+     THE HAT, EDGE ON. A brim is a line with a crown behind it,
+     and both have to sit ON the skull rather than above it.
+     ------------------------------------------------------------ */
+  if (d.flatcap) {
+    const hy = CY - 4;
+    px(BX + 1, hy + 2, CW - 2, 4, P.t);
+    px(BX + 1, hy + 2, CW - 2, 1, P.s);
+    /* the peak, forward, over the eye */
+    px(BX + CW - 3, hy + 5, 9, 2, P.K);
+    px(BX + CW - 3, hy + 5, 9, 1, P.t);
+    for (let i = 0; i < 5; i++) px(BX + 3 + i * 4, hy, CW - 6 - i * 4, 2, P.t);
+    px(BX + 2, hy + 1, CW - 4, 1, P.s);
   } else if (d.hat) {
-    const hc = P[d.hatCol] || P.T, hb = P[d.band] || P.d;
-    PIX.rect(c, bx - 6, eyy - 7, 34, 4, P.K);          // the brim
-    PIX.rect(c, bx - 5, eyy - 6, 32, 2, hc);
-    PIX.rect(c, bx - 5, eyy - 6, 32, 1, 'rgba(255,255,255,.14)');
-    PIX.rect(c, bx - 1, eyy - 18, 20, 12, P.K);        // the crown
-    PIX.rect(c, bx, eyy - 17, 18, 11, hc);
-    PIX.rect(c, bx, eyy - 17, 3, 11, 'rgba(255,255,255,.10)');
-    PIX.rect(c, bx, eyy - 9, 18, 3, hb);               // the band
-    PIX.rect(c, bx + 2, eyy - 17, 12, 2, 'rgba(0,0,0,.30)');  // the pinch
+    const hy = CY - 9;
+    const col = P[d.hatCol] || P.T, band = P[d.band] || P.K;
+    /* the crown */
+    px(BX + 4, hy, CW - 8, 8, col);
+    px(BX + 4, hy, CW - 8, 1, 'rgba(255,255,255,.16)');
+    px(BX + 5, hy + 1, 3, 6, 'rgba(255,255,255,.10)');
+    /* the dent along the top of it */
+    px(BX + 8, hy, CW - 16, 2, 'rgba(0,0,0,.30)');
+    /* the band, and then the brim it sits on */
+    px(BX + 4, hy + 6, CW - 8, 2, band);
+    px(BX - 1, hy + 8, CW + SN - 4, 2, P.K);
+    px(BX - 1, hy + 8, CW + SN - 4, 1, col);
+    /* the brim tips down at the front, which is how a fedora is worn */
+    px(BX + CW + 2, hy + 9, 6, 2, P.K);
   }
 
-  /* ---- THE COLLAR, edge on ---- */
-  const CO = C && (C.overcoat || C.jacket);
-  const cc = P[(CO && CO.col) || d.suit] || P.T;
-  const shirt = P[(C && C.shirt && C.shirt.col) || d.shirt] || P.W;
-  PIX.rect(c, bx + 2, ty + 7, 20, 4, P.K);
-  PIX.rect(c, bx + 3, ty + 7, 18, 3, cc);
-  PIX.rect(c, bx + 12, ty + 7, 7, 3, shirt);
-  if (d.tie) PIX.rect(c, bx + 15, ty + 9, 4, 2, P[d.tie] || P.r);
+  /* ---- the cigar, clamped in the corner of the mouth ---- */
+  if (d.cigar) {
+    px(TIP - 2, MOUTH + 1, 8, 2, P.u);
+    px(TIP + 5, MOUTH + 1, 2, 2, P.R);
+    px(TIP - 2, MOUTH + 1, 8, 1, P.B);
+  }
+
+  /* ---- THE NECK, RUN ALL THE WAY DOWN. It has to reach the bottom edge
+     of the canvas: the rig sits the head box directly on the torso box, so
+     a neck that stops four pixels short leaves the head floating. ---- */
+  px(BX + 3, THR - 1, CW - 8, H - (THR - 1), shade);
+  px(BX + 3, THR - 1, CW - 8, 1, skin);
+  px(BX + 3, THR - 1, 2, H - (THR - 1), skin);
+  px(BX + CW - 7, THR - 1, 2, H - (THR - 1), dark);
   return cv;
 };
 
@@ -8939,35 +9076,63 @@ SPR.bloodSplat = function (seed, R) {
 };
 
 /* ============================================================
-   A SPEECH PLATE, DRAWN AND NOT STYLED.
-   Every panel in this game is pixels except the ones CSS was
-   making, and a gradient with a border-radius is not pixel art.
-   This builds the whole thing — frame, rivets, portrait well,
-   name bar, wrapped lines — onto one canvas at one scale.
+   THE PLATE PEOPLE TALK ON.
+
+   It used to be a dark green slab behind a chunky grey bezel with
+   rivets in the corners and scanlines over the fill — a pocket
+   calculator from 1994, in a game about a detective in 1937 Paris
+   who carries a case file everywhere he goes.
+
+   It is that case file now. A sheet of manila with a fibre tooth
+   to it, a red rule across the top, the speaker's name typed on
+   it in ink, and the words underneath in the same ink. The
+   portrait is a PHOTOGRAPH CLIPPED TO THE SHEET: white border,
+   its own shadow, a steel clip over the top edge. Anything that
+   is not a person — a lock, a print kit, the case log — gets no
+   photograph and a rubber stamp instead, because a lock does not
+   have a face and giving it one was half of what was wrong.
    ============================================================ */
 SPR.speech = function (o) {
   const P = PIX.PAL;
-  const pad = 6, gap = 5;
+  const pad = 7, gap = 6;
+
+  /* PAPER, INK, AND THE RED OF A CASE FILE. Not palette letters: this
+     surface is paper and paper is not in the palette. */
+  const PAPER = '#e2d7b8', PAPER_LIT = '#f2e9cf', PAPER_DK = '#c9bc99';
+  const TOOTH = '#d8cbaa', SHADE = '#b3a684';
+  const INK = '#22201c', INK_SOFT = '#4a463c', RED = '#8a2418';
 
   /* Everything inside is drawn at ONE pixel per pixel and the whole plate
      is blown up by an integer at the end. Render the text big and scale the
      canvas down in CSS instead and the letters go soft, which defeats the
      entire point of a pixel font. */
-  const name = o.name ? PIXFONT.render(o.name, { scale: 1, color: o.nameCol || P.G, shadow: null }) : null;
+  const name = o.name ? PIXFONT.render(o.name, { scale: 1, color: INK, shadow: null }) : null;
   const lines = (o.lines || []).map(l =>
-    PIXFONT.render(l, { scale: 1, color: P.W, shadow: null }));
-  const foot = o.foot ? PIXFONT.render(o.foot, { scale: 1, color: P.q, shadow: null }) : null;
+    PIXFONT.render(l, { scale: 1, color: INK, shadow: null }));
+  const foot = o.foot ? PIXFONT.render(o.foot, { scale: 1, color: INK_SOFT, shadow: null }) : null;
 
-  const pw = o.portrait ? o.portrait.width : 0;
-  const ph = o.portrait ? o.portrait.height : 0;
-  let tw = Math.max(name ? name.width : 0, foot ? foot.width : 0);
+  /* a photograph is bordered, so it needs more room than the head in it */
+  const BORD = 3;
+  const pw = o.portrait ? o.portrait.width + BORD * 2 : 0;
+  const ph = o.portrait ? o.portrait.height + BORD * 2 : 0;
+  let tw = Math.max(name ? name.width : 0, foot ? foot.width + 20 : 0);
   lines.forEach(l => { tw = Math.max(tw, l.width); });
-  let th = (name ? name.height + 3 : 0) + (foot ? foot.height + 3 : 0);
-  lines.forEach(l => { th += l.height + 2; });
+  let th = (name ? name.height + 5 : 0) + (foot ? foot.height + 4 : 0);
+  lines.forEach(l => { th += l.height + 3; });
 
-  const bodyW = pw + (pw ? gap : 0) + tw;
-  const W = bodyW + pad * 2 + 4;
-  const H = Math.max(ph, th) + pad * 2 + 4;
+  /* ---------- WHAT IS IN THE LEFT MARGIN ----------
+     A photograph, a rubber stamp, or nothing. Decided ONCE, before the
+     sheet is measured, because deciding it again while painting is how
+     the stamp came to be drawn into a margin the sheet had not reserved
+     and pushed the last word of the line off the right-hand edge. */
+  const STAMP_W = 26;
+  const bigEnough = !o.small && th > 20 && tw > 130;
+  const marg = o.portrait ? 'photo' : (bigEnough ? 'stamp' : 'none');
+  const gutter = marg === 'photo' ? pw + gap
+    : marg === 'stamp' ? STAMP_W + gap + 3 : 0;
+
+  const W = gutter + tw + pad * 2 + 4;
+  const H = Math.max(ph, th) + pad * 2 + 8;
 
   /* the blow-up factor is chosen from the room the plate has, not guessed */
   const K = U.clamp(Math.floor((o.maxW || 1200) / W), 2, 6);
@@ -8978,36 +9143,97 @@ SPR.speech = function (o) {
   c.imageSmoothingEnabled = false;
   c.save();
   c.scale(K, K);
+  const px = (x, y, w, h, col) => PIX.rect(c, x, y, w, h, col);
 
-  /* --- the box: ink, bevel, felt, and a rivet in every corner --- */
-  SPR.rrect(c, 0, 0, W, H, 4, P.K);
-  SPR.rrect(c, 1, 1, W - 2, H - 2, 3, o.rim || P.f);
-  SPR.rrect(c, 2, 2, W - 4, H - 4, 3, P.K);
-  SPR.rrect(c, 3, 3, W - 6, H - 6, 2, '#0d1a14');
-  PIX.rect(c, 3, 3, W - 6, 1, 'rgba(255,255,255,.10)');
-  PIX.rect(c, 3, H - 4, W - 6, 1, 'rgba(0,0,0,.5)');
-  [[3, 3], [W - 7, 3], [3, H - 7], [W - 7, H - 7]].forEach(([rx, ry]) => {
-    PIX.rect(c, rx, ry, 4, 4, P.K);
-    PIX.rect(c, rx + 1, ry + 1, 2, 2, o.rim || P.f);
-  });
-  /* a hatch of scanlines over the fill, so it is not a flat slab */
-  for (let y = 5; y < H - 5; y += 3) PIX.rect(c, 4, y, W - 8, 1, 'rgba(0,0,0,.22)');
+  /* ---------- THE SHEET ----------
+     A drop shadow under it, then the paper, then the tooth of the stock. */
+  px(2, 3, W - 2, H - 3, 'rgba(0,0,0,.45)');
+  px(0, 0, W - 2, H - 3, PAPER);
+  px(0, 0, W - 2, 1, PAPER_LIT);
+  px(0, 0, 1, H - 3, PAPER_LIT);
+  px(W - 3, 0, 1, H - 3, PAPER_DK);
+  px(0, H - 4, W - 2, 1, PAPER_DK);
+  /* THE TOOTH OF THE STOCK, and not much of it. Six per cent of the
+     sheet in two contrasting tones came out as sandpaper; paper is
+     mostly one colour with a suggestion of grain in it. */
+  const seed = U.hashSeed('sheet:' + W + ':' + H + ':' + ((o.lines || [])[0] || ''));
+  const rng = U.mulberry32(seed);
+  for (let i = 0; i < Math.round(W * H * 0.014); i++) {
+    px(Math.floor(rng() * (W - 2)), Math.floor(rng() * (H - 4)), 1, 1,
+      rng() < 0.6 ? TOOTH : 'rgba(242,233,207,.55)');
+  }
+  /* the crease down a sheet that has lived in a coat pocket — a whisper,
+     because at full strength it is a seam through the middle of the words */
+  const fold = Math.round(W * 0.62);
+  px(fold, 1, 1, H - 5, 'rgba(150,138,110,.12)');
+  px(fold + 1, 1, 1, H - 5, 'rgba(255,250,232,.14)');
 
-  /* --- the portrait, in its own well --- */
-  let tx = pad + 2;
-  if (o.portrait) {
-    PIX.rect(c, pad, pad, pw + 2, ph + 2, P.K);
-    PIX.rect(c, pad + 1, pad + 1, pw, ph, '#08120d');
-    c.drawImage(o.portrait, pad + 1, pad + 1);
-    PIX.rect(c, pad + pw + 3, pad, 1, ph + 2, 'rgba(0,0,0,.55)');
-    tx = pad + pw + 3 + gap;
+  /* ---------- THE HEAD OF THE FORM ---------- */
+  px(0, 0, W - 2, 2, RED);
+  px(0, 2, W - 2, 1, 'rgba(120,32,20,.35)');
+  /* two punched holes down the left margin, on a sheet with room for them */
+  if (!o.small && H > 34) {
+    [Math.round(H * 0.30), Math.round(H * 0.70)].forEach(hy => {
+      PIX.disc(c, 5, hy, 3, '#0f0d0b');
+      PIX.disc(c, 5, hy - 1, 2, '#3a352c');
+      px(3, hy + 2, 5, 1, 'rgba(255,250,232,.45)');
+    });
   }
 
-  /* --- the words --- */
-  let ty = pad + 2;
-  if (name) { c.drawImage(name, tx, ty); ty += name.height + 3; }
-  lines.forEach(l => { c.drawImage(l, tx, ty); ty += l.height + 2; });
-  if (foot) c.drawImage(foot, W - pad - 2 - foot.width, H - pad - 2 - foot.height);
+  /* ---------- THE PHOTOGRAPH, CLIPPED ON ---------- */
+  const tx = pad + 3 + gutter;
+  if (marg === 'photo') {
+    const bx = pad, by = pad + 1;
+    px(bx + 1, by + 2, pw, ph, 'rgba(0,0,0,.35)');
+    px(bx, by, pw, ph, '#f6f2e6');                  /* the white border */
+    px(bx, by, pw, 1, '#ffffff');
+    px(bx, by + ph - 1, pw, 1, '#c4bfae');
+    px(bx + BORD - 1, by + BORD - 1, pw - BORD * 2 + 2, ph - BORD * 2 + 2, '#1a1c22');
+    c.drawImage(o.portrait, bx + BORD, by + BORD);
+    /* the steel clip over the top edge of the photograph */
+    const cx = bx + Math.round(pw / 2) - 5;
+    px(cx, by - 3, 11, 3, '#8d94a0');
+    px(cx, by - 3, 11, 1, '#bfc6d2');
+    px(cx + 1, by, 2, 5, '#8d94a0');
+    px(cx + 8, by, 2, 5, '#8d94a0');
+    px(cx + 1, by, 2, 1, '#bfc6d2');
+  } else if (marg === 'stamp') {
+    /* NO FACE. A rubber stamp in the margin instead, on the slant — but
+       only on a sheet big enough to carry one: on the little objective
+       card it landed on top of the first two words. */
+    const sw = STAMP_W, sh = 12, sx = pad, sy = pad + 2;
+    for (let i = 0; i < sh; i++) {
+      const off = Math.round((i - sh / 2) * 0.25);
+      const edge = i === 0 || i === sh - 1;
+      px(sx + off, sy + i, sw, 1, edge ? 'rgba(138,36,24,.85)' : 'rgba(138,36,24,.10)');
+    }
+    px(sx - 3, sy, 2, sh, 'rgba(138,36,24,.85)');
+    px(sx + sw - 1, sy, 2, sh, 'rgba(138,36,24,.85)');
+    const st = PIXFONT.render('NOTE', { scale: 1, color: 'rgba(138,36,24,.9)', shadow: null });
+    c.drawImage(st, sx + Math.round((sw - st.width) / 2), sy + 3);
+  }
+
+  /* ---------- THE TYPING ----------
+     A typewriter does not print an even line: every glyph sits a pixel
+     high or low of the baseline and the ribbon is dry in places. That is
+     one row of jitter per line, which is the whole difference between
+     "text in a box" and "somebody typed this". */
+  let ty = pad + 3;
+  if (name) {
+    c.drawImage(name, tx, ty);
+    px(tx, ty + name.height + 1, Math.min(tw, name.width + 8), 1, 'rgba(34,32,28,.45)');
+    ty += name.height + 5;
+  }
+  lines.forEach((l, i) => {
+    c.drawImage(l, tx, ty + ((i % 2) ? 0 : 0));
+    ty += l.height + 3;
+  });
+  if (foot) {
+    /* the prompt, pencilled in the bottom corner */
+    const fx = W - pad - 4 - foot.width, fy = H - pad - 5 - foot.height;
+    c.drawImage(foot, fx, fy);
+    px(fx - 1, fy + foot.height + 1, foot.width + 2, 1, 'rgba(74,70,60,.40)');
+  }
 
   c.restore();
   return cv;
@@ -9437,9 +9663,23 @@ SPR.frogWhole = function (key, def, opts) {
       const sh = P[def.skin[1]] || P.f;
       const dk = P[def.skin[2]] || P.e;
 
-      /* ---- the torso, turned ---- */
+      /* ---- the torso, turned ----
+
+         FIRST, PAINT THE FRONT COLLAR OUT. The body underneath is the
+         front-facing rig and it has a white shirt V at the top of it; the
+         side dressing only covers the middle forty-four per cent of the
+         width, so the two outer wings of that V were left showing either
+         side of the head as a row of white blocks. It read as teeth. */
       const px0 = bx2 + Math.round(bw2 * 0.28), pw = Math.round(bw2 * 0.44);
       const py0 = bodyTop + Math.round(bh * 0.14), ph = Math.round(bh * 0.82);
+      /* JUST WHERE THE COLLAR IS. Masking the whole shoulder width put a
+         flat slab across him and turned the silhouette into a scarecrow;
+         the front shirt V is central, so only the centre needs covering. */
+      const mx = px0 - 3, mw = pw + 6, mh = Math.round(bh * 0.26);
+      PIX.rect(c, mx, bodyTop, mw, mh, coatC);
+      PIX.rect(c, mx, bodyTop, mw, 2, 'rgba(255,255,255,.05)');
+      PIX.rect(c, mx, bodyTop, 1, mh, 'rgba(0,0,0,.20)');
+      PIX.rect(c, mx + mw - 1, bodyTop, 1, mh, 'rgba(0,0,0,.20)');
       PIX.rect(c, px0, py0, pw, ph, coatC);
       PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.06)');
       /* the one lapel you can see, edge-on */
@@ -9448,9 +9688,16 @@ SPR.frogWhole = function (key, def, opts) {
       /* a sliver of collar at the throat, and a tie only if he wears one —
          the fallback used to paint a red bar down the shirt of every frog
          in the game who does not own a tie */
-      PIX.rect(c, px0 + pw - 5, py0 + 1, 4, 3, P.W);
+      /* the collar, edge on: a wedge that steps forward, not a row of blocks */
+      for (let i = 0; i < 4; i++) {
+        PIX.rect(c, px0 + pw - 6 + i, py0 + i, 6 - i, 2, i < 2 ? P.W : P.q);
+      }
+      PIX.rect(c, px0 + pw - 6, py0, 6, 1, P.K);
       if (def.tie) {
-        PIX.rect(c, px0 + pw - 4, py0 + 3, 2, Math.round(ph * 0.26), P[def.tie] || P.r);
+        /* the knot at the throat and the blade down the front edge */
+        PIX.rect(c, px0 + pw - 4, py0 + 3, 3, 3, P[def.tie] || P.r);
+        PIX.rect(c, px0 + pw - 3, py0 + 6, 2, Math.round(ph * 0.30), P[def.tie] || P.r);
+        PIX.rect(c, px0 + pw - 2, py0 + 6, 1, Math.round(ph * 0.30), 'rgba(0,0,0,.30)');
       }
       /* the far shoulder, dropped into shadow behind the near one */
       PIX.rect(c, bx2 + Math.round(bw2 * 0.16), py0 + 3,
@@ -13153,6 +13400,8 @@ const CASE = {
     const cl = c.clues.find(x => x.id === sus.alibi.lever);
     /* THE BEST BEAT IN THE GAME DESERVES A LINE ON THE PHONE, so it is
        still on the record an hour later when you are picking a name */
+    /* the closest thing to satisfaction this job offers */
+    if (typeof SCENE !== 'undefined' && SCENE.beat) SCENE.beat('wry');
     if (typeof PHONE !== 'undefined' && PHONE.notify) {
       PHONE.notify({ app: 'case', tone: 'good',
         head: sus.name + "'S STORY IS IN PIECES",
@@ -14414,6 +14663,23 @@ const SCENE = (() => {
     hard:    ['angry', 'neutral', 'blink', 'squint'],
     sad:     ['sad', 'sad', 'blink', 'worry'],
     neutral: ['neutral', 'neutral', 'blink', 'think'],
+    /* ============================================================
+       AND THE ONE THE PLAYER ACTUALLY WEARS.
+
+       He came home off shift six years ago and the door was open.
+       He is in a foreign city with a cigarette end in an evidence
+       bag and a revolver he had to hand over at the airport. He
+       does not beam at people because his karma is good — which is
+       what he used to do, and what looked ridiculous.
+
+       Flat, tired, watchful, and hard when it is warranted. There
+       is no smile in this rotation at all. The warm face exists,
+       it just has to be EARNED by something specific happening,
+       it lasts a couple of seconds, and then he goes back to this.
+       ============================================================ */
+    grim:    ['neutral', 'bored', 'blink', 'neutral', 'squint', 'think'],
+    weary:   ['bored', 'neutral', 'blink', 'sad', 'bored'],
+    grimmer: ['angry', 'squint', 'blink', 'neutral', 'doubt'],
   };
 
   function faceOf(mood, T, seed) {
@@ -14440,6 +14706,7 @@ const SCENE = (() => {
      BUILD
      ============================================================ */
 
+  let forceK = 0;                // the harness pinning a scale for a comparison
   let oy = 0;                    // how far down the room sits in the frame
   let mouse = { x: 0, y: 0, on: false };
   let hoverRat = null;
@@ -14494,14 +14761,40 @@ const SCENE = (() => {
        ============================================================ */
     const fits = (k) => {
       if (k < 2) return false;
-      if (w / k < 190) return false;                 // camera inside a coat
+      /* two hundred room pixels is about six metres of street: enough to
+         see who is coming, which is the floor for playability */
+      if (w / k < 200) return false;
       /* the floor line has to be on screen or he is standing off the
          bottom of the frame: 122 rows keeps the deepest floor (118) plus
          a strip of foreground under it */
       return Math.floor(h / k) >= 122;
     };
+    /* ============================================================
+       AND HOW CLOSE THE CAMERA STANDS.
+
+       FOOT is three, so the only scales that keep the rig at full
+       detail are three and six — there is nothing clean in
+       between, and any other number downscales the rig through a
+       filter, which is real blur.
+
+       THREE was the old default and it puts four hundred and
+       twenty-seven room pixels in frame: most of a room, and a
+       cast eighty screen pixels tall in the middle of it. SIX
+       halves what is in frame and doubles the cast, and it used to
+       look bad — but that was the milky cast over the frame, which
+       has been measured out of existence. With the frame clean,
+       six is the better shot for a game about faces.
+
+       So six is the default where it fits, three is what a short
+       or narrow window gets, and Z switches between them for
+       anybody who would rather see the whole room.
+       ============================================================ */
+    const wide = (typeof META !== 'undefined' && META.load)
+      ? !!META.load().wideShot : false;
     let k = 0;
-    for (let m = FOOT; m <= 12; m += FOOT) if (fits(m)) { k = m; break; }
+    if (forceK && fits(forceK)) k = forceK;
+    else if (!wide && fits(FOOT * 2)) k = FOOT * 2;
+    else for (let m = FOOT; m <= 12; m += FOOT) if (fits(m)) { k = m; break; }
     if (!k) {
       /* nothing FOOT-friendly fits — a short landscape phone. Fall back to
          filling the height and accept the softer rig. */
@@ -14946,6 +15239,30 @@ const SCENE = (() => {
     } else me.v = 0;
     /* the squash from the last landing, and the dust it kicked */
     if (me.land > 0) me.land = Math.max(0, me.land - dt * 4.5);
+    /* the earned expression, running out */
+    if (warmT > 0) { warmT = Math.max(0, warmT - dt); if (!warmT) warmKind = null; }
+
+    /* ------------------------------------------------------------
+       AND THE ONES WHO PACE.
+
+       Everybody else works on the spot. A frog with the job 'pace'
+       walks a short beat and turns round at the end of it, which is
+       the only behaviour that has to move him rather than move his
+       arms — so it happens here rather than in the draw.
+       ------------------------------------------------------------ */
+    for (const a of (def.actors || [])) {
+      if (a.job !== 'pace' || a.gone || a.talking) continue;
+      if (a._home === undefined) { a._home = a.x; a._dir = 1; a._wait = 0; }
+      if (a._wait > 0) { a._wait -= dt; a.frame = 0; continue; }
+      a.x += a._dir * 13 * dt;
+      a.face = a._dir;
+      a.frame = Math.floor((a._pw = (a._pw || 0) + dt * 7)) % 8;
+      const span = a.beat || 22;
+      if ((a._dir > 0 && a.x > a._home + span) || (a._dir < 0 && a.x < a._home - span)) {
+        a._dir = -a._dir;
+        a._wait = 0.7 + (Math.abs(Math.round(a._home)) % 5) * 0.2;
+      }
+    }
     if (me.reach > 0) me.reach = Math.max(0, me.reach - dt * 1.6);
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p2 = puffs[i];
@@ -15952,7 +16269,20 @@ const SCENE = (() => {
     if (typeof CITY !== 'undefined' && G.phase !== 'title') {
       const w = viewW();
       const sky = CITY.sky();
-      if (typeof DAY !== 'undefined') DAY.wash(c, cam, -oy, w, H + oy);
+      /* ============================================================
+         NO CAST OVER THE FRAME. NOT EVEN A WHISPER.
+
+         The hour is baked into the room canvas by DAY.bake when the
+         room is painted, which is the honest place for it. This used
+         to ALSO lay two translucent sheets over the finished frame
+         every tick — a warm one and a cool one, three or four per
+         cent each. Measured on a real room that came to plus four
+         red, plus five green, plus six blue on the mean pixel, blue
+         shifted, over every pixel in the picture: which is the
+         definition of a filter over the game, and it is exactly what
+         it looked like. If an hour needs more character it goes in
+         the bake, where it lands on the art once.
+         ============================================================ */
       if (def.outdoor) {
         /* RAIN. Real drops with their own x, or a linear sequence folds
            them into a handful of columns and it reads as prison bars. */
@@ -16071,6 +16401,97 @@ const SCENE = (() => {
     return { hop: Math.round(hop), drop, tip };
   }
 
+  /* ============================================================
+     WHAT SOMEBODY IS DOING WHILE YOU ARE NOT TALKING TO THEM.
+
+     Everybody in every room used to breathe, and that was the
+     whole of it: nine frogs standing perfectly still with their
+     chests going up and down. At the old camera distance you
+     could not tell. The camera is closer now and you can.
+
+     So an actor gets a JOB, and a job is three things: a loop
+     with its own period, what the body does on that loop, and
+     the thing in his hands while he does it. The clerk types, the
+     one at the next desk turns a page, the barman wipes down the
+     counter he has wiped a thousand times, the watchman smokes,
+     somebody eats at the cafe, and the frog with nothing to do
+     walks four steps one way and four steps back.
+
+     Props are drawn at the hand: six to ten room pixels, which at
+     the close camera is enough to read as a cup or a pencil.
+     ============================================================ */
+  const DOING = {
+    /* job      period  what the body does           prop */
+    /* THE DESK ALREADY HAS A TYPEWRITER ON IT. Drawing a second one at
+       hand height put a machine through the middle of the clerk; the peck
+       of the shoulders is what reads as typing anyway. */
+    type:   { per: 0.34, body: 'peck', prop: null },
+    notes:  { per: 2.60, body: 'lean', prop: 'pad' },
+    read:   { per: 3.40, body: 'lean', prop: 'paper' },
+    drink:  { per: 3.80, body: 'raise', prop: 'glass' },
+    eat:    { per: 2.20, body: 'raise', prop: 'bite' },
+    smoke:  { per: 4.60, body: 'raise', prop: 'cig' },
+    wipe:   { per: 1.20, body: 'swing', prop: 'rag' },
+    sweep:  { per: 1.70, body: 'swing', prop: 'broom' },
+    sort:   { per: 1.50, body: 'peck', prop: null },
+    pace:   { per: 7.00, body: 'walk', prop: null },
+    watch:  { per: 5.20, body: 'turn', prop: null },
+  };
+
+  /* the little things they hold, all drawn facing `dir` */
+  function prop(c, kind, x, y, dir, T, ph) {
+    const px = (a, b, w, h, col) => ART.px(c, a, b, w, h, col);
+    if (kind === 'keys') {
+      /* the machine, not the hands: a carriage and a stack of paper */
+      px(x - 7, y + 1, 15, 5, '#3a3d48');
+      px(x - 7, y + 1, 15, 1, '#565b6c');
+      px(x - 5, y - 3, 11, 4, '#2a2d38');
+      px(x - 4, y - 2, 9, 2, '#e2d7b8');
+      for (let i = 0; i < 5; i++) {
+        px(x - 5 + i * 3, y + 3, 2, 1, (Math.floor(ph * 5) === i) ? '#c9c0a8' : '#8d8672');
+      }
+    } else if (kind === 'pad') {
+      px(x - 4 * dir, y, 9, 7, '#e2d7b8');
+      px(x - 4 * dir, y, 9, 1, '#f2e9cf');
+      px(x - 3 * dir, y + 2, 7, 1, 'rgba(34,32,28,.5)');
+      px(x - 3 * dir, y + 4, 5, 1, 'rgba(34,32,28,.5)');
+      /* the pencil, moving down the page */
+      px(x + 4 * dir, y + 1 + Math.round(ph * 4), 4, 1, '#c9a24a');
+      px(x + 7 * dir, y + 1 + Math.round(ph * 4), 1, 1, '#22201c');
+    } else if (kind === 'paper') {
+      const turn = ph > 0.86;
+      px(x - 6 * dir, y - 1, 13, 10, '#e2d7b8');
+      px(x - 6 * dir, y - 1, 13, 1, '#f2e9cf');
+      for (let i = 0; i < 4; i++) px(x - 5 * dir, y + 1 + i * 2, 10 - (i % 2) * 3, 1, 'rgba(34,32,28,.45)');
+      if (turn) px(x + 3 * dir, y - 2, 5, 11, '#f2e9cf');
+    } else if (kind === 'glass') {
+      px(x, y, 5, 6, 'rgba(200,225,235,.55)');
+      px(x, y, 5, 1, '#e8f2f6');
+      px(x + 1, y + 2, 3, 4, '#8a5a1a');
+      px(x, y + 6, 5, 1, 'rgba(0,0,0,.35)');
+    } else if (kind === 'bite') {
+      px(x, y, 7, 5, '#c9a24a');
+      px(x, y, 7, 1, '#e2c274');
+      px(x + 1, y + 2, 5, 2, '#8a5a2a');
+      if (ph > 0.5) px(x + 5, y, 2, 2, '#e2d7b8');   /* a piece gone */
+    } else if (kind === 'cig') {
+      px(x, y + 2, 6, 1, '#efe6cc');
+      px(x + 6, y + 2, 1, 1, '#e0631e');
+      for (let i = 0; i < 3; i++) {
+        px(x + 6, y - 1 - i * 2 - Math.round(ph * 3), 1, 1,
+          'rgba(206,202,190,' + (0.30 - i * 0.08).toFixed(2) + ')');
+      }
+    } else if (kind === 'rag') {
+      px(x, y + 2, 8, 3, '#c2cbd4');
+      px(x, y + 2, 8, 1, '#e2e8ee');
+      px(x + 2, y + 5, 4, 1, 'rgba(0,0,0,.28)');
+    } else if (kind === 'broom') {
+      px(x, y - 8, 1, 12, '#8a6a44');
+      px(x - 3, y + 4, 8, 4, '#b8963c');
+      px(x - 3, y + 4, 8, 1, '#d8b45c');
+    }
+  }
+
   function drawActor(c, a, T) {
     /* HE LOOKS AT YOU WHEN YOU GET CLOSE. A frog who keeps facing the wall
        while a detective walks up to him is furniture; turning his head is
@@ -16092,8 +16513,19 @@ const SCENE = (() => {
     /* AND WHAT HE IS DOING WITH HIS HANDS. A witness at a counter is
        working: wiping it down, sorting a rack, turning a page. One bob
        and one lean on their own slow loops is enough to sell it. */
-    let work = 0;
-    if (a.busyAt) {
+    let work = 0, lift = 0;
+    const job = DOING[a.job];
+    if (job) {
+      /* his own phase, so two clerks at two desks are never in step */
+      const ph = ((T / job.per) + (Math.abs(Math.round(a.x)) % 17) * 0.11) % 1;
+      const sw = Math.sin(ph * Math.PI * 2);
+      if (job.body === 'peck') work = Math.round(sw * 1.2);
+      else if (job.body === 'lean') { work = Math.round(sw); lift = Math.round(Math.abs(sw)); }
+      else if (job.body === 'raise') lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
+      else if (job.body === 'swing') work = Math.round(sw * 4);
+      else if (job.body === 'turn') work = sw > 0 ? 1 : -1;
+      a._ph = ph;
+    } else if (a.busyAt) {
       const wp = (T * a.busyAt + (a.x % 11) * 0.3) % 1;
       work = Math.round(Math.sin(wp * Math.PI * 2) * 2);
     }
@@ -16102,6 +16534,13 @@ const SCENE = (() => {
     ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
       Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
+    /* AND WHAT IS IN HIS HANDS, over the top of him, at hand height */
+    if (job && job.prop) {
+      /* held OUT, at the end of an arm, not buried in his chest */
+      const hy = Math.round(fy - h * 0.42) - lift;
+      const hx = Math.round(a.x + (w * 0.52) * face);
+      prop(c, job.prop, hx, hy, face, T, a._ph || 0);
+    }
   }
 
   /* ============================================================
@@ -16112,15 +16551,37 @@ const SCENE = (() => {
      out of hearts, looks pleased when the city thinks well of
      him, and goes bored when there is nothing left to do here.
      ============================================================ */
+  /* ------------------------------------------------------------
+     A WARM FACE HAS TO BE EARNED, AND IT DOES NOT LAST.
+
+     Something good happens — the dog leans on him, an errand pays,
+     a story comes apart — and he allows himself about two seconds
+     of it. SCENE.beat('good') is what the rest of the game calls.
+     ------------------------------------------------------------ */
+  let warmT = 0, warmKind = null;
+  function beat(kind) {
+    warmKind = kind;
+    warmT = kind === 'good' ? 2.2 : kind === 'wry' ? 1.6 : 1.2;
+  }
+
   function myFace(T) {
     if (me.reach > 0) return 'squint';                 // hand in something
     if (typeof G === 'undefined') return 'neutral';
     if ((G.hearts || 6) <= 2) return 'wince';
+    /* the earned moment, while it lasts */
+    if (warmT > 0) {
+      if (warmKind === 'good') return (warmT % 0.9) > 0.45 ? 'happy' : 'grin';
+      if (warmKind === 'wry') return 'smug';
+      if (warmKind === 'bad') return 'angry';
+    }
     const k = (typeof STORY !== 'undefined' && STORY.karma) ? STORY.karma() : null;
-    const mood = !k ? 'neutral'
-      : k.band >= 2 ? 'happy'
-      : k.band <= -2 ? 'hard'
-      : Math.abs(me.v) > 4 ? 'neutral' : 'watch';
+    /* HE DOES NOT SMILE BECAUSE HIS PAPERWORK IS IN ORDER. Good standing
+       makes him steadier, not happier; bad standing makes him harder. */
+    const mood = !k ? 'grim'
+      : k.band <= -2 ? 'grimmer'
+      : k.band <= -1 ? 'hard'
+      : (CITY && CITY.minutesLeft && CITY.minutesLeft() < 120) ? 'weary'
+      : Math.abs(me.v) > 4 ? 'grim' : 'watch';
     return faceOf(mood, T, 3);
   }
 
@@ -16222,6 +16683,8 @@ const SCENE = (() => {
         foot: inRange ? (hint || 'TAP') : null,
         /* a plate that is half the width of a phone is a wall, not a label */
         maxW: Math.max(90, Math.min(190, window.innerWidth * 0.42)),
+        /* a label over a prop is a small card: no stamp, no punched holes */
+        small: true,
         rim: inRange ? PIX.PAL.g : PIX.PAL.t,
       }));
     }
@@ -16244,7 +16707,19 @@ const SCENE = (() => {
   }
 
   return {
-    H, open, close, walkTo, rig, rigH, rigPic,
+    H, open, close, walkTo, rig, rigH, rigPic, beat,
+    /* Z: the whole room, or close enough to see a face */
+    toggleZoom() {
+      if (typeof META === 'undefined') return false;
+      const m = META.load();
+      m.wideShot = !m.wideShot;
+      META.save();
+      scale();
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall(m.wideShot ? 'CAMERA: THE WHOLE ROOM' : 'CAMERA: CLOSE IN');
+      }
+      return !m.wideShot;
+    },
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
     /* what the frame is actually rendering at, for the resolution probe */
     debugRes() {
@@ -16252,6 +16727,8 @@ const SCENE = (() => {
         floorY: def ? def.floorY : null, roomW: def ? def.w : null };
     },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
+    /* the harness compares the shot at both available scales */
+    debugForceK(k) { forceK = k || 0; scale(); },
     /* the harness asks what is under a point, so the egg rules can be
        asserted rather than eyeballed */
     debugPick(x, y) { return pick(x, y === undefined ? (def ? def.floorY - 10 : 100) : y); },
@@ -17795,18 +18272,59 @@ const PARIS = (() => {
 
     const paint = (c) => {
       const p = P();
-      /* THE CITY, A LONG WAY BELOW AND BEHIND. From the top of the Butte
-         you are looking over the whole of it, and in daylight that is not
-         a row of black boxes with lit windows in them: it is grey-blue
-         haze with roofs coming out of it, paler the further off it goes. */
-      for (let i = 0; i < 30; i++) {
-        const bx = (i * 27 + seed % 19) % (W - 24);
+      /* ============================================================
+         THE CITY, A LONG WAY BELOW AND BEHIND.
+
+         Thirty flat slabs with one white dot on each read as a row of
+         tombstones, and they were painted in fixed cold greys, so at
+         six in the evening the ground went gold and the whole of
+         Paris stayed the colour of a filing cabinet. Every block now
+         gets a mansard cap, a grid of windows and a chimney, and its
+         stone comes from the hour like everything else does.
+         ============================================================ */
+      const st = (typeof DAY !== 'undefined' && DAY.stone) ? DAY.stone() : null;
+      /* DISTANCE FADES INTO THE SKY IT IS STANDING IN, not into a fixed
+         cold grey — mixing everything 80% toward slate is how the whole
+         of Paris came out the colour of a filing cabinet at sunset. */
+      const hazeTo = (typeof DAY !== 'undefined' && DAY.band)
+        ? (DAY.band().lo || DAY.band().mid || '#c8d2da') : '#c8d2da';
+      const far4 = (n, base) => {
+        const t = 0.10 + n * 0.13;
+        return (typeof DAY !== 'undefined' && DAY.rgb)
+          ? DAY.rgb(DAY.mix(base, hazeTo, t)) : base;
+      };
+      for (let i = 0; i < 34; i++) {
+        const bx = (i * 24 + seed % 23) % (W - 26);
         const far = (i % 4);
-        const tone = ['#9fb0bd', '#93a5b4', '#a8b7c2', '#8b9dad'][far];
-        px(c, bx, FY - BAND - 52 - far * 3, 22, 20 + far * 3, tone);
-        px(c, bx, FY - BAND - 52 - far * 3, 22, 1, '#c2ceD6'.toLowerCase());
-        px(c, bx + 18, FY - BAND - 52 - far * 3, 4, 20 + far * 3, 'rgba(80,92,104,.25)');
-        if (i % 3 === 0) px(c, bx + 4, FY - BAND - 48, 3, 3, 'rgba(255,255,255,.45)');
+        const bw2 = 16 + (i % 4) * 7;
+        const top = FY - BAND - 42 - far * 5 - (i % 7) * 3;
+        const bot = FY - BAND - 26 + far * 3;
+        const face = far4(far, st ? st.mid : '#93a5b4');
+        const lit = far4(far, st ? st.lit : '#c2ced6');
+        const dark = far4(far, st ? st.shade : '#6f7f8d');
+        px(c, bx, top, bw2, bot - top, face);
+        px(c, bx, top, 2, bot - top, lit);
+        px(c, bx + bw2 - 3, top, 3, bot - top, dark);
+        /* THE MANSARD, which is the whole silhouette of this city, and it
+           is NARROW AT THE RIDGE. Drawn widest at the top it is a hat on
+           a post, and thirty of them are a row of mushrooms. */
+        for (let k = 0; k < 6; k++) {
+          px(c, bx + k, top - k, bw2 - k * 2, 1,
+            k < 2 ? far4(far, '#8f9aa6') : far4(far, '#6f7b86'));
+        }
+        px(c, bx + 2, top - 6, bw2 - 4, 1, far4(far, '#a8b2bc'));
+        /* the windows, in rows, dimmer the further off they are */
+        for (let wy = top + 4; wy < bot - 4; wy += 6) {
+          for (let wx = bx + 4; wx < bx + bw2 - 5; wx += 6) {
+            px(c, wx, wy, 3, 4, far4(far, '#5f6d7a'));
+            px(c, wx, wy, 3, 1, far4(far, '#8f9aa6'));
+          }
+        }
+        /* and a chimney or two on the ridge */
+        if (i % 2) {
+          px(c, bx + 4, top - 11, 3, 6, dark);
+          px(c, bx + bw2 - 8, top - 10, 3, 5, dark);
+        }
       }
       /* and the haze the distance sits in */
       for (let i = 0; i < 30; i++) {
@@ -17924,7 +18442,7 @@ const PARIS = (() => {
         tag: 'THE CUP MAN', tagCol: PIX.PAL.R, job: 'cups' },
       { id: 'wit', x: 600, z: 0.1, key: 'waiter',
         def: typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null, face: -1,
-        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased', busyAt: 0.65 },
+        tag: 'THE CAFE WAITER', tagCol: PIX.PAL.G, witness: true, mood: 'pleased', job: 'wipe' },
     ];
 
     const eggs = [
@@ -18053,7 +18571,7 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 480, z: 0.12, key: 'guard',
         def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
-        tag: 'THE GALLERY GUARD', tagCol: PIX.PAL.L, witness: true, mood: 'watch' },
+        job: 'pace', tag: 'THE GALLERY GUARD', tagCol: PIX.PAL.L, witness: true, mood: 'watch' },
     ];
 
     return {
@@ -18449,7 +18967,7 @@ const PARIS = (() => {
     const actors = [
       { id: 'wit', x: 400, z: 0.14, key: 'usher',
         def: typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null, face: -1,
-        tag: 'THE HOUSE MANAGER', tagCol: PIX.PAL.g, witness: true, mood: 'watch' },
+        job: 'read', tag: 'THE HOUSE MANAGER', tagCol: PIX.PAL.g, witness: true, mood: 'watch' },
     ];
 
     return {
@@ -18650,7 +19168,7 @@ const PARIS = (() => {
       { id: 'wit', x: 240, z: 0.13, key: 'keeper2',
         def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
           : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
-        tag: 'THE GARDENER', tagCol: PIX.PAL.F, witness: true, mood: 'weary' },
+        job: 'sweep', tag: 'THE GARDENER', tagCol: PIX.PAL.F, witness: true, mood: 'weary' },
     ];
 
     return {
@@ -18821,7 +19339,7 @@ const PARIS = (() => {
       { id: 'wit', x: 130, z: 0.11, key: 'zone',
         def: typeof KEEPER_DEF !== 'undefined' ? KEEPER_DEF
           : (typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null), face: 1,
-        tag: 'THE MAN AT THE FIRE', tagCol: PIX.PAL.r, witness: true, mood: 'watch' },
+        job: 'smoke', tag: 'THE MAN AT THE FIRE', tagCol: PIX.PAL.r, witness: true, mood: 'watch' },
     ];
 
     return {
@@ -19156,7 +19674,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 402, y: FY, key: 'launder', def: LAUNDER_DEF, face: -1, still: true,
-        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty', busyAt: 0.55 },
+        tag: 'THE LAUNDERER', tagCol: PIX.PAL.G, witness: true, mood: 'shifty', job: 'sort' },
     ];
 
     const eggs = [
@@ -19361,11 +19879,13 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 322, y: FY, key: 'watch', def: WATCH_DEF, face: -1,
-        tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true, mood: 'bored' },
+        job: 'smoke', tag: 'THE WATCHMAN', tagCol: PIX.PAL.S, witness: true, mood: 'bored' },
     ];
 
     const eggs = [
-      egg({ id: 'ball', x: 130, y: FY - 66, art: 'eg_ball',
+      /* ON the crate, not above it: at the close camera an easter egg
+         hanging eight pixels off the top of a stack is a balloon */
+      egg({ id: 'ball', x: 134, y: FY - 50, art: 'eg_ball',
         label: 'SOMETHING RED AND WHITE',
         look: 'A RED AND WHITE BALL WITH A BUTTON ON IT. THE CRATE SAYS KANTO.' }),
     ];
@@ -19454,7 +19974,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 288, y: FY, key: 'pawn', def: PAWN_DEF, face: -1, still: true,
-        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch', busyAt: 0.4 },
+        tag: 'THE BROKER', tagCol: PIX.PAL.Y, witness: true, mood: 'watch', job: 'notes' },
     ];
 
     /* the glass case and its counter are painted over him, so he is behind
@@ -19570,7 +20090,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 246, y: FY, key: 'waitress', def: WAITRESS_DEF, face: -1, still: true,
-        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased', busyAt: 0.7 },
+        tag: 'THE WAITRESS', tagCol: PIX.PAL.P, witness: true, mood: 'pleased', job: 'wipe' },
       { id: 'cook', x: 300, y: FY, key: 'cook', def: COOK_DEF, face: -1, still: true,
         tag: 'THE COOK', tagCol: PIX.PAL.N },
     ];
@@ -19634,17 +20154,45 @@ const PLACES = (() => {
       px(c, 44, 70, 3, 5, p.h);
       sign(c, 8, 20, 52, 'THE LAMP', '#2e7d5b');
 
-      /* the back bar: bottles, the tarnished mirror, the green lamp */
-      for (let i = 0; i < 14; i++) {
-        const bx = 84 + i * 9, h2 = 8 + (i % 3) * 4;
-        px(c, bx, 54 - h2, 5, h2, ['#2e7d5b', '#8c2230', '#a5741f', '#3f89c4'][i % 4]);
-        px(c, bx, 54 - h2, 1, h2, 'rgba(255,255,255,.2)');
-        px(c, bx + 1, 56 - h2, 3, 2, '#12101d');
+      /* ------------------------------------------------------------
+         THE BACK BAR.
+
+         Fourteen five-pixel tabs of colour along a shelf read as a row
+         of postage stamps, which is what a bottle looks like when the
+         camera is far enough away not to care. It is not far away any
+         more. A bottle is a shoulder, a neck, a cap and a label, and it
+         catches the light down one side.
+         ------------------------------------------------------------ */
+      px(c, 80, 38, 130, 3, p.K); px(c, 81, 38, 128, 1, '#6b4426');
+      px(c, 82, 40, 126, 14, '#171b22');               /* the mirror behind */
+      ART.dither(c, 82, 40, 126, 14, 'rgba(200,220,235,.05)', 0.2, 5);
+      for (let i = 0; i < 16; i++) {
+        const bx = 84 + i * 8;
+        const h2 = 13 + (i % 4) * 3;                    /* how tall this one is */
+        const top = 54 - h2;
+        const glass = ['#2e7d5b', '#8c2230', '#a5741f', '#3f89c4', '#6b4426'][i % 5];
+        const lit = ['#4fae82', '#c2465a', '#d8a23c', '#6fb2e0', '#9a6f42'][i % 5];
+        /* the body, three wide, with a lit edge down the left of it */
+        px(c, bx, top + 4, 6, h2 - 4, glass);
+        px(c, bx, top + 4, 1, h2 - 4, lit);
+        px(c, bx + 5, top + 4, 1, h2 - 4, 'rgba(0,0,0,.34)');
+        /* the shoulder, stepping in to the neck */
+        px(c, bx + 1, top + 2, 4, 2, glass);
+        px(c, bx + 1, top + 2, 1, 2, lit);
+        px(c, bx + 2, top, 2, 3, glass);
+        px(c, bx + 2, top, 1, 3, lit);
+        /* the cap, and a foil collar on the tall ones */
+        px(c, bx + 2, top - 2, 2, 2, i % 3 ? '#c9a24a' : '#8d8672');
+        if (h2 > 18) px(c, bx + 1, top + 1, 4, 1, '#c9a24a');
+        /* the label, which is the only thing you actually read */
+        px(c, bx, top + 8, 6, 4, '#e2d7b8');
+        px(c, bx, top + 8, 6, 1, '#f2e9cf');
+        px(c, bx + 1, top + 9, 4, 1, 'rgba(34,32,28,.55)');
+        /* and what is left in it */
+        if (i % 3 === 1) px(c, bx + 1, top + 4, 4, 3, 'rgba(12,14,18,.45)');
       }
       px(c, 80, 54, 130, 3, p.K); px(c, 81, 54, 128, 1, '#6b4426');
-      px(c, 80, 38, 130, 3, p.K); px(c, 81, 38, 128, 1, '#6b4426');
-      px(c, 82, 40, 126, 12, '#1b2028');
-      ART.dither(c, 82, 40, 126, 12, 'rgba(200,220,235,.06)', 0.2, 5);
+      px(c, 81, 53, 128, 1, 'rgba(255,240,210,.14)');   /* the shelf's lit lip */
       /* the lamp the place is named after */
       px(c, 140, 12, 4, 10, p.K);
       PIX.disc(c, 142, 26, 10, p.K);
@@ -19714,7 +20262,7 @@ const PLACES = (() => {
 
     const actors = [
       { id: 'wit', x: 168, y: FY, key: 'barman', def: BARMAN_DEF, face: 1, still: true,
-        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard', busyAt: 0.5 },
+        tag: 'THE BARMAN', tagCol: PIX.PAL.N, witness: true, mood: 'hard', job: 'wipe' },
       { id: 'drunk', x: 300, y: FY, key: 'drunk', def: DRUNK_DEF, face: -1, still: true,
         tag: 'A REGULAR', tagCol: PIX.PAL.d },
     ];
@@ -19981,7 +20529,10 @@ const PHONE = (() => {
     { id: 'job', word: 'WORK', icon: 'ic_star', dock: true },
     { id: 'karma', word: 'KARMA', icon: 'ic_paw' },
     { id: 'jobs', word: 'JOBS', icon: 'ic_coin' },
-    { id: 'notes', word: 'ALERTS', icon: 'ic_star' },
+    { id: 'notes', word: 'ALERTS', icon: 'ic_drum' },
+    { id: 'wire', word: 'WIRE', icon: 'ic_phone' },
+    { id: 'roll', word: 'ROLL', icon: 'ic_glass2' },
+    { id: 'book', word: 'TELLS', icon: 'ic_skull' },
   ];
 
   /* ============================================================
@@ -20200,7 +20751,7 @@ const PHONE = (() => {
   }
 
   function drawMap() {
-    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v6';
+    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v7';
     return ART.cached(key, () => {
       const o = ART.cv(MW, MH), c = o.c;
       const rng = U.mulberry32(U.hashSeed((G.seedStr || 'CITY') + ':map'));
@@ -20402,6 +20953,45 @@ const PHONE = (() => {
         /* and its name, in the top left of it, out of the pins' way */
         const t = PIXFONT.render(z.name, { scale: 1, color: 'rgba(90,76,48,.72)', shadow: null });
         c.drawImage(t, zx + 4, zy + 3);
+      });
+
+      /* ---------- THE STREET NAMES ----------
+         A plan you can lean over has to have something on it that
+         rewards leaning: the named streets, in the ink a plan uses for
+         lettering, along the boulevards they belong to. At the fit
+         magnification they are a grey texture; close in they are words. */
+      const streetInk = 'rgba(70,58,36,.78)';
+      const NAMED = [
+        ['RUE DE RIVOLI', 118, 132, 0],
+        ['BD SEBASTOPOL', 196, 96, 1],
+        ['AV DE L OPERA', 176, 74, 0],
+        ['BD HAUSSMANN', 150, 52, 0],
+        ['RUE LAFAYETTE', 250, 44, 0],
+        ['BD ST GERMAIN', 132, 190, 0],
+        ['BD ST MICHEL', 168, 214, 1],
+        ['AV DES CHAMPS ELYSEES', 44, 88, 0],
+        ['QUAI DE LA RAPEE', 336, 214, 0],
+        ['RUE DE LA PAIX', 158, 88, 0],
+        ['BD DE CLICHY', 176, 24, 0],
+        ['AV FOCH', 30, 62, 0],
+      ];
+      NAMED.forEach(([nm, nx, ny, vert]) => {
+        const t = PIXFONT.render(nm, { scale: 1, color: streetInk, shadow: null });
+        if (!vert) { c.drawImage(t, nx, ny); return; }
+        /* a street running down the sheet gets its name turned with it */
+        c.save();
+        c.translate(nx, ny);
+        c.rotate(Math.PI / 2);
+        c.drawImage(t, 0, -t.height);
+        c.restore();
+      });
+      /* and the arrondissement numbers, in the roman a plan would use */
+      [['I', 150, 120], ['II', 186, 96], ['III', 222, 108], ['IV', 200, 140],
+        ['V', 176, 186], ['VI', 138, 176], ['VII', 92, 160], ['VIII', 86, 76],
+        ['IX', 176, 62], ['X', 258, 62], ['XI', 276, 128], ['XVI', 34, 122],
+        ['XVIII', 176, 16], ['XX', 320, 96]].forEach(([n2, nx, ny]) => {
+        const t = PIXFONT.render(n2, { scale: 1, color: 'rgba(120,102,66,.55)', shadow: null });
+        c.drawImage(t, nx, ny);
       });
 
       /* ---------- THE CARTOUCHE, THE ROSE AND THE SCALE ---------- */
@@ -20733,6 +21323,8 @@ const PHONE = (() => {
   function badgeFor(id) {
     const n = unread(id);
     if (id === 'notes') return unread();
+    if (id === 'roll') return n + CITY.found().length;
+    if (id === 'wire') return n + ((G.log || []).length ? 1 : 0);
     if (id === 'map') return n + (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
     if (id === 'case') return n + CITY.found().length;
     if (id === 'kit') return n + Object.keys(G.cargo || {}).length;
@@ -20811,6 +21403,121 @@ const PHONE = (() => {
   }
 
   /* ============================================================
+     MESSAGES — the captain does not phone, he wires.
+
+     Every line the case log has recorded, laid out as a thread:
+     his in a grey bubble on the left, yours in a green one on the
+     right. It is the same log the case file has always kept; a
+     thread is just the honest shape for it, because that is what
+     a run of short lines from one person over one afternoon is.
+     ============================================================ */
+  function wireApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('THE BRIGADE', k, '#eae4d0'));
+    head.appendChild(line('CAPTAIN ROOK  -  ' + CITY.hhmm(), Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const thread = U.el('div', 'ph-thread');
+    const log = (G.log || []).slice(-14);
+    if (!log.length) {
+      const b2 = U.el('div', 'ph-bub them');
+      b2.appendChild(line('GET OUT THERE.', Math.max(1, k - 1), '#eae4d0', null));
+      thread.appendChild(b2);
+    }
+    log.forEach((l, i) => {
+      /* what the city did is him; what you did is you */
+      const mine = /^(PINNED|OPENED|FOUND|NAMED|BROKE)/.test(l);
+      const b2 = U.el('div', 'ph-bub ' + (mine ? 'me' : 'them'));
+      UI.wrapLines(l, 26).forEach(t =>
+        b2.appendChild(line(t, Math.max(1, k - 1), mine ? '#0b1a14' : '#eae4d0', null)));
+      thread.appendChild(b2);
+    });
+    /* and the one line he always ends on */
+    const last = U.el('div', 'ph-bub them');
+    const left = CITY.minutesLeft();
+    UI.wrapLines(left < 90 ? 'OFF THE STREET BY SEVEN. I MEAN IT.'
+      : 'ANYTHING YET?', 26).forEach(t =>
+      last.appendChild(line(t, Math.max(1, k - 1), '#eae4d0', null)));
+    thread.appendChild(last);
+    wrap.appendChild(thread);
+    return wrap;
+  }
+
+  /* ============================================================
+     THE ROLL — every piece of evidence, as a photograph.
+
+     The case app lists what each clue RULES OUT, which is the
+     working view. This is the other one: the things themselves,
+     in the order you dug them up, each in a white border with the
+     place and the hour written under it. It is the only place in
+     the game you can see the whole afternoon at once.
+     ============================================================ */
+  function rollApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const got = CITY.found();
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('THE ROLL', k, '#eae4d0'));
+    head.appendChild(line(got.length + ' PHOTOGRAPHED  -  '
+      + (G.case ? G.case.clues.length : 0) + ' IN THE FILE',
+      Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    if (!got.length) {
+      wrap.appendChild(line('NOTHING ON THE ROLL YET.', Math.max(1, k - 1), '#5f8f7f', null));
+      return wrap;
+    }
+    const grid = U.el('div', 'ph-roll');
+    got.forEach(cl => {
+      const cell = U.el('div', 'ph-snap');
+      const art = ART.art(cl.icon || 'ev_photo', Math.max(2, k));
+      cell.appendChild(SPR.clone(art, 1));
+      const cap = U.el('div', 'ph-snapcap');
+      /* WHAT IT SAYS, not what its id is. `cl.text` is the line the game
+         shows everywhere else; `cl.at` is the stop it came out of. */
+      UI.wrapLines(String(cl.text || cl.id || '').toUpperCase(), 15).slice(0, 3).forEach(t =>
+        cap.appendChild(line(t, 1, '#22201c', null)));
+      cap.appendChild(line(((CITY.PLACES[cl.at] || {}).short || 'THE CITY'),
+        1, '#6b6454', null));
+      cell.appendChild(cap);
+      grid.appendChild(cell);
+    });
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  /* ============================================================
+     THE NOTEBOOK — what a face tells you before he speaks.
+
+     Every tell you have ever learned off a corpse, kept between
+     runs, with what it does to a man across a table. This has
+     been in the save file since the second week and there has
+     never been a way to read it.
+     ============================================================ */
+  function bookApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const all = (typeof TRAITS !== 'undefined') ? Object.keys(TRAITS) : [];
+    const known = all.filter(id => META.knowsTell && META.knowsTell(id));
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('THE NOTEBOOK', k, '#eae4d0'));
+    head.appendChild(line(known.length + ' OF ' + all.length + ' TELLS LEARNED',
+      Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const list = U.el('div', 'ph-clues');
+    all.forEach(id => {
+      const t = TRAITS[id], on = known.indexOf(id) >= 0;
+      const row = U.el('div', 'ph-clue' + (on ? ' got' : ''));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(on ? t.name : '- - - -', Math.max(1, k - 1),
+        on ? '#eae4d0' : '#3f5f52', null));
+      UI.wrapLines(on ? (t.hint || '') : 'NOT LEARNED YET', 30).forEach(x =>
+        col.appendChild(line(x, 1, on ? '#8fb3a0' : '#2f4a3f', null)));
+      row.appendChild(col);
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+    return wrap;
+  }
+
+  /* ============================================================
      ALERTS — everything the night has told you, newest first
      ============================================================ */
   function notesApp(k) {
@@ -20870,13 +21577,33 @@ const PHONE = (() => {
   }
 
   /* ---------- FROGGOMAP ---------- */
+  /* ============================================================
+     ZOOM AND PAN.
+
+     A plan of a city you cannot lean over is a picture of a plan.
+     There are two whole-number magnifications — the paper is
+     pixels and half a pixel is a smudge — so: FIT, where the
+     whole sheet is on screen, and CLOSE, where it is twice that
+     and you drag it about with your thumb.
+
+     `mz` is which of the two, `mpx/mpy` is where the paper has
+     been dragged to. Both live outside the render so opening the
+     app again puts you back where you were looking.
+     ============================================================ */
+  let mz = 0, mpx = 0, mpy = 0;
+
   function mapApp(k) {
     const wrap = U.el('div', 'ph-app');
     /* AT THIS RESOLUTION THE PAPER WANTS TO BE 1:1. Four times the pixels
        in the same space on screen is the whole point; blowing it up again
        would throw that straight back away. */
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.88 / MW,
+    const fit = U.clamp(Math.floor(Math.min(window.innerWidth * 0.88 / MW,
       window.innerHeight * 0.54 / MH)), 1, 4);
+    const K = mz ? fit * 2 : fit;
+    /* the window the paper is looked at through */
+    const view = U.el('div', 'map-view');
+    view.style.width = (MW * fit) + 'px';
+    view.style.height = (MH * fit) + 'px';
     const holder = U.el('div', 'map-holder');
     holder.appendChild(SPR.clone(drawMap(), K));
     /* the routes ride on their own layer over the paper: the paper is
@@ -20890,9 +21617,76 @@ const PHONE = (() => {
     /* THE PINS SHRINK WITH THE PAPER. At the old resolution a marker had
        to be chunky to read at all; on a plan with individual buildings on
        it the same marker covers half an arrondissement. */
-    CITY.board().forEach(e => holder.appendChild(pin(e, 1)));
-    holder.appendChild(pin({ place: CITY.PLACES.precinct, visited: true, left: 0 }, 1));
-    wrap.appendChild(holder);
+    CITY.board().forEach(e => holder.appendChild(pin(e, mz ? 2 : 1)));
+    holder.appendChild(pin({ place: CITY.PLACES.precinct, visited: true, left: 0 },
+      mz ? 2 : 1));
+
+    /* ---- where the paper sits inside the window ---- */
+    const clampPan = () => {
+      const maxX = Math.max(0, MW * K - MW * fit);
+      const maxY = Math.max(0, MH * K - MH * fit);
+      mpx = U.clamp(mpx, -maxX, 0);
+      mpy = U.clamp(mpy, -maxY, 0);
+    };
+    clampPan();
+    const place = () => { holder.style.transform = 'translate(' + mpx + 'px,' + mpy + 'px)'; };
+    place();
+
+    /* ---- drag to pan, at the close magnification ---- */
+    let drag = null;
+    view.onpointerdown = (ev) => {
+      if (!mz) return;
+      drag = { x: ev.clientX, y: ev.clientY, px: mpx, py: mpy, moved: 0 };
+      view.setPointerCapture && view.setPointerCapture(ev.pointerId);
+    };
+    view.onpointermove = (ev) => {
+      if (!drag) return;
+      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      drag.moved = Math.max(drag.moved, Math.abs(dx) + Math.abs(dy));
+      mpx = drag.px + dx; mpy = drag.py + dy;
+      clampPan(); place();
+    };
+    view.onpointerup = () => { drag = null; };
+    view.onpointercancel = () => { drag = null; };
+    /* a wheel is a zoom, centred on where the pointer is */
+    view.onwheel = (ev) => {
+      ev.preventDefault();
+      const want = ev.deltaY < 0 ? 1 : 0;
+      if (want === mz) return;
+      const r = view.getBoundingClientRect();
+      const fx = (ev.clientX - r.left - mpx) / K, fy = (ev.clientY - r.top - mpy) / K;
+      mz = want;
+      const K2 = mz ? fit * 2 : fit;
+      mpx = Math.round((ev.clientX - r.left) - fx * K2);
+      mpy = Math.round((ev.clientY - r.top) - fy * K2);
+      render();
+    };
+    view.appendChild(holder);
+    wrap.appendChild(view);
+
+    /* ---- and the buttons, for anybody without a wheel ---- */
+    const bar = U.el('div', 'map-zoom');
+    [['-', 0], ['+', 1]].forEach(([sym, to]) => {
+      const b2 = U.el('button', 'map-zb' + (mz === to ? ' on' : ''));
+      b2.appendChild(line(sym, k, mz === to ? '#0b1a14' : '#8ff7c8', null));
+      b2.onclick = () => {
+        if (mz === to) return;
+        /* keep the middle of what you are looking at in the middle */
+        const cx = (MW * fit / 2 - mpx) / K, cy = (MH * fit / 2 - mpy) / K;
+        mz = to;
+        const K2 = mz ? fit * 2 : fit;
+        mpx = Math.round(MW * fit / 2 - cx * K2);
+        mpy = Math.round(MH * fit / 2 - cy * K2);
+        SFX.tick && SFX.tick();
+        render();
+      };
+      bar.appendChild(b2);
+    });
+    const hint = U.el('span', 'map-zhint');
+    hint.appendChild(line(mz ? 'DRAG THE PAPER' : 'WHOLE SHEET',
+      Math.max(1, k - 1), '#5f8f7f', null));
+    bar.appendChild(hint);
+    wrap.appendChild(bar);
 
     const foot = U.el('div', 'ph-foot');
     const p = CITY.here();
@@ -21171,7 +21965,10 @@ const PHONE = (() => {
           : view === 'job' ? jobApp(k)
             : view === 'karma' ? karmaApp(k)
               : view === 'jobs' ? jobsApp(k)
-                : view === 'notes' ? notesApp(k) : mapApp(k));
+                : view === 'notes' ? notesApp(k)
+                  : view === 'wire' ? wireApp(k)
+                    : view === 'roll' ? rollApp(k)
+                      : view === 'book' ? bookApp(k) : mapApp(k));
       screen.appendChild(dock(k));
     }
     body.appendChild(screen);
@@ -22165,6 +22962,8 @@ const ROOMS = (() => {
     /* --- Maybelle, at her desk --- */
     actors.push({
       id: 'may', x: 164, y: FY, key: MAY_RIG.key, def: MAY_RIG.def, face: -1,
+      /* she is on the front desk and the front desk is a typewriter */
+      job: 'type', mood: 'pleased',
       label: 'OFFICER MAYBELLE',
       hint: () => (G.mayTalked ? 'ALREADY SAID YOUR PIECE' : 'TALK'),
       onUse: () => STORY.talkMaybelle(),
@@ -22172,15 +22971,35 @@ const ROOMS = (() => {
     /* --- the captain, outside his own door --- */
     actors.push({
       id: 'cap', x: 272, y: FY, key: CAP_RIG.key, def: CAP_RIG.def, face: -1,
+      /* he stands outside his own door with a cigar and reads the room */
+      job: 'smoke', mood: 'hard',
       label: 'CAPTAIN ROOK',
       hint: () => (STORY.capHasBrief() ? 'HE HAS SOMETHING' : 'TALK'),
       onUse: () => STORY.talkCaptain(),
     });
     /* --- a uniform typing up an assault, and a drunk in the cell --- */
     actors.push({ id: 'uni', x: 344, y: FY, key: UNI_RIG.key, def: UNI_RIG.def, face: -1, still: false,
+      job: 'type', mood: 'bored',
       label: 'PATROLMAN DILL', hint: 'TALK', onUse: () => STORY.smallTalk('dill') });
     actors.push({ id: 'drunk', x: 566, y: FY, key: DRUNK_RIG.key, def: DRUNK_RIG.def, face: -1, still: true,
+      job: 'drink', mood: 'bored',
       label: 'THE DRUNK TANK', hint: 'TALK', onUse: () => STORY.smallTalk('drunk') });
+    /* AND THE REST OF A WORKING BULLPEN. Two more at the desks behind —
+       one typing up somebody else's night, one going through a file — and a
+       sergeant walking the length of the room because he always is. */
+    actors.push({ id: 'clerk1', x: 408, y: FY, key: 'clerk1',
+      def: Object.assign({}, DILL_DEF, { skin: ['N', 'n', 'n'], flatcap: false }),
+      face: -1, job: 'type', mood: 'bored', profile: false,
+      label: 'A CLERK', hint: 'HE IS BUSY', onUse: () => STORY.smallTalk('dill') });
+    actors.push({ id: 'clerk2', x: 462, y: FY, key: 'clerk2',
+      def: Object.assign({}, DILL_DEF, { skin: ['G', 'g', 'h'], glasses: 'round' }),
+      face: -1, job: 'read', mood: 'watch',
+      label: 'A CLERK', hint: 'HE IS READING', onUse: () => STORY.smallTalk('dill') });
+    actors.push({ id: 'sarge', x: 100, y: FY, key: 'sarge',
+      def: Object.assign({}, DILL_DEF, { skin: ['e', 'e', 'K'], fat: true }),
+      face: 1, job: 'pace', beat: 40, mood: 'hard',
+      label: 'THE DUTY SERGEANT', hint: 'HE IS WALKING IT OFF',
+      onUse: () => STORY.smallTalk('dill') });
 
     /* --- the board --- */
     spots.push({
@@ -23090,6 +23909,7 @@ const STORY = {
       G.quests[id] = 'ready';
       STORY.note('ERRAND DONE. GO BACK TO ' + q.who + '.');
       UI.stampSmall('ERRAND DONE: SEE ' + q.who);
+      if (typeof SCENE !== 'undefined' && SCENE.beat) SCENE.beat('wry');
       if (typeof PHONE !== 'undefined' && PHONE.notify) {
         PHONE.notify({ app: 'map', tone: 'good',
           head: q.who + ' OWES YOU NOW',
@@ -23987,6 +24807,8 @@ const STORY = {
      station. Nothing in the case depends on any of them.
      ============================================================ */
   async petIt(a) {
+    /* the one moment in a shift he is allowed to look pleased */
+    if (typeof SCENE !== 'undefined' && SCENE.beat) SCENE.beat('good');
     if (CINE.busy) return;
     a.pet = 2.2;
     a.wait = 2.2;
@@ -24861,8 +25683,9 @@ const UI = {
       plate.id = 'obj-plate';
       plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
       const col = U.el('div', 'obj-col');
-      col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
-      col.appendChild(UI.wrap(ob.line, 34, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+      /* ink on buff stock, like the sheet and the cards */
+      col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: '#8a2418', shadow: null }));
+      col.appendChild(UI.wrap(ob.line, 34, { scale: K, color: '#22201c', shadow: null }));
       plate.appendChild(col);
       plate.onclick = () => PHONE.open('job');
 
@@ -24971,8 +25794,8 @@ const UI = {
     plate.innerHTML = '';
     plate.appendChild(SPR.clone(ART.art(ob.icon || 'ic_star', K), 1));
     const col = U.el('div', 'obj-col');
-    col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: PIX.PAL.g, shadow: null }));
-    col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+    col.appendChild(UI.txt('OBJECTIVE', { scale: K - 1, color: '#8a2418', shadow: null }));
+    col.appendChild(UI.wrap(ob.line, 26, { scale: K, color: '#22201c', shadow: null }));
     plate.appendChild(col);
     plate.classList.remove('bump'); void plate.offsetWidth; plate.classList.add('bump');
   },
@@ -26272,6 +27095,9 @@ const UI = {
       const k = e.key.toLowerCase();
       if (k === 'm') { document.getElementById('btn-mute') ? document.getElementById('btn-mute').click() : SFX.toggleMute(); return; }
       if (k === 'h' || e.key === '?') { UI.modalOpen() ? UI.closeModal() : UI.showHelp(); return; }
+      /* Z: how close the camera stands. Two scales, both of them crisp. */
+      if (k === 'z' && typeof SCENE !== 'undefined' && SCENE.toggleZoom
+        && UI.isScene(G.phase)) { SCENE.toggleZoom(); return; }
       /* the phone, out of your coat, anywhere you can walk */
       if (k === 'p' && typeof PHONE !== 'undefined' && UI.isScene(G.phase)) {
         PHONE.toggle('map'); return;
@@ -34142,6 +34968,110 @@ const TOOLS = (() => {
    marked in the save so a second run is silent.
    ============================================================ */
 
+/* ============================================================
+   WHOSE FACE IS ON THE PLATE.
+
+   A HUNDRED AND THIRTY-EIGHT LINES OF DIALOGUE IN THIS GAME AND
+   NOT ONE OF THEM PASSED A PORTRAIT, so every one of them —
+   including the twenty-five spoken as YOU — showed the captain.
+   You have been having conversations with yourself wearing
+   somebody else's face all game.
+
+   Fixing that at the call sites means editing a hundred and
+   thirty-eight of them and getting it wrong again next time a
+   line is added, so it is resolved from the name instead. The
+   name is already there, it is already right, and it is the one
+   thing every caller passes.
+
+   Anything that is not a person gets NO portrait: a lock, a
+   print kit, a case log and the pavement do not have faces, and
+   giving them one was half of why the plate looked wrong.
+   ============================================================ */
+const NOT_A_PERSON = [
+  'THE FILE', 'THE PAPER', 'THE LOCK', 'THE PRINT KIT', 'THE CASE LOG',
+  'YOUR CHART', 'YOUR IRON', 'YOUR BELT', 'THE PAVEMENT', 'WORK THE TAPS',
+  'THE BOARD', 'THE PLAN', 'THE CLOCK', 'THE MACHINE', 'THE LEDGER',
+];
+
+/* name -> the def to build a head from. Missing names fall through to a
+   frog seeded off the name itself, so an unnamed witness at least has
+   the SAME face every time he speaks. */
+const CAST = () => ({
+  'THE CAPTAIN': typeof HANDLER_DEF !== 'undefined' ? HANDLER_DEF : null,
+  'CAPTAIN ROOK': typeof HANDLER_DEF !== 'undefined' ? HANDLER_DEF : null,
+  'OFFICER MAYBELLE': typeof MAYBELLE_DEF !== 'undefined' ? MAYBELLE_DEF : null,
+  'THE BARMAN': typeof BARMAN_DEF !== 'undefined' ? BARMAN_DEF : null,
+  'THE COOK': typeof COOK_DEF !== 'undefined' ? COOK_DEF : null,
+  'THE NURSE': typeof NURSE_DEF !== 'undefined' ? NURSE_DEF : null,
+  'THE LAUNDERER': typeof LAUNDER_DEF !== 'undefined' ? LAUNDER_DEF : null,
+  'THE BROKER': typeof PAWN_DEF !== 'undefined' ? PAWN_DEF : null,
+  'THE WAITRESS': typeof WAITRESS_DEF !== 'undefined' ? WAITRESS_DEF : null,
+  'THE WATCHMAN': typeof WATCH_DEF !== 'undefined' ? WATCH_DEF : null,
+  'DILL': typeof DILL_DEF !== 'undefined' ? DILL_DEF : null,
+});
+
+function speakerArt(name) {
+  if (!name) return null;
+  const n = String(name).toUpperCase();
+  if (NOT_A_PERSON.indexOf(n) >= 0) return null;
+  /* YOU is you. This is the one that was most wrong. */
+  if (n === 'YOU' || n.indexOf('YOU') === 0) {
+    const d = (typeof DUEL !== 'undefined' && DUEL.myDef) ? DUEL.myDef() : null;
+    return d ? SPR.frogCustom('me', d) : null;
+  }
+  const known = CAST()[n];
+  if (known) return SPR.frogCustom('cast:' + n, known);
+  /* ------------------------------------------------------------
+     SOMEBODY THE GAME HAS NOT WRITTEN A FACE FOR.
+
+     A witness at the laverie, a hawker under the Tower, the man at
+     the fire. They need a face that is theirs, is the same face
+     every time that name speaks, and — this is the part the first
+     attempt got wrong — actually renders.
+
+     Synthesising a def from a hash does not render: `hat` is a
+     name and not a yes, `costume` is a name and not a flag, and
+     half the combinations of glasses, lashes and braces came out
+     as headgear floating over an empty collar. So nothing is
+     synthesised. There are fifteen hand-drawn faces in this game
+     that are known to work; an unwritten speaker is given one of
+     them by the hash of his own name, with only the SKIN moved,
+     which is three palette letters and cannot break a silhouette.
+     ------------------------------------------------------------ */
+  const spare = [];
+  [typeof BARMAN_DEF !== 'undefined' && BARMAN_DEF,
+    typeof COOK_DEF !== 'undefined' && COOK_DEF,
+    typeof DILL_DEF !== 'undefined' && DILL_DEF,
+    typeof DRUNK_DEF !== 'undefined' && DRUNK_DEF,
+    typeof LAUNDER_DEF !== 'undefined' && LAUNDER_DEF,
+    typeof NURSE_DEF !== 'undefined' && NURSE_DEF,
+    typeof PAWN_DEF !== 'undefined' && PAWN_DEF,
+    typeof WAITRESS_DEF !== 'undefined' && WAITRESS_DEF,
+    typeof WATCH_DEF !== 'undefined' && WATCH_DEF].forEach(d => { if (d) spare.push(d); });
+  /* NOT the casino cast. FROG_DEFS holds the old table players, and half
+     of them have their faces covered on purpose — the blindfold frog is
+     wearing a blindfold, the spinner has spirals for eyes. Pulled into a
+     dialogue portrait they read as two cream domes and no face. The nine
+     above are Paris civilians and all nine have faces. */
+  if (!spare.length) return null;
+  /* AND THE SKIN IS A RAMP, NOT THREE RANDOM LETTERS. A skin is a
+     light-mid-dark triple and the three have to belong together; picking
+     each one out of the whole palette independently gave several of them
+     a bone-white head, which with a pale pair of glasses on it read as
+     two cream domes and no face at all. These nine triples are lifted
+     off frogs that already render. */
+  const RAMPS = [
+    ['F', 'f', 'e'], ['N', 'n', 'n'], ['G', 'g', 'h'], ['P', 'p', 'p'],
+    ['e', 'e', 'K'], ['f', 'e', 'E'], ['B', 'b', 'u'], ['S', 's', 't'],
+    ['L', 'l', 'l'],
+  ];
+  const seed = U.hashSeed('speaker:' + n);
+  /* two independent draws, or nine names land on two faces */
+  const base = spare[(seed * 2654435761 >>> 8) % spare.length];
+  const skin = RAMPS[(seed * 40503 >>> 3) % RAMPS.length];
+  return SPR.frogCustom('speaker:' + n, Object.assign({}, base, { skin }));
+}
+
 const TUTOR = {
 
   /* ---------------- the opening, before the first board ---------------- */
@@ -34242,9 +35172,12 @@ const TUTOR = {
          portrait alone covered the board it was talking about. A line you
          have to answer gets a middling one, so the replies under it are
          not a mile wide. */
-      maxW: o.small ? Math.min(window.innerWidth - 40, 560)
-        : o.asking ? Math.min(window.innerWidth - 40, 860)
-          : Math.min(window.innerWidth - 28, 1180),
+      /* A SHEET OF PAPER, NOT A BANNER. Eleven hundred and eighty pixels
+         of plate across the bottom of the screen read as a strip; a page
+         out of a case file is about the width of a page. */
+      maxW: o.small ? Math.min(window.innerWidth - 40, 520)
+        : o.asking ? Math.min(window.innerWidth - 40, 780)
+          : Math.min(window.innerWidth - 28, 860),
       portrait: o.art,
       name: o.name,
       nameCol: o.nameCol,
@@ -34279,7 +35212,11 @@ const TUTOR = {
       if (hushed) TUTOR.hush(true);
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
-      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
+      /* A LOCK HAS NO FACE. speakerArt returns null for the things that
+         are not people, and falling through to the handler put the
+         captain's photograph on the print kit and the case log. */
+      const base = opts.art || speakerArt(opts.name)
+        || (opts.name ? null : SPR.frogCustom('handler', HANDLER_DEF));
       const build = (reveal) => {
         holder.innerHTML = '';
         /* HIS MOUTH MOVES WHILE HE IS TALKING. Three characters a flap,
@@ -34372,7 +35309,11 @@ const TUTOR = {
       const holder = U.el('div', 'tut-plate');
       const rack = U.el('div', 'reply-rack');
 
-      const base = opts.art || SPR.frogCustom('handler', HANDLER_DEF);
+      /* A LOCK HAS NO FACE. speakerArt returns null for the things that
+         are not people, and falling through to the handler put the
+         captain's photograph on the print kit and the case log. */
+      const base = opts.art || speakerArt(opts.name)
+        || (opts.name ? null : SPR.frogCustom('handler', HANDLER_DEF));
       const build = (reveal) => {
         holder.innerHTML = '';
         const art = reveal === null || reveal === undefined ? base
@@ -34405,13 +35346,16 @@ const TUTOR = {
              nothing said so; now the key is printed on the thing it
              presses, which is the only honest place for it. */
           const num = U.el('span', 'reply-num');
-          num.appendChild(PIXFONT.render(String(i + 1), { scale: k, color: PIX.PAL.G, shadow: PIX.PAL.K }));
+          /* INK ON BUFF STOCK. Bone-white letters with a black drop shadow
+             are for a lit screen; these are cards, so the words are typed
+             in the same ink as the sheet they answer. */
+          num.appendChild(PIXFONT.render(String(i + 1), { scale: k, color: '#8a2418', shadow: null }));
           b.appendChild(num);
           const col = U.el('span', 'reply-col');
           UI.wrapLines(typeof r === 'string' ? r : r.label, 38).forEach(t => {
-            col.appendChild(PIXFONT.render(t, { scale: k, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+            col.appendChild(PIXFONT.render(t, { scale: k, color: '#22201c', shadow: null }));
           });
-          if (r.note) col.appendChild(PIXFONT.render(r.note, { scale: Math.max(1, k - 2), color: PIX.PAL.q, shadow: null }));
+          if (r.note) col.appendChild(PIXFONT.render(r.note, { scale: Math.max(1, k - 2), color: '#6b6454', shadow: null }));
           b.appendChild(col);
           b.onclick = () => finish(i);
           /* a mouse gets the same feedback a thumb does */

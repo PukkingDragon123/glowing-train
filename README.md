@@ -94,6 +94,40 @@ on to a ceiling instead of meeting a black bar.
 
 ![The whole tower](docs/screen-tower.png)
 
+### Nothing is painted over the picture
+
+There is no filter on this game. There was one, twice: a CRT overlay and a
+radial vignette in the CSS, which went a while ago, and then a much quieter
+one that survived — two translucent sheets laid over the finished frame every
+tick, a warm one and a cool one, three or four per cent each. Measured on a
+real room that came to **plus four red, plus five green, plus six blue on the
+mean pixel**, blue shifted, over every pixel in the picture. Which is the
+definition of a filter over the game, and is exactly what it looked like.
+
+The hour is baked into the room canvas when the room is painted, which is the
+honest place for it, so the cast over the frame was a second pass doing the
+same job worse. It is gone, and it is measured back to zero. The two soft
+gradient bands the CSS drew across the top and bottom of the room went with
+it: a soft gradient over a picture made of hard pixels is the other thing
+that reads as a filter.
+
+### The camera stands close
+
+FOOT is three, so the only display scales that keep the rig at full detail
+are **three and six** — nothing clean sits between them, and any other number
+downscales the rig through a smoothing filter, which is real blur. Three puts
+four hundred and twenty-seven room pixels in frame and a cast eighty screen
+pixels tall in the middle of it. Six halves the frame and doubles the cast.
+
+Six is the default now. It used to look wrong and that was the cast over the
+frame; with the frame clean, six is plainly the better shot for a game about
+faces — the detective reads as a frog in a pinstripe suit with shades, a
+fedora, a red tie and a cigar rather than as a green smudge. A short or
+narrow window still gets three, and **Z** switches between them and remembers
+which you chose.
+
+![The bullpen, close in](docs/screen-bullpen-working.png)
+
 ### The light is the clock
 
 Nothing in here tells you the time as insistently as the sky does. The shift
@@ -254,6 +288,41 @@ there.
 
 ![La Zone](docs/screen-zone.png)
 
+### You can lean over the plan
+
+Two whole-number magnifications — the sheet is made of pixels and half a
+pixel is a smudge — so: **fit**, where the whole plan is on screen, and
+**close**, where it is twice that and you drag the paper about with your
+thumb. A wheel zooms on the pointer, the buttons zoom on the middle of what
+you are looking at, and it remembers where you were looking.
+
+Close in, the sheet has something to reward leaning over: the named
+streets — Rivoli, Sébastopol, Haussmann, Saint-Germain, the Champs-Élysées,
+the quays — and the arrondissement numbers in roman, in the ink a plan uses
+for lettering.
+
+![Leaning over the plan](docs/screen-map-close.png)
+
+### Ten apps, and three of them are new
+
+![The phone](docs/screen-phone-home.png)
+
+**WIRE** is the case log as a thread — his lines in grey on the left, yours
+in green on the right — because a run of short messages from one person over
+one afternoon is already a thread and it may as well look like one.
+
+**ROLL** is every piece of evidence as a photograph, in a white border, with
+what it says and where it came from written under it. The case app tells you
+what each clue *rules out*, which is the working view; this is the other one,
+and it is the only place you see the whole afternoon at once.
+
+**TELLS** is the notebook: every tell you have ever learned off a corpse,
+kept between runs, with what it does to a man across a table. It has been in
+the save file since the second week and there has never been a way to read
+it.
+
+![The wire](docs/screen-phone-wire.png)
+
 ### The phone tells you things
 
 The city used to tell you things by putting a line in a log nobody opened.
@@ -337,6 +406,27 @@ A stop is not one room. There are **cellar steps** in the laundry down to
 where the canal comes in, and **stairs over the pawn shop** to the room the
 broker actually sleeps in — each its own painted room, with its own props, and
 the case can be buried on either floor.
+
+### Everybody is doing something
+
+For a long time every frog in every room breathed, and that was the whole of
+it: nine people standing perfectly still with their chests going up and down.
+At the old camera distance you could not tell. You can now.
+
+An actor has a **job**, and a job is three things — a loop with its own
+period, what the body does on that loop, and the thing in his hands while he
+does it. Typing (the shoulders peck; the desk already has the machine). A pad
+and a pencil working down the page. A file, and a page turning over. A glass
+raised and set down. Something with a piece gone out of it. A cigarette, and
+the smoke off it. A rag going back and forth along a counter he has wiped a
+thousand times. A broom. Hands working through a rack. And **pacing**, which
+is the only one that has to move him rather than move his arms: four steps
+one way, a pause, four steps back.
+
+Every phase is offset by the actor's own position, so two clerks at two desks
+are never in step. The bullpen has six people in it now: Maybelle typing, the
+captain smoking outside his own door, two at the machines, one going through
+a file, and a duty sergeant walking the length of the room.
 
 ### The animals
 
@@ -591,6 +681,40 @@ A frog you already know — a lieutenant, the Bullfrog himself — needs no
 line-up. You have had his face on your own wall for six years. They wave you
 straight through.
 
+## The interface is paper
+
+Everything you read in this game is on paper, because the man reading it
+carries a case file everywhere he goes.
+
+The plate people talk on was a dark green slab behind a chunky bezel with
+rivets in the corners and scanlines over the fill — a pocket calculator, in
+1937. It is a sheet out of the file now: manila stock with a tooth to it, a
+red rule across the head, the speaker's name typed on it in ink, and the
+words under that in the same ink. The portrait is a **photograph clipped to
+the sheet** with a steel clip. What you say back is a **buff index card**
+with a red rule down its left edge and the key that presses it typed in the
+corner. The one line telling you what you are supposed to be doing is the
+card clipped to the front of the folder.
+
+![A witness, on paper](docs/screen-paper-plate.png)
+
+### And the face on it is the face of whoever is talking
+
+A hundred and thirty-eight lines of dialogue in this game and **not one of
+them passed a portrait**, so every one of them showed the captain — including
+the twenty-five spoken as YOU. You had been having conversations with
+yourself wearing somebody else's face all game.
+
+The portrait is resolved from the speaker's name now, which is the one thing
+every caller already passes and already gets right: YOU is your own frog, the
+captain is the captain, Maybelle is Maybelle, and a witness the game has
+never written a face for gets one of the fifteen hand-drawn faces by the hash
+of his own name — so he is a different frog from everybody else and the same
+frog every time that name speaks.
+
+A lock, a print kit and the case log have **no face at all** any more,
+because they do not have faces. They get a rubber stamp in the margin.
+
 ## Faces
 
 Twenty expressions, and none of them are decoration: a frog's mouth is very
@@ -715,6 +839,29 @@ still breathing. You get one decision:
 
 ![His chair](docs/screen-bad.png)
 
+## He turns sideways properly now
+
+![Front, side, walking, back](docs/screen-profile.png)
+
+The side view was a wedge with a long horizontal bill on it and a gold ring
+for an eye: a duck with a bullseye. It is built from what actually makes a
+frog read side on, in order of how much each matters — the **eye bulge**
+standing proud of the skull, which is the single most recognisable thing
+about the animal; a **mouth line** running most of the head's length with a
+slight lift at the back; a short **rounded** snout, not a beak; and a full
+throat sloping back to a neck that reaches the collar. Plus a collar that
+reads edge-on instead of as a row of white teeth, and a hat with a crown
+behind its brim.
+
+### And he does not smile
+
+Good standing used to put him in the cheerful rotation, which on a man who
+came home to an open door six years ago and flew to another country with a
+cigarette end in a bag read as ridiculous. His register is flat, tired,
+watchful, and hard when it is warranted. The warm face still exists — it just
+has to be **earned** by something specific happening, and it lasts about two
+seconds: the dog leans on him, an errand pays off, a story comes apart.
+
 ## Everything that moves
 
 All drawn, all procedural, no sprite sheets, tap to skip the long ones.
@@ -837,6 +984,9 @@ dev/smoke.js      full browser smoke test (node dev/smoke.js)
 - What a room is furnished with — the scene definitions in `js/rooms.js`
 - The day, the sky and what a search costs — `COST` / `WEATHER` in `js/city.js`
 - Which props exist to be searched — `CITY.PROPS` in `js/city.js`
+- What each NPC does with their hands — `DOING` in `js/scene.js`, and the
+  `job` field on any actor
+- Who has a face and which one — `speakerArt` in `js/tutor.js`
 - The quarters and what unlocks them — `CITY.ZONES` and each place's `lock`
   in `js/city.js`
 - The four questions on the form — `INTRO.PAPER` in `js/intro.js`
@@ -847,6 +997,12 @@ dev/smoke.js      full browser smoke test (node dev/smoke.js)
 node dev/sim.js      # 500 bot cases + 200 fuzz cases against the real engine
 node dev/smoke.js    # drives the whole story in headless Chromium
 ```
+
+Visual claims in this file are measured, not eyeballed. `SCENE.debugRes()`
+reports what the frame is actually rendering at; the filter over the picture
+was found by turning each translucent layer off in a live room and diffing
+the mean pixel, which is how a three-per-cent cast that nobody could point at
+turned out to be the thing everybody could see.
 
 The smoke test plays the game rather than mashing at it. It taps through the
 first beats of the opening and skips the rest, and — new — it **picks locks
@@ -864,9 +1020,9 @@ Current curve, for a bot with **no eyes and no hunches**: it drives to a
 random stop, puts its hand in things at random, pays the clock for all of it,
 and names whoever is left standing.
 
-- **42%** fill the board
-- **34%** reach the Bullfrog at all
-- **14%** could still take the good ending when they get there
+- **39%** fill the board
+- **33%** reach the Bullfrog at all
+- **16%** could still take the good ending when they get there
 - **4.2** trips to the ward per run
 - **40** props searched per case, **17** stories checked and **1.3** broken,
   and **26 arrivals a run at a door that had already shut**

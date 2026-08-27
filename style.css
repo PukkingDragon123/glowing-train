@@ -2870,26 +2870,38 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 .corner-ui { transition: opacity .18s ease, transform .18s ease; }
 
 /* what you are supposed to be doing */
+/* ============================================================
+   THE JOB, ON A CARD.
+
+   The plate somebody talks on is a sheet out of the case file and
+   the things you say back are index cards, so the one line saying
+   what you are supposed to be doing is the card clipped to the
+   front of the folder: buff stock, a red rule down the left edge,
+   a punched hole, and a shadow under it. It used to be a leather
+   panel with a brass rule, which belonged to a different game.
+   ============================================================ */
 .obj-plate {
   pointer-events: auto; cursor: pointer;
   display: flex; align-items: center; gap: 10px;
   max-width: min(46vw, 460px);
-  padding: 5px 11px 6px 8px;
-  background: linear-gradient(180deg, var(--hide-hi), var(--hide) 45%, var(--hide-lo));
-  border: var(--bd-thick) solid var(--hide-ink);
-  /* a brass rule down the left edge, which is what says "this is the job" */
+  padding: 6px 12px 7px 12px;
+  background: #ded2b2;
+  border: 0; border-left: 5px solid #8a2418;
   box-shadow:
-    inset 3px 0 0 var(--trim),
-    inset 0 0 0 2px rgba(255,215,126,.14),
-    inset 0 2px 0 rgba(255,236,196,.10),
-    0 5px 0 rgba(14,9,5,.55);
+    inset 0 1px 0 rgba(255,250,232,.8),
+    inset -1px -1px 0 rgba(150,138,110,.5),
+    3px 4px 0 rgba(0,0,0,.5);
 }
+.obj-plate::before {
+  /* the punched hole in the margin */
+  content: ''; position: absolute; left: 2px; top: 50%;
+  width: 5px; height: 5px; margin-top: -3px; border-radius: 50%;
+  background: #0f0d0b; box-shadow: 0 1px 0 rgba(255,250,232,.5);
+}
+.obj-plate:hover { background: #ece0be; }
 .obj-plate:active {
-  transform: translateY(2px);
-  box-shadow:
-    inset 3px 0 0 var(--trim),
-    inset 0 0 0 2px rgba(255,215,126,.14),
-    0 3px 0 rgba(14,9,5,.55);
+  transform: translate(1px, 2px);
+  box-shadow: inset 0 1px 0 rgba(255,250,232,.7), 1px 2px 0 rgba(0,0,0,.5);
 }
 .obj-col { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 .obj-col .txt-lines { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
@@ -3361,6 +3373,77 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   pointer-events: none;
 }
 .phone-badge.hidden { display: none; }
+
+/* ============================================================
+   LEANING OVER THE PLAN.
+
+   The paper is bigger than the window it is looked at through, so
+   the window clips and the paper slides inside it. Two whole-number
+   magnifications only: the sheet is made of pixels and half a pixel
+   is a smudge.
+   ============================================================ */
+.map-view {
+  position: relative; overflow: hidden;
+  margin: 0 auto; touch-action: none; cursor: grab;
+  box-shadow: inset 0 0 0 2px rgba(107,90,60,.5);
+}
+.map-view:active { cursor: grabbing; }
+.map-holder { position: relative; will-change: transform; }
+.map-zoom {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; justify-content: flex-end;
+}
+.map-zb {
+  min-width: 30px; min-height: 26px; cursor: pointer; border: 0;
+  background: rgba(20,34,28,.9);
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.28);
+  display: flex; align-items: center; justify-content: center;
+}
+.map-zb.on { background: #6ff7d8; box-shadow: inset 0 0 0 2px #0b1a14; }
+.map-zb:hover { box-shadow: inset 0 0 0 2px rgba(111,247,216,.7); }
+.map-zhint { margin-right: auto; padding-left: 4px; }
+
+/* ---- WIRE: a thread of short lines, his and yours ---- */
+.ph-thread { display: flex; flex-direction: column; gap: 5px; padding: 4px 6px; }
+.ph-bub {
+  max-width: 82%; padding: 5px 7px;
+  /* align-items MATTERS: a flex column stretches its children across the
+     cross axis, and a stretched canvas keeps its aspect ratio, so a
+     one-word line came out four times the height of the ones around it.
+     Same bug as the notification rail, same fix. */
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+}
+.ph-bub > canvas { max-width: 100%; }
+/* and the same guard everywhere else the phone stacks drawn lines */
+.ph-snapcap > canvas, .ph-cluecol > canvas, .ph-head > canvas,
+.ph-foot > canvas, .ph-lock > canvas { max-width: 100%; }
+.ph-snapcap, .ph-cluecol, .ph-head, .ph-foot { align-items: flex-start; }
+.ph-snapcap { align-items: center; }
+.ph-head { align-items: center; }
+.ph-bub.them {
+  align-self: flex-start; background: rgba(22,38,32,.92);
+  box-shadow: inset 0 0 0 2px rgba(111,247,216,.16);
+}
+.ph-bub.me {
+  align-self: flex-end; background: #6ff7d8;
+  box-shadow: inset 0 0 0 2px rgba(11,26,20,.35);
+}
+
+/* ---- ROLL: the evidence as photographs ---- */
+.ph-roll {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px; padding: 4px 6px;
+}
+.ph-snap {
+  background: #f2e9cf; padding: 4px 4px 2px;
+  box-shadow: 0 2px 0 rgba(0,0,0,.45);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.ph-snap canvas { image-rendering: pixelated; display: block; }
+.ph-snapcap {
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  padding-bottom: 2px;
+}
 @media (max-width: 560px) {
   #note-rail { top: 6px; right: 6px; left: 6px; max-width: none; }
 }

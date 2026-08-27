@@ -34,7 +34,10 @@ const PHONE = (() => {
     { id: 'job', word: 'WORK', icon: 'ic_star', dock: true },
     { id: 'karma', word: 'KARMA', icon: 'ic_paw' },
     { id: 'jobs', word: 'JOBS', icon: 'ic_coin' },
-    { id: 'notes', word: 'ALERTS', icon: 'ic_star' },
+    { id: 'notes', word: 'ALERTS', icon: 'ic_drum' },
+    { id: 'wire', word: 'WIRE', icon: 'ic_phone' },
+    { id: 'roll', word: 'ROLL', icon: 'ic_glass2' },
+    { id: 'book', word: 'TELLS', icon: 'ic_skull' },
   ];
 
   /* ============================================================
@@ -253,7 +256,7 @@ const PHONE = (() => {
   }
 
   function drawMap() {
-    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v6';
+    const key = 'phmap:' + (G.seedStr || 'CITY') + ':' + (G.weather || 'x') + ':v7';
     return ART.cached(key, () => {
       const o = ART.cv(MW, MH), c = o.c;
       const rng = U.mulberry32(U.hashSeed((G.seedStr || 'CITY') + ':map'));
@@ -455,6 +458,45 @@ const PHONE = (() => {
         /* and its name, in the top left of it, out of the pins' way */
         const t = PIXFONT.render(z.name, { scale: 1, color: 'rgba(90,76,48,.72)', shadow: null });
         c.drawImage(t, zx + 4, zy + 3);
+      });
+
+      /* ---------- THE STREET NAMES ----------
+         A plan you can lean over has to have something on it that
+         rewards leaning: the named streets, in the ink a plan uses for
+         lettering, along the boulevards they belong to. At the fit
+         magnification they are a grey texture; close in they are words. */
+      const streetInk = 'rgba(70,58,36,.78)';
+      const NAMED = [
+        ['RUE DE RIVOLI', 118, 132, 0],
+        ['BD SEBASTOPOL', 196, 96, 1],
+        ['AV DE L OPERA', 176, 74, 0],
+        ['BD HAUSSMANN', 150, 52, 0],
+        ['RUE LAFAYETTE', 250, 44, 0],
+        ['BD ST GERMAIN', 132, 190, 0],
+        ['BD ST MICHEL', 168, 214, 1],
+        ['AV DES CHAMPS ELYSEES', 44, 88, 0],
+        ['QUAI DE LA RAPEE', 336, 214, 0],
+        ['RUE DE LA PAIX', 158, 88, 0],
+        ['BD DE CLICHY', 176, 24, 0],
+        ['AV FOCH', 30, 62, 0],
+      ];
+      NAMED.forEach(([nm, nx, ny, vert]) => {
+        const t = PIXFONT.render(nm, { scale: 1, color: streetInk, shadow: null });
+        if (!vert) { c.drawImage(t, nx, ny); return; }
+        /* a street running down the sheet gets its name turned with it */
+        c.save();
+        c.translate(nx, ny);
+        c.rotate(Math.PI / 2);
+        c.drawImage(t, 0, -t.height);
+        c.restore();
+      });
+      /* and the arrondissement numbers, in the roman a plan would use */
+      [['I', 150, 120], ['II', 186, 96], ['III', 222, 108], ['IV', 200, 140],
+        ['V', 176, 186], ['VI', 138, 176], ['VII', 92, 160], ['VIII', 86, 76],
+        ['IX', 176, 62], ['X', 258, 62], ['XI', 276, 128], ['XVI', 34, 122],
+        ['XVIII', 176, 16], ['XX', 320, 96]].forEach(([n2, nx, ny]) => {
+        const t = PIXFONT.render(n2, { scale: 1, color: 'rgba(120,102,66,.55)', shadow: null });
+        c.drawImage(t, nx, ny);
       });
 
       /* ---------- THE CARTOUCHE, THE ROSE AND THE SCALE ---------- */
@@ -786,6 +828,8 @@ const PHONE = (() => {
   function badgeFor(id) {
     const n = unread(id);
     if (id === 'notes') return unread();
+    if (id === 'roll') return n + CITY.found().length;
+    if (id === 'wire') return n + ((G.log || []).length ? 1 : 0);
     if (id === 'map') return n + (STORY.questsLive() || []).filter(x => x.state === 'ready').length;
     if (id === 'case') return n + CITY.found().length;
     if (id === 'kit') return n + Object.keys(G.cargo || {}).length;
@@ -864,6 +908,121 @@ const PHONE = (() => {
   }
 
   /* ============================================================
+     MESSAGES — the captain does not phone, he wires.
+
+     Every line the case log has recorded, laid out as a thread:
+     his in a grey bubble on the left, yours in a green one on the
+     right. It is the same log the case file has always kept; a
+     thread is just the honest shape for it, because that is what
+     a run of short lines from one person over one afternoon is.
+     ============================================================ */
+  function wireApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('THE BRIGADE', k, '#eae4d0'));
+    head.appendChild(line('CAPTAIN ROOK  -  ' + CITY.hhmm(), Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const thread = U.el('div', 'ph-thread');
+    const log = (G.log || []).slice(-14);
+    if (!log.length) {
+      const b2 = U.el('div', 'ph-bub them');
+      b2.appendChild(line('GET OUT THERE.', Math.max(1, k - 1), '#eae4d0', null));
+      thread.appendChild(b2);
+    }
+    log.forEach((l, i) => {
+      /* what the city did is him; what you did is you */
+      const mine = /^(PINNED|OPENED|FOUND|NAMED|BROKE)/.test(l);
+      const b2 = U.el('div', 'ph-bub ' + (mine ? 'me' : 'them'));
+      UI.wrapLines(l, 26).forEach(t =>
+        b2.appendChild(line(t, Math.max(1, k - 1), mine ? '#0b1a14' : '#eae4d0', null)));
+      thread.appendChild(b2);
+    });
+    /* and the one line he always ends on */
+    const last = U.el('div', 'ph-bub them');
+    const left = CITY.minutesLeft();
+    UI.wrapLines(left < 90 ? 'OFF THE STREET BY SEVEN. I MEAN IT.'
+      : 'ANYTHING YET?', 26).forEach(t =>
+      last.appendChild(line(t, Math.max(1, k - 1), '#eae4d0', null)));
+    thread.appendChild(last);
+    wrap.appendChild(thread);
+    return wrap;
+  }
+
+  /* ============================================================
+     THE ROLL — every piece of evidence, as a photograph.
+
+     The case app lists what each clue RULES OUT, which is the
+     working view. This is the other one: the things themselves,
+     in the order you dug them up, each in a white border with the
+     place and the hour written under it. It is the only place in
+     the game you can see the whole afternoon at once.
+     ============================================================ */
+  function rollApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const got = CITY.found();
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('THE ROLL', k, '#eae4d0'));
+    head.appendChild(line(got.length + ' PHOTOGRAPHED  -  '
+      + (G.case ? G.case.clues.length : 0) + ' IN THE FILE',
+      Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    if (!got.length) {
+      wrap.appendChild(line('NOTHING ON THE ROLL YET.', Math.max(1, k - 1), '#5f8f7f', null));
+      return wrap;
+    }
+    const grid = U.el('div', 'ph-roll');
+    got.forEach(cl => {
+      const cell = U.el('div', 'ph-snap');
+      const art = ART.art(cl.icon || 'ev_photo', Math.max(2, k));
+      cell.appendChild(SPR.clone(art, 1));
+      const cap = U.el('div', 'ph-snapcap');
+      /* WHAT IT SAYS, not what its id is. `cl.text` is the line the game
+         shows everywhere else; `cl.at` is the stop it came out of. */
+      UI.wrapLines(String(cl.text || cl.id || '').toUpperCase(), 15).slice(0, 3).forEach(t =>
+        cap.appendChild(line(t, 1, '#22201c', null)));
+      cap.appendChild(line(((CITY.PLACES[cl.at] || {}).short || 'THE CITY'),
+        1, '#6b6454', null));
+      cell.appendChild(cap);
+      grid.appendChild(cell);
+    });
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  /* ============================================================
+     THE NOTEBOOK — what a face tells you before he speaks.
+
+     Every tell you have ever learned off a corpse, kept between
+     runs, with what it does to a man across a table. This has
+     been in the save file since the second week and there has
+     never been a way to read it.
+     ============================================================ */
+  function bookApp(k) {
+    const wrap = U.el('div', 'ph-app ph-scroll');
+    const all = (typeof TRAITS !== 'undefined') ? Object.keys(TRAITS) : [];
+    const known = all.filter(id => META.knowsTell && META.knowsTell(id));
+    const head = U.el('div', 'ph-head');
+    head.appendChild(line('THE NOTEBOOK', k, '#eae4d0'));
+    head.appendChild(line(known.length + ' OF ' + all.length + ' TELLS LEARNED',
+      Math.max(1, k - 1), '#8fb3a0', null));
+    wrap.appendChild(head);
+    const list = U.el('div', 'ph-clues');
+    all.forEach(id => {
+      const t = TRAITS[id], on = known.indexOf(id) >= 0;
+      const row = U.el('div', 'ph-clue' + (on ? ' got' : ''));
+      const col = U.el('div', 'ph-cluecol');
+      col.appendChild(line(on ? t.name : '- - - -', Math.max(1, k - 1),
+        on ? '#eae4d0' : '#3f5f52', null));
+      UI.wrapLines(on ? (t.hint || '') : 'NOT LEARNED YET', 30).forEach(x =>
+        col.appendChild(line(x, 1, on ? '#8fb3a0' : '#2f4a3f', null)));
+      row.appendChild(col);
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+    return wrap;
+  }
+
+  /* ============================================================
      ALERTS — everything the night has told you, newest first
      ============================================================ */
   function notesApp(k) {
@@ -923,13 +1082,33 @@ const PHONE = (() => {
   }
 
   /* ---------- FROGGOMAP ---------- */
+  /* ============================================================
+     ZOOM AND PAN.
+
+     A plan of a city you cannot lean over is a picture of a plan.
+     There are two whole-number magnifications — the paper is
+     pixels and half a pixel is a smudge — so: FIT, where the
+     whole sheet is on screen, and CLOSE, where it is twice that
+     and you drag it about with your thumb.
+
+     `mz` is which of the two, `mpx/mpy` is where the paper has
+     been dragged to. Both live outside the render so opening the
+     app again puts you back where you were looking.
+     ============================================================ */
+  let mz = 0, mpx = 0, mpy = 0;
+
   function mapApp(k) {
     const wrap = U.el('div', 'ph-app');
     /* AT THIS RESOLUTION THE PAPER WANTS TO BE 1:1. Four times the pixels
        in the same space on screen is the whole point; blowing it up again
        would throw that straight back away. */
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.88 / MW,
+    const fit = U.clamp(Math.floor(Math.min(window.innerWidth * 0.88 / MW,
       window.innerHeight * 0.54 / MH)), 1, 4);
+    const K = mz ? fit * 2 : fit;
+    /* the window the paper is looked at through */
+    const view = U.el('div', 'map-view');
+    view.style.width = (MW * fit) + 'px';
+    view.style.height = (MH * fit) + 'px';
     const holder = U.el('div', 'map-holder');
     holder.appendChild(SPR.clone(drawMap(), K));
     /* the routes ride on their own layer over the paper: the paper is
@@ -943,9 +1122,76 @@ const PHONE = (() => {
     /* THE PINS SHRINK WITH THE PAPER. At the old resolution a marker had
        to be chunky to read at all; on a plan with individual buildings on
        it the same marker covers half an arrondissement. */
-    CITY.board().forEach(e => holder.appendChild(pin(e, 1)));
-    holder.appendChild(pin({ place: CITY.PLACES.precinct, visited: true, left: 0 }, 1));
-    wrap.appendChild(holder);
+    CITY.board().forEach(e => holder.appendChild(pin(e, mz ? 2 : 1)));
+    holder.appendChild(pin({ place: CITY.PLACES.precinct, visited: true, left: 0 },
+      mz ? 2 : 1));
+
+    /* ---- where the paper sits inside the window ---- */
+    const clampPan = () => {
+      const maxX = Math.max(0, MW * K - MW * fit);
+      const maxY = Math.max(0, MH * K - MH * fit);
+      mpx = U.clamp(mpx, -maxX, 0);
+      mpy = U.clamp(mpy, -maxY, 0);
+    };
+    clampPan();
+    const place = () => { holder.style.transform = 'translate(' + mpx + 'px,' + mpy + 'px)'; };
+    place();
+
+    /* ---- drag to pan, at the close magnification ---- */
+    let drag = null;
+    view.onpointerdown = (ev) => {
+      if (!mz) return;
+      drag = { x: ev.clientX, y: ev.clientY, px: mpx, py: mpy, moved: 0 };
+      view.setPointerCapture && view.setPointerCapture(ev.pointerId);
+    };
+    view.onpointermove = (ev) => {
+      if (!drag) return;
+      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      drag.moved = Math.max(drag.moved, Math.abs(dx) + Math.abs(dy));
+      mpx = drag.px + dx; mpy = drag.py + dy;
+      clampPan(); place();
+    };
+    view.onpointerup = () => { drag = null; };
+    view.onpointercancel = () => { drag = null; };
+    /* a wheel is a zoom, centred on where the pointer is */
+    view.onwheel = (ev) => {
+      ev.preventDefault();
+      const want = ev.deltaY < 0 ? 1 : 0;
+      if (want === mz) return;
+      const r = view.getBoundingClientRect();
+      const fx = (ev.clientX - r.left - mpx) / K, fy = (ev.clientY - r.top - mpy) / K;
+      mz = want;
+      const K2 = mz ? fit * 2 : fit;
+      mpx = Math.round((ev.clientX - r.left) - fx * K2);
+      mpy = Math.round((ev.clientY - r.top) - fy * K2);
+      render();
+    };
+    view.appendChild(holder);
+    wrap.appendChild(view);
+
+    /* ---- and the buttons, for anybody without a wheel ---- */
+    const bar = U.el('div', 'map-zoom');
+    [['-', 0], ['+', 1]].forEach(([sym, to]) => {
+      const b2 = U.el('button', 'map-zb' + (mz === to ? ' on' : ''));
+      b2.appendChild(line(sym, k, mz === to ? '#0b1a14' : '#8ff7c8', null));
+      b2.onclick = () => {
+        if (mz === to) return;
+        /* keep the middle of what you are looking at in the middle */
+        const cx = (MW * fit / 2 - mpx) / K, cy = (MH * fit / 2 - mpy) / K;
+        mz = to;
+        const K2 = mz ? fit * 2 : fit;
+        mpx = Math.round(MW * fit / 2 - cx * K2);
+        mpy = Math.round(MH * fit / 2 - cy * K2);
+        SFX.tick && SFX.tick();
+        render();
+      };
+      bar.appendChild(b2);
+    });
+    const hint = U.el('span', 'map-zhint');
+    hint.appendChild(line(mz ? 'DRAG THE PAPER' : 'WHOLE SHEET',
+      Math.max(1, k - 1), '#5f8f7f', null));
+    bar.appendChild(hint);
+    wrap.appendChild(bar);
 
     const foot = U.el('div', 'ph-foot');
     const p = CITY.here();
@@ -1224,7 +1470,10 @@ const PHONE = (() => {
           : view === 'job' ? jobApp(k)
             : view === 'karma' ? karmaApp(k)
               : view === 'jobs' ? jobsApp(k)
-                : view === 'notes' ? notesApp(k) : mapApp(k));
+                : view === 'notes' ? notesApp(k)
+                  : view === 'wire' ? wireApp(k)
+                    : view === 'roll' ? rollApp(k)
+                      : view === 'book' ? bookApp(k) : mapApp(k));
       screen.appendChild(dock(k));
     }
     body.appendChild(screen);
