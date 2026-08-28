@@ -774,21 +774,33 @@ const ART = (() => {
   }
 
   /* ---- the typewriter on the bullpen desk ---- */
+  /* ---- the machine somebody's night gets typed on.
+
+     It was a white box with a dark slot and two rows of dots. A
+     typewriter has a CARRIAGE across the top with a knob on each
+     end and a sheet standing up out of it, a paper bail, a return
+     lever off to the left, and a key bank that STEPS -- three rows
+     each one further forward than the last, which is the shape
+     everybody recognises before they recognise anything else. ---- */
   paint('typewriter', [
-    '....KKKKKKKKKK....',
-    '...KWWWWWWWWWWK...',
-    '..KWKKKKKKKKKKWK..',
-    '..KWK::::::::KWK..',
-    '..KWK::::::::KWK..',
-    '.KKWKKKKKKKKKKWKK.',
-    '.KSSSSSSSSSSSSSSK.',
-    'KSssssssssssssssSK',
-    'KSoOoOoOoOoOoOoOSK',
-    'KSssssssssssssssSK',
-    'KSoOoOoOoOoOoOoOSK',
-    'KSssssssssssssssSK',
-    '.KKKKKKKKKKKKKKKK.',
-  ], { ':': '#2a3140', 'o': 'q', 'O': 'W' });
+    '.......PPPP.........',
+    '......KPPPPK........',
+    '..LKKKKPPPPKKKKn....',
+    '..LKMMMMMMMMMMKn....',
+    '...K@@@@@@@@@@K.....',
+    '...KSSSSGSSSSSK.....',
+    '..KSssssssssssSK....',
+    '..KoOoOoOoOoOoSK....',
+    '.KSssssssssssssSK...',
+    '.KoOoOoOoOoOoOoSK...',
+    'KSssssssssssssssSK..',
+    'KoOoOoOoOoOoOoOoSK..',
+    '.KSSSSSSSSSSSSSSK...',
+    '..KKKKKKKKKKKKKK....',
+  ], {
+    'P': '#ded2b4', 'M': '#22262e', '@': '#6a737f',
+    'L': '#8d8672', 'n': '#8d8672', 'o': 'q', 'O': 'W',
+  });
 
   /* ---- the wall clock nobody winds ---- */
   paint('wallclock', [
@@ -887,21 +899,31 @@ const ART = (() => {
   ], {});
 
   /* ---- water cooler, one bubble ---- */
+  /* ---- the water cooler. It was a flat cyan slab on a grey box, the
+     brightest object in the precinct and the least convincing. A bottle
+     is GLASS: the light goes through it, there is a meniscus at the top
+     of the water and a bright core down the middle, and it sits on a
+     cabinet with two taps, a drip tray and a sleeve of cones. ---- */
   paint('cooler', [
-    '..KKKKKKK..',
-    '.KLLLLLLLK.',
-    'KLlLLLLLlLK',
-    'KLLWLLLLLLK',
-    'KLlLLLLLlLK',
-    '.KLLLLLLLK.',
-    '..KKKKKKK..',
+    '...KKKKK...',
+    '..K#####K..',
+    '.K##ww###K.',
+    'K=~~~~~~~=K',
+    'K=~ww~~~~=K',
+    'K=~~~~~~~=K',
+    'K=~~~~~~~=K',
+    'K=b~~~~~b=K',
+    '.K=======K.',
     '.KTTTTTTTK.',
+    '.KTbTTTbTK.',
+    '.KT-T-T-TK.',
     '.KTsssssTK.',
-    '.KTsWWWsTK.',
-    '.KTsssssTK.',
-    '.KTTTTTTTK.',
     '.KKKKKKKKK.',
-  ], {});
+  ], {
+    '#': 'rgba(196,226,238,.42)', '~': 'rgba(120,186,208,.60)',
+    'w': 'rgba(240,252,255,.72)', '=': 'rgba(74,120,140,.66)',
+    'b': 'rgba(46,84,102,.66)', '-': '#8d8672',
+  });
 
   /* ---- IV drip, hospital ---- */
   paint('ivbag', [
@@ -1003,73 +1025,161 @@ const ART = (() => {
 
   const P = () => PIX.PAL;
 
-  /* a wooden desk seen side-on, with a drawer bank and a worn top */
+  /* ============================================================
+     THE DESK, WITH THE NIGHT'S WORK STILL ON IT.
+
+     Three drawers with a brass dash for a pull, a knee hole and a
+     bin: that is a desk in outline, which is what it read as. What
+     a desk in a bullpen actually has is WEAR -- the front edge is
+     worn pale where forearms go, the top is ringed and inked, and
+     there is always paper on it. So: real grain in two directions,
+     a rubbed nose to the top, drawer pulls with a shadow under the
+     lip, a keyhole on the top drawer, and the leavings of a shift.
+     ============================================================ */
   function desk(w, h, seed) {
     return cached('desk:' + w + 'x' + h + ':' + (seed || 0), () => {
       const o = cv(w, h), c = o.c, p = P();
-      /* the top slab, overhanging */
+      const rng = U.mulberry32((seed || 1) * 37 + 3);
+      /* the top slab, overhanging, with a WORN NOSE to it */
       box(c, 0, 0, w, 6, { fill: p.b, top: p.B, bot: p.u, ink: p.K });
-      grain(c, 2, 2, w - 4, 3, p.u, p.B, (seed || 1) * 3 + 5);
+      grain(c, 2, 1, w - 4, 4, p.u, p.B, (seed || 1) * 3 + 5);
+      px(c, 0, 1, w, 1, 'rgba(255,236,196,.14)');            /* the lit edge */
+      px(c, 1, 3, w - 2, 1, 'rgba(214,190,150,.10)');        /* rubbed pale */
+      px(c, 0, 5, w, 1, 'rgba(0,0,0,.40)');
+      px(c, 0, 6, w, 1, 'rgba(0,0,0,.24)');                  /* its own shadow */
+      /* rings and ink on the top, because somebody works here */
+      for (let i = 0; i < 3; i++) {
+        const rx = 4 + Math.floor(rng() * (w - 12));
+        PIX.ring(c, rx, 3, 3 + Math.floor(rng() * 2), 1, 'rgba(0,0,0,.22)');
+      }
+      for (let i = 0; i < 5; i++) {
+        px(c, 3 + Math.floor(rng() * (w - 6)), 2 + Math.floor(rng() * 3), 1, 1,
+          'rgba(20,26,40,.44)');
+      }
       /* the body, inset */
       box(c, 3, 6, w - 6, h - 6, { fill: p.u, top: p.b, bot: p.U, ink: p.K });
-      /* drawers, three of them, with pulls */
+      grain(c, 4, 8, w - 8, h - 12, p.U, p.u, (seed || 1) * 11);
+      /* drawers, three of them, with pulls that have a lip and a shadow */
       const dh = Math.max(6, Math.floor((h - 12) / 3));
+      const dw = Math.floor((w - 12) * 0.52);
       for (let i = 0; i < 3; i++) {
         const dy = 9 + i * (dh + 1);
         if (dy + dh > h - 3) break;
-        box(c, 6, dy, Math.floor((w - 12) * 0.52), dh, { fill: p.b, top: p.B, bot: p.U, ink: p.K });
-        const px0 = 6 + Math.floor((w - 12) * 0.52 / 2) - 3;
-        px(c, px0, dy + Math.floor(dh / 2) - 1, 7, 2, p.h);
-        px(c, px0, dy + Math.floor(dh / 2) - 1, 7, 1, p.G);
+        box(c, 6, dy, dw, dh, { fill: p.b, top: p.B, bot: p.U, ink: p.K });
+        grain(c, 8, dy + 1, dw - 4, dh - 2, p.u, p.B, (seed || 1) * 7 + i);
+        px(c, 6, dy - 1, dw, 1, 'rgba(0,0,0,.44)');          /* the gap above it */
+        const px0 = 6 + Math.floor(dw / 2) - 4;
+        px(c, px0 - 1, dy + Math.floor(dh / 2) - 2, 11, 5, 'rgba(0,0,0,.40)');
+        px(c, px0, dy + Math.floor(dh / 2) - 1, 9, 2, p.h);
+        px(c, px0, dy + Math.floor(dh / 2) - 1, 9, 1, p.G);
+        px(c, px0, dy + Math.floor(dh / 2) + 1, 9, 1, 'rgba(0,0,0,.44)');
+        if (i === 0) {                                        /* and a keyhole */
+          px(c, 6 + dw - 6, dy + Math.floor(dh / 2) - 1, 2, 3, 'rgba(0,0,0,.66)');
+          px(c, 6 + dw - 6, dy + Math.floor(dh / 2) - 2, 2, 1, p.h);
+        }
       }
       /* the knee hole: not a black rectangle — a dark space with a bin in it */
-      const kx = 6 + Math.floor((w - 12) * 0.52) + 3;
-      const kw = w - 12 - Math.floor((w - 12) * 0.52) - 3;
+      const kx = 6 + dw + 3;
+      const kw = w - 12 - dw - 3;
       px(c, kx, 9, kw, h - 12, '#0e0b08');
       px(c, kx, 9, kw, 1, 'rgba(0,0,0,.7)');
       px(c, kx + 1, 10, kw - 2, 2, 'rgba(255,255,255,.04)');
+      px(c, kx, 9, 2, h - 12, 'rgba(0,0,0,.5)');
+      /* bounced light on the back of the knee hole, low down */
+      for (let i = 0; i < 4; i++) {
+        px(c, kx + 1, h - 4 - i, kw - 2, 1, 'rgba(190,168,124,' + (0.030 * (4 - i)).toFixed(3) + ')');
+      }
       if (kw > 12) {
         /* a waste basket, and the shadow it throws */
         const bw = Math.min(11, kw - 4);
         px(c, kx + 2, h - 3 - 9, bw, 9, '#1a1712');
         px(c, kx + 3, h - 3 - 8, bw - 2, 7, '#2a241a');
         px(c, kx + 3, h - 3 - 8, bw - 2, 1, '#3a3224');
+        for (let i = 0; i < 3; i++) {
+          px(c, kx + 4, h - 9 + i * 2, bw - 4, 1, 'rgba(0,0,0,.28)');
+        }
         px(c, kx + 5, h - 3 - 11, 3, 3, '#ded2b4');
+        px(c, kx + 4, h - 3 - 12, 2, 2, '#f0e6c8');
+      }
+      /* PAPER ON IT: a docket half off the front edge, and a pencil */
+      if (w > 40) {
+        const sx = 8 + Math.floor(rng() * Math.max(1, w - 34));
+        px(c, sx, 0, 18, 3, '#0e0c0a');
+        px(c, sx + 1, 0, 16, 2, '#ded2b4');
+        px(c, sx + 1, 0, 16, 1, '#f0e6c8');
+        px(c, sx + 3, 1, 9, 1, '#8d8672');
+        const gx = sx + 22;
+        if (gx + 9 < w) {
+          px(c, gx, 1, 9, 2, '#0e0c0a');
+          px(c, gx, 1, 8, 1, '#c8a83c');
+          px(c, gx + 8, 1, 2, 2, '#8d8672');
+        }
       }
       dither(c, 0, 0, w, 7, 'rgba(0,0,0,.16)', 0.09, (seed || 2) * 7);
       return o.cv;
     });
   }
 
-  /* an office chair, side on, on a five-star base */
+  /* ============================================================
+     THE CHAIR NOBODY ADJUSTS.
+
+     A tilted seven-pixel bar for a back, a slab for a seat, a post
+     and three castors. Seen from the side that came out as a black
+     lolly on a stick. A typist's chair has a back with a PAD on it
+     and a gap under it, a seat with a nosed front edge, a gas post
+     with a collar, and a five-star base whose near arms are longer
+     than its far ones.
+     ============================================================ */
   function chair(w, h, seed) {
     return cached('chair:' + w + 'x' + h + ':' + (seed || 0), () => {
       const o = cv(w, h), c = o.c, p = P();
-      const sy = Math.round(h * 0.46);
-      /* back rest, tilted by one pixel per two rows */
-      for (let i = 0; i < sy - 2; i++) {
-        const xx = 2 + Math.round(i * 0.12);
-        px(c, xx, i, 7, 1, p.K);
-        px(c, xx + 1, i, 5, 1, i < 3 ? p.t : p.T);
+      /* the seat sits at just over half the height, not at forty-six per
+         cent: at forty-six the pad above it came out FOUR ROWS tall and the
+         whole chair read as a letter T on a stick */
+      const sy = Math.round(h * 0.54);
+      const mid = Math.floor(w / 2);
+      /* the back: a pad on a stalk, tilted, with daylight under it */
+      const bTop = 0, bBot = Math.max(5, Math.round(sy * 0.66));
+      for (let i = bTop; i < bBot; i++) {
+        const xx = 2 + Math.round(i * 0.14);
+        const bw = 8;
+        px(c, xx - 1, i, bw + 2, 1, p.K);
+        px(c, xx, i, bw, 1, i < 2 ? p.t : p.T);
+        px(c, xx, i, 2, 1, 'rgba(255,255,255,.10)');
+        px(c, xx + bw - 2, i, 2, 1, 'rgba(0,0,0,.30)');
       }
-      px(c, 2, 0, 8, 2, p.K);
-      /* the seat */
-      box(c, 1, sy, w - 2, 6, { fill: p.T, top: p.t, bot: p.K, ink: p.K });
-      /* post */
-      px(c, Math.floor(w / 2) - 2, sy + 6, 4, h - sy - 10, p.K);
-      px(c, Math.floor(w / 2) - 1, sy + 6, 2, h - sy - 10, p.s);
-      /* the star base + castors */
+      px(c, 2, bTop, 9, 2, p.K);
+      px(c, 3, bTop + 1, 7, 1, 'rgba(255,255,255,.12)');
+      /* two seams across the pad, so it is upholstery */
+      px(c, 3, Math.round(bBot * 0.36), 7, 1, 'rgba(0,0,0,.30)');
+      px(c, 4, Math.round(bBot * 0.70), 7, 1, 'rgba(0,0,0,.30)');
+      /* the stalk from the pad down to the seat */
+      const stx = 4 + Math.round(bBot * 0.14);
+      px(c, stx, bBot, 3, sy - bBot + 1, p.K);
+      px(c, stx + 1, bBot, 1, sy - bBot + 1, p.s);
+      /* the seat: a slab with a nosed front */
+      box(c, 1, sy, w - 2, 5, { fill: p.T, top: p.t, bot: p.K, ink: p.K });
+      px(c, 1, sy, w - 2, 1, 'rgba(255,255,255,.14)');
+      px(c, 1, sy + 4, w - 2, 1, 'rgba(0,0,0,.44)');
+      px(c, w - 4, sy + 1, 3, 3, 'rgba(255,255,255,.08)');
+      /* the post, with a collar on it */
+      px(c, mid - 2, sy + 5, 4, h - sy - 10, p.K);
+      px(c, mid - 1, sy + 5, 2, h - sy - 10, p.s);
+      px(c, mid - 3, sy + 7, 6, 2, p.K);
+      px(c, mid - 2, sy + 7, 4, 1, p.S);
+      /* the base: the near arms longer than the far, so it sits in depth */
       px(c, 2, h - 4, w - 4, 2, p.K);
       px(c, 3, h - 4, w - 6, 1, p.s);
-      for (const cx of [3, Math.floor(w / 2) - 1, w - 5]) {
-        px(c, cx, h - 2, 3, 2, p.K);
-        px(c, cx, h - 2, 1, 1, p.s);
+      px(c, 4, h - 6, w - 8, 1, 'rgba(0,0,0,.34)');
+      for (const [cx, lift] of [[2, 0], [mid - 1, 1], [w - 5, 0]]) {
+        px(c, cx, h - 2 - lift, 3, 2, p.K);
+        px(c, cx, h - 2 - lift, 1, 1, p.s);
+        px(c, cx + 1, h - 3 - lift, 1, 1, 'rgba(255,255,255,.10)');
       }
       return o.cv;
     });
   }
 
-  /* filing cabinet: four drawers, labels, one left open */
   function cabinet(w, h, openIdx, seed) {
     return cached('cab:' + w + 'x' + h + ':' + openIdx + ':' + (seed || 0), () => {
       const o = cv(w, h), c = o.c, p = P();
@@ -1325,10 +1435,34 @@ const ART = (() => {
     });
   }
 
-  /* institutional wall: two-tone with a chair rail, stains and a scuff */
+  /* ============================================================
+     THE TWO SURFACES EVERY ROOM IS MADE OF.
+
+     A wall used to be a dithered field with a rail across it and a
+     floor was boards or lino with one bright line at the top. At
+     twice the resolution that is what they read as, too: two flat
+     fields with a seam. What a room actually has, and what these
+     now draw, is a SECOND READ -- the things you only notice on
+     the second look, which are the things that make the first look
+     convincing:
+
+       the skirting     a board at the bottom with a lit top edge
+                        and a line of dust in the angle behind it
+       the falloff      darker at the ceiling and darker again at
+                        the floor, because light comes from the
+                        middle of a room, not from everywhere
+       the scuffs       chair-back height, where chairs go
+       the sockets      a plate and a conduit run, once or twice
+       the contact      a hard shadow in the wall-floor angle, and
+                        a band of light bounced back off the floor
+       the wear         a walked path down the middle of the floor,
+                        grit in the corners, and scratch arcs where
+                        a door swings
+     ============================================================ */
   function wall(w, h, opt) {
     opt = opt || {};
-    const key = 'wall:' + w + 'x' + h + ':' + (opt.tone || 'green') + ':' + (opt.seed || 0);
+    const key = 'wall:' + w + 'x' + h + ':' + (opt.tone || 'green') + ':' + (opt.seed || 0)
+      + ':' + (opt.railY === undefined ? 'd' : opt.railY);
     return cached(key, () => {
       const o = cv(w, h), c = o.c;
       const T = {
@@ -1351,6 +1485,12 @@ const ART = (() => {
       if (opt.tone === 'tile') {
         for (let y = 2; y < railY; y += 9) px(c, 0, y, w, 1, 'rgba(255,255,255,.05)');
         for (let x = 0; x < w; x += 12) px(c, x, 0, 1, railY, 'rgba(0,0,0,.12)');
+        /* and the grout going at the joins, which is what says old tile */
+        const rg = U.mulberry32((opt.seed || 1) * 17);
+        for (let i = 0; i < Math.round(w / 26); i++) {
+          const gx = Math.floor(rg() * (w - 12)), gy = 2 + Math.floor(rg() * (railY - 12));
+          px(c, gx, gy, 12, 1, 'rgba(0,0,0,.20)');
+        }
       }
       if (opt.tone === 'brick') {
         for (let y = 0; y < h; y += 6) {
@@ -1369,6 +1509,44 @@ const ART = (() => {
             'rgba(0,0,0,.22)', 0.16 * k + 0.03, i * 31 + y);
         }
       }
+
+      /* ---- THE SECOND READ ---- */
+      /* the falloff: the ceiling angle and the floor angle both go dark,
+         because a room is lit from the middle of itself */
+      for (let y = 0; y < Math.min(14, h); y++) {
+        px(c, 0, y, w, 1, 'rgba(0,0,0,' + (0.30 * (1 - y / 14)).toFixed(3) + ')');
+      }
+      for (let i = 0; i < 10; i++) {
+        px(c, 0, h - 1 - i, w, 1, 'rgba(0,0,0,' + (0.26 * (1 - i / 10)).toFixed(3) + ')');
+      }
+      /* the skirting board, and the dust in the angle above it */
+      const skH = Math.max(3, Math.round(h * 0.045));
+      px(c, 0, h - skH, w, skH, T[2]);
+      px(c, 0, h - skH, w, 1, T[3]);
+      px(c, 0, h - skH + 1, w, 1, 'rgba(255,255,255,.09)');
+      px(c, 0, h - 2, w, 2, 'rgba(0,0,0,.44)');
+      dither(c, 0, h - skH - 2, w, 2, 'rgba(0,0,0,.28)', 0.30, (opt.seed || 1) * 5);
+      /* scuffs at chair-back height, where chairs go */
+      for (let i = 0; i < Math.round(w / 70); i++) {
+        const sx = Math.floor(rng() * (w - 26));
+        const sy = railY + Math.round((h - railY - skH) * (0.18 + rng() * 0.30));
+        dither(c, sx, sy, 20 + Math.floor(rng() * 14), 3, 'rgba(0,0,0,.24)', 0.34, sx);
+        px(c, sx + 2, sy - 1, 14, 1, 'rgba(255,255,255,.05)');
+      }
+      /* a socket and a conduit run, once or twice along the wall */
+      for (let i = 0; i < Math.max(1, Math.round(w / 240)); i++) {
+        const sx = 40 + Math.floor(rng() * Math.max(1, w - 90));
+        const sy = h - skH - 9;
+        px(c, sx, sy, 8, 7, 'rgba(0,0,0,.44)');
+        px(c, sx + 1, sy + 1, 6, 5, '#3a4046');
+        px(c, sx + 1, sy + 1, 6, 1, '#525a62');
+        px(c, sx + 2, sy + 2, 2, 2, '#12161a');
+        px(c, sx + 4, sy + 2, 2, 2, '#12161a');
+        px(c, sx + 3, sy - 12, 2, 12, 'rgba(0,0,0,.34)');
+        px(c, sx + 3, sy - 12, 1, 12, 'rgba(255,255,255,.06)');
+      }
+      /* the picture rail's own shadow, so it stands off the wall */
+      px(c, 0, railY + 1, w, 2, 'rgba(0,0,0,.22)');
       return o.cv;
     });
   }
@@ -1378,7 +1556,7 @@ const ART = (() => {
     opt = opt || {};
     const key = 'floor:' + w + 'x' + h + ':' + (opt.tone || 'board') + ':' + (opt.seed || 0);
     return cached(key, () => {
-      const o = cv(w, h), c = o.c, p = P();
+      const o = cv(w, h), c = o.c;
       if (opt.tone === 'lino') {
         px(c, 0, 0, w, h, '#1a2028');
         for (let x = 0; x < w; x += 14) {
@@ -1398,15 +1576,229 @@ const ART = (() => {
           grain(c, 0, y + 2, w, 4, '#241c14', '#382c1e', (opt.seed || 1) * 13 + y);
         }
         /* board ends, staggered */
-        const rng = U.mulberry32((opt.seed || 1) * 41);
+        const rng0 = U.mulberry32((opt.seed || 1) * 41);
         for (let y = 0; y < h; y += 7) {
-          for (let x = Math.floor(rng() * 40); x < w; x += 40 + Math.floor(rng() * 50)) {
+          for (let x = Math.floor(rng0() * 40); x < w; x += 40 + Math.floor(rng0() * 50)) {
             px(c, x, y, 1, 7, 'rgba(0,0,0,.4)');
           }
         }
       }
-      /* the sheen where the light lands, drawn as a soft band */
-      px(c, 0, 0, w, 2, 'rgba(255,255,255,.05)');
+
+      /* ---- THE SECOND READ ---- */
+      const rng = U.mulberry32((opt.seed || 3) * 53);
+      /* the wall's shadow in the angle, hard, then LIGHT BOUNCED BACK off
+         the floor a few rows down -- one line at four per cent white was
+         the only thing standing between a wall and a floor before */
+      for (let i = 0; i < 6; i++) {
+        px(c, 0, i, w, 1, 'rgba(0,0,0,' + (0.42 * (1 - i / 6)).toFixed(3) + ')');
+      }
+      px(c, 0, 6, w, 2, 'rgba(255,255,255,.055)');
+      px(c, 0, 8, w, 1, 'rgba(255,255,255,.025)');
+      /* the walked path: everybody uses the middle of a room, so the middle
+         of the floor is polished and the edges are not */
+      const pTop = Math.round(h * 0.16), pBot = h;
+      for (let y = pTop; y < pBot; y++) {
+        const t = (y - pTop) / Math.max(1, pBot - pTop);
+        const hw = Math.round(w * (0.20 + t * 0.26));
+        dither(c, Math.round(w / 2 - hw), y, hw * 2, 1, 'rgba(255,255,255,.05)',
+          0.16 + t * 0.10, y * 7);
+      }
+      /* grit and dropped nothing, heavier at the back where nobody sweeps */
+      for (let i = 0; i < Math.round(w / 9); i++) {
+        const gx = Math.floor(rng() * w);
+        const gy = Math.floor(Math.pow(rng(), 2.1) * h);
+        px(c, gx, gy, 1 + (rng() < 0.2 ? 1 : 0), 1, 'rgba(0,0,0,.30)');
+      }
+      for (let i = 0; i < Math.round(w / 130); i++) {          /* wear patches */
+        const px2 = Math.floor(rng() * (w - 40)), py = Math.floor(rng() * (h - 14));
+        for (let k = 0; k < 5; k++) {
+          dither(c, px2 + k * 2, py + k, 34 - k * 5, 2, 'rgba(255,255,255,.05)', 0.22, px2 + k);
+        }
+      }
+      /* and the arc a door scratches, if the room says where a door is */
+      if (opt.doorX !== undefined) {
+        for (let a = 0; a < 26; a++) {
+          const th = (a / 25) * Math.PI * 0.42;
+          const r = opt.doorR || 34;
+          px(c, Math.round(opt.doorX + Math.cos(th) * r),
+            Math.round(1 + Math.sin(th) * r * 0.34), 2, 1, 'rgba(255,255,255,.05)');
+        }
+      }
+      /* the darkest rows are the ones closest to the lens */
+      for (let i = 0; i < 8; i++) {
+        px(c, 0, h - 1 - i, w, 1, 'rgba(0,0,0,' + (0.20 * (1 - i / 8)).toFixed(3) + ')');
+      }
+      return o.cv;
+    });
+  }
+
+  /* ============================================================
+     STANDING SOMETHING ON THE FLOOR.
+
+     Every stick of furniture in this game was blitted at an x and
+     a y with nothing under it, and a cabinet with nothing under it
+     floats however carefully its feet are drawn. This puts the
+     shadow down first -- hard and tight along the foot, spreading
+     and fading out to one side -- and then the thing on top of it.
+     The side it spreads to is the side away from the light, which
+     for an interior in this game is overhead and slightly left.
+     ============================================================ */
+  function stand(c, img, x, y, o) {
+    o = o || {};
+    const w = img.width, h = img.height;
+    const fy = y + h - 1;
+    const dir = o.dir === undefined ? 1 : o.dir;
+    const a = o.a === undefined ? 1 : o.a;
+    const len = Math.round(w * (o.len === undefined ? 0.34 : o.len));
+    for (let i = 6; i >= 1; i--) {
+      const t = i / 6;
+      const ex = Math.round(x + w / 2 + dir * len * t);
+      px(c, ex - Math.round(w * 0.5 * (1 - t * 0.5)), fy + Math.round(t * 2),
+        Math.max(2, Math.round(w * (1 - t * 0.5))),
+        Math.max(1, Math.round(3 - t * 2)),
+        'rgba(8,10,15,' + (a * 0.30 * (1 - t) * (1 - t * 0.5)).toFixed(3) + ')');
+    }
+    px(c, x + 1, fy, w - 2, 2, 'rgba(6,8,12,' + (a * 0.46).toFixed(3) + ')');
+    px(c, x + 2, fy + 1, w - 4, 1, 'rgba(4,5,8,' + (a * 0.34).toFixed(3) + ')');
+    c.drawImage(img, x, y);
+    return img;
+  }
+
+  /* ============================================================
+     THE CITY, SEEN THROUGH A HOLE IN A WALL.
+
+     A room can declare an opening with `sky: true` and the runtime
+     drops DAY.sky in behind it. Sized to the whole room and then
+     clipped to a seventy-by-forty doorway, what that produces at
+     nine in the morning is a rectangle of flat pale blue -- four
+     times brighter than the green room around it, no detail in it
+     at all, and the single loudest object in the precinct. It is
+     the "light filter over everything" complaint in one prop.
+
+     A window onto a city shows the CITY. Two ranks of roof against
+     the sky, the far one hazed so the sky comes through it and the
+     near one solid; chimneys, cowls, dormers, aerials, a wire
+     between two stacks, a landmark once per run, and lit windows
+     after dark. Returned with the sky left TRANSPARENT, so the
+     caller draws it over whatever DAY put there, and twice at a
+     parallax offset so it slides at a third of the room's rate.
+     ============================================================ */
+  function vista(w, h, seed, lit) {
+    return cached('vista:' + w + 'x' + h + ':' + (seed || 0) + ':' + (lit ? 1 : 0), () => {
+      const o = cv(w, h), c = o.c;
+      const rng = U.mulberry32((seed || 1) * 71 + 13);
+      const HAZE = 'rgba(96,116,140,.52)';
+      const HAZE_T = 'rgba(140,162,186,.60)';
+      const NEAR = '#161c26';
+      const NEAR_T = '#232c38';
+      const WARM = '#ffd75e';
+      const COOL = 'rgba(150,182,210,.44)';
+
+      /* ---- the far rank: hazed, so the sky reads through it ---- */
+      let x = -6;
+      while (x < w) {
+        const bw = 8 + Math.floor(rng() * 16);
+        const bh = Math.round(h * (0.22 + rng() * 0.24));
+        px(c, x, h - bh, bw, bh, HAZE);
+        px(c, x, h - bh, bw, 1, HAZE_T);
+        if (rng() < 0.4) px(c, x + Math.floor(bw / 2), h - bh - 3, 2, 3, HAZE);
+        /* a few windows in it, but only as smudges at this distance */
+        for (let ly = h - bh + 3; ly < h - 2; ly += 4) {
+          for (let lx = x + 2; lx < x + bw - 2; lx += 4) {
+            if (rng() < (lit ? 0.20 : 0.07)) px(c, lx, ly, 2, 2, COOL);
+          }
+        }
+        x += bw + 1 + Math.floor(rng() * 3);
+      }
+      /* the haze bank sitting on the far roofline */
+      for (let i = 0; i < 5; i++) {
+        px(c, 0, Math.round(h * 0.50) + i, w, 1,
+          'rgba(168,190,212,' + (0.10 - i * 0.018).toFixed(3) + ')');
+      }
+
+      /* ---- the near rank: solid, with everything a roof has on it ---- */
+      const stacks = [];
+      x = -8;
+      while (x < w) {
+        const bw = 12 + Math.floor(rng() * 22);
+        const bh = Math.round(h * (0.40 + rng() * 0.34));
+        const top = h - bh;
+        px(c, x, top, bw, bh, NEAR);
+        px(c, x, top, bw, 1, NEAR_T);
+        px(c, x, top + 1, bw, 1, 'rgba(0,0,0,.40)');
+        /* the mansard slope on some of them, which is what says Paris */
+        if (rng() < 0.55) {
+          for (let i = 0; i < 5; i++) {
+            px(c, x + i, top - 5 + i, bw - i * 2, 1, i < 2 ? NEAR_T : NEAR);
+          }
+          /* and a dormer in it */
+          if (bw > 16) {
+            const dx = x + Math.floor(bw / 2) - 3;
+            px(c, dx, top - 6, 7, 7, NEAR);
+            px(c, dx + 1, top - 5, 5, 4, lit ? WARM : COOL);
+            px(c, dx - 1, top - 7, 9, 2, NEAR_T);
+          }
+        }
+        /* chimneys and cowls */
+        const nch = 1 + Math.floor(rng() * 2);
+        for (let k = 0; k < nch; k++) {
+          const cxx = x + 2 + Math.floor(rng() * Math.max(1, bw - 6));
+          const chh = 4 + Math.floor(rng() * 6);
+          px(c, cxx, top - chh, 4, chh, NEAR);
+          px(c, cxx, top - chh, 4, 1, '#3a4450');
+          if (rng() < 0.5) { px(c, cxx, top - chh - 2, 4, 2, '#2b3340'); stacks.push([cxx + 2, top - chh - 2]); }
+          else stacks.push([cxx + 2, top - chh]);
+        }
+        /* the windows, in rows, because a building has floors */
+        for (let ly = top + 5; ly < h - 3; ly += 6) {
+          for (let lx = x + 3; lx < x + bw - 3; lx += 6) {
+            if (rng() < (lit ? 0.34 : 0.12)) {
+              px(c, lx, ly, 3, 4, rng() < 0.6 ? WARM : COOL);
+              px(c, lx, ly, 3, 1, 'rgba(255,255,255,.30)');
+            } else {
+              px(c, lx, ly, 3, 4, 'rgba(0,0,0,.30)');
+            }
+          }
+        }
+        x += bw + 1 + Math.floor(rng() * 4);
+      }
+      /* the aerials, and one wire slung between two stacks */
+      for (const [sx, sy] of stacks) {
+        if (rng() < 0.4) {
+          px(c, sx, sy - 5, 1, 5, '#39424e');
+          for (let i = 0; i < 3; i++) px(c, sx - 2, sy - 5 + i * 2, 5, 1, '#39424e');
+        }
+      }
+      for (let i = 0; i + 1 < stacks.length; i += 3) {
+        const a = stacks[i], bq = stacks[i + 1];
+        if (!bq || Math.abs(bq[0] - a[0]) > w * 0.5) continue;
+        const dx = bq[0] - a[0];
+        for (let k = 0; k <= Math.abs(dx); k++) {
+          const t = k / Math.max(1, Math.abs(dx));
+          px(c, a[0] + Math.round(dx * t),
+            Math.round(a[1] + (bq[1] - a[1]) * t + Math.sin(t * Math.PI) * 3), 1, 1,
+            'rgba(24,30,40,.8)');
+        }
+      }
+      /* ONE LANDMARK, so the view is of somewhere rather than of buildings */
+      const mx = Math.round(w * (0.24 + rng() * 0.5));
+      const mh = Math.round(h * 0.92);
+      px(c, mx - 7, h - mh, 14, mh, 'rgba(70,86,106,.66)');
+      px(c, mx - 7, h - mh, 14, 1, 'rgba(150,172,196,.70)');
+      px(c, mx - 10, h - Math.round(mh * 0.72), 20, 3, 'rgba(70,86,106,.66)');
+      for (let i = 0; i < 8; i++) {                      /* the dome on it */
+        const rw = Math.round(13 - i * 1.4);
+        px(c, mx - Math.round(rw / 2), h - mh - 8 + i, rw, 1,
+          i < 2 ? 'rgba(160,182,206,.70)' : 'rgba(84,102,124,.66)');
+      }
+      px(c, mx - 1, h - mh - 14, 2, 7, 'rgba(84,102,124,.72)');
+      px(c, mx - 1, h - mh - 16, 2, 2, lit ? WARM : 'rgba(180,200,220,.7)');
+      /* and the pigeons, because there always are */
+      for (let i = 0; i < 3; i++) {
+        const bx2 = Math.floor(rng() * w), by2 = Math.round(h * (0.16 + rng() * 0.2));
+        px(c, bx2, by2, 3, 1, 'rgba(30,36,46,.7)');
+        px(c, bx2 + 1, by2 - 1, 1, 1, 'rgba(30,36,46,.7)');
+      }
       return o.cv;
     });
   }
@@ -1414,6 +1806,6 @@ const ART = (() => {
   return {
     cv, cached, px, box, dither, grain, rivets, paint, art,
     desk, chair, cabinet, lockers, cell, window: window_, radiator,
-    corkboard, bed, barCounter, crate, hangLamp, pipes, wall, floor,
+    corkboard, bed, barCounter, crate, hangLamp, pipes, wall, floor, vista, stand,
   };
 })();

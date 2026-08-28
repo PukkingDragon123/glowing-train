@@ -1594,10 +1594,42 @@ const SCENE = (() => {
            sized to the room it shows whatever slice of cloud and ramp
            happens to be at that height, which is what a window does. */
         DAY.sky(c, Math.round(cam), -oy, viewW(), oy + def.floorY, T, seedOf(def));
-        /* the reveal of the opening, and the dirt in the corners of it */
-        ART.px(c, dp.x, dp.y, dp.w, 1, 'rgba(0,0,0,.30)');
-        ART.px(c, dp.x, dp.y, 1, dp.h, 'rgba(0,0,0,.22)');
-        ART.px(c, dp.x + dp.w - 1, dp.y, 1, dp.h, 'rgba(0,0,0,.22)');
+        /* ---- AND THEN THE CITY, over the sky, sliding at a third of the
+           room's rate. Sky alone in a seventy-by-forty opening is a
+           rectangle of flat pale blue with nothing in it, four times
+           brighter than the room around it. ---- */
+        const lit = (typeof DAY !== 'undefined')
+          && ['dusk', 'dark', 'first'].indexOf(DAY.band().id) >= 0;
+        const vis = ART.vista(Math.max(40, dp.w), Math.max(16, dp.h), seedOf(def), lit);
+        const vspan = vis.width;
+        const voff = dp.x - (Math.round(cam * 0.33) % vspan);
+        c.drawImage(vis, voff, dp.y + dp.h - vis.height);
+        c.drawImage(vis, voff + vspan, dp.y + dp.h - vis.height);
+        /* ---- AND THE GLASS. You are inside a dark room looking out, so
+           the outside is knocked back and the pane is dirty. ---- */
+        ART.px(c, dp.x, dp.y, dp.w, dp.h, 'rgba(16,20,30,.30)');
+        for (let i = 0; i < 6; i++) {
+          const a = (0.20 - i * 0.032).toFixed(3);
+          ART.px(c, dp.x + i, dp.y + i, dp.w - i * 2, 1, 'rgba(10,14,20,' + a + ')');
+          ART.px(c, dp.x + i, dp.y + dp.h - 1 - i, dp.w - i * 2, 1, 'rgba(10,14,20,' + a + ')');
+          ART.px(c, dp.x + i, dp.y + i, 1, dp.h - i * 2, 'rgba(10,14,20,' + a + ')');
+          ART.px(c, dp.x + dp.w - 1 - i, dp.y + i, 1, dp.h - i * 2, 'rgba(10,14,20,' + a + ')');
+        }
+        /* one raking reflection off the pane, and the muck it has run in */
+        for (let i = 0; i < dp.h; i++) {
+          ART.px(c, dp.x + Math.round(dp.w * 0.16) + i, dp.y + i, Math.max(2, dp.w >> 3), 1,
+            'rgba(214,232,248,.055)');
+        }
+        for (let i = 0; i < Math.round(dp.w / 7); i++) {
+          const gx = dp.x + ((i * 37) % dp.w);
+          ART.px(c, gx, dp.y + dp.h - 2 - ((i * 13) % Math.max(2, dp.h >> 2)), 1,
+            1 + (i % 3), 'rgba(0,0,0,.24)');
+        }
+        /* the reveal of the opening */
+        ART.px(c, dp.x, dp.y, dp.w, 1, 'rgba(0,0,0,.44)');
+        ART.px(c, dp.x, dp.y + 1, dp.w, 1, 'rgba(255,255,255,.07)');
+        ART.px(c, dp.x, dp.y, 1, dp.h, 'rgba(0,0,0,.30)');
+        ART.px(c, dp.x + dp.w - 1, dp.y, 1, dp.h, 'rgba(0,0,0,.30)');
         c.restore();
         continue;
       }
@@ -2055,7 +2087,7 @@ const SCENE = (() => {
     const sc2 = sc * (a.scale || 1);
     const w = Math.max(1, Math.round(r.w * sc2));
     const h = Math.max(1, Math.round(r.h * sc2) - id.rise);
-    ART.px(c, Math.round(a.x - w / 3), fy, Math.round(w * 0.66), 2, 'rgba(52,44,32,.32)');
+    castShadow(c, Math.round(a.x), fy, w, 0.42);
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
       Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
     /* AND WHAT IS IN HIS HANDS — in the hand the rig reports, so the glass
@@ -2070,6 +2102,36 @@ const SCENE = (() => {
         : Math.round(fy - h * 0.42) - lift;
       prop(c, job.prop, hx, hy, face, T, a._ph || 0);
     }
+  }
+
+  /* ============================================================
+     WHAT A FIGURE PUTS ON THE FLOOR.
+
+     Everybody in this game stood on a two-row bar at a third
+     opacity, and an object with a bar under it does not read as
+     standing on the floor -- it reads as having a bar under it. A
+     contact shadow is DARKEST and TIGHTEST where the feet touch,
+     it spreads and fades as it goes, and it goes AWAY from
+     whatever is lighting the room, which every room already
+     declares as def.lights.
+     ============================================================ */
+  function castShadow(c, x, fy, w, a) {
+    let dir = 1, near = 1e9;
+    for (const L of (def && def.lights) || []) {
+      const dd = Math.abs(L.x - x);
+      if (dd < near) { near = dd; dir = L.x <= x ? 1 : -1; }
+    }
+    const len = Math.round(w * (near > 110 ? 0.55 : 1.15));
+    /* eight steps, not one per pixel: this runs for every actor every frame */
+    for (let i = 8; i >= 1; i--) {
+      const t = i / 8;
+      SPR.ellipse(c, Math.round(x + dir * len * t), fy + Math.round(t * 2),
+        Math.max(1, Math.round(w * 0.44 * (1 - t * 0.62))),
+        Math.max(1, Math.round(3.2 * (1 - t * 0.7))),
+        'rgba(9,11,17,' + (a * 0.62 * (1 - t) * (1 - t * 0.6)).toFixed(3) + ')');
+    }
+    SPR.ellipse(c, x, fy, Math.round(w * 0.46), 3, 'rgba(8,10,14,' + (a * 0.95).toFixed(3) + ')');
+    SPR.ellipse(c, x, fy + 1, Math.round(w * 0.30), 2, 'rgba(5,6,9,' + (a * 1.25).toFixed(3) + ')');
   }
 
   /* ============================================================
@@ -2150,8 +2212,8 @@ const SCENE = (() => {
     /* THE SHADOW STAYS ON THE FLOOR while he hops off it, which is the only
        thing that makes a hop read as leaving the ground rather than as the
        whole sprite sliding up the screen. */
-    ART.px(c, Math.round(me.x - shW / 2), fy, shW, 2,
-      'rgba(52,44,32,' + (0.38 - g.hop * 0.06).toFixed(2) + ')');
+    castShadow(c, Math.round(me.x), fy + Math.round(g.hop * 0.4), shW,
+      0.50 - g.hop * 0.10);
     c.drawImage(r.cv, Math.round(me.x - w / 2) + id.lean + lean + g.tip,
       Math.round(fy - h + 1 - g.hop + g.drop), w, h);
   }

@@ -90,22 +90,22 @@ const ROOMS = (() => {
       /* ============ the bullpen: the chairs live behind the desks ============ */
       for (let i = 0; i < 3; i++) {
         const dx = 176 + i * 78;
-        c.drawImage(ART.chair(14, 26, i + 1), dx - 4, FY - 26);
+        ART.stand(c, ART.chair(14, 26, i + 1), dx - 4, FY - 26, { a: 0.8, len: 0.6 });
       }
       /* the window between the desks, city outside */
       c.drawImage(ART.window(64, 40, false, 8), 214, 20);
       c.drawImage(ART.window(64, 40, false, 12), 320, 20);
 
       /* ============ the water cooler + the dead plant ============ */
-      c.drawImage(ART.art('cooler', 2), 52, FY - 26);
-      c.drawImage(ART.art('plant', 2), 400, FY - 26);
+      ART.stand(c, ART.art('cooler', 2), 52, FY - 26, { dir: -1 });
+      ART.stand(c, ART.art('plant', 2), 400, FY - 26, { len: 0.5 });
 
       /* ============ filing wall + lockers ============ */
-      c.drawImage(ART.cabinet(30, 46, 1, 7), 420, FY - 46);
-      c.drawImage(ART.cabinet(30, 46, -1, 9), 452, FY - 46);
-      c.drawImage(ART.lockers(56, 52, 4, 3), 484, FY - 52);
+      ART.stand(c, ART.cabinet(30, 46, 1, 7), 420, FY - 46);
+      ART.stand(c, ART.cabinet(30, 46, -1, 9), 452, FY - 46);
+      ART.stand(c, ART.lockers(56, 52, 4, 3), 484, FY - 52);
       c.drawImage(ART.art('wallclock', 1), 430, 24);
-      c.drawImage(ART.radiator(40, 16), 372, FY - 16);
+      ART.stand(c, ART.radiator(40, 16), 372, FY - 16, { a: 0.7, len: 0.25 });
 
       /* ============ the captain's office door ============ */
       px(c, 262, 34, 40, 72, p.K);
@@ -146,7 +146,7 @@ const ROOMS = (() => {
       }
 
       /* ============ the holding cell, stage right ============ */
-      c.drawImage(ART.cell(58, 62, 5), 544, FY - 62);
+      ART.stand(c, ART.cell(58, 62, 5), 544, FY - 62);
 
       /* ============ THE BOARD at the far end ============ */
       c.drawImage(ART.corkboard(78, 52, 2), 556 - 92, 26);
@@ -185,7 +185,7 @@ const ROOMS = (() => {
     const front = (c) => {
       const p = P();
       /* Maybelle's counter */
-      c.drawImage(ART.desk(70, 22, 2), 78, FY - 22);
+      ART.stand(c, ART.desk(70, 22, 2), 78, FY - 22, { len: 0.28 });
       c.drawImage(ART.art('phone', 1), 86, FY - 32);
       c.drawImage(ART.art('files', 1), 126, FY - 33);
       c.drawImage(ART.art('mug', 1), 140, FY - 29);
@@ -194,7 +194,7 @@ const ROOMS = (() => {
       /* the three bullpen desks */
       for (let i = 0; i < 3; i++) {
         const dx = 176 + i * 78;
-        c.drawImage(ART.desk(62, 22, i + 3), dx + 10, FY - 22);
+        ART.stand(c, ART.desk(62, 22, i + 3), dx + 10, FY - 22, { len: 0.28 });
         c.drawImage(ART.art('typewriter', 1), dx + 14, FY - 35);
         if (i === 1) c.drawImage(ART.art('ashtray', 1), dx + 44, FY - 28);
         if (i === 2) c.drawImage(ART.art('files', 1), dx + 42, FY - 33);

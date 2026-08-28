@@ -163,28 +163,91 @@ const PLACES = (() => {
       px(c, 44, 70, 3, 5, p.h);
       sign(c, 6, 18, 52, 'LAUNDRY', '#3a7d6a');
 
-      /* THE MACHINES. Three drums, one door open, one still turning. */
+      /* ============ THE MACHINES ============
+         Three white rectangles with a dark circle on each and a slot
+         and a dial in the top corners. At twice the resolution that is
+         a row of fridges with portholes. A launderette machine has: a
+         FASCIA that steps back above the door, a door with a rim and a
+         hinge and a latch, glass in it with the room reflected in the
+         top of it, a plinth with feet that leave a gap and a shadow
+         under the whole thing, and enamel that has been chipped for
+         thirty years. */
       for (let i = 0; i < 3; i++) {
-        const mx = 70 + i * 46;
-        ART.box(c, mx, FY - 46, 42, 46, { fill: '#cdd3d8', top: '#e6ebee', bot: '#7f878e', left: '#e0e5e8', right: '#9aa2a8', ink: p.K });
-        ART.grain(c, mx + 2, FY - 44, 38, 42, '#bcc3c9', '#dde2e6', seed + i * 7);
-        /* the drum door */
-        const open = i === 1;
-        PIX.disc(c, mx + 21, FY - 26, 13, p.K);
-        PIX.disc(c, mx + 21, FY - 26, 12, open ? '#0d1116' : '#2a3540');
-        if (!open) {
-          PIX.disc(c, mx + 21, FY - 26, 9, '#4a5c6a');
-          PIX.disc(c, mx + 18, FY - 29, 4, 'rgba(255,255,255,.18)');
-          /* the wash still going round */
-          const a = (i * 1.7) % 6.28;
-          px(c, mx + 21 + Math.round(Math.cos(a) * 5), FY - 26 + Math.round(Math.sin(a) * 5), 3, 3, '#c9d2d8');
+        const mx = 70 + i * 46, top = FY - 46;
+        /* the shadow it stands in, and the gap under the plinth */
+        for (let k = 5; k >= 1; k--) {
+          const t = k / 5;
+          px(c, mx - Math.round(4 * t), FY - Math.round(t * 2) - 1,
+            42 + Math.round(9 * t), 2, 'rgba(8,10,14,' + (0.30 * (1 - t)).toFixed(3) + ')');
         }
-        /* the coin slot and the dial */
-        px(c, mx + 6, FY - 42, 12, 4, p.K);
-        px(c, mx + 7, FY - 41, 10, 2, '#5a646c');
-        px(c, mx + 30, FY - 42, 8, 8, p.K);
-        px(c, mx + 31, FY - 41, 6, 6, '#8d9298');
-        px(c, mx + 33, FY - 40, 2, 3, '#22282e');
+        px(c, mx + 1, FY - 4, 40, 4, '#0d1013');
+        for (const fx of [mx + 3, mx + 36]) {              /* the feet */
+          px(c, fx, FY - 5, 3, 5, '#1b2126');
+          px(c, fx, FY - 5, 1, 5, '#39424a');
+        }
+        /* the body */
+        ART.box(c, mx, top, 42, 42, { fill: '#cdd3d8', top: '#e6ebee', bot: '#7f878e',
+          left: '#e0e5e8', right: '#9aa2a8', ink: p.K });
+        ART.grain(c, mx + 2, top + 2, 38, 38, '#bcc3c9', '#dde2e6', seed + i * 7);
+        /* the fascia, stepped back, with the coin box and the programme dial */
+        px(c, mx, top, 42, 11, '#b3bac0');
+        px(c, mx, top, 42, 1, '#eef2f4');
+        px(c, mx, top + 10, 42, 1, 'rgba(0,0,0,.34)');
+        px(c, mx, top + 11, 42, 1, 'rgba(255,255,255,.16)');
+        px(c, mx + 5, top + 3, 13, 5, p.K);                /* the coin box */
+        px(c, mx + 6, top + 4, 11, 3, '#4d565e');
+        px(c, mx + 8, top + 4, 7, 1, '#0e1216');
+        PIX.disc(c, mx + 32, top + 5, 5, p.K);             /* the dial */
+        PIX.disc(c, mx + 32, top + 5, 4, '#8d9298');
+        PIX.disc(c, mx + 31, top + 4, 2, '#c4cace');
+        px(c, mx + 32, top + 2, 1, 4, '#22282e');
+        for (let k = 0; k < 5; k++) {                      /* its marks */
+          const a2 = -2.2 + k * 1.1;
+          px(c, mx + 32 + Math.round(Math.cos(a2) * 7), top + 5 + Math.round(Math.sin(a2) * 7),
+            1, 1, 'rgba(0,0,0,.40)');
+        }
+        px(c, mx + 22, top + 4, 6, 3, '#3a7d6a');          /* the running light */
+        px(c, mx + 23, top + 5, 4, 1, i === 2 ? '#7fe6c0' : '#1c3a33');
+        /* THE DOOR: a rim, a hinge, a latch, and glass */
+        const open = i === 1;
+        const dcx = mx + 21, dcy = top + 27;
+        PIX.disc(c, dcx, dcy, 15, p.K);
+        PIX.disc(c, dcx, dcy, 14, '#aeb6bc');              /* the rim */
+        PIX.disc(c, dcx - 2, dcy - 2, 12, '#d6dce0');
+        PIX.disc(c, dcx, dcy, 12, p.K);
+        PIX.disc(c, dcx, dcy, 11, open ? '#0d1116' : '#2a3540');
+        px(c, mx + 4, dcy - 6, 4, 12, p.K);                /* the hinge */
+        px(c, mx + 5, dcy - 5, 2, 10, '#8d9298');
+        px(c, mx + 35, dcy - 3, 5, 7, p.K);                /* the latch */
+        px(c, mx + 36, dcy - 2, 3, 5, '#c4cace');
+        if (!open) {
+          PIX.disc(c, dcx, dcy, 8, '#4a5c6a');
+          /* the wash going round, and the room reflected in the top of the glass */
+          const a = (i * 1.7) % 6.28;
+          px(c, dcx + Math.round(Math.cos(a) * 5), dcy + Math.round(Math.sin(a) * 5),
+            3, 3, '#c9d2d8');
+          px(c, dcx + Math.round(Math.cos(a + 2.1) * 4), dcy + Math.round(Math.sin(a + 2.1) * 4),
+            2, 2, '#8fa2ae');
+          for (let k = 0; k < 4; k++) {
+            px(c, dcx - 7 + k, dcy - 8 + k, 8 - k, 1, 'rgba(236,246,252,.20)');
+          }
+        } else {
+          /* an open door has depth in it, and the drum's ribs */
+          for (let k = 0; k < 5; k++) {
+            PIX.disc(c, dcx + k, dcy, 11 - k * 2, 'rgba(0,0,0,' + (0.16).toFixed(2) + ')');
+          }
+          for (let k = 0; k < 3; k++) {
+            px(c, dcx - 6 + k * 5, dcy - 7, 2, 14, 'rgba(120,140,156,.28)');
+          }
+        }
+        /* thirty years of chips in the enamel, and rust at the plinth */
+        const rg = U.mulberry32(seed * 13 + i * 91);
+        for (let k = 0; k < 14; k++) {
+          const cx3 = mx + 2 + Math.floor(rg() * 38), cy3 = top + 12 + Math.floor(rg() * 28);
+          if (Math.abs(cx3 - dcx) < 16 && Math.abs(cy3 - dcy) < 16) continue;
+          px(c, cx3, cy3, 1 + (rg() < 0.3 ? 1 : 0), 1, 'rgba(90,100,110,.44)');
+        }
+        ART.dither(c, mx + 1, FY - 12, 40, 8, 'rgba(122,86,52,.24)', 0.22, seed + i);
       }
 
       /* THE OUTLINE. Where he was, in chalk, with the tape still up. */
@@ -226,19 +289,66 @@ const PLACES = (() => {
 
       /* SHEETS ON A LINE, across the midground. Hung at a height you look
          under, so the room has something between you and the back wall. */
-      px(c, 62, 30, 300, 1, '#5a5040');
+      /* A SHEET IS NOT A RECTANGLE. These were flat cream boxes with a few
+         one-pixel lines ruled down them, which is what a sheet looks like
+         in a diagram. Cloth hanging off a line SAGS between the pegs, it
+         is wider at the bottom than at the top, its hem is uneven, the
+         folds that were ironed into it catch the light down one side and
+         go dark down the other, and it throws a shadow on the wall it is
+         hanging in front of. */
       for (let i = 0; i < 5; i++) {
         const sx = 74 + i * 58, sw = 34 + (i % 2) * 8;
         const sh = 22 + ((i * 7 + seed) % 10);
-        px(c, sx, 30, sw, sh, i % 2 ? '#cfc7b2' : '#ded6c2');
-        px(c, sx, 30, sw, 2, '#f0e9d6');
-        px(c, sx, 30 + sh - 2, sw, 2, 'rgba(0,0,0,.22)');
-        /* the fold shadows down it, and the sag at the bottom */
-        for (let k = 4; k < sw - 3; k += 7) px(c, sx + k, 32, 1, sh - 4, 'rgba(0,0,0,.10)');
-        px(c, sx + 2, 30 + sh, sw - 4, 1, 'rgba(0,0,0,.3)');
-        /* two pegs */
-        px(c, sx + 3, 28, 2, 4, '#8d6a3a');
-        px(c, sx + sw - 5, 28, 2, 4, '#8d6a3a');
+        const rg = U.mulberry32(seed * 7 + i * 53);
+        const base = i % 2 ? '#cfc7b2' : '#ded6c2';
+        const lit = i % 2 ? '#e6dfcb' : '#f0e9d6';
+        const dk = i % 2 ? '#a79f8b' : '#b4ac98';
+        /* on the wall behind it, offset down and right */
+        px(c, sx + 4, 34, sw, sh, 'rgba(6,10,14,.26)');
+        /* the cloth, row by row: it sags at the top and flares at the foot */
+        const folds = [];
+        for (let k = 3; k < sw - 2; k += 6 + Math.floor(rg() * 3)) folds.push(k);
+        for (let y = 0; y < sh; y++) {
+          const t = y / (sh - 1);
+          const flare = Math.round(t * 3);
+          const x0 = sx - flare, ww = sw + flare * 2;
+          /* the top edge dips between the two pegs */
+          const dip = Math.round(Math.sin(Math.PI * U.clamp(t * 8, 0, 1)) * 0);
+          px(c, x0, 30 + y + dip, ww, 1, base);
+          /* the folds: lit down one side of each crease, dark down the other */
+          for (const k of folds) {
+            px(c, x0 + k + flare, 30 + y, 1, 1, dk);
+            px(c, x0 + k + flare + 1, 30 + y, 1, 1, lit);
+          }
+          /* and the light falling off toward the bottom of the drop */
+          if (t > 0.62) {
+            px(c, x0, 30 + y, ww, 1, 'rgba(0,0,0,' + ((t - 0.62) * 0.30).toFixed(3) + ')');
+          }
+        }
+        /* the sag of the top edge between the two pegs */
+        for (let x = 0; x < sw; x++) {
+          const t = x / (sw - 1);
+          const s2 = Math.round(Math.sin(Math.PI * t) * 2);
+          if (s2 > 0) px(c, sx + x, 30, 1, s2, 'rgba(0,0,0,.34)');
+          px(c, sx + x, 30 + s2, 1, 1, lit);
+        }
+        /* the hem: uneven, with a couple of pixels of it turned up */
+        for (let x = 0; x < sw + 6; x++) {
+          const hy = 30 + sh + (rg() < 0.3 ? 1 : 0);
+          px(c, sx - 3 + x, hy - 1, 1, 2, dk);
+          if (rg() < 0.22) px(c, sx - 3 + x, hy, 1, 1, 'rgba(0,0,0,.30)');
+        }
+        /* two pegs, gripping */
+        for (const pxx of [sx + 3, sx + sw - 5]) {
+          px(c, pxx, 27, 3, 6, '#5c4526');
+          px(c, pxx, 27, 1, 6, '#a37f45');
+          px(c, pxx, 32, 3, 1, 'rgba(0,0,0,.44)');
+        }
+      }
+      /* THE LINE, over the pegs, sagging between the walls */
+      for (let x = 62; x < 362; x++) {
+        const t = (x - 62) / 300;
+        px(c, x, 29 + Math.round(Math.sin(Math.PI * t) * 2), 1, 1, '#6b5f4a');
       }
 
       /* THE FOLDING TABLE, with a stack nobody came back for */
