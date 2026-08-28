@@ -188,6 +188,8 @@ out with twenty francs and a captain who thinks you might be worth the desk.
 
 ![Six shots](docs/screen-range.png)
 
+![Down the lane, over the sights](docs/screen-pov-range.png)
+
 ### It is drawn at the size it is drawn at
 
 Every room is a canvas of world pixels blown up by a **whole number**, which
@@ -758,9 +760,40 @@ better than the job.
 It follows you between cases, the street reads it before you open your mouth,
 and at the end it is weighed with everything else.
 
-### The jobs
+### The jobs, in the first person
 
-![The pavement](docs/screen-scoop.png)
+![Breakfast, from over his own shoulder](docs/screen-pov-breakfast.png)
+
+Every trade in this game used to happen on a **card**: a hundred and
+thirty-two pixels by eighty-four, floated in the middle of a dark screen with
+a headline over it and a caption under it. It was a dialog box with a picture
+in it and it felt like one — you were never pouring a pint, you were
+operating a widget.
+
+A trade is a **shot** now. Same size as a room, same letterbox, filling the
+frame: the wall behind, the surface you are working on, the thing you are
+working on standing on it, and **your own two arms** coming in from the bottom
+corners in pinstripe sleeves. The needle is a strip low in the picture rather
+than a header. The words are drawn into the canvas, because a caption in the
+DOM is a caption on a dialog.
+
+![The lock, at the end of your arm](docs/screen-pov-lock.png)
+
+So the pan is on the stove with the window over the sink behind it, one fist
+on the handle and one on the slice and the egg setting dead centre. The lock
+is at the end of your arm with a pick in one hand and a wrench in the other
+and a cutaway of three pins above it. The tap column ends where the glass
+begins and the pour crosses the gap. The target is down a converging lane
+over the front blade of a pistol you are holding in two hands.
+
+![The taps, from behind the bar](docs/screen-pov-taps.png)
+
+The brief is a **docket** — cream paper, black ink, a bulldog clip — up over
+the shot for a second and then gone, because a plate parked in the corner
+covers exactly the thing you are meant to be looking at. And the needle
+**waits** for it: it used to be sweeping behind the card the whole time it was
+up, so round one was decided by something you were still reading. A tap while
+the docket is up skips the brief instead of firing.
 
 Nobody lives on this salary. **Work the taps** at the Moulin, **make a batch**
 at the café, **clear the drums** at the laundry, **pick the lock** on the shed
@@ -769,6 +802,9 @@ at the quay, **dust for prints** at the Brigade — and, this being Paris:
 - **THE PAVEMENT.** Every dog in this city fouls it and nobody picks it up.
   There is a scoop on the back of the cart, three passes to get it, and the
   only reward is that somebody does not step in it.
+
+![The pavement](docs/screen-scoop.png)
+
 - **THE THREE CUPS.** A frog with a folding table on the Butte. Play him and
   he is faster than your eye. Warn the mark off and he loses his rent. Or run
   the table yourself, which pays and costs.
@@ -1040,6 +1076,106 @@ watchful, and hard when it is warranted. The warm face still exists — it just
 has to be **earned** by something specific happening, and it lasts about two
 seconds: the dog leans on him, an errand pays off, a story comes apart.
 
+## The hand you hold things with
+
+![The fist at the three sizes the game asks for](docs/screen-hand.png)
+
+Two hands on a pan handle came out as four green sausages, and the reason was
+arithmetic rather than taste: the hand was a stack of rounded rectangles
+thirty-four pixels wide, drawn through a **scale of one half**. Every crease
+in it landed on half a pixel and went away.
+
+So it is authored at whatever width it is asked for, in **integer pixels**,
+and cached — the same rule the side-on torso already followed, for the same
+reason. A resampled crease is not a crease.
+
+It took three poses to find one that reads. Four fingers with creases and
+nails, laid out in rows, is **five parallel bars** at the twenty pixels the
+game actually draws it at, with a sixth on top for a thumb. What works is
+what a closed hand actually is: one rounded **mass**, four **knuckle domes**
+in an arc on the front of it with a crease under each, four **phalanges**
+wrapping away underneath with a nail on each curled tip, and the thumb
+crossing the top **diagonally** — a different direction is the thing that
+makes a thumb read as a thumb at this size. Its outline used to be painted
+column by column over the skin the column before had just laid down, so it
+came out as a black diagonal with one green pixel on the end of it.
+
+## The second read
+
+![The launderette](docs/screen-scene.png)
+
+A wall was a dithered field with a rail across it. A floor was boards with one
+bright line at the top. At twice the resolution that is precisely what they
+looked like: two flat fields with a seam between them.
+
+Both of them now carry the things you only notice on the **second** look,
+which are the things that make the first look convincing. On the wall: a
+skirting board with a line of dust in the angle behind it, the falloff at the
+ceiling and again at the floor because a room is lit from the middle of
+itself, scuffs at chair-back height where chairs go, a socket and the conduit
+running up out of it. On the floor: the hard shadow in the wall-floor angle
+and then **light bounced back** off the boards a few rows down, the walked
+path polished down the middle where everybody goes, grit piling up at the
+back where nobody sweeps, and the arc a door scratches.
+
+And everything **stands** on it. Every stick of furniture in this game sat on
+a two-pixel bar at a third opacity, and an object with a bar under it does not
+read as standing on the floor — it reads as having a bar under it. A contact
+shadow is darkest and tightest where the feet touch, it spreads and fades as
+it goes, and it goes **away from the light**, which every room already
+declares. The cast get theirs in the runtime, so every character in every
+room has one.
+
+### The hole in the precinct wall was a lightbox
+
+A room can declare an opening with `sky: true`, and the runtime used to drop
+the whole sky in behind it — sized to the room, clipped to a
+seventy-by-forty doorway. At nine in the morning that is a rectangle of flat
+pale blue with nothing in it, four times brighter than the green room around
+it, and the loudest object in the picture.
+
+A window onto a city shows the **city**: two ranks of roof against the sky,
+the far one hazed so the sky comes through it, mansards and dormers and
+chimney cowls and aerials, a wire slung between two stacks, one landmark,
+pigeons, lit windows after dark — sliding past at a third of the room's rate.
+Then it gets knocked back behind dirty glass, because you are looking at it
+from inside a dark room.
+
+### And the props themselves
+
+![Typewriter, cooler, chair, desk](docs/screen-props.png)
+
+The desk has **wear** on it: a rubbed nose to the top where forearms go, rings
+and ink, grain in two directions, pulls with a lip and a shadow under it, a
+keyhole on the top drawer, bounced light low in the knee hole, and the
+leavings of a shift.
+
+The chair's back pad was measured at forty-six per cent of the height and came
+out **four rows tall** — a letter T on a stick.
+
+The typewriter was a white box with a dark slot and two rows of dots. It has a
+carriage with a knob at each end, a sheet standing up out of it, a paper bail,
+a return lever, a maker's badge, and a key bank that **steps** — three rows
+each further forward than the last, which is the shape everybody recognises
+before they recognise anything else.
+
+The water cooler was a flat cyan slab on a grey box, and it was the brightest
+thing in the precinct. A bottle is glass: the light goes through it, there is
+a meniscus and a bright core down the middle, and it stands on a cabinet with
+two taps and a drip tray.
+
+The launderette's machines were three white rectangles with a dark circle on
+each — a row of fridges with portholes. They have a fascia that steps back
+above the door, a coin box, a programme dial with its marks, a running light,
+a door with a rim and a hinge and a latch, the wash going round behind glass
+with the room reflected in the top of it, a plinth on feet with a gap and a
+shadow under it, and thirty years of chips in the enamel.
+
+And a sheet is not a rectangle. Cloth on a line sags between the pegs, flares
+toward the hem, has ironed folds that catch the light down one side and go
+dark down the other, ends in an uneven turned-up hem, and throws a shadow on
+the wall it hangs in front of.
+
 ## Everything that moves
 
 All drawn, all procedural, no sprite sheets, tap to skip the long ones.
@@ -1112,11 +1248,14 @@ every conversation.
 
 ```
 index.html        entry point
-style.css         the pixel skin: chunky panels, CRT overlay, zero radius
+style.css         the pixel skin: chunky panels, paper plates, zero radius
 js/util.js        seeded RNG (mulberry32), helpers, procedural WebAudio SFX
 js/pixfont.js     the hand-drawn 5×7 typeface every letter is set in
 js/pix.js         pixel engine: the palette, a sprite compiler, draw helpers
-js/art.js         THE PROP SHOP: painted pixel maps + the shading kit
+js/art.js         THE PROP SHOP: painted pixel maps, the shading kit, the
+                  walls and floors with their second read, ART.stand (which
+                  puts a contact shadow down before the thing that throws
+                  it) and ART.vista (the city through a hole in a wall)
 js/scene.js       the side-on rooms: tap-to-move, camera, walk rig, plates
 js/city.js        THE CITY: five stops, the clock, the sky, what is searchable
 js/places.js      the working stops, and the floors under and over them
@@ -1133,14 +1272,19 @@ js/paris.js       the city itself: the Tower, the Arch, the Butte, the
                   cemetery, the ring road, and the furniture of Paris —
                   Haussmann, plane trees, Wallace fountains
 js/phone.js       the FroggoPhone: the map, the file, the kit, the only menu
-js/jobs.js        the side work: taps, fryer, drums, lock, prints, scoop,
-                  and three cups with a ball under one of them
+js/jobs.js        the side work, all of it FIRST PERSON at room size:
+                  taps, fryer, drums, lock, prints, scoop, breakfast, the
+                  range, and three cups with a ball under one of them --
+                  plus the paper docket that briefs each one and gets out
+                  of the way
 js/tools.js       the belt: the hand, the eyeglass, the iron, the cursors
 js/rooms.js       the station: bullpen, board room, ward, line-up room
 js/story.js       THE CASE: chapters, the board, dialogue, errands, endings
 js/data.js        the crew, the guns, the belt, the questions, the tuning
 js/meta.js        what survives a case: stats, learned tells, her trust
-js/sprites.js     THE ONE FROG MODEL, the iron rig, mugshots, splats, plates
+js/sprites.js     THE ONE FROG MODEL, the iron rig, mugshots, splats,
+                  plates, the side-on torso and SPR.povFist -- both
+                  authored at the size they are drawn at, in whole pixels
 js/engine.js      pure rules: the duel, his brain, the loot, the heat
 js/case.js        the identification game: suspects, evidence, questions
 js/duel.js        the drawn table: expressions, grips, the steady check
@@ -1154,6 +1298,7 @@ js/fx.js          smoke, gore, chip arcs, slow-mo, ambient dust
 js/main.js        boot (+ ?debug harness)
 dev/sim.js        headless balance + fuzz harness (node dev/sim.js)
 dev/smoke.js      full browser smoke test (node dev/smoke.js)
+dev/bundle.js     inlines every script into dist/shell-and-debt.html
 ```
 
 ### Tuning knobs
