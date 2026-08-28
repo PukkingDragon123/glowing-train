@@ -1737,60 +1737,209 @@ SPR.frogGesture = function (ctx, cx, cy, d, kind, sgn) {
 };
 
 /* ============================================================
-   A HAND CLOSED AROUND SOMETHING.
-   The splayed hand is wrong for a grip: four digits fanned out
-   over a gun butt read as a shrub. This is the back of a fist,
-   knuckles toward the lens, the digits wrapping away to the
-   LEFT across whatever it is holding, thumb laid over the top.
-   Nominal 30 wide — scale it with the transform.
+   THE HAND YOU HOLD THINGS WITH, AT TRUE SIZE.
+
+   frogFist was a stack of rounded rectangles thirty-four pixels
+   wide, drawn through a transform at scale one-half. Every crease
+   in it landed on half a pixel and vanished, every digit came out
+   the same thickness as the one above it, and the thumb was a
+   fifth finger laid across the top. On screen it was a cluster of
+   green sausages.
+
+   So this is authored at whatever width it is asked for, in
+   integer pixels, and cached -- the same rule the profile bust
+   follows, for the same reason. A hand is nearly all creases and
+   a resampled crease is not a crease.
+
+   What a human hand looks like from behind, closed round
+   something, is:
+
+     the back      a trapezoid, WIDER at the knuckle end than at
+                   the wrist, with three tendons standing up on it
+     the knuckles  four domes in an arc, the middle two highest
+     the fingers   from each knuckle, going away, TAPERING, with a
+                   crease at the middle joint, and the tip curling
+                   back so you see a sliver of pad and a nail
+     the thumb     off the side, THICKER than any finger, one
+                   crease, a broad flat nail, laid over the top
+
+   Digits wrap to the LEFT; the wrist anchor is on the right edge
+   and reported as cv.wrist, so the caller can put the cuff there.
    ============================================================ */
+SPR.povFist = function (d, w, o) {
+  o = o || {};
+  w = Math.max(12, Math.round(w));
+  const key = 'pfist_' + (d.id || d.name || 'x') + ':' + w
+    + (o.wet ? 'w' : '') + (d.rings ? 'r' : '');
+  return SPR.cached(key, () => {
+    const P = PIX.PAL, INK = P.K;
+    const skin = P[d.skin[0]] || P.F;
+    const shade = P[d.skin[1]] || P.f;
+    const dark = P[d.skin[2]] || P.e;
+    const H = Math.max(13, Math.round(w * 1.02));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = H;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    const u = (n) => Math.max(1, Math.round(n * w / 32));
+    const NAIL = 'rgba(242,235,218,.62)';
+
+    /* THE LEADING EDGE. A fist is a rounded MASS with the knuckles on the
+       front of it, not a stack of horizontal bars -- which is what four
+       fingers-with-creases came out as, five parallel green sticks with a
+       sixth on top for a thumb, at every size the game asks for. So: one
+       silhouette, four knuckles in an arc on the front of it, four short
+       phalanges wrapping away underneath, and the thumb crossing the top
+       DIAGONALLY, because a different direction is what makes a thumb
+       read as a thumb at twenty pixels. */
+    /* to the power of six tenths, so the mass is FULL at the top and bottom
+       and only tapers right at the ends: a plain sine came out a lens, and
+       left a wedge of nothing between the thumb and the top of the hand */
+    const arcAt = (y) => Math.pow(Math.sin(Math.PI
+      * U.clamp((y / (H - 1) - 0.02) / 0.96, 0, 1)), 0.60);
+    const EL = (y) => Math.round(w * 0.26 - arcAt(y) * w * 0.22);
+    const ER = (y) => w - 1 - Math.round((1 - arcAt(y)) * w * 0.07);
+    const ft = Math.max(3, Math.round(H * 0.17));          /* one phalanx thick */
+
+    /* ---- 1. THE PHALANGES, wrapping away off the front edge. Drawn first,
+            so the mass lands over where they leave the knuckles. ---- */
+    const KY = [0, 1, 2, 3].map(i => Math.round(H * (0.19 + i * 0.187)));
+    const KL = [u(7), u(8), u(7), u(5)];                   /* shorter down the hand */
+    for (let i = 3; i >= 0; i--) {
+      const y = KY[i] - (ft >> 1), len = KL[i];
+      const x1 = EL(KY[i]) + u(3), x0 = Math.max(0, x1 - len);
+      PIX.rect(c, x0 - 1, y - 1, x1 - x0 + 2, ft + 2, INK);
+      PIX.rect(c, x0, y, x1 - x0, ft, i < 2 ? skin : shade);
+      PIX.rect(c, x0, y, x1 - x0, 1, 'rgba(255,255,255,.18)');
+      PIX.rect(c, x0, y + ft - 1, x1 - x0, 1, 'rgba(0,0,0,.30)');
+      /* the tip, curled back under: a pad with a small nail on it */
+      if (len >= u(5)) {
+        PIX.rect(c, x0 - 1, y, u(3) + 2, ft + 1, INK);
+        PIX.rect(c, x0, y + 1, u(3), ft - 1, shade);
+        PIX.rect(c, x0, y + 1, Math.max(1, u(2)), Math.max(1, ft - 2), NAIL);
+      }
+    }
+
+    /* ---- 2. THE MASS ---- */
+    for (let y = 0; y < H; y++) {
+      const xl = EL(y), xr = ER(y);
+      if (xr <= xl) continue;
+      const t = y / (H - 1);
+      PIX.rect(c, xl - 1, y, xr - xl + 3, 1, INK);
+      PIX.rect(c, xl, y, xr - xl + 1, 1, t < 0.52 ? skin : shade);
+      PIX.rect(c, xl, y, Math.max(1, u(2)), 1, 'rgba(255,255,255,.15)');
+      PIX.rect(c, xr - Math.max(1, u(2)), y, Math.max(1, u(2)), 1, 'rgba(0,0,0,.26)');
+    }
+    /* the tendons, running back from the knuckles into the wrist */
+    for (let i = 0; i < 3; i++) {
+      const ty = Math.round((KY[i] + KY[i + 1]) / 2), xl = EL(ty);
+      if (ER(ty) - xl < u(6)) continue;
+      PIX.rect(c, xl + u(4), ty, ER(ty) - xl - u(5), 1, 'rgba(0,0,0,.22)');
+      PIX.rect(c, xl + u(4), ty - 1, ER(ty) - xl - u(5), 1, 'rgba(255,255,255,.08)');
+    }
+
+    /* ---- 3. THE KNUCKLES, four domes on the front of the mass ---- */
+    for (let i = 0; i < 4; i++) {
+      const ky = KY[i], r = Math.max(2, u(i === 1 || i === 2 ? 3.6 : 3.0));
+      const kx = EL(ky) + r - 1;
+      PIX.disc(c, kx, ky, r + 1, INK);
+      PIX.disc(c, kx, ky, r, skin);
+      PIX.disc(c, kx - Math.max(1, u(1)), ky - Math.max(1, u(1)),
+        Math.max(1, r - u(2)), 'rgba(255,255,255,.22)');
+      /* the crease below each one, which is what makes four of them read
+         as four rather than as one lumpy edge */
+      PIX.rect(c, kx - r, ky + r, r + u(5), 1, 'rgba(0,0,0,.34)');
+      PIX.rect(c, kx - r, ky + r + 1, r + u(4), 1, 'rgba(255,255,255,.07)');
+    }
+
+    /* ---- 4. THE THUMB, across the top on the diagonal ---- */
+    const tt = ft + Math.max(1, u(2));
+    const ax = Math.round(w * 0.66), ay = Math.max(1, Math.round(H * 0.07));
+    const bx = Math.max(0, Math.round(w * 0.09)), by = Math.round(H * 0.33);
+    const steps = Math.max(3, ax - bx);
+    const col = (i) => {
+      const t = i / steps;
+      return { x: Math.round(ax + (bx - ax) * t), y: Math.round(ay + (by - ay) * t),
+        h: tt - Math.round(t * u(1)) };
+    };
+    /* ALL THE INK FIRST, THEN ALL THE SKIN. Drawn per column -- ink at
+       x minus one through x plus one, then skin at x -- each column's
+       outline painted over the skin the column before it had just laid
+       down, and the thumb came out as a black diagonal with one green
+       pixel at the end of it. */
+    for (let i = 0; i <= steps; i++) {
+      const q = col(i);
+      PIX.rect(c, q.x - 1, q.y - 1, 3, q.h + 2, INK);
+    }
+    for (let i = 0; i <= steps; i++) {
+      const q = col(i);
+      PIX.rect(c, q.x, q.y, 1, q.h, skin);
+      PIX.rect(c, q.x, q.y, 1, 1, 'rgba(255,255,255,.22)');
+      PIX.rect(c, q.x, q.y + q.h - 1, 1, 1, 'rgba(0,0,0,.40)');
+    }
+    /* its one crease, square across the shaft */
+    const cxx = Math.round(ax + (bx - ax) * 0.46);
+    const cyy = Math.round(ay + (by - ay) * 0.46);
+    PIX.rect(c, cxx, cyy, 1, tt, 'rgba(0,0,0,.42)');
+    PIX.rect(c, cxx + 1, cyy, 1, tt, 'rgba(255,255,255,.14)');
+    /* and the NAIL: broad, flat, lying on top of the tip. This is the whole
+       tell that it is a thumb and not a fifth finger. */
+    const nw = Math.max(3, u(4)), nh = Math.max(2, tt - u(3));
+    const nx = bx, ny = by + 1;
+    PIX.rect(c, nx - 1, ny - 1, nw + 2, nh + 2, INK);
+    PIX.rect(c, nx, ny, nw, nh, shade);
+    PIX.rect(c, nx + 1, ny, nw - 1, nh, NAIL);
+    PIX.rect(c, nx + 1, ny, nw - 1, 1, 'rgba(255,252,244,.78)');
+    PIX.rect(c, nx, ny + nh - 1, nw, 1, 'rgba(0,0,0,.26)');
+    PIX.rect(c, nx + nw - 1, ny, 1, nh, 'rgba(0,0,0,.20)');
+    /* the web, where it leaves the hand */
+    PIX.rect(c, ax - u(3), ay + tt, u(5), 1, 'rgba(0,0,0,.34)');
+
+    if (d.rings) {
+      const ry = KY[2] - (ft >> 1), rx = Math.max(0, EL(KY[2]) - u(2));
+      PIX.rect(c, rx, ry - 1, 3, ft + 2, INK);
+      PIX.rect(c, rx + 1, ry, 1, ft, P.G);
+    }
+    if (o.wet) {
+      const my = Math.round(H * 0.44);
+      PIX.rect(c, EL(my) + u(5), my, Math.max(2, ER(my) - EL(my) - u(8)), 1,
+        'rgba(255,255,255,.16)');
+      PIX.rect(c, EL(my) + u(6), my + u(4), Math.max(2, ER(my) - EL(my) - u(11)), 1,
+        'rgba(255,255,255,.10)');
+    }
+    /* the wrist, where the mass turns into the arm */
+    const wy = Math.round(H * 0.80);
+    if (ER(wy) - EL(wy) > u(8)) {
+      PIX.rect(c, EL(wy) + u(6), wy, ER(wy) - EL(wy) - u(7), 1, 'rgba(0,0,0,.24)');
+      PIX.rect(c, EL(wy) + u(6), wy + 1, ER(wy) - EL(wy) - u(8), 1, 'rgba(255,255,255,.07)');
+    }
+    cv.wrist = { x: w - 1, y: Math.round(H * 0.52) };
+    return cv;
+  });
+};
+
+/* THE OLD SIGNATURE, kept so every existing caller still works.
+
+   The duel draws this hand through a rotate and a scale of about a half,
+   and asks for a nominal thirty-four. So: read the scale off the context,
+   ask the true-size draw for thirty-four TIMES it, and undo the scale
+   before blitting -- the hand comes out the size the caller wanted, but
+   its pixels are its own rather than three fifths of one each. The
+   rotation still resamples, and nothing can be done about that. */
 SPR.frogFist = function (ctx, cx, cy, d, o) {
   o = o || {};
-  const P = PIX.PAL, INK = P.K;
-  const skin = P[d.skin[0]] || P.F, shade = P[d.skin[1]] || P.f, dark = P[d.skin[2]] || P.e;
-
-  /* the digits first, so the back of the hand lands on top of them */
-  for (let i = 0; i < 4; i++) {
-    const fy = cy - 12 + i * 8, len = i === 3 ? 13 : 17 - Math.abs(i - 1) * 2;
-    SPR.rrect(ctx, cx - 14 - len, fy - 1, len + 8, 10, 4, INK);
-    SPR.rrect(ctx, cx - 13 - len, fy, len + 6, 8, 3, i < 2 ? skin : shade);
-    PIX.rect(ctx, cx - 13 - len, fy, len + 6, 2, 'rgba(255,255,255,.16)');
-    PIX.rect(ctx, cx - 13 - len, fy + 6, len + 6, 2, 'rgba(0,0,0,.30)');
-    PIX.rect(ctx, cx - 16 - len, fy + 1, 7, 7, INK);           // the knuckle of it
-    PIX.rect(ctx, cx - 15 - len, fy + 2, 5, 5, i < 2 ? skin : shade);
+  let k = 1;
+  if (ctx.getTransform) {
+    const m = ctx.getTransform();
+    k = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) || 1;
   }
-
-  /* the back of the hand, one mass over the top of the digits */
-  SPR.rrect(ctx, cx - 16, cy - 16, 34, 38, 11, INK);
-  SPR.rrect(ctx, cx - 14, cy - 14, 30, 34, 10, skin);
-  SPR.rrect(ctx, cx - 14, cy + 6, 30, 14, 8, shade);
-  PIX.rect(ctx, cx - 12, cy - 14, 24, 3, 'rgba(255,255,255,.20)');
-
-  /* the tendons standing up over the knuckles when it is held tight */
-  for (let i = 0; i < 3; i++) {
-    PIX.rect(ctx, cx - 12, cy - 8 + i * 8, 22, 1, 'rgba(0,0,0,.26)');
-    PIX.rect(ctx, cx - 12, cy - 9 + i * 8, 22, 1, 'rgba(255,255,255,.09)');
-  }
-  const rng = SPR.defRng(d);
-  for (let i = 0; i < 7; i++) {
-    PIX.rect(ctx, Math.round(cx - 12 + rng() * 24), Math.round(cy - 12 + rng() * 28), 2, 2, shade);
-  }
-
-  /* the thumb, laid over the top of the grip and pointing away */
-  SPR.rrect(ctx, cx - 22, cy - 24, 38, 14, 6, INK);
-  SPR.rrect(ctx, cx - 20, cy - 22, 34, 11, 5, skin);
-  PIX.rect(ctx, cx - 20, cy - 22, 34, 2, 'rgba(255,255,255,.20)');
-  PIX.rect(ctx, cx - 20, cy - 14, 34, 3, 'rgba(0,0,0,.22)');
-  PIX.rect(ctx, cx - 26, cy - 22, 10, 10, INK);
-  PIX.rect(ctx, cx - 25, cy - 21, 8, 8, skin);
-  PIX.rect(ctx, cx - 24, cy - 20, 3, 2, 'rgba(255,255,255,.25)');
-
-  if (d.rings) {
-    PIX.rect(ctx, cx - 24, cy - 4, 5, 6, INK);
-    PIX.rect(ctx, cx - 24, cy - 3, 4, 4, P.G);
-  }
-  if (o.wet) PIX.rect(ctx, cx - 6, cy - 10, 14, 4, 'rgba(255,255,255,.10)');
-  void dark;
+  k = U.clamp(k, 0.1, 6);
+  const cv = SPR.povFist(d, U.clamp(Math.round(34 * k), 12, 110), o);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1 / k, 1 / k);
+  ctx.drawImage(cv, -cv.wrist.x, -cv.wrist.y);
+  ctx.restore();
 };
 
 /* ============================================================
