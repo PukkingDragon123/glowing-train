@@ -1304,14 +1304,20 @@ SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
   const INK = P.K;
   const LIT = 'rgba(255,255,255,.20)';
   const f = sgn < 0 ? -1 : 1;            // outward: away from his body
+  /* A HAND IS A FRACTION OF A SHOULDER. The rig used to draw this at a fixed
+     nine pixels whatever size the body was, so when the body came down to
+     human proportions the hands stayed the size of dinner plates. k scales
+     the row tables and everything hung off them. */
+  const K = opts.k === undefined ? 1 : Math.max(0.4, opts.k);
+  const q = (n) => Math.max(1, Math.round(n * K));
 
   if (!opts.noCuff) {                    // the sleeve the wrist comes out of
     const cuffC = SPR.cuffColor ? SPR.cuffColor(d) : (P[d.shirt] || P.W);
-    PIX.rect(ctx, x - 4, y - 6, 8, 5, INK);
-    PIX.rect(ctx, x - 3, y - 6, 6, 4, cuffC);
-    PIX.rect(ctx, x - 3, y - 6, 6, 1, 'rgba(255,255,255,.18)');
-    PIX.rect(ctx, x - 3, y - 3, 6, 1, 'rgba(0,0,0,.30)');
-    if (opts.link) PIX.rect(ctx, x + f * 2 - 1, y - 5, 2, 2, P.G);
+    PIX.rect(ctx, x - q(4), y - q(6), q(8), q(5), INK);
+    PIX.rect(ctx, x - q(3), y - q(6), q(6), q(4), cuffC);
+    PIX.rect(ctx, x - q(3), y - q(6), q(6), 1, 'rgba(255,255,255,.18)');
+    PIX.rect(ctx, x - q(3), y - q(3), q(6), 1, 'rgba(0,0,0,.30)');
+    if (opts.link) PIX.rect(ctx, x + f * q(2) - 1, y - q(5), q(2), q(2), P.G);
   }
 
   /* ROW TABLES, not a loop of digits.
@@ -1327,7 +1333,18 @@ SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
     point: [[2, 2], [3, 3], [4, 9], [4, 10], [4, 4], [4, 4], [3, 3]],
     grip:  [[2, 3], [3, 5], [4, 6], [4, 6], [4, 6], [3, 5], [2, 3]],
   };
-  const rows = SIL[pose] || SIL.hang;
+  const raw = SIL[pose] || SIL.hang;
+  /* the table, scaled and de-duplicated: at k = 0.6 two source rows land on
+     the same output row, and drawing both just wastes fills */
+  const rows = K === 1 ? raw : (() => {
+    const out = [];
+    const n = Math.max(4, Math.round(raw.length * K));
+    for (let i = 0; i < n; i++) {
+      const r = raw[Math.min(raw.length - 1, Math.round(i / K))];
+      out.push([q(r[0]), q(r[1])]);
+    }
+    return out;
+  })();
   const N = rows.length;
   const lo = (i) => x - f * rows[i][0], hi = (i) => x + f * rows[i][1];
   const at = (i) => {
@@ -1355,19 +1372,20 @@ SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
     /* THE KNUCKLES, four bumps along the outward edge, and the grooves
        between the digits curling under them. This is the whole read: a fist
        is knuckles-then-grooves, a relaxed hand is the same thing softer. */
-    const kx = x + f * (pose === 'fist' ? 4 : 3);
-    for (let k = 0; k < 4; k++) {
-      const ky = y + 1 + k * 2;
+    const kx = x + f * q(pose === 'fist' ? 4 : 3);
+    const kstep = Math.max(1, q(2));
+    for (let k = 0; k < 4 && 1 + k * kstep < N; k++) {
+      const ky = y + 1 + k * kstep;
       PIX.rect(ctx, kx, ky, 1, 1, pose === 'fist' ? 'rgba(255,255,255,.30)' : LIT);
       PIX.rect(ctx, kx, ky + 1, 1, 1, dark);
     }
-    const g0 = pose === 'fist' ? y + 4 : y + 5;
+    const g0 = y + q(pose === 'fist' ? 4 : 5);
     for (let g = 0; g < 3; g++) {
-      PIX.rect(ctx, x + f * (g * 2 - 2), g0, 1, N - (g0 - y) - 1, dark);
+      PIX.rect(ctx, x + f * q(g * 2 - 2), g0, 1, Math.max(1, N - (g0 - y) - 1), dark);
     }
     /* the pads on the ends of the curled digits */
     for (let g = 0; g < 3; g++) {
-      PIX.rect(ctx, x + f * (g * 2 - 1), y + N - 2, 1, 1, shade);
+      PIX.rect(ctx, x + f * q(g * 2 - 1), y + N - 2, 1, 1, shade);
     }
   } else if (pose === 'point') {
     /* one digit out level, a pad on the end of it, the rest folded away */
@@ -1390,18 +1408,20 @@ SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
   /* THE THUMB, on the near side, crossing the front of the hand. Two pixels
      wide with a pad on it: the one part of a hand that is unmistakable at
      any size, and the reason a mitten reads as a mitten. */
-  const tx = x - f * (rows[2][0] + 1);
-  const ty = y + (pose === 'grip' ? 1 : 2);
-  PIX.rect(ctx, tx - 1, ty - 1, 3, 6, INK);
-  PIX.rect(ctx, tx - (f < 0 ? 1 : 0), ty, 2, 4, skin);
-  PIX.rect(ctx, tx - (f < 0 ? 1 : 0), ty, 1, 4, LIT);
-  PIX.rect(ctx, tx - 1, ty + 4, 3, 2, INK);
-  PIX.rect(ctx, tx - (f < 0 ? 1 : 0), ty + 4, 2, 1, shade);
+  const tx = x - f * (rows[Math.min(2, N - 1)][0] + 1);
+  const ty = y + q(pose === 'grip' ? 1 : 2);
+  const tw = Math.max(1, q(2)), th = Math.max(2, q(4));
+  PIX.rect(ctx, tx - 1, ty - 1, tw + 2, th + 2, INK);
+  PIX.rect(ctx, tx - (f < 0 ? tw - 1 : 0), ty, tw, th, skin);
+  PIX.rect(ctx, tx - (f < 0 ? tw - 1 : 0), ty, 1, th, LIT);
+  PIX.rect(ctx, tx - 1, ty + th, tw + 2, 2, INK);
+  PIX.rect(ctx, tx - (f < 0 ? tw - 1 : 0), ty + th, tw, 1, shade);
 
   /* the freckling the rest of him has, seeded the same way */
   const hr = SPR.defRng(d);
-  for (let i = 0; i < 3; i++) {
-    PIX.rect(ctx, x + Math.round((hr() - 0.5) * 5), y + 1 + Math.floor(hr() * 4), 1, 1, shade);
+  for (let i = 0; i < (K < 0.8 ? 1 : 3); i++) {
+    PIX.rect(ctx, x + Math.round((hr() - 0.5) * q(5)),
+      y + 1 + Math.floor(hr() * q(4)), 1, 1, shade);
   }
 
   if (opts.dim) {
@@ -1415,13 +1435,13 @@ SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
   }
 
   if (d.rings) {
-    PIX.rect(ctx, x - f * 2, y + 4, 2, 2, INK);
-    PIX.rect(ctx, x - f * 2, y + 4, 2, 1, P.G);
+    PIX.rect(ctx, x - f * q(2), y + q(4), q(2), q(2), INK);
+    PIX.rect(ctx, x - f * q(2), y + q(4), q(2), 1, P.G);
   }
   if (d.knuckles) {                      /* brass, over the knuckle row */
-    for (let k = 0; k < 4; k++) {
-      PIX.rect(ctx, x + f * 3 - (f < 0 ? 1 : 0), y + 1 + k * 2, 2, 2, INK);
-      PIX.rect(ctx, x + f * 3 - (f < 0 ? 1 : 0), y + 1 + k * 2, 2, 1, P.G);
+    for (let k = 0; k < 4 && 1 + k * q(2) < N; k++) {
+      PIX.rect(ctx, x + f * q(3) - (f < 0 ? 1 : 0), y + 1 + k * q(2), q(2), q(2), INK);
+      PIX.rect(ctx, x + f * q(3) - (f < 0 ? 1 : 0), y + 1 + k * q(2), q(2), 1, P.G);
     }
   }
 };
@@ -5078,13 +5098,52 @@ SPR.frogWhole = function (key, def, opts) {
        stumps under it. So the head comes down, the bust comes in, and the
        legs take the height back — roughly a third head, a third body, a
        third leg, and taller than he is wide. */
-    const hs = 1.12, BS = 0.86, NECK = 8, LEGS = 38, RISE = 2;
-    const hw = Math.round(head.width * hs), hh = Math.round(head.height * hs);
-    const bw = Math.round(body.width * BS), bh = Math.round(body.height * BS);
-    const W = Math.max(bw, hw) + 2;
-    /* two spare rows at the top: the torso now rises off planted feet
-       rather than the whole frog sliding up and down together */
+    /* ============================================================
+       PROPORTION, MEASURED RATHER THAN GUESSED.
+
+       The rig was a mascot and the numbers said so. Measured on the
+       finished figure: the head was 0.37 of the total height and the
+       body was 0.51 as wide as it was tall. A cartoon person is
+       0.18-0.22 and 0.26. He was not a stylised man, he was a barrel
+       with a beach ball on it.
+
+       So the figure is now laid out on HEADS, the way a person is
+       drawn. Five and a half of them, which is heroic-cartoon: real
+       people are seven and a half and look gangly at this size.
+
+         head    28     0.21 of the figure, hat included
+         neck     2     how far the head overlaps the collar, so a
+                        few rows of throat actually show
+         torso   44     shoulder to hip
+         legs    56     hip to sole
+         ----------
+                130     and the rig box does not change, so every
+                        room's furniture is still the right size
+
+       The head also comes in NARROWER than its own aspect: a frog's
+       skull is wide, but drawn at its full width it came out as wide
+       as his shoulders, and nothing with a head as wide as its
+       shoulders has ever read as a person.
+
+       Width comes down with it. The bust is authored 116 wide with
+       the arms out; fitted into 48 the coat lands about 34 across,
+       which on a 132 figure is 0.26 -- a person. Both the head and
+       the bust go through SPR.fit to get there, because nearest
+       neighbour at a fractional scale drops columns and a dropped
+       column is a missing eyelid or half a pinstripe.
+       ============================================================ */
+    const HEAD_H = 28, NECK = 2, TORSO = 44, LEGS = 56, RISE = 2;
+    const hh = HEAD_H;
+    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height) * 0.80));
+    const bh = TORSO + NECK;
+    const bw = Math.round(body.width * (bh / body.height) * 0.62);
+    const W = Math.max(bw, hw) + 12;
+    /* two spare rows at the top: the torso rises off planted feet rather
+       than the whole frog sliding up and down together */
     const H = hh + bh - NECK + LEGS + RISE;
+    /* everything that used to be a hard pixel count on a 65-wide figure is
+       now a fraction of the shoulders, so one number moves the whole rig */
+    const SLIM = bw / 100;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
@@ -5110,13 +5169,21 @@ SPR.frogWhole = function (key, def, opts) {
     /* legs first, so the coat hem sits over them */
     const C = SPR.costumeOf(def);
     const O = C.overcoat || C.jacket || null;
+    /* THE TROUSERS ARE NOT THE COAT. Painted in the coat's own dark, the hem
+       and the legs came out as one black mass with two shoes under it. Half
+       a step up separates them and costs nothing. */
     const legC = P[(O && O.dark) || 'k'] || P.k;
+    const legLift = 'rgba(255,255,255,.06)';
     const hipY = bodyTop + bh - 6;
     /* TURNED, HIS LEGS ARE IN LINE, not side by side. A profile with the
        feet spread apart across the frame is a frog standing front-on with
        a side-on head stuck on it, which is the single thing that stops
        the turn reading. */
-    const spread = side ? 3 : (def.fat ? 10 : 8);
+    /* the legs scale with the shoulders. A thigh fifteen pixels wide on a
+       thirty-four pixel torso is half his own body: that was the old rig's
+       proportion and it is a rugby player's. */
+    const LW = (n) => Math.max(4, Math.round(n * SLIM * 1.10));
+    const spread = side ? Math.max(2, LW(4)) : LW(def.fat ? 13 : 10);
     const shoeC = '#1c1a2c';
 
     /* ONE TAPERED BONE between two points, stepped down y so it can lean
@@ -5169,17 +5236,18 @@ SPR.frogWhole = function (key, def, opts) {
       const kx = Math.round(hx + (ax - hx) * 0.42)
         + (side ? Math.round(fold * 5) : sgn * Math.round(fold * 1.5));
 
-      bone(hx, hipY, kx, kneeY, def.fat ? 17 : 15, 11, legC, 0);
+      bone(hx, hipY, kx, kneeY, LW(def.fat ? 17 : 15), LW(11), legC, 0, legLift);
       /* the knee: a knob with cloth pulling over it */
-      PIX.disc(c, kx, kneeY, 6, P.K);
-      PIX.disc(c, kx, kneeY, 5, legC);
-      PIX.rect(c, kx - 3, kneeY - 3, 4, 2, 'rgba(255,255,255,.14)');
-      PIX.rect(c, kx - 4, kneeY + 3, 8, 1, 'rgba(0,0,0,.34)');
+      const kr = Math.max(3, LW(6));
+      PIX.disc(c, kx, kneeY, kr, P.K);
+      PIX.disc(c, kx, kneeY, kr - 1, legC);
+      PIX.rect(c, kx - 2, kneeY - 2, 3, 2, 'rgba(255,255,255,.14)');
+      PIX.rect(c, kx - kr + 1, kneeY + kr - 3, kr * 2 - 2, 1, 'rgba(0,0,0,.34)');
       /* the crease the cloth takes down the front of the shin */
       PIX.rect(c, Math.round((kx + ax) / 2) - 1, kneeY + 5, 1,
         Math.max(0, ankY - kneeY - 7), 'rgba(255,255,255,.06)');
       /* the shin, with the calf swelling under the knee */
-      bone(kx, kneeY, ax, ankY, 11, 8, legC, 1.8);
+      bone(kx, kneeY, ax, ankY, LW(11), LW(8), legC, 1.8 * SLIM * 1.6, legLift);
       PIX.rect(c, ax - 5, ankY - 2, 10, 2, 'rgba(0,0,0,.34)');   // the trouser breaks
 
       /* THE FOOT ROLLS. Flat through the stance, toe down as it pushes off,
@@ -5188,11 +5256,12 @@ SPR.frogWhole = function (key, def, opts) {
          brick. */
       const toe = st > 0.5 ? -1 : (st < -0.5 ? 1 : 0);
       const face = side ? 1 : sgn;
-      for (let i = 0; i <= 14; i++) {
-        const tt = i / 14;
-        const xx = ax - face * 5 + face * i;
+      const SHOE = Math.max(7, LW(15)), SHOH = Math.max(4, LW(6));
+      for (let i = 0; i <= SHOE; i++) {
+        const tt = i / SHOE;
+        const xx = ax - face * Math.round(SHOE * 0.34) + face * i;
         const dy = Math.round(toe * tt * 2);
-        const hgt = 6 - Math.round(tt * 2);
+        const hgt = SHOH - Math.round(tt * 2);
         PIX.rect(c, xx, ankY + dy, 1, hgt + 1, P.K);
         PIX.rect(c, xx, ankY + dy, 1, hgt, shoeC);
         PIX.rect(c, xx, ankY + dy, 1, 1, 'rgba(255,255,255,.16)');
@@ -5218,9 +5287,19 @@ SPR.frogWhole = function (key, def, opts) {
     /* SHOULDERS TURN. A torso seen edge-on is about two thirds the width
        it is head-on, and drawing it at full width is what made the first
        profile read as a front view with a snout drawn on it. */
-    const sbw = side ? Math.round(bw * 0.66) : bw;
-    const shw = side ? Math.round(hw * 0.90) : hw;
-    c.drawImage(body, Math.round((W - sbw) / 2), bodyTop, sbw, bh);
+    const sbw = side ? Math.round(bw * 0.72) : bw;
+    const shw = side ? Math.round(hw * 0.94) : hw;
+    /* FITTED, NOT SQUASHED. drawImage with smoothing off at 0.4 scale threw
+       away three columns in five: the pinstripes came out as dotted lines
+       and the lapels lost their edge. */
+    /* TURNED, HE GETS A DIFFERENT TORSO. Not the front one narrowed: a
+       body seen from the side is another shape entirely, and pretending
+       otherwise is what made every profile in this game a dark slab with
+       a pale smear on it. See SPR.profileBust. */
+    const bodyFit = side
+      ? SPR.profileBust(key, def, sbw, bh)
+      : SPR.fit('body_' + key + ':' + frame, body, sbw, bh);
+    c.drawImage(bodyFit, Math.round((W - sbw) / 2), bodyTop);
 
     /* HANDS. The bust stops at a shirt cuff because the duel paints the
        hands onto the felt itself. Standing up he needs his own, hung on the
@@ -5236,12 +5315,19 @@ SPR.frogWhole = function (key, def, opts) {
         if (armP && w.sgn > 0) return;
         /* HANGING, NOT SPLAYED. The felt pose put a fan of four green digits
            at hip height on every standing frog in the game. */
-        SPR.frogHand(c, bx + Math.round(w.x * BS), bodyTop + Math.round(w.y * BS),
-          def, w.sgn, { noCuff: true, pose: 'hang', dim: 0.54 });
+        /* the wrists come back in the bust's own coordinates, so they scale
+           into the fitted bust exactly as the pixels did, and the hand is
+           drawn at the same fraction: a hand is about a quarter of the
+           shoulder width on a person, and it was half on this rig. */
+        const kx = sbw / body.width, ky = bh / body.height;
+        SPR.frogHand(c, bx + Math.round(w.x * kx), bodyTop + Math.round(w.y * ky),
+          def, w.sgn, { noCuff: true, pose: 'hang', dim: 0.54, k: SLIM * 1.55 });
       });
     }
 
-    c.drawImage(head, Math.round((W - shw) / 2), bob, shw, hh);
+    const headFit = SPR.fit('head_' + key + ':' + ex + (side ? 's' : '') + (back ? 'b' : ''),
+      head, shw, hh);
+    c.drawImage(headFit, Math.round((W - shw) / 2), bob);
 
     /* ------------------------------------------------------------
        WALKING AWAY FROM YOU.
@@ -5306,60 +5392,25 @@ SPR.frogWhole = function (key, def, opts) {
        outline all still belong to the same frog.
        ------------------------------------------------------------ */
     if (side) {
-      const bw2 = sbw, hw2 = shw;
+      /* ------------------------------------------------------------
+         IN PROFILE.
+
+         The torso is drawn edge on by SPR.profileBust above and the
+         head is its own profile drawing, so there is nothing left to
+         repaint: what used to live here was two hundred lines of
+         panel, collar mask, lapel and tie painted OVER a narrowed
+         front bust to disguise it as a side view. It did not work,
+         because a narrowed front view is not a side view.
+
+         All that is left is the arms, which is the one thing a
+         profile cannot inherit: one of them is in front of him and
+         one of them is behind him.
+         ------------------------------------------------------------ */
+      const bw2 = sbw;
       const bx2 = Math.round((W - bw2) / 2);
-      const hx = Math.round((W - hw2) / 2);
-      const cx2 = hx + Math.round(hw2 / 2);
-      const ey = bob + Math.round(hh * 0.46);
-      const sk = P[def.skin[0]] || P.F;
-      const sh = P[def.skin[1]] || P.f;
-      const dk = P[def.skin[2]] || P.e;
+      const px0 = bx2 + Math.round(bw2 * 0.22), pw = Math.round(bw2 * 0.56);
+      const py0 = bodyTop + Math.round(bh * 0.10), ph = Math.round(bh * 0.86);
 
-      /* ---- the torso, turned ----
-
-         FIRST, PAINT THE FRONT COLLAR OUT. The body underneath is the
-         front-facing rig and it has a white shirt V at the top of it; the
-         side dressing only covers the middle forty-four per cent of the
-         width, so the two outer wings of that V were left showing either
-         side of the head as a row of white blocks. It read as teeth. */
-      const px0 = bx2 + Math.round(bw2 * 0.28), pw = Math.round(bw2 * 0.44);
-      const py0 = bodyTop + Math.round(bh * 0.14), ph = Math.round(bh * 0.82);
-      /* JUST WHERE THE COLLAR IS. Masking the whole shoulder width put a
-         flat slab across him and turned the silhouette into a scarecrow;
-         the front shirt V is central, so only the centre needs covering. */
-      const mx = px0 - 3, mw = pw + 6, mh = Math.round(bh * 0.26);
-      PIX.rect(c, mx, bodyTop, mw, mh, coatC);
-      PIX.rect(c, mx, bodyTop, mw, 2, 'rgba(255,255,255,.05)');
-      PIX.rect(c, mx, bodyTop, 1, mh, 'rgba(0,0,0,.20)');
-      PIX.rect(c, mx + mw - 1, bodyTop, 1, mh, 'rgba(0,0,0,.20)');
-      PIX.rect(c, px0, py0, pw, ph, coatC);
-      PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.06)');
-      /* the one lapel you can see, edge-on */
-      PIX.rect(c, px0 + pw - 4, py0 + 2, 4, Math.round(ph * 0.42), 'rgba(255,255,255,.10)');
-      PIX.rect(c, px0 + pw - 1, py0 + 2, 1, Math.round(ph * 0.42), 'rgba(0,0,0,.30)');
-      /* a sliver of collar at the throat, and a tie only if he wears one —
-         the fallback used to paint a red bar down the shirt of every frog
-         in the game who does not own a tie */
-      /* the collar, edge on: a wedge that steps forward, not a row of blocks */
-      for (let i = 0; i < 4; i++) {
-        PIX.rect(c, px0 + pw - 6 + i, py0 + i, 6 - i, 2, i < 2 ? P.W : P.q);
-      }
-      PIX.rect(c, px0 + pw - 6, py0, 6, 1, P.K);
-      if (def.tie) {
-        /* the knot at the throat and the blade down the front edge */
-        PIX.rect(c, px0 + pw - 4, py0 + 3, 3, 3, P[def.tie] || P.r);
-        PIX.rect(c, px0 + pw - 3, py0 + 6, 2, Math.round(ph * 0.30), P[def.tie] || P.r);
-        PIX.rect(c, px0 + pw - 2, py0 + 6, 1, Math.round(ph * 0.30), 'rgba(0,0,0,.30)');
-      }
-      /* the far shoulder, dropped into shadow behind the near one */
-      PIX.rect(c, bx2 + Math.round(bw2 * 0.16), py0 + 3,
-        Math.round(bw2 * 0.14), Math.round(ph * 0.6), 'rgba(0,0,0,.30)');
-
-      /* the head is its own drawing now; nothing to repaint */
-
-      /* ---- ONE ARM IN FRONT, ONE BEHIND ----
-         The far arm is a sliver of sleeve showing past the back of him;
-         the near one swings across his front with the hand on the end. */
       /* ---- THE ARMS, IN PROFILE ----
          These were two slivers of rect down the sides of the coat, which is
          what an arm looks like on a shop dummy. Turned sideways the arm is
@@ -5368,10 +5419,18 @@ SPR.frogWhole = function (key, def, opts) {
          forearm coming forward and a hand on the end of it. The two swing
          in opposite phase, and against the legs. */
       {
-        const shY = py0 + 5;
-        const elY = shY + Math.round(bh * 0.30);
-        const haY = shY + Math.round(bh * 0.60);
+        const shY = py0 + 4;
+        const elY = shY + Math.round(bh * 0.31);
+        const haY = shY + Math.round(bh * 0.62);
         const cuffC = SPR.cuffColor(def);
+        /* AN ARM, NOT A PANEL. Ten pixels wide on a thirty-four pixel torso
+           is a third of him, and filled in the coat's own colour with a rim
+           light down it, it came out as a pale smear over his chest. Narrow
+           it to a limb, ink both edges, and shade it AGAINST the coat: the
+           near arm is nearer the lamp so it is lighter, the far one is
+           behind him so it is darker. */
+        const AW = Math.max(5, Math.round(bw2 * 0.20));
+        const AF = Math.max(4, Math.round(bw2 * 0.15));
         const arm = (aph, sx, col, hsgn, near) => {
           const fold = U.clamp(0.32 + aph * 0.42, 0.05, 0.88);
           const ex = sx - Math.round(aph * 2) - Math.round(fold * 3);
@@ -5382,21 +5441,24 @@ SPR.frogWhole = function (key, def, opts) {
              discs stuck on his side. So the near arm is lifted a shade and
              the far one dropped, and the joints are SMALLER than the bones
              they join — a knuckle that overhangs its own limb is a balloon. */
-          const tone = near ? 'rgba(255,255,255,.11)' : 'rgba(0,0,0,.30)';
-          bone(sx, shY, ex, elY, 10, 8, col, 0, tone);
-          bone(ex, elY, hx2, haY - 4, 8, 6, col, 1.2, tone);
-          PIX.disc(c, ex, elY, 4, col);
-          PIX.disc(c, ex, elY, 4, tone);
+          const tone = near ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.42)';
+          bone(sx, shY, ex, elY, AW, AF, col, 0, tone);
+          bone(ex, elY, hx2, haY - 4, AF, Math.max(3, AF - 2), col, 1.0, tone);
+          const er = Math.max(3, Math.round(AF * 0.55));
+          PIX.disc(c, ex, elY, er, col);
+          PIX.disc(c, ex, elY, er, tone);
           if (near) {
-            PIX.rect(c, ex + 1, elY - 2, 2, 3, 'rgba(255,255,255,.14)');
-            PIX.rect(c, ex - 4, elY + 1, 3, 3, 'rgba(0,0,0,.34)');
+            PIX.rect(c, ex + 1, elY - 2, 2, 3, 'rgba(255,255,255,.20)');
+            PIX.rect(c, ex - er - 1, elY, 2, 3, 'rgba(0,0,0,.40)');
           }
-          PIX.rect(c, hx2 - 4, haY - 6, 8, 5, P.K);          // the cuff
-          PIX.rect(c, hx2 - 3, haY - 6, 6, 4, cuffC);
-          PIX.rect(c, hx2 - 3, haY - 6, 6, 1, 'rgba(255,255,255,.16)');
-          if (!near) PIX.rect(c, hx2 - 4, haY - 6, 8, 5, 'rgba(0,0,0,.34)');
+          const cw2 = Math.max(4, AF + 1);
+          PIX.rect(c, hx2 - (cw2 >> 1) - 1, haY - 6, cw2 + 2, 5, P.K);
+          PIX.rect(c, hx2 - (cw2 >> 1), haY - 6, cw2, 4, cuffC);
+          PIX.rect(c, hx2 - (cw2 >> 1), haY - 6, cw2, 1, 'rgba(255,255,255,.16)');
+          if (!near) PIX.rect(c, hx2 - (cw2 >> 1) - 1, haY - 6, cw2 + 2, 5, 'rgba(0,0,0,.38)');
           SPR.frogHand(c, hx2, haY - 1, def, hsgn, {
-            noCuff: true, pose: 'hang', dim: near ? 0.22 : 0.42 });
+            noCuff: true, pose: 'hang', dim: near ? 0.26 : 0.46,
+            k: SLIM * 1.45 });
         };
         /* the far one goes UNDERNEATH everything already on the canvas, which
            is the only way an arm behind a body can be drawn after it */
@@ -5405,9 +5467,12 @@ SPR.frogWhole = function (key, def, opts) {
         /* the walk phase, NOT the local ph — which in this block is the
            height of the coat panel */
         const aw = swing / 6;
-        arm(-aw, px0 - 1, coatD, -1, false);
+        /* the far arm hangs off the BACK of him and the near one off the
+           front third, which is where a shoulder actually is on a body seen
+           edge on -- both of them used to hang off the middle */
+        arm(-aw, px0 - 3, coatD, -1, false);
         c.restore();
-        arm(aw, px0 + Math.round(pw * 0.62) + 3, coatC, 1, true);
+        arm(aw, px0 + Math.round(pw * 0.66), coatC, 1, true);
       }
     }
 
@@ -5480,6 +5545,280 @@ SPR.fullBody = function (key, def) { return SPR.frogWhole(key, def, { frame: 0 }
    the frame sizes where that does not come out even, plus mugshots
    and pins.
    ============================================================ */
+/* ============================================================
+   FIT — a canvas resampled into a target box and hardened back
+   to hard pixels.
+
+   Nearest-neighbour drawImage at a fractional scale DROPS rows
+   and columns: a pinstripe becomes a dotted line and a face
+   loses an eyelid. So a downscale goes through a box filter with
+   smoothing ON — which is the correct way to shrink a bitmap —
+   and then the result is hardened: alpha thresholded so there is
+   no half-transparent fringe, and the outermost solid pixels
+   darkened so the silhouette is still a drawing rather than a
+   smudge. This is the pass rigLOD has always used on the whole
+   figure; the rig needs it on the HEAD and the BUST too now that
+   those are drawn at human proportions rather than at the size
+   they happen to be authored at.
+   ============================================================ */
+SPR.fit = function (key, src, w, h) {
+  return SPR.cached('fit_' + key + ':' + w + 'x' + h, () => {
+    w = Math.max(1, Math.round(w));
+    h = Math.max(1, Math.round(h));
+    const soft = document.createElement('canvas');
+    soft.width = w; soft.height = h;
+    const sc = soft.getContext('2d');
+    sc.imageSmoothingEnabled = true;
+    sc.imageSmoothingQuality = 'high';
+    sc.drawImage(src, 0, 0, src.width, src.height, 0, 0, w, h);
+    const img = sc.getImageData(0, 0, w, h);
+    const d = img.data;
+    const solid = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] > 108) { d[i + 3] = 255; solid[y * w + x] = 1; }
+        else d[i + 3] = 0;
+      }
+    }
+    const on = (x, y) => (x < 0 || y < 0 || x >= w || y >= h)
+      ? false : solid[y * w + x] === 1;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!solid[y * w + x]) continue;
+        if (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1)) continue;
+        const i = (y * w + x) * 4;
+        d[i] = Math.round(d[i] * 0.40);
+        d[i + 1] = Math.round(d[i + 1] * 0.40);
+        d[i + 2] = Math.round(d[i + 2] * 0.44);
+      }
+    }
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const oc = out.getContext('2d');
+    oc.imageSmoothingEnabled = false;
+    oc.putImageData(img, 0, 0);
+    return out;
+  });
+};
+
+/* ============================================================
+   THE BUST, EDGE ON.
+
+   Every previous profile in this game was the FRONT bust drawn
+   narrower with a panel of coat painted over the middle of it,
+   and it looked exactly like what it was: a dark slab with a
+   pale smear on it. A body seen from the side is not a narrow
+   body seen from the front. It is a different shape, and the
+   thing that makes it read is that it is ASYMMETRIC -- the front
+   line and the back line do completely different jobs.
+
+     the back    almost straight, with the shoulder blade at the
+                 top and the seat kicking out at the bottom
+     the front   the chest comes forward, the waist goes in, the
+                 hip comes forward again
+
+   So this is authored as two edge functions rather than one
+   half-width, and everything else hangs off them: the coat
+   opening runs down the front line, the lapel is a wedge off the
+   collar, the vent is a slot up from the hem at the back, the
+   shoulder seam sits on the highest point, and the pocket flap
+   is a horizontal on the front third.
+
+   Drawn facing +x. The rig flips the whole sprite for left.
+   Authored at whatever size it is asked for, in fractions of
+   that size, so the caller does not have to resample it -- a
+   resampled coat edge is a soft coat edge, and this one has to
+   be the hardest line on the figure.
+   ============================================================ */
+SPR.profileBust = function (key, def, w, h) {
+  w = Math.max(12, Math.round(w));
+  h = Math.max(16, Math.round(h));
+  return SPR.cached('pbust_' + key + ':' + w + 'x' + h, () => {
+    const P = PIX.PAL;
+    const C = SPR.costumeOf(def);
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+
+    const L = (l, fb) => (l && P[l]) || fb;
+    const O = C.overcoat || C.jacket || null;
+    const sh = C.shirt, gown = C.gown, acc = C.acc || {};
+    const base = L(O ? O.col : (gown ? gown.col : (sh && sh.col) || 'T'), P.T);
+    const dark = L(O ? O.dark : (gown ? gown.dark : 'q'), P.k);
+    const shirtC = L(sh && sh.col, P.W);
+    const skin = P[(def.skin && def.skin[0]) || 'F'] || P.F;
+    const skDk = P[(def.skin && def.skin[2]) || 'e'] || P.e;
+    const INK = P.K;
+    const fat = !!def.fat;
+
+    /* THE SPINE. Set back of centre, because a man seen from the side has
+       more of himself in front of his backbone than behind it. */
+    const sp = Math.round(w * 0.42);
+    const D = w * 0.01;                       /* one per cent of the depth */
+
+    /* the two edges, as a fraction of the height, measured from the spine */
+    const BANDS = [
+      /* to    back  front  what it is */
+      [0.00, 0.10, 0.13],   /* the neck, edge on -- narrow, or it is a stump */
+      [0.09, 0.26, 0.34],   /* the collar and the trapezius */
+      [0.16, 0.34, 0.50],   /* the shoulder -- the deepest point up top */
+      [0.24, 0.35, 0.53],   /* the chest, forward */
+      [0.36, 0.34, 0.50],
+      [0.50, 0.33, 0.44],   /* the waist, in */
+      [0.62, 0.36, 0.43],
+      [0.76, 0.44, 0.46],   /* the hip and the seat, both out */
+      [0.88, 0.47, 0.44],
+      [1.00, 0.44, 0.40],   /* the coat hem */
+    ];
+    const edge = (y) => {
+      const t = y / (h - 1);
+      let a = BANDS[0], b = BANDS[BANDS.length - 1];
+      for (let i = 0; i < BANDS.length - 1; i++) {
+        if (t >= BANDS[i][0] && t <= BANDS[i + 1][0]) { a = BANDS[i]; b = BANDS[i + 1]; break; }
+      }
+      const k = b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]);
+      const ease = k * k * (3 - 2 * k);       /* smoothstep, so no corners */
+      const bk = (a[1] + (b[1] - a[1]) * ease) * w * (fat ? 1.10 : 1);
+      const fr = (a[2] + (b[2] - a[2]) * ease) * w * (fat ? 1.22 : 1);
+      return { b: Math.round(sp - bk), f: Math.round(sp + fr) };
+    };
+
+    /* ---- 1. THE INK, one pixel outside the whole silhouette ---- */
+    for (let y = -1; y <= h; y++) {
+      const e = edge(U.clamp(y, 0, h - 1));
+      PIX.rect(c, e.b - 1, y, e.f - e.b + 3, 1, INK);
+    }
+    /* ---- 2. THE CLOTH ---- */
+    for (let y = 0; y < h; y++) {
+      const e = edge(y);
+      PIX.rect(c, e.b, y, e.f - e.b + 1, 1, base);
+      /* the back is turned away from the room: two pixels of shadow down it,
+         and the front edge catches whatever light there is */
+      PIX.rect(c, e.b, y, 2, 1, 'rgba(0,0,0,.34)');
+      PIX.rect(c, e.b + 2, y, 2, 1, 'rgba(0,0,0,.16)');
+      PIX.rect(c, e.f - 1, y, 2, 1, 'rgba(255,255,255,.10)');
+    }
+    /* the weave, so a coat this size is not a flat colour */
+    ART.dither(c, 0, 0, w, h, 'rgba(0,0,0,.12)', 0.10, 17);
+
+    /* ---- 3. THE NECK AND THE COLLAR ---- */
+    const nTop = Math.round(h * 0.02), nBot = Math.round(h * 0.13);
+    for (let y = nTop; y <= nBot; y++) {
+      const e = edge(y);
+      PIX.rect(c, e.b + 1, y, e.f - e.b - 1, 1, skin);
+      PIX.rect(c, e.b + 1, y, 2, 1, skDk);
+    }
+    /* the collar, edge on: a wedge that steps FORWARD as it comes down,
+       which is the shape that says shirt rather than bib */
+    for (let i = 0; i < 4; i++) {
+      const y = nBot - 1 + i;
+      const e = edge(y);
+      PIX.rect(c, e.f - 5 - i, y, 5 + i, 2, i < 2 ? shirtC : P.q);
+      PIX.rect(c, e.f - 5 - i, y, 5 + i, 1, i < 2 ? P.W : shirtC);
+    }
+    /* and the tie, if he owns one: a knot at the throat and a blade running
+       down the front edge, in front of the coat opening */
+    if (def.tie) {
+      const tc = P[def.tie] || P.r;
+      const ey = edge(nBot + 2), eb = edge(Math.round(h * 0.44));
+      PIX.rect(c, ey.f - 4, nBot + 2, 4, 4, INK);
+      PIX.rect(c, ey.f - 4, nBot + 2, 3, 3, tc);
+      for (let y = nBot + 5; y < h * 0.44; y++) {
+        const e = edge(y);
+        PIX.rect(c, e.f - 3, y, 3, 1, INK);
+        PIX.rect(c, e.f - 3, y, 2, 1, tc);
+        PIX.rect(c, e.f - 3, y, 1, 1, 'rgba(255,255,255,.14)');
+      }
+      PIX.rect(c, eb.f - 3, Math.round(h * 0.44), 3, 1, 'rgba(0,0,0,.4)');
+    }
+
+    /* ---- 4. THE SHOULDER SEAM, on the highest point ---- */
+    const shY = Math.round(h * 0.15);
+    const se = edge(shY);
+    PIX.rect(c, se.b + 3, shY, se.f - se.b - 5, 1, 'rgba(0,0,0,.34)');
+    PIX.rect(c, se.b + 3, shY - 1, se.f - se.b - 5, 1, 'rgba(255,255,255,.12)');
+    /* the pad, rounded, so the shoulder is a shoulder and not a corner */
+    PIX.disc(c, Math.round(sp + w * 0.16), shY + 2, Math.round(w * 0.15), base);
+    PIX.disc(c, Math.round(sp + w * 0.16), shY, Math.round(w * 0.10),
+      'rgba(255,255,255,.09)');
+
+    /* ---- 5. THE COAT OPENING, down the front ---- */
+    if (O || (C.waistcoat && C.waistcoat.outer)) {
+      const lapTop = nBot + 1, lapBot = Math.round(h * 0.40);
+      for (let y = lapTop; y < lapBot; y++) {
+        const e = edge(y);
+        const t = (y - lapTop) / Math.max(1, lapBot - lapTop);
+        /* the lapel: a wedge widening down to the break, edge on it is a
+           strip of cloth turned toward you, so it is LIGHTER */
+        const lw = Math.round(2 + t * w * 0.10);
+        PIX.rect(c, e.f - lw - 1, y, lw, 1, 'rgba(255,255,255,.13)');
+        PIX.rect(c, e.f - lw - 1, y, 1, 1, 'rgba(0,0,0,.36)');
+      }
+      /* and the opening carrying on to the hem as one hard line */
+      for (let y = lapBot; y < h; y++) {
+        const e = edge(y);
+        PIX.rect(c, e.f - 3, y, 1, 1, 'rgba(0,0,0,.40)');
+      }
+      /* two buttons on it, edge on, so they are one pixel wide each */
+      for (let i = 0; i < 2; i++) {
+        const y = lapBot + 2 + i * Math.round(h * 0.10);
+        const e = edge(y);
+        PIX.rect(c, e.f - 4, y, 2, 2, INK);
+        PIX.rect(c, e.f - 4, y, 1, 1, L(O && O.button, P.q));
+      }
+      /* the pocket flap, on the front third at the hip */
+      const py = Math.round(h * 0.64), pe = edge(py);
+      PIX.rect(c, pe.f - Math.round(w * 0.26), py, Math.round(w * 0.22), 2, 'rgba(0,0,0,.34)');
+      PIX.rect(c, pe.f - Math.round(w * 0.26), py, Math.round(w * 0.22), 1, 'rgba(255,255,255,.10)');
+    }
+
+    /* ---- 6. THE HEM, and the vent up the back of it ---- */
+    const he = edge(h - 1);
+    PIX.rect(c, he.b, h - 2, he.f - he.b + 1, 2, 'rgba(0,0,0,.34)');
+    PIX.rect(c, he.b + 1, h - 3, he.f - he.b - 1, 1, 'rgba(255,255,255,.07)');
+    for (let y = Math.round(h * 0.80); y < h; y++) {
+      const e = edge(y);
+      PIX.rect(c, e.b + 2, y, 1, 1, 'rgba(0,0,0,.30)');
+    }
+
+    /* ---- 7. WHAT HE HAS PINNED ON, seen edge on ---- */
+    if (acc.badge) {
+      const by = Math.round(h * 0.32), be = edge(by);
+      PIX.rect(c, be.f - Math.round(w * 0.20), by, 3, 4, INK);
+      PIX.rect(c, be.f - Math.round(w * 0.20), by, 2, 3, L(acc.badge, P.G));
+    }
+    if (acc.watchChain) {
+      const wy = Math.round(h * 0.52), we = edge(wy);
+      for (let i = 0; i < 5; i++) {
+        PIX.rect(c, we.f - 6 - i, wy + Math.round(Math.sin(i * 0.9) * 2) + 1, 1, 1,
+          L(acc.watchChain, P.G));
+      }
+    }
+    if (acc.braces) {
+      const y0 = Math.round(h * 0.18), y1 = Math.round(h * 0.56);
+      for (let y = y0; y < y1; y++) {
+        const e = edge(y);
+        PIX.rect(c, e.b + 4, y, 2, 1, L(acc.braces, P.T));
+      }
+    }
+    if (acc.apron) {
+      const ac = L(acc.apron, P.w);
+      for (let y = Math.round(h * 0.34); y < h; y++) {
+        const e = edge(y);
+        PIX.rect(c, e.f - Math.round(w * 0.30), y, Math.round(w * 0.28), 1, ac);
+        PIX.rect(c, e.f - Math.round(w * 0.30), y, 1, 1, 'rgba(0,0,0,.28)');
+      }
+    }
+
+    /* where the arms hang from, in this canvas's own coordinates */
+    cv.shoulder = { x: Math.round(sp + w * 0.14), y: shY + 2 };
+    cv.hip = { x: Math.round(sp + w * 0.06), y: Math.round(h * 0.86) };
+    return cv;
+  });
+};
+
 SPR.rigLOD = function (key, def, frame, face, down, back, expr, side, arm) {
   down = down || 3;
   /* EIGHT FRAMES, NOT FOUR. This used to fold the frame number modulo four,
