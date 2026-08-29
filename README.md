@@ -74,6 +74,53 @@ He waves from the gate. You do not go in.
 
 ![Twenty past eight](docs/screen-school.png)
 
+### Breakfast is not a trade
+
+Breakfast used the same numbers as picking a lock — three rounds, a band a
+fifth of the sweep wide, three quarters of a sweep a second — because it was
+built out of the same widget. But the house is where the game teaches you to
+tap something, on the one morning it is going to spend the rest of itself
+taking away from you.
+
+Two eggs, a band nearly half the sweep wide, two thirds of the speed, and it
+**cannot be failed**: a miss is an egg with a brown edge on it, which is still
+breakfast, and the pips go amber rather than red, because a red pip in a
+kitchen says you have failed your family before eight in the morning.
+
+### And the family are people you can talk to
+
+![The house, end to end](docs/screen-house-wide.png)
+
+Cleo and Tobias were tags on a backdrop. They had a name floating over them,
+they spoke when the script said so, and there was nothing you could do about
+either of them — the boy had exactly one line per state, and his mother had
+none at all.
+
+An actor in this game gets a bracket round it, a label, a hint and an `onUse`
+the moment it declares them, which is the machinery every clerk and barman in
+the city already uses. So the two people this whole story is about use it too.
+Walk up, tap, and they answer. Both conversations branch three ways with real
+replies, both know what you have done to the room — whether the egg is on the
+plate, whether the reader has turned up, whether you have already told him off
+for not looking properly — both react with their faces, and both can be had
+again, because a boy with one thing to say is a sign rather than a son. She
+goes tired when you say you might be late. He goes happy when you offer him
+your own book. Yours goes warm for about two seconds, which is the only place
+in this game that is allowed.
+
+They also *do* something while you are not talking to them: she wipes the
+table down, he reads until there is an egg and then eats.
+
+And the house itself got the saturation pass and the catalogue. Butter paper at
+forty-eight per cent chroma next to a cast at sixty-two is beige, not warm, so
+the ochre came up to seventy at the same value — and the wall above the dado,
+which was seventy rows of nothing for the length of the room with one corkboard
+on it, is now hung with rose curtains over the sink, a shelf of tins above the
+range, a pendulum clock, two pictures, a mirror, a sconce, a dresser full of
+plates, a pot plant and a standing lamp. The layout comment at the top of
+`home()` already had the span of every piece of furniture in there, so they went
+in the gaps between them.
+
 ### And then the post comes up from the desk
 
 An envelope with his name on it and **no stamp**, which is the first thing
@@ -1076,6 +1123,112 @@ watchful, and hard when it is warranted. The warm face still exists — it just
 has to be **earned** by something specific happening, and it lasts about two
 seconds: the dog leans on him, an errand pays off, a story comes apart.
 
+## Cartoon, deliberately
+
+![Front and side, eight frames each](docs/screen-rig.png)
+
+The measured pass in the last section is right about people and wrong about
+this game. Taken to a head fraction of 0.21 and an aspect of 0.30 he came out
+a slim, sensible, forgettable man in a coat — and the whole cast around him is
+bold and saturated and drawn like a cartoon, so he stopped belonging to it.
+
+Cartoon is not the same mistake as **mascot**. The mascot was 0.37 of the
+height in head and half as wide as it was tall: a beach ball on a barrel with
+no joints in it. This is the middle — head **0.27**, aspect **0.39**, four
+heads and a bit, shorter legs than a person has, and a bust that comes in at
+eighty-four per cent of its own aspect instead of sixty-two, which widens the
+drawn figure from thirty-seven pixels to fifty and thickens every limb with
+it. Every joint, hand and finger the measured pass built stays exactly where
+it was. Cartoony is a shape language, not an excuse for a solid block.
+
+### And the walk had no amplitude in it
+
+All the machinery was already there — tapered bones, a knee that folds, a sole
+that stays planted while the hips rise over it, arms opposing the legs — and
+every number driving it was small enough to be invisible. The ankle travelled
+**four pixels** on a figure a hundred and thirty tall. The foot lifted four.
+The body rose two. The arm swung six inside a bust that was then fitted down
+to two thirds, so four on screen. Eight frames of a man standing still, very
+slightly.
+
+Ankle thirteen, lift nine, rise five, arm thirteen. Plus a head that arrives a
+beat late — clamped to one pixel, because taken as its own five-pixel bob it
+went down while the shoulders went up and swallowed his own neck — and a sway,
+so the head leans one way as the shoulders go the other.
+
+And a **turn** used to be a mirror flip: `me.face` went from plus one to minus
+one between two frames and the whole sprite reversed in a single tick, which at
+this size reads as a glitch. The facing lags now. It walks toward the input at
+eleven per second, the sprite squashes horizontally to how far through the turn
+it is, and the drawing flips at the exact frame the squash is narrowest —
+seven frames end to end, measured. Every actor gets it, so a clerk pacing a
+bullpen stops reversing between frames as well.
+
+## Saturated dark, not grey
+
+![The Lamb](docs/screen-bar.png)
+
+"The background is not saturated like the sprite" turned out to be a number.
+Measured: the cast's **top tenth of pixels by chroma** sits at 0.62, and the
+rooms were coming in between 0.41 and 0.56. The four wall tones were
+near-neutrals at about a third chroma — grey-green mud with a saturated cartoon
+standing in front of it.
+
+There are seven of them now and they are deep **saturated** darks at two
+thirds and up, at the same value, because this is still a mafia story in a city
+at night: bottle green, petrol, cold teal, oxblood, tobacco panel, plum,
+mustard, with lino and floorboards to match. Rooms now measure 0.39 to 0.68
+mean and 0.76 to 0.86 at the top tenth, with the value unmoved.
+
+Two things fell out of raising the chroma. The wall dither was running at
+fourteen per cent of a tone much lighter than the base, which in colour comes
+out as television static; and the dado was the same hue at the same chroma as
+the field, so it read as the same wall — it takes a step down in **value** as
+well to be a dado.
+
+## The furniture shop
+
+![Twenty-four pieces](docs/screen-furniture.png)
+
+Every room was dressed by hand, in place, out of `ART.box` and `ART.px` — a
+desk here, a cabinet there, and whenever a room needed something nobody had
+drawn yet it got a rectangle with a highlight on the top edge. That is why the
+places all had the same silhouette, boxes of different sizes against a wall,
+and why a bar with nothing on its walls stayed a bar with nothing on its walls.
+
+`js/furn.js` is a catalogue: armchair, sofa, sideboard, dresser, bookcase,
+standing lamp, rug, picture, mirror, curtains, cooking range, folding screen,
+wall clock, pot plant (alive or dead), crate, barrel, bar stool, shelf, wall
+sconce, wallpaper, radiator, hat stand, sink, bed, diner booth. Each one is
+authored at whatever size it is asked for, cached by name and finish, carries
+its own wear and lit edges — and takes a **material name** rather than a hex,
+out of twenty saturated four-step finishes, so a room can order the same
+armchair in oxblood or in bottle green and get one that belongs in it. The
+walls went to two thirds chroma; furniture that came in grey would have undone
+it.
+
+![The pawn shop](docs/screen-pawn.png)
+
+Two things went wrong while dressing with it, and both are worth writing down.
+
+**The first pass put a bookcase behind the front door.** Hand-placing into a
+room you cannot see the whole of fails the same way every time: doors, windows
+and counters are painted *after* the dressing, so half of it went in behind
+them — and at a 240-pixel frame on a 400-pixel room, the other half was in the
+part nobody had ever screenshotted.
+
+So there is `nearDress`: low pieces only, at the very bottom rows, on the
+**front** layer, which is the one band reliably empty in every room in this
+game. A side-on room with something standing in its foreground reads deeper
+than one without, for free — and nothing goes there tall enough to hide the man
+you are steering. It runs at the *end* of the front layer, not the start, or
+the counter gets painted over the bar stools sitting at it.
+
+**And a bright bezel round a bright face is a fried egg.** The first wall clock
+was a three-pixel wooden ring round a cream dial with one-pixel marks: it read
+as a dartboard. Thin dark case, bright face, bold marks at the quarters, and
+the two hands the highest-contrast thing on the piece.
+
 ## The hand you hold things with
 
 ![The fist at the three sizes the game asks for](docs/screen-hand.png)
@@ -1252,6 +1405,9 @@ style.css         the pixel skin: chunky panels, paper plates, zero radius
 js/util.js        seeded RNG (mulberry32), helpers, procedural WebAudio SFX
 js/pixfont.js     the hand-drawn 5×7 typeface every letter is set in
 js/pix.js         pixel engine: the palette, a sprite compiler, draw helpers
+js/furn.js        THE FURNITURE SHOP: twenty-four pieces of furniture and
+                  decoration, authored at whatever size they are asked for,
+                  finished out of a table of saturated materials
 js/art.js         THE PROP SHOP: painted pixel maps, the shading kit, the
                   walls and floors with their second read, ART.stand (which
                   puts a contact shadow down before the thing that throws

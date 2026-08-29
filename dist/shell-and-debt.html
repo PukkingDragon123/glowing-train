@@ -8506,11 +8506,13 @@ SPR.buildBody = function (d, o) {
        in screen space one arm comes across the body while the other swings
        away from it — which is what a stride looks like from the front.
        Mirroring it per side (the obvious thing) makes him shrug instead. */
-    const sw = Math.round(swing * 6);
+    /* SIX PIXELS, inside a bust that then gets fitted down to two thirds:
+       four on screen, on a figure a hundred and thirty tall. Thirteen. */
+    const sw = Math.round(swing * 13);
     /* AND ONE HAND RIDES HIGHER. Sliding both arms sideways alone reads as a
        slide; the arm coming across also lifts while the trailing one hangs,
        and that vertical difference is what sells it at room size. */
-    const lift = Math.round(sgn * swing * 2);
+    const lift = Math.round(sgn * swing * 4);
     const elX0 = cx + sgn * (baseHw - (armIn ? 8 : 1)) + Math.round(sw * 0.45);
     const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw;   // wrist leads the swing
     /* seated, the sleeve head starts BELOW the coat's shoulder line, so the
@@ -8697,8 +8699,8 @@ SPR.buildBody = function (d, o) {
      which is the only thing that can follow a swing. */
   cv.wrist = { dx: baseHw - (armIn ? 13 : 9), dy: 56, cx: cx, h: H };
   cv.wristAt = [-1, 1].map(sgn => {
-    const sw = Math.round(swing * 6);
-    const lift = Math.round(sgn * swing * 2);
+    const sw = Math.round(swing * 13);
+    const lift = Math.round(sgn * swing * 4);
     return {
       sgn,
       x: cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw,
@@ -9974,11 +9976,42 @@ SPR.frogWhole = function (key, def, opts) {
        neighbour at a fractional scale drops columns and a dropped
        column is a missing eyelid or half a pinstripe.
        ============================================================ */
-    const HEAD_H = 28, NECK = 2, TORSO = 44, LEGS = 56, RISE = 2;
+    /* ============================================================
+       AND THEN BACK TO CARTOON, DELIBERATELY.
+
+       The measured pass above is correct about people and wrong about
+       this game. Taken to a head fraction of 0.21 and an aspect of
+       0.30 he came out a slim, sensible, forgettable man in a coat --
+       and the whole cast around him is saturated, bold and drawn like
+       a cartoon, so he stopped belonging to it.
+
+       Cartoon is not the same mistake as mascot. A mascot was 0.37 of
+       the height in head and half as wide as it was tall: a beach
+       ball on a barrel with no joints in it. What this is aiming at is
+       the middle -- heroic cartoon, four heads and a bit:
+
+         head    35     0.27 of the figure, hat included
+         neck     2
+         torso   44     shoulder to hip, unchanged
+         legs    48     shorter than a person's, which is most of
+                        what makes a drawing read as a cartoon
+         ----------
+                129     the rig box is unchanged, so every room's
+                        furniture is still the right size against him
+
+       And he is CHUNKY: the bust comes in at eighty-four per cent of
+       its own aspect rather than sixty-two, which widens the drawn
+       figure from thirty-seven to fifty and thickens every limb with
+       it, because SLIM is derived from it. Bold shapes, exaggerated
+       proportions -- and every joint, hand and finger the measured
+       pass built stays exactly where it is. Cartoony is a shape
+       language, not an excuse for a solid block.
+       ============================================================ */
+    const HEAD_H = 35, NECK = 2, TORSO = 44, LEGS = 48, RISE = 5;
     const hh = HEAD_H;
-    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height) * 0.80));
+    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height) * 0.78));
     const bh = TORSO + NECK;
-    const bw = Math.round(body.width * (bh / body.height) * 0.62);
+    const bw = Math.round(body.width * (bh / body.height) * 0.84);
     const W = Math.max(bw, hw) + 12;
     /* two spare rows at the top: the torso rises off planted feet rather
        than the whole frog sliding up and down together */
@@ -9994,7 +10027,22 @@ SPR.frogWhole = function (key, def, opts) {
     /* THE WALK. Two legs in opposite phase, the whole frog rising on the
        passing beats. The bob is twice the stride frequency, because you go
        up once per step and there are two steps in a cycle. */
-    const swing = Math.round(ph * 6);
+    /* ============================================================
+       THE WALK HAD NO AMPLITUDE IN IT.
+
+       Every part of the machinery was already here -- tapered bones, a
+       knee that folds, a sole that stays planted while the hips rise
+       over it, arms opposing the legs. And then every number driving it
+       was small enough to be invisible: the ankle travelled four pixels
+       on a figure a hundred and thirty tall, the foot lifted four, the
+       body rose two, and the arm swung six inside a bust that was then
+       fitted down to two thirds. Eight frames of a man standing still,
+       very slightly.
+
+       Doubled and then some, which is what a cartoon walk is: not more
+       machinery, more OF it.
+       ============================================================ */
+    const swing = Math.round(ph * 11);
     /* THE BOB WAS UPSIDE DOWN, and it moved the feet with it. You are at
        your TALLEST at the passing beat, when the supporting leg is straight
        under you, and lowest at the stride ends, where both legs are out at
@@ -10004,6 +10052,19 @@ SPR.frogWhole = function (key, def, opts) {
     const bobU = (1 + Math.cos(((frame % SPR.WALK_FRAMES) /
       SPR.WALK_FRAMES) * Math.PI * 4)) / 2;          // 1 passing, 0 at full stride
     const bob = RISE - Math.round(bobU * RISE);
+    /* THE HEAD ARRIVES LATE. A head that rises and falls in lockstep with
+       the hips is a head bolted to a torso; one frame of lag out of eight
+       is the whole of it. And the sway is the weight going from one foot to
+       the other -- the head leans one way while the shoulders go the other,
+       which is the read everybody recognises as walking. */
+    const bobU2 = (1 + Math.cos((((frame + 1) % SPR.WALK_FRAMES) /
+      SPR.WALK_FRAMES) * Math.PI * 4)) / 2;
+    /* CLAMPED TO ONE PIXEL. Taken as its own five-pixel bob the head went
+       down while the shoulders went up and swallowed his own neck: the lag
+       is a nudge off the body's bob, not a second bob. */
+    const headBob = bob + U.clamp(
+      Math.round(((RISE - bobU2 * RISE) - bob) * 0.6), -1, 1);
+    const sway = side ? 0 : Math.round(SPR.walkPhase(frame) * 2);
     const bodyTop = hh - NECK + bob;
     const cx = Math.round(W / 2);
     const groundY = H - 6;                            // where the soles rest
@@ -10066,9 +10127,9 @@ SPR.frogWhole = function (key, def, opts) {
       const st = sgn * ph;                  // -1 behind him .. +1 out in front
       const air = Math.max(0, sgn * co);    // >0 while it is swinging through
       const fold = air * 0.9 + Math.max(0, -st) * 0.3;
-      const lift = Math.round(air * 4);
+      const lift = Math.round(air * 9);
       const hx = cx + sgn * spread;
-      const ax = hx + Math.round(st * (side ? 6 : 4));   // the ankle leads
+      const ax = hx + Math.round(st * (side ? 13 : 8));  // the ankle leads
       const solY = groundY - lift;          // the sole; planted unless airborne
       const ankY = solY - 5;
       /* the knee breaks FORWARD out of the hip-ankle line as it folds. Head
@@ -10129,7 +10190,11 @@ SPR.frogWhole = function (key, def, opts) {
     /* SHOULDERS TURN. A torso seen edge-on is about two thirds the width
        it is head-on, and drawing it at full width is what made the first
        profile read as a front view with a snout drawn on it. */
-    const sbw = side ? Math.round(bw * 0.72) : bw;
+    /* seventy-two per cent of the front width was wider than his own head
+       is tall, and with the cartoon bust back it read as a hunchback: what
+       you see from the side is his DEPTH, and a man is not as deep as he
+       is wide */
+    const sbw = side ? Math.round(bw * 0.58) : bw;
     const shw = side ? Math.round(hw * 0.94) : hw;
     /* FITTED, NOT SQUASHED. drawImage with smoothing off at 0.4 scale threw
        away three columns in five: the pinstripes came out as dotted lines
@@ -10141,7 +10206,7 @@ SPR.frogWhole = function (key, def, opts) {
     const bodyFit = side
       ? SPR.profileBust(key, def, sbw, bh)
       : SPR.fit('body_' + key + ':' + frame, body, sbw, bh);
-    c.drawImage(bodyFit, Math.round((W - sbw) / 2), bodyTop);
+    c.drawImage(bodyFit, Math.round((W - sbw) / 2) + sway, bodyTop);
 
     /* HANDS. The bust stops at a shirt cuff because the duel paints the
        hands onto the felt itself. Standing up he needs his own, hung on the
@@ -10169,7 +10234,7 @@ SPR.frogWhole = function (key, def, opts) {
 
     const headFit = SPR.fit('head_' + key + ':' + ex + (side ? 's' : '') + (back ? 'b' : ''),
       head, shw, hh);
-    c.drawImage(headFit, Math.round((W - shw) / 2), bob);
+    c.drawImage(headFit, Math.round((W - shw) / 2) - sway, headBob);
 
     /* ------------------------------------------------------------
        WALKING AWAY FROM YOU.
@@ -10275,15 +10340,17 @@ SPR.frogWhole = function (key, def, opts) {
         const AF = Math.max(4, Math.round(bw2 * 0.15));
         const arm = (aph, sx, col, hsgn, near) => {
           const fold = U.clamp(0.32 + aph * 0.42, 0.05, 0.88);
-          const ex = sx - Math.round(aph * 2) - Math.round(fold * 3);
-          const hx2 = sx + Math.round(aph * 4);
+          const ex = sx - Math.round(aph * 4) - Math.round(fold * 3);
+          const hx2 = sx + Math.round(aph * 9);
           /* THE ARM HAS TO COME OUT OF THE COAT. Filled in the coat's own
              colour all you see is the ink round it, and an ink ring is a
              bubble, not a limb: the first go at this read as a row of dark
              discs stuck on his side. So the near arm is lifted a shade and
              the far one dropped, and the joints are SMALLER than the bones
              they join — a knuckle that overhangs its own limb is a balloon. */
-          const tone = near ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.42)';
+          /* seven per cent of white on a coat this dark is nothing: the
+             near arm has to come off the coat or the profile is a slab */
+          const tone = near ? 'rgba(255,255,255,.17)' : 'rgba(0,0,0,.46)';
           bone(sx, shY, ex, elY, AW, AF, col, 0, tone);
           bone(ex, elY, hx2, haY - 4, AF, Math.max(3, AF - 2), col, 1.0, tone);
           const er = Math.max(3, Math.round(AF * 0.55));
@@ -10306,9 +10373,11 @@ SPR.frogWhole = function (key, def, opts) {
            is the only way an arm behind a body can be drawn after it */
         c.save();
         c.globalCompositeOperation = 'destination-over';
-        /* the walk phase, NOT the local ph — which in this block is the
-           height of the coat panel */
-        const aw = swing / 6;
+        /* the walk phase, NOT the local ph -- which in this block is the
+           height of the coat panel. Taken as swing/6 it went out past one
+           once the swing was raised to eleven, and everything downstream
+           clamps, so it is the raw phase and the multipliers do the work. */
+        const aw = SPR.walkPhase(frame);
         /* the far arm hangs off the BACK of him and the near one off the
            front third, which is where a shoulder actually is on a body seen
            edge on -- both of them used to hang off the middle */
@@ -12255,21 +12324,43 @@ const ART = (() => {
       + ':' + (opt.railY === undefined ? 'd' : opt.railY);
     return cached(key, () => {
       const o = cv(w, h), c = o.c;
+      /* ============================================================
+         SATURATED DARK, NOT GREY.
+
+         Measured: the cast's top tenth of pixels by chroma sits at
+         0.62 and the rooms were coming in at 0.41 to 0.56, which is
+         exactly the complaint -- the frogs are painted and the walls
+         they stand against are mud. Every one of these was a
+         near-neutral at about a third chroma. They are now deep,
+         SATURATED darks at two thirds and up, at the same value:
+         bottle green, petrol, cold teal, oxblood, tobacco, plum,
+         mustard. The value stays where it was, because this is still
+         a mafia story in a city at night. What goes up is the colour.
+         ============================================================ */
       const T = {
-        green: ['#1d2a26', '#243430', '#16211e', '#2f403a'],
-        grey:  ['#1e222c', '#262b36', '#171a22', '#333a48'],
-        tile:  ['#20282e', '#28323a', '#181e23', '#36424c'],
-        brick: ['#241c1a', '#2c2220', '#1a1413', '#3a2c28'],
-      }[opt.tone || 'green'];
+        green:   ['#0e3524', '#15462f', '#082115', '#2a7a4e'],   /* bottle green */
+        grey:    ['#0f2140', '#173058', '#08142a', '#2b5490'],   /* petrol */
+        tile:    ['#0a2d36', '#0f424f', '#051d24', '#1f7d8e'],   /* cold teal */
+        brick:   ['#3a1410', '#4d1d16', '#230b08', '#7d3320'],   /* oxblood */
+        wood:    ['#3d2408', '#523110', '#261504', '#8a5a1c'],   /* tobacco panel */
+        plum:    ['#2c1030', '#3c1642', '#1a0820', '#6e2a78'],   /* a bar at night */
+        mustard: ['#3c2f06', '#514009', '#241c03', '#96761a'],   /* a cheap diner */
+      }[opt.tone] || ['#0e3524', '#15462f', '#082115', '#2a7a4e'];
       px(c, 0, 0, w, h, T[0]);
-      /* upper field, dithered so it isn't dead flat */
-      dither(c, 0, 0, w, h, T[1], 0.14, (opt.seed || 1) * 3);
-      dither(c, 0, 0, w, h, T[2], 0.1, (opt.seed || 1) * 7);
+      /* upper field, dithered so it isn't dead flat -- but LIGHTLY: at
+         fourteen per cent of a tone this much lighter than the base, the
+         saturated walls came out as television static in colour */
+      dither(c, 0, 0, w, h, T[1], 0.085, (opt.seed || 1) * 3);
+      dither(c, 0, 0, w, h, T[2], 0.07, (opt.seed || 1) * 7);
       const railY = opt.railY === undefined ? Math.round(h * 0.62) : opt.railY;
-      /* the darker wainscot below the rail */
+      /* the darker wainscot below the rail. The darkest of the four tones is
+         still the same hue at the same chroma, so on its own it read as the
+         same wall: it takes a step down in VALUE as well to be a dado. */
       px(c, 0, railY, w, h - railY, T[2]);
-      dither(c, 0, railY, w, h - railY, T[0], 0.12, (opt.seed || 1) * 11);
+      px(c, 0, railY, w, h - railY, 'rgba(0,0,0,.30)');
+      dither(c, 0, railY, w, h - railY, T[0], 0.09, (opt.seed || 1) * 11);
       px(c, 0, railY - 2, w, 2, T[3]);
+      px(c, 0, railY - 2, w, 2, 'rgba(0,0,0,.22)');
       px(c, 0, railY, w, 1, '#0f1316');
       /* tiling, if this is a tiled room */
       if (opt.tone === 'tile') {
@@ -12348,22 +12439,24 @@ const ART = (() => {
     return cached(key, () => {
       const o = cv(w, h), c = o.c;
       if (opt.tone === 'lino') {
-        px(c, 0, 0, w, h, '#1a2028');
+        /* the same saturation pass the walls got: a chequer of two neutral
+           greys is a chequer of two neutral greys */
+        px(c, 0, 0, w, h, '#0d2028');
         for (let x = 0; x < w; x += 14) {
           for (let y = 0; y < h; y += 14) {
             const d = ((x / 14) + (y / 14)) % 2;
-            px(c, x, y, 14, 14, d ? '#1e252e' : '#161c23');
+            px(c, x, y, 14, 14, d ? '#0f2831' : '#0a1e26');
           }
         }
         /* the seams between the sheets, and the wear down the middle */
         for (let x = 0; x < w; x += 14) px(c, x, 0, 1, h, 'rgba(0,0,0,.22)');
         dither(c, 0, 2, w, Math.max(2, h - 6), 'rgba(255,255,255,.025)', 0.08, 3);
       } else {
-        px(c, 0, 0, w, h, '#2a2118');
+        px(c, 0, 0, w, h, '#331d08');
         for (let y = 0; y < h; y += 7) {
           px(c, 0, y, w, 1, 'rgba(0,0,0,.34)');
           px(c, 0, y + 1, w, 1, 'rgba(255,255,255,.04)');
-          grain(c, 0, y + 2, w, 4, '#241c14', '#382c1e', (opt.seed || 1) * 13 + y);
+          grain(c, 0, y + 2, w, 4, '#261504', '#4d2f10', (opt.seed || 1) * 13 + y);
         }
         /* board ends, staggered */
         const rng0 = U.mulberry32((opt.seed || 1) * 41);
@@ -12597,6 +12690,1059 @@ const ART = (() => {
     cv, cached, px, box, dither, grain, rivets, paint, art,
     desk, chair, cabinet, lockers, cell, window: window_, radiator,
     corkboard, bed, barCounter, crate, hangLamp, pipes, wall, floor, vista, stand,
+  };
+})();
+</script>
+<script>
+/* ==== js/furn.js ==== */
+/* ============================================================
+   THE FURNITURE SHOP.
+
+   Every room in this game was dressed by hand, in place, out of
+   ART.box and ART.px: a desk here, a cabinet there, and whenever
+   a room needed something nobody had drawn yet it got a rectangle
+   with a highlight on the top edge. That is why the places all
+   had the same silhouette -- boxes of different sizes against a
+   wall -- and why a bar with nothing on its walls stayed a bar
+   with nothing on its walls.
+
+   So there is a catalogue now. Every piece:
+
+     - is authored at whatever size it is asked for, in fractions
+       of that size, so a sideboard in a small room and a sideboard
+       in a big one are the same sideboard;
+     - is CACHED by name and size, because these get drawn once
+       into a room canvas and then never again;
+     - carries its own second read -- wear where hands go, a lit
+       top edge, a shadow under the overhang, joints, fixings,
+       the dirt that collects in its corners;
+     - is SATURATED. The walls went from a third chroma to two
+       thirds and the furniture has to come with them, or a
+       painted room fills up with grey boxes. Upholstery, enamel,
+       lacquer and paint are where a cartoon interior keeps its
+       colour;
+     - reports where it stands (cv.foot) and how tall it is at the
+       front (cv.top), so the room can put things ON it and the
+       cast can stand BEHIND it.
+
+   Colours come in as a PALETTE NAME rather than a hex, so a room
+   can order the same armchair in oxblood, bottle green or mustard
+   and get one that belongs in it.
+   ============================================================ */
+const FURN = (() => {
+
+  const cv = (w, h) => ART.cv(w, h);
+  const px = (c, x, y, w, h, col) => ART.px(c, x, y, w, h, col);
+  const box = (c, x, y, w, h, o) => ART.box(c, x, y, w, h, o);
+  const grain = (c, x, y, w, h, a, b, s) => ART.grain(c, x, y, w, h, a, b, s);
+  const dith = (c, x, y, w, h, col, d, s) => ART.dither(c, x, y, w, h, col, d, s);
+
+  /* ---- THE MATERIALS. Named, saturated, and always four steps: the lit
+         edge, the body, the shade and the ink. A material with three steps
+         is a colour with a highlight on it. ---- */
+  const MAT = {
+    /* woods */
+    walnut:   { lit: '#8a5a30', mid: '#5c3a1c', dk: '#361f0d', ink: '#160c04' },
+    oak:      { lit: '#a8783c', mid: '#7a5324', dk: '#4a3012', ink: '#1c1206' },
+    ebony:    { lit: '#3c3644', mid: '#241f2c', dk: '#141018', ink: '#0a070d' },
+    pine:     { lit: '#c39a54', mid: '#96712f', dk: '#5e4517', ink: '#241a08' },
+    /* upholstery, which is where the colour is */
+    oxblood:  { lit: '#a8342c', mid: '#7a1f1c', dk: '#4a0f10', ink: '#1e0607' },
+    bottle:   { lit: '#2f8a5a', mid: '#1c5c3a', dk: '#0e3320', ink: '#04150c' },
+    petrol:   { lit: '#2f6a96', mid: '#1c4466', dk: '#0e2440', ink: '#040d1c' },
+    plum:     { lit: '#8a3c96', mid: '#5c2466', dk: '#331240', ink: '#12061c' },
+    mustard:  { lit: '#c8a02c', mid: '#96741a', dk: '#5e470a', ink: '#241b03' },
+    teal:     { lit: '#2f9096', mid: '#1c6066', dk: '#0e3640', ink: '#04161c' },
+    rose:     { lit: '#d4707c', mid: '#a04a58', dk: '#652832', ink: '#280d12' },
+    cream:    { lit: '#f4efe0', mid: '#d4c8aa', dk: '#9a8d6e', ink: '#3a3324' },
+    /* hard things */
+    enamel:   { lit: '#eef2f2', mid: '#c6cecc', dk: '#8a9694', ink: '#2c3634' },
+    steel:    { lit: '#b6c0c8', mid: '#7c8894', dk: '#4a5460', ink: '#1a2028' },
+    brass:    { lit: '#ffd75e', mid: '#c8991e', dk: '#7a5c0e', ink: '#2e2205' },
+    copper:   { lit: '#e08a4c', mid: '#a85c26', dk: '#663310', ink: '#251206' },
+    glass:    { lit: 'rgba(214,240,250,.46)', mid: 'rgba(140,190,214,.26)',
+                dk: 'rgba(60,100,124,.30)', ink: 'rgba(10,20,28,.60)' },
+  };
+  const M = (name) => MAT[name] || MAT.walnut;
+
+  const CACHE = {};
+  function make(key, w, h, draw) {
+    const k = key + ':' + w + 'x' + h;
+    if (CACHE[k]) return CACHE[k];
+    const o = cv(Math.max(2, w), Math.max(2, h));
+    draw(o.c, Math.max(2, w), Math.max(2, h));
+    o.cv.foot = h - 1;
+    CACHE[k] = o.cv;
+    return o.cv;
+  }
+
+  /* ---- a panel with a bevel: the unit almost everything is built from ---- */
+  function panel(c, x, y, w, h, m, o) {
+    o = o || {};
+    px(c, x - 1, y - 1, w + 2, h + 2, m.ink);
+    px(c, x, y, w, h, m.mid);
+    px(c, x, y, w, Math.max(1, o.top || 1), m.lit);
+    px(c, x, y + h - Math.max(1, o.bot || 1), w, Math.max(1, o.bot || 1), m.dk);
+    px(c, x, y, Math.max(1, o.left || 1), h, m.lit);
+    px(c, x + w - Math.max(1, o.right || 1), y, Math.max(1, o.right || 1), h, m.dk);
+    if (o.grain !== false) grain(c, x + 1, y + 1, w - 2, h - 2, m.dk, m.lit, (o.seed || 3) * 7);
+  }
+
+  /* ---- a moulded frame round an opening: a door, a mirror, a picture ---- */
+  function moulding(c, x, y, w, h, m, t) {
+    t = t || 3;
+    px(c, x - 1, y - 1, w + 2, h + 2, m.ink);
+    px(c, x, y, w, t, m.lit);
+    px(c, x, y + h - t, w, t, m.dk);
+    px(c, x, y, t, h, m.lit);
+    px(c, x + w - t, y, t, h, m.dk);
+    px(c, x + t, y + t, w - t * 2, 1, 'rgba(0,0,0,.34)');
+    px(c, x + t, y + h - t - 1, w - t * 2, 1, 'rgba(255,255,255,.10)');
+  }
+
+  /* ---- turned legs, which is what stops a table being a plank on blocks ---- */
+  function legs(c, x, y, w, h, m, n, o) {
+    o = o || {};
+    const lw = Math.max(3, Math.round(w * (o.lw || 0.07)));
+    for (let i = 0; i < n; i++) {
+      const lx = Math.round(x + (w - lw) * (n === 1 ? 0.5 : i / (n - 1)));
+      px(c, lx - 1, y, lw + 2, h, m.ink);
+      px(c, lx, y, lw, h, m.mid);
+      px(c, lx, y, Math.max(1, lw >> 1), h, m.lit);
+      px(c, lx + lw - 1, y, 1, h, m.dk);
+      /* the turning: three collars down it */
+      for (let k = 1; k <= 3; k++) {
+        const ky = y + Math.round(h * (k / 4));
+        px(c, lx - 1, ky, lw + 2, 2, m.dk);
+        px(c, lx - 1, ky, lw + 2, 1, m.lit);
+      }
+      if (o.castor) {
+        px(c, lx - 1, y + h - 2, lw + 2, 3, MAT.steel.ink);
+        px(c, lx, y + h - 2, lw, 2, MAT.steel.mid);
+      }
+    }
+  }
+
+  /* ============================================================
+     THE CATALOGUE
+     ============================================================ */
+  const PIECES = {};
+  const piece = (name, fn) => { PIECES[name] = fn; };
+
+  /* ---- 1. AN ARMCHAIR, seen three-quarters from the side. Wings, a
+          seat cushion that sags, a skirt, and a worn arm-top where a hand
+          has been going for thirty years. ---- */
+  piece('armchair', (c, w, h, o) => {
+    const m = M(o.mat || 'oxblood'), wd = M(o.wood || 'walnut');
+    const backT = Math.round(h * 0.06), seatY = Math.round(h * 0.56);
+    /* the back, taller at the far side */
+    px(c, 2, backT, w - 12, seatY - backT + 6, m.ink);
+    px(c, 3, backT + 1, w - 14, seatY - backT + 4, m.mid);
+    px(c, 3, backT + 1, w - 14, 2, m.lit);
+    px(c, 3, backT + 1, 3, seatY - backT + 4, m.lit);
+    /* the buttoning, which is what says armchair rather than box */
+    for (let r = 0; r < 3; r++) {
+      for (let q = 0; q < 3; q++) {
+        const bx = 8 + q * Math.round((w - 26) / 2.4);
+        const by = backT + 6 + r * Math.round((seatY - backT) / 3.4);
+        if (bx > w - 14) continue;
+        px(c, bx, by, 2, 2, m.dk);
+        px(c, bx, by, 1, 1, m.lit);
+        px(c, bx - 2, by + 2, 5, 1, 'rgba(0,0,0,.20)');
+      }
+    }
+    /* the near arm: a roll, with the top worn pale */
+    const armY = Math.round(h * 0.40);
+    px(c, w - 14, armY - 1, 13, seatY - armY + 8, m.ink);
+    px(c, w - 13, armY, 11, seatY - armY + 6, m.mid);
+    px(c, w - 13, armY, 11, 3, m.lit);
+    px(c, w - 12, armY + 1, 9, 1, 'rgba(255,255,255,.16)');
+    px(c, w - 5, armY + 3, 3, seatY - armY + 3, m.dk);
+    /* the seat cushion, sagging in the middle */
+    for (let x = 3; x < w - 3; x++) {
+      const t = (x - 3) / Math.max(1, w - 7);
+      const sag = Math.round(Math.sin(Math.PI * t) * 2);
+      px(c, x, seatY + sag, 1, 8, m.mid);
+      px(c, x, seatY + sag, 1, 2, m.lit);
+      px(c, x, seatY + sag + 6, 1, 2, m.dk);
+    }
+    px(c, 2, seatY + 8, w - 4, 2, m.ink);
+    /* the skirt and the feet */
+    px(c, 3, seatY + 10, w - 6, h - seatY - 14, wd.mid);
+    px(c, 3, seatY + 10, w - 6, 1, wd.lit);
+    grain(c, 4, seatY + 11, w - 8, h - seatY - 16, wd.dk, wd.lit, (o.seed || 1) * 5);
+    legs(c, 3, h - 5, w - 6, 5, wd, 2, { lw: 0.09 });
+  });
+
+  /* ---- 2. A SOFA. Same language, three cushions, longer. ---- */
+  piece('sofa', (c, w, h, o) => {
+    const m = M(o.mat || 'bottle'), wd = M(o.wood || 'walnut');
+    const backT = Math.round(h * 0.08), seatY = Math.round(h * 0.58);
+    px(c, 2, backT, w - 4, seatY - backT + 6, m.ink);
+    px(c, 3, backT + 1, w - 6, seatY - backT + 4, m.mid);
+    px(c, 3, backT + 1, w - 6, 2, m.lit);
+    /* three back cushions with a seam between each */
+    for (let i = 1; i < 3; i++) {
+      const sx = 3 + Math.round((w - 6) * i / 3);
+      px(c, sx, backT + 2, 1, seatY - backT + 2, m.dk);
+      px(c, sx + 1, backT + 2, 1, seatY - backT + 2, m.lit);
+    }
+    dith(c, 4, backT + 2, w - 8, seatY - backT, m.dk, 0.10, (o.seed || 2) * 11);
+    /* both arms, the near one lower */
+    for (const ax of [2, w - 13]) {
+      px(c, ax, Math.round(h * 0.40) - 1, 12, seatY - Math.round(h * 0.40) + 8, m.ink);
+      px(c, ax + 1, Math.round(h * 0.40), 10, seatY - Math.round(h * 0.40) + 6, m.mid);
+      px(c, ax + 1, Math.round(h * 0.40), 10, 3, m.lit);
+    }
+    /* the seat, three cushions, each sagging */
+    for (let i = 0; i < 3; i++) {
+      const x0 = 13 + Math.round((w - 26) * i / 3), cw = Math.round((w - 26) / 3) - 1;
+      for (let x = x0; x < x0 + cw; x++) {
+        const t = (x - x0) / Math.max(1, cw - 1);
+        const sag = Math.round(Math.sin(Math.PI * t) * 2);
+        px(c, x, seatY + sag, 1, 9, m.mid);
+        px(c, x, seatY + sag, 1, 2, m.lit);
+        px(c, x, seatY + sag + 7, 1, 2, m.dk);
+      }
+      px(c, x0 - 1, seatY, 1, 10, m.ink);
+    }
+    px(c, 2, seatY + 10, w - 4, 2, m.ink);
+    px(c, 3, seatY + 12, w - 6, h - seatY - 16, wd.mid);
+    px(c, 3, seatY + 12, w - 6, 1, wd.lit);
+    legs(c, 4, h - 5, w - 8, 5, wd, 3, { lw: 0.05 });
+  });
+
+  /* ---- 3. A SIDEBOARD: two doors, a drawer run, a plinth, and the
+          things people leave on top of it. ---- */
+  piece('sideboard', (c, w, h, o) => {
+    const wd = M(o.mat || 'walnut'), br = M('brass');
+    /* the top slab, overhanging both ends */
+    px(c, 0, 0, w, 5, wd.ink);
+    px(c, 1, 1, w - 2, 3, wd.mid);
+    px(c, 1, 1, w - 2, 1, wd.lit);
+    grain(c, 2, 2, w - 4, 2, wd.dk, wd.lit, (o.seed || 1) * 3);
+    px(c, 1, 4, w - 2, 1, 'rgba(0,0,0,.44)');
+    /* the carcase */
+    px(c, 3, 5, w - 6, h - 10, wd.ink);
+    px(c, 4, 6, w - 8, h - 12, wd.dk);
+    /* a drawer run across the top */
+    const dh = Math.round((h - 12) * 0.26);
+    const nd = Math.max(2, Math.round(w / 26));
+    for (let i = 0; i < nd; i++) {
+      const dx = 5 + Math.round((w - 10) * i / nd), dw = Math.round((w - 10) / nd) - 2;
+      panel(c, dx, 8, dw, dh, wd, { seed: (o.seed || 1) + i });
+      px(c, dx + (dw >> 1) - 4, 8 + (dh >> 1) - 1, 9, 3, br.ink);
+      px(c, dx + (dw >> 1) - 4, 8 + (dh >> 1) - 1, 9, 2, br.mid);
+      px(c, dx + (dw >> 1) - 4, 8 + (dh >> 1) - 1, 9, 1, br.lit);
+    }
+    /* two doors under it, with a moulded field in each */
+    const doorY = 8 + dh + 3, doorH = h - doorY - 8;
+    for (let i = 0; i < 2; i++) {
+      const dx = 5 + Math.round((w - 10) * i / 2), dw = Math.round((w - 10) / 2) - 2;
+      panel(c, dx, doorY, dw, doorH, wd, { seed: (o.seed || 1) + 9 + i });
+      moulding(c, dx + 4, doorY + 4, dw - 8, doorH - 8, wd, 2);
+      px(c, dx + dw - 7, doorY + (doorH >> 1) - 2, 3, 5, br.ink);
+      px(c, dx + dw - 7, doorY + (doorH >> 1) - 2, 2, 4, br.mid);
+    }
+    /* the plinth, and the shadow it casts back under itself */
+    px(c, 3, h - 8, w - 6, 8, wd.ink);
+    px(c, 4, h - 7, w - 8, 6, wd.dk);
+    px(c, 4, h - 7, w - 8, 1, wd.mid);
+    px(c, 4, h - 3, w - 8, 3, 'rgba(0,0,0,.44)');
+  });
+
+  /* ---- 4. A DRESSER: a sideboard with open shelves over it, and plates
+          standing on edge in them. ---- */
+  piece('dresser', (c, w, h, o) => {
+    const wd = M(o.mat || 'pine');
+    const baseY = Math.round(h * 0.52);
+    /* the rack above */
+    px(c, 2, 0, w - 4, baseY, wd.ink);
+    px(c, 3, 1, w - 6, baseY - 2, wd.dk);
+    px(c, 3, 1, w - 6, 2, wd.mid);
+    px(c, 0, 0, w, 4, wd.ink);
+    px(c, 1, 1, w - 2, 2, wd.lit);
+    const shelves = Math.max(2, Math.round(baseY / 16));
+    for (let i = 1; i <= shelves; i++) {
+      const sy = Math.round(baseY * i / (shelves + 0.4));
+      px(c, 3, sy, w - 6, 3, wd.ink);
+      px(c, 3, sy, w - 6, 2, wd.mid);
+      px(c, 3, sy, w - 6, 1, wd.lit);
+      px(c, 3, sy + 3, w - 6, 2, 'rgba(0,0,0,.40)');
+      /* plates on edge, and the odd cup hanging under the shelf */
+      const pal = [M('cream'), M('teal'), M('rose'), M('mustard')];
+      for (let q = 0; q < Math.round((w - 10) / 11); q++) {
+        const pm = pal[(q + i) % pal.length];
+        const pxx = 6 + q * 11, r = Math.min(5, Math.round(baseY / (shelves + 1) * 0.32));
+        PIX.disc(c, pxx + 4, sy - r - 1, r + 1, pm.ink);
+        PIX.disc(c, pxx + 4, sy - r - 1, r, pm.mid);
+        PIX.disc(c, pxx + 3, sy - r - 2, Math.max(1, r - 2), pm.lit);
+        if ((q + i) % 3 === 0) {
+          px(c, pxx + 2, sy + 5, 6, 4, pm.ink);
+          px(c, pxx + 3, sy + 5, 4, 3, pm.mid);
+          px(c, pxx + 7, sy + 6, 2, 1, pm.lit);
+        }
+      }
+    }
+    /* the base cupboard */
+    px(c, 0, baseY, w, 5, wd.ink);
+    px(c, 1, baseY + 1, w - 2, 3, wd.mid);
+    px(c, 1, baseY + 1, w - 2, 1, wd.lit);
+    px(c, 2, baseY + 5, w - 4, h - baseY - 8, wd.ink);
+    for (let i = 0; i < 2; i++) {
+      const dx = 4 + Math.round((w - 8) * i / 2), dw = Math.round((w - 8) / 2) - 2;
+      panel(c, dx, baseY + 7, dw, h - baseY - 14, wd, { seed: (o.seed || 1) + i });
+      px(c, dx + dw - 6, baseY + 7 + ((h - baseY - 14) >> 1), 3, 4, M('brass').mid);
+    }
+    px(c, 2, h - 4, w - 4, 4, wd.ink);
+    px(c, 3, h - 3, w - 6, 2, wd.dk);
+  });
+
+  /* ---- 5. A BOOKCASE, with books that are not all the same height. ---- */
+  piece('bookcase', (c, w, h, o) => {
+    const wd = M(o.mat || 'oak');
+    const rng = U.mulberry32((o.seed || 1) * 61);
+    px(c, 0, 0, w, h, wd.ink);
+    px(c, 2, 2, w - 4, h - 4, wd.dk);
+    px(c, 0, 0, w, 3, wd.mid);
+    px(c, 0, 0, w, 1, wd.lit);
+    px(c, 0, 0, 3, h, wd.mid);
+    px(c, w - 3, 0, 3, h, wd.dk);
+    const shelves = Math.max(2, Math.round(h / 22));
+    const sp = (h - 6) / shelves;
+    const cols = [M('oxblood'), M('bottle'), M('petrol'), M('mustard'),
+      M('plum'), M('walnut'), M('teal'), M('cream')];
+    for (let i = 0; i < shelves; i++) {
+      const sy = Math.round(3 + sp * (i + 1)) - 3;
+      /* the books, standing, leaning, and one lot fallen over */
+      let x = 4;
+      const lean = rng() < 0.3;
+      while (x < w - 6) {
+        const bw = 2 + Math.floor(rng() * 4);
+        const bh = Math.round(sp * (0.52 + rng() * 0.34));
+        const m = cols[Math.floor(rng() * cols.length)];
+        if (x + bw > w - 5) break;
+        px(c, x, sy - bh, bw, bh, m.ink);
+        px(c, x, sy - bh, bw, bh - 1, m.mid);
+        px(c, x, sy - bh, 1, bh - 1, m.lit);
+        if (bh > 8) px(c, x, sy - bh + 3, bw, 1, M('brass').mid);
+        x += bw + (rng() < 0.2 ? 2 : 0);
+      }
+      if (lean && x < w - 14) {
+        /* a stack lying on its side at the end of the row */
+        for (let k = 0; k < 3; k++) {
+          const m = cols[(i + k) % cols.length];
+          px(c, x + 1, sy - 3 - k * 3, Math.min(12, w - 6 - x), 3, m.ink);
+          px(c, x + 1, sy - 3 - k * 3, Math.min(12, w - 6 - x), 2, m.mid);
+        }
+      }
+      px(c, 2, sy, w - 4, 3, wd.ink);
+      px(c, 2, sy, w - 4, 2, wd.mid);
+      px(c, 2, sy, w - 4, 1, wd.lit);
+    }
+  });
+
+  /* ---- 6. A STANDING LAMP: a shade with light coming THROUGH it, a
+          brass stem and a weighted foot. ---- */
+  piece('standlamp', (c, w, h, o) => {
+    const br = M('brass'), sm = M(o.mat || 'mustard');
+    const shH = Math.round(h * 0.24), shW = w - 2;
+    /* the shade, wider at the bottom, lit from inside */
+    for (let y = 0; y < shH; y++) {
+      const t = y / Math.max(1, shH - 1);
+      const ww = Math.round(shW * (0.56 + t * 0.44));
+      const x0 = Math.round((w - ww) / 2);
+      px(c, x0 - 1, y, ww + 2, 1, sm.ink);
+      px(c, x0, y, ww, 1, sm.mid);
+      px(c, x0, y, Math.max(1, Math.round(ww * 0.22)), 1, sm.lit);
+      if (t > 0.5) px(c, x0, y, ww, 1, 'rgba(255,232,168,' + ((t - 0.5) * 0.34).toFixed(3) + ')');
+    }
+    px(c, Math.round((w - shW) / 2), shH - 1, shW, 2, sm.dk);
+    /* the bulb glow under the shade */
+    for (let i = 0; i < 5; i++) {
+      const ww = Math.round(shW * (0.9 - i * 0.1));
+      px(c, Math.round((w - ww) / 2), shH + 1 + i, ww, 1,
+        'rgba(255,236,180,' + (0.24 - i * 0.045).toFixed(3) + ')');
+    }
+    /* the stem, with a collar */
+    const sx = Math.round(w / 2) - 1;
+    px(c, sx - 1, shH, 4, h - shH - 6, br.ink);
+    px(c, sx, shH, 2, h - shH - 6, br.mid);
+    px(c, sx, shH, 1, h - shH - 6, br.lit);
+    const cy = shH + Math.round((h - shH) * 0.44);
+    px(c, sx - 3, cy, 8, 3, br.ink);
+    px(c, sx - 2, cy, 6, 2, br.mid);
+    px(c, sx - 2, cy, 6, 1, br.lit);
+    /* the foot */
+    const fw = Math.round(w * 0.62);
+    px(c, Math.round((w - fw) / 2), h - 6, fw, 6, br.ink);
+    px(c, Math.round((w - fw) / 2) + 1, h - 5, fw - 2, 4, br.dk);
+    px(c, Math.round((w - fw) / 2) + 1, h - 5, fw - 2, 1, br.mid);
+  });
+
+  /* ---- 7. A RUG. Lies on the floor, has a border and a pattern in it,
+          and its ends are frayed. ---- */
+  piece('rug', (c, w, h, o) => {
+    const m = M(o.mat || 'oxblood'), a = M(o.trim || 'mustard');
+    px(c, 1, 0, w - 2, h, m.ink);
+    px(c, 2, 1, w - 4, h - 2, m.mid);
+    px(c, 2, 1, w - 4, 1, m.lit);
+    px(c, 2, h - 2, w - 4, 1, m.dk);
+    /* the border */
+    px(c, 4, 3, w - 8, 1, a.mid);
+    px(c, 4, h - 4, w - 8, 1, a.mid);
+    px(c, 4, 3, 1, h - 6, a.mid);
+    px(c, w - 5, 3, 1, h - 6, a.mid);
+    /* a repeating figure down the middle */
+    const n = Math.max(2, Math.round((w - 16) / 14));
+    for (let i = 0; i < n; i++) {
+      const cx2 = 8 + Math.round((w - 16) * (i + 0.5) / n), cy2 = Math.round(h / 2);
+      px(c, cx2 - 4, cy2 - 1, 9, 3, a.dk);
+      px(c, cx2 - 1, cy2 - 3, 3, 7, a.dk);
+      px(c, cx2 - 3, cy2, 7, 1, a.lit);
+      px(c, cx2, cy2 - 2, 1, 5, a.lit);
+    }
+    dith(c, 2, 1, w - 4, h - 2, m.dk, 0.10, (o.seed || 4) * 13);
+    /* the fringe, at both ends */
+    for (let y = 1; y < h - 1; y += 2) {
+      px(c, 0, y, 2, 1, m.dk);
+      px(c, w - 2, y, 2, 1, m.dk);
+    }
+  });
+
+  /* ---- 8. A MIRROR or a PICTURE in a frame, with the room in it. ---- */
+  piece('picture', (c, w, h, o) => {
+    const fm = M(o.mat || 'brass');
+    moulding(c, 0, 0, w, h, fm, Math.max(2, Math.round(w * 0.07)));
+    const t = Math.max(2, Math.round(w * 0.07));
+    const iw = w - t * 2 - 2, ih = h - t * 2 - 2;
+    const ix = t + 1, iy = t + 1;
+    if (o.kind === 'mirror') {
+      /* A MIRROR IS NOT A HOLE. At five to fifteen per cent of white over a
+         near-black ground it came out as a black rectangle in a frame. What
+         a mirror on a wall actually shows is the room BEHIND you, which at
+         this size is a soft vertical ramp with the ceiling light at the top
+         of it -- bright enough to read as glass. */
+      px(c, ix, iy, iw, ih, '#3d5560');
+      for (let y = 0; y < ih; y++) {
+        const t = y / Math.max(1, ih - 1);
+        px(c, ix, iy + y, iw, 1,
+          'rgba(206,232,244,' + (0.34 - t * 0.26).toFixed(3) + ')');
+      }
+      /* the reflected ceiling, and the reflected far wall under it */
+      px(c, ix, iy, iw, Math.max(1, Math.round(ih * 0.22)), 'rgba(236,248,255,.26)');
+      px(c, ix, iy + Math.round(ih * 0.52), iw, 1, 'rgba(20,30,38,.30)');
+      /* one raking streak, and the silvering going at a corner */
+      for (let i = 0; i < ih; i++) {
+        px(c, ix + Math.round(iw * 0.20) + i, iy + i, Math.max(2, iw >> 3), 1,
+          'rgba(236,248,255,.12)');
+      }
+      dith(c, ix, iy + ih - 6, Math.min(10, iw), 6, 'rgba(90,70,50,.34)', 0.4, 5);
+    } else {
+      /* a seascape, because that is what is on every wall of every rented
+         room: a horizon, a sail, a headland */
+      const sky = ['#2a4a6a', '#3a5f80', '#4a7496'];
+      for (let y = 0; y < ih; y++) {
+        px(c, ix, iy + y, iw, 1, y < ih * 0.55 ? sky[Math.floor(y / (ih * 0.2)) % 3] : '#1d3a4a');
+      }
+      px(c, ix, iy + Math.round(ih * 0.55), iw, 1, 'rgba(214,236,246,.40)');
+      const shx = ix + Math.round(iw * 0.34);
+      px(c, shx, iy + Math.round(ih * 0.30), 1, Math.round(ih * 0.26), '#e8dcc0');
+      for (let i = 0; i < Math.round(ih * 0.22); i++) {
+        px(c, shx + 1, iy + Math.round(ih * 0.34) + i, Math.max(1, i >> 1), 1, '#e8dcc0');
+      }
+      px(c, ix + Math.round(iw * 0.62), iy + Math.round(ih * 0.48), Math.round(iw * 0.3), 4, '#24402e');
+      px(c, ix, iy, iw, ih, 'rgba(60,40,20,.14)');   /* varnish gone yellow */
+    }
+    /* the wire it hangs on and the wall shadow under the frame */
+    px(c, 1, h - 1, w - 2, 1, 'rgba(0,0,0,.44)');
+  });
+
+  /* ---- 9. CURTAINS, hung either side of a window, with a pelmet. ---- */
+  piece('curtain', (c, w, h, o) => {
+    const m = M(o.mat || 'plum'), br = M('brass');
+    /* the pole and the pelmet */
+    px(c, 0, 0, w, 3, br.ink);
+    px(c, 0, 0, w, 2, br.mid);
+    px(c, 0, 0, w, 1, br.lit);
+    PIX.disc(c, 2, 1, 2, br.mid);
+    PIX.disc(c, w - 3, 1, 2, br.mid);
+    /* two drops, gathered, each with folds that read as cloth */
+    const dw = Math.round(w * 0.30);
+    for (const side of [0, 1]) {
+      const x0 = side ? w - dw : 0;
+      for (let y = 3; y < h; y++) {
+        const t = (y - 3) / Math.max(1, h - 4);
+        const ww = Math.round(dw * (0.78 + t * 0.22));
+        const xx = side ? w - ww : 0;
+        px(c, xx, y, ww, 1, m.mid);
+        /* the folds */
+        for (let k = 0; k < 4; k++) {
+          const fx = xx + Math.round(ww * (0.14 + k * 0.24));
+          px(c, fx, y, 1, 1, m.dk);
+          px(c, fx + 1, y, 1, 1, m.lit);
+        }
+        if (t > 0.7) px(c, xx, y, ww, 1, 'rgba(0,0,0,' + ((t - 0.7) * 0.5).toFixed(3) + ')');
+      }
+      /* the tie-back, pulling it in at two thirds height */
+      const ty = Math.round(h * 0.62);
+      px(c, x0, ty, dw, 3, br.ink);
+      px(c, x0, ty, dw, 2, br.mid);
+      px(c, x0, ty, dw, 1, br.lit);
+    }
+  });
+
+  /* ---- 10. A COOKING RANGE: enamel, a black hob, a brass rail, an oven
+           door with a window in it, and a kettle's ring of heat. ---- */
+  piece('range', (c, w, h, o) => {
+    const en = M(o.mat || 'cream'), br = M('brass'), st = M('steel');
+    px(c, 0, 4, w, h - 4, en.ink);
+    px(c, 1, 5, w - 2, h - 6, en.mid);
+    px(c, 1, 5, w - 2, 2, en.lit);
+    px(c, 1, 5, 2, h - 6, en.lit);
+    px(c, w - 3, 5, 2, h - 6, en.dk);
+    /* the hob: black iron with the rings on it */
+    px(c, 2, 4, w - 4, 8, '#1a1614');
+    px(c, 2, 4, w - 4, 1, '#3a332c');
+    const rings = Math.max(2, Math.round(w / 22));
+    for (let i = 0; i < rings; i++) {
+      const rx = Math.round((w - 4) * (i + 0.5) / rings) + 2;
+      PIX.ring(c, rx, 8, Math.min(5, Math.round(w / (rings * 4))), 1, '#4a4038');
+      PIX.disc(c, rx, 8, 2, '#0e0c0a');
+      if (i === 0) PIX.ring(c, rx, 8, Math.min(5, Math.round(w / (rings * 4))), 1, 'rgba(255,120,40,.44)');
+    }
+    /* the brass rail across the front */
+    px(c, 1, 16, w - 2, 2, br.ink);
+    px(c, 2, 16, w - 4, 1, br.lit);
+    /* the oven door, with a window and a handle */
+    const dy = 22, dh = h - dy - 8;
+    px(c, 4, dy, w - 8, dh, en.ink);
+    px(c, 5, dy + 1, w - 10, dh - 2, en.dk);
+    px(c, 5, dy + 1, w - 10, 1, en.mid);
+    px(c, 8, dy + 5, w - 16, dh - 12, '#120e0c');
+    px(c, 9, dy + 6, w - 18, dh - 14, 'rgba(255,150,60,.20)');
+    px(c, 9, dy + 6, w - 18, 1, 'rgba(255,190,120,.30)');
+    px(c, 6, dy + dh - 5, w - 12, 3, st.ink);
+    px(c, 6, dy + dh - 5, w - 12, 2, st.mid);
+    px(c, 6, dy + dh - 5, w - 12, 1, st.lit);
+    /* the dials, and the towel over the rail */
+    for (let i = 0; i < 3; i++) {
+      const dx = 6 + i * 8;
+      if (dx + 5 > w - 4) break;
+      PIX.disc(c, dx + 2, 20, 2, st.ink);
+      PIX.disc(c, dx + 2, 20, 1, st.lit);
+    }
+    px(c, w - 16, 17, 12, 14, M('teal').mid);
+    px(c, w - 16, 17, 12, 2, M('teal').lit);
+    for (let i = 0; i < 3; i++) px(c, w - 15, 21 + i * 4, 10, 1, M('teal').dk);
+    px(c, 1, h - 4, w - 2, 4, en.ink);
+    px(c, 2, h - 3, w - 4, 2, en.dk);
+  });
+
+  /* ---- 11. A WOODEN SCREEN, three leaves, for a corner. ---- */
+  piece('screen', (c, w, h, o) => {
+    const wd = M(o.mat || 'ebony'), cl = M(o.cloth || 'rose');
+    const lw = Math.round(w / 3);
+    for (let i = 0; i < 3; i++) {
+      const x0 = i * lw, top = Math.round(h * (i === 1 ? 0.00 : 0.05));
+      px(c, x0, top, lw - 1, h - top, wd.ink);
+      px(c, x0 + 1, top + 1, lw - 3, h - top - 2, wd.mid);
+      px(c, x0 + 1, top + 1, lw - 3, 2, wd.lit);
+      px(c, x0 + 1, top + 1, 2, h - top - 2, wd.lit);
+      /* the cloth panel. Painted in the cloth's DARK it was three slabs of
+         plum with dots on them: the panel is the light thing on a screen
+         and the frame is the dark thing round it. */
+      px(c, x0 + 4, top + 5, lw - 9, h - top - 12, cl.mid);
+      px(c, x0 + 4, top + 5, lw - 9, 1, cl.lit);
+      px(c, x0 + 4, h - 8, lw - 9, 1, cl.dk);
+      /* and a printed figure on it: a stem with leaves off it, twice */
+      for (let k = 0; k < 2; k++) {
+        const fy = top + 10 + k * Math.round((h - top - 26) / 2);
+        const fx = x0 + Math.round(lw / 2) - 1;
+        const fh = Math.round((h - top - 26) / 2) - 2;
+        if (fh < 6) break;
+        px(c, fx, fy, 1, fh, cl.dk);
+        for (let q = 0; q < 3; q++) {
+          const qy = fy + 2 + q * Math.round(fh / 3), dir = q % 2 ? 1 : -1;
+          px(c, fx + (dir > 0 ? 1 : -4), qy, 4, 1, cl.dk);
+          px(c, fx + dir * 5, qy - 1, 2, 2, cl.lit);
+        }
+      }
+      /* the hinges */
+      if (i < 2) {
+        for (let k = 0; k < 2; k++) {
+          px(c, x0 + lw - 2, Math.round(h * (0.28 + k * 0.4)), 3, 5, M('brass').ink);
+          px(c, x0 + lw - 2, Math.round(h * (0.28 + k * 0.4)), 3, 4, M('brass').mid);
+        }
+      }
+    }
+  });
+
+  /* ---- 12. A CLOCK on the wall: a case, a dial, hands that say a time. */
+  piece('clock', (c, w, h, o) => {
+    const wd = M(o.mat || 'walnut'), br = M('brass');
+    /* THE DIAL HAS TO BE THE THING. A wooden bezel three pixels thick round
+       a cream face with one-pixel marks came out as a dartboard: the bezel
+       is thin and DARK, the face is bright, the marks are bold, and the two
+       hands are the highest-contrast thing on the piece. */
+    const r = Math.round(Math.min(w, Math.round(h * 0.72)) * 0.48);
+    const cx2 = w >> 1, cy2 = r + 2;
+    PIX.disc(c, cx2, cy2, r + 2, wd.ink);
+    PIX.disc(c, cx2, cy2, r + 1, wd.dk);
+    PIX.disc(c, cx2, cy2 - 1, r, wd.mid);
+    PIX.disc(c, cx2, cy2, r - 1, '#0e0c0a');
+    PIX.disc(c, cx2, cy2, r - 2, '#f4efe0');
+    PIX.disc(c, cx2 - 1, cy2 - 1, Math.max(1, r - 5), '#fbf7ec');
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * Math.PI * 2;
+      const rr = r - 3, bold = i % 3 === 0;
+      const mx = cx2 + Math.round(Math.cos(a) * rr), my = cy2 + Math.round(Math.sin(a) * rr);
+      px(c, mx - (bold ? 1 : 0), my - (bold ? 1 : 0), bold ? 2 : 1, bold ? 2 : 1,
+        bold ? '#1a1614' : '#6d6656');
+    }
+    const hh2 = (o.hour === undefined ? 10 : o.hour % 12) / 12 * Math.PI * 2 - Math.PI / 2;
+    const mm = (o.min === undefined ? 10 : o.min) / 60 * Math.PI * 2 - Math.PI / 2;
+    for (let i = 0; i < r - 3; i++) {
+      if (i < (r - 3) * 0.56) {
+        px(c, cx2 + Math.round(Math.cos(hh2) * i) - 1, cy2 + Math.round(Math.sin(hh2) * i) - 1,
+          2, 2, '#141210');
+      }
+      if (i < (r - 3) * 0.86) {
+        px(c, cx2 + Math.round(Math.cos(mm) * i), cy2 + Math.round(Math.sin(mm) * i),
+          1, 1, '#141210');
+      }
+    }
+    PIX.disc(c, cx2, cy2, 2, br.ink);
+    PIX.disc(c, cx2, cy2, 1, br.mid);
+    /* the pendulum case under it, if there is room */
+    if (h - cy2 - r > 10) {
+      const ch = h - cy2 - r;
+      px(c, cx2 - 6, cy2 + r, 13, ch, wd.ink);
+      px(c, cx2 - 5, cy2 + r, 11, ch - 1, wd.dk);
+      px(c, cx2 - 5, cy2 + r, 3, ch - 1, wd.mid);
+      px(c, cx2 - 3, cy2 + r + 2, 7, ch - 6, '#0a0806');
+      px(c, cx2, cy2 + r + 2, 1, ch - 9, br.dk);
+      PIX.disc(c, cx2, h - 6, 3, br.ink);
+      PIX.disc(c, cx2, h - 6, 2, br.mid);
+      px(c, cx2 - 6, h - 3, 13, 3, wd.ink);
+      px(c, cx2 - 5, h - 3, 11, 2, wd.mid);
+    }
+  });
+
+  /* ---- 13. A POT PLANT, alive or dead. ---- */
+  piece('plant', (c, w, h, o) => {
+    const pot = M(o.mat || 'copper');
+    const dead = !!o.dead;
+    const lf = dead ? M('walnut') : M('bottle');
+    const potH = Math.round(h * 0.30);
+    for (let y = 0; y < potH; y++) {
+      const t = y / Math.max(1, potH - 1);
+      const ww = Math.round(w * (0.72 - t * 0.22));
+      const x0 = Math.round((w - ww) / 2);
+      px(c, x0 - 1, h - potH + y, ww + 2, 1, pot.ink);
+      px(c, x0, h - potH + y, ww, 1, pot.mid);
+      px(c, x0, h - potH + y, Math.max(1, Math.round(ww * 0.24)), 1, pot.lit);
+    }
+    px(c, Math.round(w * 0.12), h - potH, Math.round(w * 0.76), 3, pot.ink);
+    px(c, Math.round(w * 0.13), h - potH, Math.round(w * 0.74), 2, pot.lit);
+    px(c, Math.round(w * 0.20), h - potH + 3, Math.round(w * 0.60), 2, '#241a10');
+    /* the leaves: a fan of them off a short stem, drooping if it is dead */
+    const rng = U.mulberry32((o.seed || 2) * 47);
+    const sx = w >> 1;
+    px(c, sx - 1, h - potH - Math.round(h * 0.18), 2, Math.round(h * 0.18), lf.dk);
+    const n = dead ? 4 : 7;
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI * (0.18 + 0.64 * (i / (n - 1))) + (dead ? 0.5 : 0);
+      const len = Math.round(h * (dead ? 0.16 : 0.30) * (0.7 + rng() * 0.5));
+      let x = sx, y = h - potH - Math.round(h * 0.16);
+      for (let k = 0; k < len; k++) {
+        const droop = dead ? k * k * 0.010 : k * k * 0.004;
+        x = sx + Math.cos(a) * k;
+        y = h - potH - Math.round(h * 0.16) + Math.sin(a) * k + droop;
+        const lw2 = Math.max(1, Math.round(3 - k / len * 2));
+        px(c, Math.round(x), Math.round(y), lw2, lw2, k < len * 0.6 ? lf.mid : lf.dk);
+        if (k % 4 === 0) px(c, Math.round(x), Math.round(y), 1, 1, lf.lit);
+      }
+    }
+  });
+
+  /* ---- 14. A CRATE / TEA CHEST, stencilled. ---- */
+  piece('crate', (c, w, h, o) => {
+    const wd = M(o.mat || 'pine');
+    px(c, 0, 0, w, h, wd.ink);
+    px(c, 1, 1, w - 2, h - 2, wd.mid);
+    grain(c, 2, 2, w - 4, h - 4, wd.dk, wd.lit, (o.seed || 1) * 9);
+    for (const bx of [1, w - 4]) {
+      px(c, bx, 1, 3, h - 2, wd.dk);
+      px(c, bx, 1, 1, h - 2, wd.lit);
+    }
+    for (const by of [1, h - 4]) {
+      px(c, 1, by, w - 2, 3, wd.dk);
+      px(c, 1, by, w - 2, 1, wd.lit);
+    }
+    /* the diagonal brace, and a stencil over it */
+    for (let i = 0; i < w - 8; i++) {
+      px(c, 4 + i, 4 + Math.round(i * (h - 10) / (w - 8)), 2, 2, wd.dk);
+    }
+    if (w > 22 && h > 16) {
+      px(c, Math.round(w * 0.22), Math.round(h * 0.40), Math.round(w * 0.56), 2, '#2a2620');
+      px(c, Math.round(w * 0.30), Math.round(h * 0.52), Math.round(w * 0.40), 2, '#2a2620');
+    }
+  });
+
+  /* ---- 15. A BARREL, on its end or on its side. ---- */
+  piece('barrel', (c, w, h, o) => {
+    const wd = M(o.mat || 'oak'), st = M('steel');
+    for (let y = 0; y < h; y++) {
+      const t = y / Math.max(1, h - 1);
+      const ww = Math.round(w * (0.80 + Math.sin(Math.PI * t) * 0.20));
+      const x0 = Math.round((w - ww) / 2);
+      px(c, x0 - 1, y, ww + 2, 1, wd.ink);
+      px(c, x0, y, ww, 1, wd.mid);
+      px(c, x0, y, Math.max(1, Math.round(ww * 0.20)), 1, wd.lit);
+      px(c, x0 + ww - 2, y, 2, 1, wd.dk);
+    }
+    /* the staves and the hoops */
+    for (let i = 1; i < 5; i++) {
+      const sxx = Math.round(w * i / 5);
+      px(c, sxx, 2, 1, h - 4, 'rgba(0,0,0,.30)');
+    }
+    for (const hy of [Math.round(h * 0.14), Math.round(h * 0.50), Math.round(h * 0.84)]) {
+      const t = hy / Math.max(1, h - 1);
+      const ww = Math.round(w * (0.80 + Math.sin(Math.PI * t) * 0.20));
+      const x0 = Math.round((w - ww) / 2);
+      px(c, x0 - 1, hy, ww + 2, 3, st.ink);
+      px(c, x0, hy, ww, 2, st.mid);
+      px(c, x0, hy, ww, 1, st.lit);
+    }
+    px(c, Math.round(w * 0.42), Math.round(h * 0.62), 4, 4, '#1a1208');
+    px(c, Math.round(w * 0.42), Math.round(h * 0.62), 3, 3, M('brass').mid);
+  });
+
+  /* ---- 16. A BAR STOOL. ---- */
+  piece('stool', (c, w, h, o) => {
+    const m = M(o.mat || 'oxblood'), st = M('steel');
+    const seatY = Math.round(h * 0.18);
+    PIX.disc(c, w >> 1, seatY, Math.round(w * 0.46), m.ink);
+    PIX.disc(c, w >> 1, seatY, Math.round(w * 0.44) - 1, m.mid);
+    PIX.disc(c, w >> 1, seatY - 1, Math.round(w * 0.34), m.lit);
+    px(c, Math.round(w * 0.08), seatY + Math.round(w * 0.30), Math.round(w * 0.84), 3, m.dk);
+    /* the column and the ring */
+    const sx = (w >> 1) - 1;
+    px(c, sx - 1, seatY + Math.round(w * 0.30), 4, h - seatY - Math.round(w * 0.30) - 3, st.ink);
+    px(c, sx, seatY + Math.round(w * 0.30), 2, h - seatY - Math.round(w * 0.30) - 3, st.mid);
+    px(c, sx, seatY + Math.round(w * 0.30), 1, h - seatY - Math.round(w * 0.30) - 3, st.lit);
+    const ry = Math.round(h * 0.70);
+    px(c, Math.round(w * 0.16), ry, Math.round(w * 0.68), 2, st.ink);
+    px(c, Math.round(w * 0.18), ry, Math.round(w * 0.64), 1, st.lit);
+    px(c, Math.round(w * 0.16), ry, 2, 5, st.mid);
+    px(c, Math.round(w * 0.82), ry, 2, 5, st.mid);
+    /* the foot */
+    px(c, Math.round(w * 0.12), h - 3, Math.round(w * 0.76), 3, st.ink);
+    px(c, Math.round(w * 0.14), h - 3, Math.round(w * 0.72), 2, st.dk);
+  });
+
+  /* ---- 17. A SHELF with things on it, which is how a wall stops being
+           a wall. ---- */
+  piece('shelf', (c, w, h, o) => {
+    const wd = M(o.mat || 'walnut');
+    const sy = h - 4;
+    px(c, 0, sy, w, 4, wd.ink);
+    px(c, 0, sy, w, 3, wd.mid);
+    px(c, 0, sy, w, 1, wd.lit);
+    /* the brackets */
+    for (const bx of [3, w - 8]) {
+      for (let i = 0; i < 5; i++) px(c, bx, sy + 3 + i, 5 - i, 1, wd.dk);
+    }
+    /* and what is on it: tins, jars, a bottle, a book, a photograph */
+    const rng = U.mulberry32((o.seed || 1) * 29);
+    const cols = [M('mustard'), M('teal'), M('oxblood'), M('bottle'), M('copper'), M('plum')];
+    let x = 2;
+    while (x < w - 6) {
+      const kind = Math.floor(rng() * 4);
+      const m = cols[Math.floor(rng() * cols.length)];
+      const ih = Math.min(h - 6, 6 + Math.floor(rng() * (h - 10)));
+      const iw = kind === 3 ? 3 + Math.floor(rng() * 3) : 5 + Math.floor(rng() * 5);
+      if (x + iw > w - 4) break;
+      if (kind === 0) {                                 /* a tin */
+        px(c, x, sy - ih, iw, ih, m.ink);
+        px(c, x + 1, sy - ih + 1, iw - 2, ih - 1, m.mid);
+        px(c, x + 1, sy - ih + 1, 2, ih - 1, m.lit);
+        px(c, x + 1, sy - Math.round(ih * 0.6), iw - 2, 2, M('cream').mid);
+      } else if (kind === 1) {                          /* a jar */
+        px(c, x, sy - ih, iw, ih, 'rgba(10,20,28,.5)');
+        px(c, x + 1, sy - ih + 2, iw - 2, ih - 2, m.mid);
+        px(c, x + 1, sy - ih + 2, 2, ih - 2, 'rgba(255,255,255,.24)');
+        px(c, x + 1, sy - ih, iw - 2, 2, M('brass').mid);
+      } else if (kind === 2) {                          /* a bottle */
+        px(c, x + Math.round(iw / 2) - 1, sy - ih, 3, Math.round(ih * 0.34), m.dk);
+        px(c, x, sy - Math.round(ih * 0.7), iw, Math.round(ih * 0.7), m.ink);
+        px(c, x + 1, sy - Math.round(ih * 0.7) + 1, iw - 2, Math.round(ih * 0.7) - 2, m.mid);
+        px(c, x + 1, sy - Math.round(ih * 0.7) + 1, 2, Math.round(ih * 0.7) - 2, m.lit);
+      } else {                                          /* a book, leaning */
+        px(c, x, sy - ih, iw, ih, m.ink);
+        px(c, x, sy - ih, iw - 1, ih - 1, m.mid);
+        px(c, x, sy - ih, 1, ih - 1, m.lit);
+      }
+      x += iw + 1 + Math.floor(rng() * 2);
+    }
+  });
+
+  /* ---- 18. A WALL SCONCE, which is a lamp that is also decoration. ---- */
+  piece('sconce', (c, w, h, o) => {
+    const br = M('brass'), sm = M(o.mat || 'cream');
+    px(c, (w >> 1) - 2, Math.round(h * 0.34), 5, Math.round(h * 0.5), br.ink);
+    px(c, (w >> 1) - 1, Math.round(h * 0.34), 3, Math.round(h * 0.5), br.mid);
+    px(c, (w >> 1) - 1, Math.round(h * 0.34), 1, Math.round(h * 0.5), br.lit);
+    px(c, (w >> 1) - 4, h - 4, 9, 4, br.ink);
+    px(c, (w >> 1) - 3, h - 4, 7, 3, br.dk);
+    /* the shade, a half cone, lit inside */
+    const shH = Math.round(h * 0.34);
+    for (let y = 0; y < shH; y++) {
+      const t = y / Math.max(1, shH - 1);
+      const ww = Math.round(w * (0.40 + t * 0.58));
+      const x0 = Math.round((w - ww) / 2);
+      px(c, x0 - 1, y, ww + 2, 1, sm.ink);
+      px(c, x0, y, ww, 1, sm.mid);
+      px(c, x0, y, Math.max(1, Math.round(ww * 0.3)), 1, sm.lit);
+    }
+    for (let i = 0; i < 4; i++) {
+      const ww = Math.round(w * (0.9 - i * 0.12));
+      px(c, Math.round((w - ww) / 2), shH + i, ww, 1,
+        'rgba(255,236,180,' + (0.26 - i * 0.055).toFixed(3) + ')');
+    }
+  });
+
+  /* ---- 19. WALLPAPER, as a piece: a strip a room can tile across its
+           upper wall so the field is not a dither. ---- */
+  piece('paper', (c, w, h, o) => {
+    const m = M(o.mat || 'bottle');
+    px(c, 0, 0, w, h, m.dk);
+    /* the stripe */
+    for (let x = 0; x < w; x += 8) {
+      px(c, x, 0, 3, h, m.mid);
+      px(c, x, 0, 1, h, 'rgba(255,255,255,.05)');
+    }
+    /* and a sprig on it, two pixels of contrast, on a wide grid */
+    for (let y = 4; y < h; y += 14) {
+      for (let x = ((y / 14) % 2 ? 6 : 0); x < w; x += 16) {
+        px(c, x + 2, y, 2, 1, m.lit);
+        px(c, x + 1, y + 1, 4, 1, m.lit);
+        px(c, x + 2, y + 2, 2, 1, m.lit);
+      }
+    }
+    dith(c, 0, 0, w, h, 'rgba(0,0,0,.22)', 0.06, (o.seed || 1) * 17);
+  });
+
+  /* ---- 20. A RADIATOR, ribbed, with the paint gone at the top. ---- */
+  piece('radiator', (c, w, h, o) => {
+    const m = M(o.mat || 'enamel');
+    px(c, 0, 0, w, h, m.ink);
+    const ribs = Math.max(3, Math.round(w / 7));
+    for (let i = 0; i < ribs; i++) {
+      const rx = 1 + Math.round((w - 2) * i / ribs), rw = Math.round((w - 2) / ribs) - 1;
+      px(c, rx, 1, rw, h - 2, m.mid);
+      px(c, rx, 1, Math.max(1, rw >> 1), h - 2, m.lit);
+      px(c, rx + rw - 1, 1, 1, h - 2, m.dk);
+    }
+    px(c, 1, 1, w - 2, 2, m.lit);
+    px(c, 1, h - 3, w - 2, 2, m.dk);
+    dith(c, 1, 1, w - 2, 4, 'rgba(120,80,40,.30)', 0.24, (o.seed || 1) * 7);
+    /* the valve */
+    px(c, w - 5, h - 8, 4, 7, M('brass').ink);
+    px(c, w - 5, h - 8, 3, 6, M('brass').mid);
+    px(c, w - 5, h - 8, 3, 1, M('brass').lit);
+  });
+
+  /* ---- 21. A HAT STAND, with what he left on it. ---- */
+  piece('hatstand', (c, w, h, o) => {
+    const wd = M(o.mat || 'ebony');
+    const sx = (w >> 1) - 1;
+    px(c, sx - 1, 4, 4, h - 8, wd.ink);
+    px(c, sx, 4, 2, h - 8, wd.mid);
+    px(c, sx, 4, 1, h - 8, wd.lit);
+    /* the pegs */
+    for (let i = 0; i < 4; i++) {
+      const py = 8 + i * 5, dir = i % 2 ? 1 : -1;
+      px(c, sx + (dir > 0 ? 2 : -5), py, 4, 2, wd.ink);
+      px(c, sx + (dir > 0 ? 2 : -5), py, 4, 1, wd.mid);
+      PIX.disc(c, sx + dir * 6, py + 1, 2, wd.lit);
+    }
+    /* the foot */
+    px(c, Math.round(w * 0.16), h - 5, Math.round(w * 0.68), 4, wd.ink);
+    px(c, Math.round(w * 0.18), h - 5, Math.round(w * 0.64), 3, wd.dk);
+    /* and a hat, and a coat hanging */
+    px(c, sx - 7, 4, 16, 3, '#1a1a24');
+    px(c, sx - 4, 0, 10, 5, '#22222e');
+    px(c, sx - 4, 3, 10, 1, M('oxblood').mid);
+    for (let y = 14; y < h - 8; y++) {
+      const t = (y - 14) / Math.max(1, h - 22);
+      const ww = Math.round(4 + t * 8);
+      px(c, sx + 3, y, ww, 1, '#2a2f42');
+      px(c, sx + 3, y, 2, 1, '#3c4460');
+    }
+  });
+
+  /* ---- 22. A SINK with a draining board, taps and a splashback. ---- */
+  piece('sink', (c, w, h, o) => {
+    const en = M(o.mat || 'enamel'), br = M('brass'), st = M('steel');
+    /* the splashback, tiled */
+    const bh = Math.round(h * 0.30);
+    px(c, 0, 0, w, bh, '#0f424f');
+    for (let y = 2; y < bh; y += 6) px(c, 0, y, w, 1, 'rgba(255,255,255,.12)');
+    for (let x = 0; x < w; x += 8) px(c, x, 0, 1, bh, 'rgba(0,0,0,.24)');
+    px(c, 0, bh - 2, w, 2, 'rgba(0,0,0,.40)');
+    /* the slab it is all set into */
+    px(c, 0, bh, w, h - bh, en.ink);
+    px(c, 1, bh + 1, w - 2, h - bh - 2, en.mid);
+    px(c, 1, bh + 1, w - 2, 2, en.lit);
+    /* THE BASIN, which has to be a HOLE: at forty-six per cent of the
+       remaining height it was a thin dark band and the whole piece read as
+       a white box with a stripe on it. It takes most of the slab, it is
+       dark at the bottom and it has a rim you can see the thickness of. */
+    const bx = Math.round(w * 0.08), bw2 = Math.round(w * 0.50);
+    const byy = bh + 4, bhh = Math.max(8, h - bh - 9);
+    px(c, bx - 1, byy - 1, bw2 + 2, bhh + 2, en.dk);
+    px(c, bx, byy, bw2, bhh, en.ink);
+    for (let y = 0; y < bhh; y++) {
+      const t = y / Math.max(1, bhh - 1);
+      px(c, bx + 1, byy + y, bw2 - 2, 1,
+        'rgb(' + Math.round(38 - t * 18) + ',' + Math.round(52 - t * 24)
+        + ',' + Math.round(58 - t * 26) + ')');
+    }
+    px(c, bx + 1, byy, bw2 - 2, 1, 'rgba(255,255,255,.22)');
+    px(c, bx + 1, byy + bhh - 2, bw2 - 2, 2, 'rgba(0,0,0,.44)');
+    /* a puddle in the bottom of it, and the plug */
+    px(c, bx + 3, byy + bhh - 5, bw2 - 6, 3, 'rgba(120,190,214,.22)');
+    PIX.disc(c, bx + (bw2 >> 1), byy + bhh - 4, 2, st.mid);
+    px(c, bx + (bw2 >> 1) + 2, byy + bhh - 6, 5, 1, st.dk);
+    /* the draining board, grooved, sloping into the basin */
+    const dx = bx + bw2 + 3;
+    for (let i = 0; i < 5; i++) {
+      const gy = byy + 2 + i * Math.max(2, Math.round((bhh - 6) / 5));
+      if (gy > h - 5) break;
+      px(c, dx, gy, w - dx - 2, 1, 'rgba(0,0,0,.30)');
+      px(c, dx, gy + 1, w - dx - 2, 1, 'rgba(255,255,255,.14)');
+    }
+    px(c, dx - 1, byy, 1, bhh, 'rgba(0,0,0,.34)');
+    /* the taps */
+    for (let i = 0; i < 2; i++) {
+      const tx = bx + 4 + i * (bw2 - 10);
+      px(c, tx, bh - 6, 3, 7, br.ink);
+      px(c, tx, bh - 6, 2, 6, br.mid);
+      px(c, tx - 1, bh - 8, 5, 3, br.ink);
+      px(c, tx - 1, bh - 8, 4, 2, br.lit);
+    }
+    px(c, 0, h - 3, w, 3, en.ink);
+    px(c, 1, h - 2, w - 2, 2, en.dk);
+  });
+
+  /* ---- 23. A BED, with a quilt and a brass frame. ---- */
+  piece('bed', (c, w, h, o) => {
+    const br = M(o.frame || 'brass'), q = M(o.mat || 'rose');
+    const headH = Math.round(h * 0.62);
+    /* the head, brass, with rails */
+    px(c, 1, h - headH, 4, headH, br.ink);
+    px(c, 2, h - headH, 2, headH, br.mid);
+    px(c, 2, h - headH, 1, headH, br.lit);
+    PIX.disc(c, 3, h - headH - 1, 3, br.mid);
+    px(c, 1, h - headH, Math.round(w * 0.30), 3, br.ink);
+    px(c, 2, h - headH, Math.round(w * 0.30) - 2, 2, br.mid);
+    for (let i = 1; i < 4; i++) {
+      const rx = 5 + i * 4;
+      if (rx > w * 0.30) break;
+      px(c, rx, h - headH + 2, 2, headH - Math.round(h * 0.30), br.dk);
+      px(c, rx, h - headH + 2, 1, headH - Math.round(h * 0.30), br.mid);
+    }
+    /* the mattress and the quilt over it, with a fold at the top */
+    const my = h - Math.round(h * 0.34);
+    px(c, 3, my, w - 5, Math.round(h * 0.30), M('cream').ink);
+    px(c, 4, my + 1, w - 7, Math.round(h * 0.30) - 2, M('cream').mid);
+    px(c, 8, my - 3, w - 11, Math.round(h * 0.26), q.ink);
+    px(c, 9, my - 2, w - 13, Math.round(h * 0.26) - 2, q.mid);
+    px(c, 9, my - 2, w - 13, 2, q.lit);
+    for (let x = 10; x < w - 6; x += 9) px(c, x, my - 1, 1, Math.round(h * 0.24), q.dk);
+    for (let y = my + 2; y < my + Math.round(h * 0.24); y += 7) px(c, 9, y, w - 13, 1, q.dk);
+    /* the pillow */
+    px(c, 5, my - 6, 14, 7, M('cream').ink);
+    px(c, 6, my - 5, 12, 5, M('cream').lit);
+    px(c, 6, my - 2, 12, 2, M('cream').dk);
+    /* the foot rail and the legs */
+    px(c, w - 5, my - 8, 4, Math.round(h * 0.34) + 8, br.ink);
+    px(c, w - 4, my - 8, 2, Math.round(h * 0.34) + 8, br.mid);
+    PIX.disc(c, w - 3, my - 9, 3, br.mid);
+    px(c, 3, h - 3, 3, 3, br.dk);
+    px(c, w - 6, h - 3, 3, 3, br.dk);
+  });
+
+  /* ---- 24. A DINER BOOTH: a bench back and a table, seen side on. ---- */
+  piece('booth', (c, w, h, o) => {
+    const m = M(o.mat || 'oxblood'), st = M('steel'), tp = M('cream');
+    const backH = Math.round(h * 0.66);
+    px(c, 0, h - backH, Math.round(w * 0.34), backH, m.ink);
+    px(c, 1, h - backH + 1, Math.round(w * 0.34) - 2, backH - 2, m.mid);
+    px(c, 1, h - backH + 1, Math.round(w * 0.34) - 2, 2, m.lit);
+    for (let y = h - backH + 4; y < h - 8; y += 6) {
+      px(c, 2, y, Math.round(w * 0.34) - 4, 1, m.dk);
+      px(c, 2, y + 1, Math.round(w * 0.34) - 4, 1, 'rgba(255,255,255,.07)');
+    }
+    px(c, 0, h - backH, Math.round(w * 0.34), 2, st.mid);   /* the chrome cap */
+    /* the seat */
+    px(c, 0, h - Math.round(h * 0.26), Math.round(w * 0.46), Math.round(h * 0.12), m.ink);
+    px(c, 1, h - Math.round(h * 0.26) + 1, Math.round(w * 0.46) - 2, Math.round(h * 0.12) - 2, m.mid);
+    px(c, 1, h - Math.round(h * 0.26) + 1, Math.round(w * 0.46) - 2, 2, m.lit);
+    /* the table, on a single column */
+    const ty = h - Math.round(h * 0.42);
+    px(c, Math.round(w * 0.36), ty, Math.round(w * 0.62), 4, tp.ink);
+    px(c, Math.round(w * 0.36), ty, Math.round(w * 0.62), 3, tp.mid);
+    px(c, Math.round(w * 0.36), ty, Math.round(w * 0.62), 1, tp.lit);
+    px(c, Math.round(w * 0.36), ty + 4, Math.round(w * 0.62), 1, 'rgba(0,0,0,.44)');
+    const cxx = Math.round(w * 0.66);
+    px(c, cxx - 2, ty + 5, 5, h - ty - 8, st.ink);
+    px(c, cxx - 1, ty + 5, 3, h - ty - 8, st.mid);
+    px(c, cxx - 1, ty + 5, 1, h - ty - 8, st.lit);
+    px(c, cxx - 7, h - 3, 15, 3, st.ink);
+    px(c, cxx - 6, h - 3, 13, 2, st.dk);
+    /* the ketchup, the sugar and the napkins */
+    px(c, Math.round(w * 0.44), ty - 8, 4, 8, M('oxblood').mid);
+    px(c, Math.round(w * 0.44), ty - 10, 4, 2, M('oxblood').dk);
+    px(c, Math.round(w * 0.52), ty - 6, 5, 6, 'rgba(226,240,248,.44)');
+    px(c, Math.round(w * 0.52), ty - 7, 5, 1, st.mid);
+    px(c, Math.round(w * 0.78), ty - 4, 8, 4, tp.lit);
+  });
+
+  /* ============================================================
+     THE PUBLIC FACE
+     ============================================================ */
+  return {
+    MAT,
+    /* the list, so a room (or a probe) can ask what exists */
+    names: () => Object.keys(PIECES),
+    /* one piece, at a size, cached */
+    get(name, w, h, o) {
+      const fn = PIECES[name];
+      if (!fn) return null;
+      o = o || {};
+      const key = name + ':' + (o.mat || '') + ':' + (o.wood || '') + ':'
+        + (o.cloth || '') + ':' + (o.trim || '') + ':' + (o.kind || '')
+        + ':' + (o.seed || 0) + ':' + (o.dead ? 'd' : '')
+        + ':' + (o.hour === undefined ? '' : o.hour + '.' + o.min);
+      return make(key, w, h, (c, W, H) => fn(c, W, H, o));
+    },
+    /* draw one standing on the floor, with the shadow it throws */
+    stand(c, name, x, y, w, h, o) {
+      const img = this.get(name, w, h, o);
+      if (!img) return null;
+      return ART.stand(c, img, x, y, o);
+    },
+    /* or hung on a wall, with the shadow it throws DOWN the wall */
+    hang(c, name, x, y, w, h, o) {
+      const img = this.get(name, w, h, o);
+      if (!img) return null;
+      ART.px(c, x + 2, y + 3, w, h, 'rgba(6,8,12,.34)');
+      c.drawImage(img, x, y);
+      return img;
+    },
   };
 })();
 </script>
@@ -16632,6 +17778,27 @@ const SCENE = (() => {
         a._wait = 0.7 + (Math.abs(Math.round(a._home)) % 5) * 0.2;
       }
     }
+    /* ============================================================
+       A TURN WAS A MIRROR FLIP.
+
+       me.face went from plus one to minus one between two frames and
+       the whole sprite reversed in a single tick, which at this size
+       reads as a glitch rather than as a man turning round -- and it
+       was most of what made the movement look ugly, because you do it
+       every time you tap the other side of the room.
+
+       So the FACING lags: me.turn walks toward me.face over about a
+       fifth of a second, the sprite is squashed horizontally to how
+       far through the turn it is, and the drawing itself flips at the
+       exact frame the squash is narrowest. Which is how a cartoon has
+       always turned somebody round.
+       ============================================================ */
+    if (me.turn === undefined) me.turn = me.face;
+    me.turn = U.approach(me.turn, me.face, 11, dt);
+    for (const a of (def.actors || [])) {
+      if (a.turn === undefined) a.turn = a.face || 1;
+      a.turn = U.approach(a.turn, a.face || 1, 11, dt);
+    }
     if (me.reach > 0) me.reach = Math.max(0, me.reach - dt * 1.6);
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p2 = puffs[i];
@@ -17957,12 +19124,18 @@ const SCENE = (() => {
       work = Math.round(Math.sin(wp * Math.PI * 2) * 2);
     }
     if (a.arm) arm = a.arm;                 /* a script can hold a pose */
-    const r = rig(a, a.frame || 0, face, a.back, ex, aside, arm);
+    /* the same lagged turn everybody else gets: an actor walking across a
+       cutscene and turning round at the end of it used to reverse between
+       two frames */
+    const atf = (a.turn === undefined ? face : (a.turn >= 0 ? 1 : -1));
+    const atw = Math.max(0.24, Math.abs(a.turn === undefined ? 1 : a.turn));
+    const r = rig(a, a.frame || 0, a.turn === undefined ? face : atf,
+      a.back, ex, aside, arm);
     /* AND HOW BIG HE IS. Depth already scales everybody, which is the right
        rule for a room and the wrong one for a CHILD: a boy standing next to
        his father is smaller without being further away. */
     const sc2 = sc * (a.scale || 1);
-    const w = Math.max(1, Math.round(r.w * sc2));
+    const w = Math.max(1, Math.round(r.w * sc2 * atw));
     const h = Math.max(1, Math.round(r.h * sc2) - id.rise);
     castShadow(c, Math.round(a.x), fy, w, 0.42);
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
@@ -18064,7 +19237,11 @@ const SCENE = (() => {
     const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
     /* a cutscene can pin his face and put his arm in a pose — reaching for
        the ashtray, handing the iron over the counter */
-    const r = rig(SCENE.meDef(), me.frame, me.face, back,
+    /* the drawing flips at the narrowest point of the turn, not at the
+       instant the input changed */
+    const tf = (me.turn === undefined ? me.face : me.turn) >= 0 ? 1 : -1;
+    const tw = Math.max(0.24, Math.abs(me.turn === undefined ? 1 : me.turn));
+    const r = rig(SCENE.meDef(), me.frame, tf, back,
       me.expr || myFace(T), side, me.arm);
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
@@ -18083,7 +19260,7 @@ const SCENE = (() => {
     const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
     const lean = Math.round(rc * 3) * (me.reachTo || 1);
     const g = gaitOf(T);
-    const w = Math.max(1, Math.round(r.w * sc * (1 + sq - st * 0.5 + rc * 0.04)));
+    const w = Math.max(1, Math.round(r.w * sc * tw * (1 + sq - st * 0.5 + rc * 0.04)));
     const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
     /* THE SHADOW STAYS ON THE FLOOR while he hops off it, which is the only
@@ -21103,6 +22280,35 @@ const PLACES = (() => {
   /* ============================================================
      1. THE CANAL LAUNDRY — the crime scene
      ============================================================ */
+
+  /* ============================================================
+     THE NEAR FLOOR.
+
+     Hand-placing furniture into a room you cannot see the whole of
+     goes wrong the same way every time: the first pass put a
+     bookcase behind the pawn shop's front door and an armchair
+     behind its window, because doors and windows are painted after
+     the dressing. There is one band that is reliably empty in every
+     room in this game, though -- the strip of floor between the
+     wall and the bottom of the frame, in FRONT of everything --
+     and a side-on room with something standing in its foreground
+     reads deeper than one without, for free.
+
+     So: low pieces only, at the very bottom rows, on the front
+     layer. A crate you can see over, a rug, a stool, a pot. Never
+     anything tall enough to hide the man you are steering.
+     ============================================================ */
+  function nearDress(c, W, FY, seed, list) {
+    const H = SCENE.H;
+    const base = FY + Math.round((H - FY) * 0.62);
+    (list || []).forEach((it, i) => {
+      const x = Math.round(W * it.at);
+      const h = it.h || 18, w = it.w || 26;
+      FURN.stand(c, it.p, x, Math.min(H - 2, base + (it.dy || 0)) - h, w, h,
+        Object.assign({ seed: seed + 17 + i, a: 1.1, len: 0.22 }, it.o || {}));
+    });
+  }
+
   function laundry() {
     const W = 430, FY = 108, seed = seedFor('laundry');
 
@@ -21111,6 +22317,19 @@ const PLACES = (() => {
       c.drawImage(ART.wall(W, FY + 4, { tone: 'tile', railY: 66, seed: seed % 91 }), 0, 0);
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'lino', seed: seed % 47 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#0f1316');
+
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE. Three machines, a chalk outline
+         and a lot of tile: what a laverie has as well is somewhere to
+         wait, somewhere to put the basket down, and a plant nobody
+         waters.
+         ============================================================ */
+      FURN.stand(c, 'stool', 336, FY - 32, 18, 32, { mat: 'teal' });
+      FURN.stand(c, 'stool', 358, FY - 32, 18, 32, { mat: 'teal' });
+      FURN.stand(c, 'crate', 396, FY - 22, 28, 22, { mat: 'pine', seed: seed + 7 });
+      FURN.stand(c, 'plant', 62, FY - 30, 20, 30, { mat: 'copper', dead: true, seed: seed + 8 });
+      FURN.hang(c, 'clock', 302, 12, 24, 42, { mat: 'ebony', hour: 9, min: 35 });
+      FURN.hang(c, 'sconce', 400, 26, 16, 20, { mat: 'cream' });
       sheen(c, 0, FY - 2, W, 20, 0.06);
 
       /* the way in, off the towpath */
@@ -21354,6 +22573,11 @@ const PLACES = (() => {
       ART.box(c, 388, FY - 42, 24, 12, { fill: '#8d9298', top: '#b3b8bd', bot: '#4a5056', ink: p.K });
       px(c, 392, FY - 39, 16, 5, '#22282e');
       px(c, 378, FY - 34, 6, 4, '#8c2230');
+      nearDress(c, W, FY, seed, [
+        { p: 'crate', at: 0.06, w: 30, h: 22, o: { mat: 'pine' } },
+        { p: 'rug', at: 0.52, w: 64, h: 12, dy: 4, o: { mat: 'petrol', trim: 'cream' } },
+        { p: 'plant', at: 0.88, w: 20, h: 26, o: { mat: 'copper', dead: true } },
+      ]);
     };
 
     const spots = [
@@ -21607,6 +22831,27 @@ const PLACES = (() => {
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 41 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#0d0b09');
 
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE. A pawn shop is the fullest room
+         there is -- everything in it belonged to somebody else -- and
+         this one was three shelves of tins on bare brick with two
+         hundred pixels of empty board under them.
+         ============================================================ */
+      /* PLACED WHERE THE ROOM IS EMPTY, which is not where it looks empty:
+         the first pass put a bookcase behind the front door and an armchair
+         behind the window, because the door and the window are painted
+         after them. The shelf run owns x=105 to 227 and the openings own
+         everything left of it, so the dressing lives in the right half --
+         which, at a two-hundred-and-forty pixel frame on a four-hundred
+         pixel room, is the half nobody had ever seen. */
+      FURN.stand(c, 'bookcase', 248, FY - 62, 40, 62, { mat: 'oak', seed: seed + 1 });
+      FURN.stand(c, 'armchair', 296, FY - 42, 36, 42, { mat: 'plum', wood: 'ebony', seed: seed + 2 });
+      FURN.stand(c, 'standlamp', 338, FY - 66, 20, 66, { mat: 'mustard' });
+      FURN.stand(c, 'crate', 364, FY - 24, 30, 24, { mat: 'pine', seed: seed + 3 });
+      FURN.hang(c, 'clock', 252, 14, 24, 44, { mat: 'walnut', hour: 15, min: 25 });
+      FURN.hang(c, 'picture', 300, 18, 32, 26, { mat: 'brass', seed: seed + 6 });
+      FURN.hang(c, 'sconce', 348, 22, 16, 20, { mat: 'mustard' });
+
       /* the door, with the bell over it */
       px(c, 10, 32, 44, 74, p.K);
       px(c, 13, 35, 38, 71, '#251c14');
@@ -21690,6 +22935,12 @@ const PLACES = (() => {
       px(c, 256, FY - 40, 26, 6, p.K);
       px(c, 257, FY - 39, 24, 4, '#ded2b4');
       px(c, 259, FY - 38, 20, 1, '#8d8672');
+      nearDress(c, W, FY, seed, [
+        { p: 'crate', at: 0.10, w: 32, h: 24, o: { mat: 'pine' } },
+        { p: 'barrel', at: 0.36, w: 24, h: 28, o: { mat: 'oak' } },
+        { p: 'rug', at: 0.60, w: 70, h: 13, dy: 4, o: { mat: 'oxblood', trim: 'mustard' } },
+        { p: 'stool', at: 0.92, w: 18, h: 28, o: { mat: 'plum' } },
+      ]);
     };
 
     const eggs = [
@@ -21720,6 +22971,19 @@ const PLACES = (() => {
       c.drawImage(ART.wall(W, FY + 4, { tone: 'tile', railY: 60, seed: seed % 77 }), 0, 0);
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'lino', seed: seed % 39 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#12161a');
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE. Half of this room was a teal tile
+         field with one window in it and a hundred and eighty pixels of
+         bare lino. A diner has booths down the wall.
+         ============================================================ */
+      FURN.stand(c, 'booth', 178, FY - 46, 78, 46, { mat: 'oxblood', seed: seed + 1 });
+      FURN.stand(c, 'booth', 262, FY - 46, 78, 46, { mat: 'petrol', seed: seed + 2 });
+      FURN.stand(c, 'stool', 352, FY - 34, 18, 34, { mat: 'oxblood' });
+      FURN.stand(c, 'stool', 376, FY - 34, 18, 34, { mat: 'oxblood' });
+      FURN.hang(c, 'clock', 148, 14, 24, 42, { mat: 'ebony', hour: 9, min: 35 });
+      FURN.hang(c, 'shelf', 244, 24, 58, 22, { mat: 'walnut', seed: seed + 6 });
+      FURN.hang(c, 'sconce', 344, 22, 16, 20, { mat: 'cream' });
+
       /* the checker floor this place would actually have */
       for (let x = 0; x < W; x += 12) {
         for (let y = FY; y < SCENE.H; y += 12) {
@@ -21816,6 +23080,11 @@ const PLACES = (() => {
         px(c, sx - 5, FY - 11, 14, 4, '#8c2230');
         px(c, sx - 5, FY - 11, 14, 1, '#c94a4a');
       }
+      nearDress(c, W, FY, seed, [
+        { p: 'stool', at: 0.08, w: 18, h: 28, o: { mat: 'oxblood' } },
+        { p: 'rug', at: 0.40, w: 60, h: 12, dy: 4, o: { mat: 'teal', trim: 'cream' } },
+        { p: 'crate', at: 0.86, w: 28, h: 20, o: { mat: 'pine' } },
+      ]);
     };
 
     const eggs = [
@@ -21843,6 +23112,24 @@ const PLACES = (() => {
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 53 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#0d0b09');
       px(c, 0, FY - 1, W, 1, 'rgba(255,255,255,.05)');
+
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE.
+
+         This was a brick wall with a shelf of bottles on it and forty
+         pixels of empty floorboard in front of the counter. A bar has
+         things in it: stools you sit on, a booth in the corner, a barrel
+         they never took away, and something on the walls.
+         ============================================================ */
+      FURN.stand(c, 'booth', 22, FY - 52, 86, 52, { mat: 'oxblood', seed: seed + 1 });
+      FURN.hang(c, 'picture', 122, 28, 34, 26, { mat: 'brass', seed: seed + 2 });
+      FURN.hang(c, 'picture', 166, 24, 28, 32, { mat: 'walnut', kind: 'mirror' });
+      FURN.hang(c, 'clock', 208, 18, 24, 40, { mat: 'walnut', hour: 22, min: 40 });
+      FURN.stand(c, 'barrel', 366, FY - 34, 26, 34, { mat: 'oak', seed: seed + 3 });
+      FURN.stand(c, 'crate', 398, FY - 22, 28, 22, { mat: 'pine', seed: seed + 4 });
+      FURN.stand(c, 'plant', 428, FY - 30, 20, 30, { mat: 'copper', dead: true, seed: seed + 5 });
+      FURN.hang(c, 'sconce', 300, 34, 16, 20, { mat: 'cream' });
+      FURN.hang(c, 'sconce', 404, 34, 16, 20, { mat: 'cream' });
 
       /* the door out, under a dead sign */
       px(c, 10, 34, 44, 72, p.K);
@@ -21942,6 +23229,12 @@ const PLACES = (() => {
       px(c, 150, FY - 29, 6, 3, '#3a3f52');
       px(c, 152, FY - 31, 1, 2, '#c9c0a8');
       px(c, 186, FY - 32, 5, 7, 'rgba(220,240,255,.35)');
+      nearDress(c, W, FY, seed, [
+        { p: 'stool', at: 0.42, w: 20, h: 32, o: { mat: 'oxblood' } },
+        { p: 'stool', at: 0.56, w: 20, h: 32, o: { mat: 'oxblood' } },
+        { p: 'stool', at: 0.70, w: 20, h: 32, o: { mat: 'oxblood' } },
+        { p: 'barrel', at: 0.90, w: 24, h: 30, o: { mat: 'oak' } },
+      ]);
     };
 
     const spots = [
@@ -24011,8 +25304,13 @@ const JOBS = (() => {
     for (let i = 0; i < rounds; i++) {
       const px2 = p0 + i * 8;
       ART.px(c, px2, py, 5, 4, PIX.PAL.K);
+      /* AT HOME NOTHING GOES RED. A miss in the kitchen is an egg with a
+         brown edge on it, and a red pip says you have failed your family
+         before breakfast. */
       ART.px(c, px2 + 1, py + 1, 3, 2,
-        i < s.round ? (i < s.hits ? '#6ff7d8' : '#ff6a5e') : '#3a4149');
+        i < s.round
+          ? (i < s.hits ? '#6ff7d8' : (o.kind === 'home' ? '#c8a03c' : '#ff6a5e'))
+          : '#3a4149');
     }
     povSlate(c, o, s.T, s.armAt);
   }
@@ -25327,15 +26625,30 @@ const JOBS = (() => {
     },
 
     /* three eggs, for a small frog who is going to be late */
+    /* ============================================================
+       BREAKFAST IS NOT A TRADE.
+
+       This ran on the same numbers as picking a lock -- three rounds,
+       a band a fifth of the sweep wide, three quarters of a sweep a
+       second -- because it was built out of the same widget. But the
+       house is where the game teaches you to tap something, on the one
+       morning it is going to spend the rest of itself taking away from
+       you. A skill check there is a skill check in the wrong place.
+
+       So: TWO eggs instead of three, a band nearly half the sweep
+       wide, two thirds of the speed, and it cannot be failed -- a miss
+       is an egg with a brown edge on it, which is still breakfast.
+       ============================================================ */
     async breakfast() {
       const r = await meter({
         head: 'BREAKFAST',
-        sub: 'THREE EGGS. OFF WHEN THE WHITE SETS.',
-        key: 'TAP TO PLATE THE EGG',
-        rounds: 3, band: 0.24, speed: 0.72,
+        sub: 'TWO EGGS. TAP WHEN THE WHITE SETS.',
+        key: 'TAP TO PLATE IT',
+        rounds: 2, band: 0.46, speed: 0.46, kind: 'home',
         draw: drawPan,
       });
-      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, fed: r.hits >= 2 };
+      /* fed either way: nobody in this house goes to school hungry */
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, fed: true };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */
@@ -34447,32 +35760,37 @@ const CUT = (() => {
       const p = P();
 
       /* ---- THE SHELL: butter paper, honey dado, scrubbed boards ---- */
-      px(c, 0, 0, W, FY, '#6b5a3c');
-      px(c, 0, 0, W, FY - 34, '#8a7448');
+      /* THE SAME SATURATION PASS THE REST OF THE GAME GOT. The house is
+         warm on purpose -- it is the one room in this story that is -- but
+         warm and PALE is not the same thing as warm. Butter paper at
+         forty-eight per cent chroma next to a cast at sixty-two read as
+         beige; this is ochre. */
+      px(c, 0, 0, W, FY, '#6a5320');
+      px(c, 0, 0, W, FY - 34, '#8f6d22');
       /* THE PAPER. A sprig every twelve by ten, and only two pixels of
          contrast in it: on a four-by-six grid at full contrast the same
          motif read as television static. */
       for (let y = 4; y < FY - 40; y += 10) {
         for (let x = ((y / 10) % 2) ? 4 : 10; x < W; x += 12) {
-          px(c, x, y, 1, 3, '#94804f');
-          px(c, x - 2, y + 1, 5, 1, '#94804f');
-          px(c, x - 1, y + 4, 3, 1, '#94804f');
+          px(c, x, y, 1, 3, '#a37d24');
+          px(c, x - 2, y + 1, 5, 1, '#a37d24');
+          px(c, x - 1, y + 4, 3, 1, '#a37d24');
         }
       }
-      ART.dither(c, 0, 0, W, FY - 34, '#826d45', 0.07, 5);
+      ART.dither(c, 0, 0, W, FY - 34, '#7d5e1a', 0.07, 5);
       /* the picture rail and the honey dado under it */
-      px(c, 0, FY - 40, W, 3, '#a98a52');
-      px(c, 0, FY - 40, W, 1, '#c4a468');
+      px(c, 0, FY - 40, W, 3, '#b58a2c');
+      px(c, 0, FY - 40, W, 1, '#d4a63c');
       px(c, 0, FY - 37, W, 2, 'rgba(70,48,24,.34)');
-      px(c, 0, FY - 34, W, 34, '#7a6038');
+      px(c, 0, FY - 34, W, 34, '#7a5518');
       for (let x = 4; x < W; x += 26) {
-        px(c, x, FY - 30, 20, 26, '#856844');
-        px(c, x, FY - 30, 20, 1, '#a08050');
+        px(c, x, FY - 30, 20, 26, '#8a611c');
+        px(c, x, FY - 30, 20, 1, '#a87c28');
         px(c, x, FY - 5, 20, 1, 'rgba(60,40,20,.40)');
         px(c, x + 19, FY - 30, 1, 26, 'rgba(60,40,20,.30)');
       }
-      px(c, 0, FY - 6, W, 6, '#5e4a2c');
-      px(c, 0, FY - 6, W, 1, '#7c6238');
+      px(c, 0, FY - 6, W, 6, '#5c3f10');
+      px(c, 0, FY - 6, W, 1, '#7e5a18');
       /* the boards, and a rag rug over them in the middle of the room */
       c.drawImage(ART.floor(W, SCENE.H - FY + 8, { tone: 'board', seed: 3 }), 0, FY - 2);
       /* SCRUBBED, NOT SOOTED. ART.floor is a police-station board at
@@ -34484,8 +35802,8 @@ const CUT = (() => {
       for (let x = 0; x < W; x += 7) px(c, x, FY, 1, SCENE.H - FY + 6, 'rgba(120,84,40,.14)');
       /* the ceiling: whitewash, warm, with a beam across it */
       px(c, 0, -46, W, 46, '#3a2e1c');
-      px(c, 0, 0, W, 9, '#c8b489');
-      px(c, 0, 0, W, 2, '#e0cba0');
+      px(c, 0, 0, W, 9, '#cfb266');
+      px(c, 0, 0, W, 2, '#e8c878');
       px(c, 0, 9, W, 3, 'rgba(70,48,24,.30)');
       for (let x = 0; x < W; x += 96) {
         px(c, x, 0, 6, 9, '#8a7048');
@@ -34711,6 +36029,27 @@ const CUT = (() => {
         px(c, SOFA + 46, FY - 32 + i, 10, 1, i % 3 ? '#b8543c' : '#c86848');
       }
       px(c, SOFA + 52, FY - 20, 5, 10, '#b8543c');
+      /* ============================================================
+         AND THE HOUSE IS DRESSED FROM THE CATALOGUE TOO.
+
+         The wall above the dado was seventy rows of ochre paper for
+         the length of the room, and the one thing on it was a
+         corkboard. The layout comment at the top of this function has
+         the span of every piece of furniture in here, so these go in
+         the gaps between them: above the range, above the table,
+         above the sofa, and in the hall.
+         ============================================================ */
+      FURN.hang(c, 'curtain', SINK - 12, 10, 86, 50, { mat: 'rose' });
+      FURN.hang(c, 'shelf', STOVE + 16, 22, 50, 20, { mat: 'pine', seed: 11 });
+      FURN.hang(c, 'clock', TABLE - 38, 12, 24, 42, { mat: 'walnut', hour: 7, min: 20 });
+      FURN.hang(c, 'picture', TABLE + 4, 16, 34, 26, { mat: 'brass', seed: 3 });
+      FURN.hang(c, 'picture', SOFA - 18, 14, 30, 34, { mat: 'walnut', kind: 'mirror' });
+      FURN.hang(c, 'sconce', SOFA + 34, 20, 16, 20, { mat: 'cream' });
+      FURN.hang(c, 'picture', HALLT - 4, 18, 32, 26, { mat: 'oak', seed: 5 });
+      FURN.stand(c, 'dresser', 226, FY - 60, 44, 60, { mat: 'pine', seed: 7 });
+      FURN.stand(c, 'plant', 336, FY - 30, 20, 30, { mat: 'copper', seed: 9 });
+      FURN.stand(c, 'standlamp', 462, FY - 62, 18, 62, { mat: 'mustard' });
+
       /* the rag rug in front of it */
       px(c, SOFA - 30, FY - 1, 96, 9, '#8a5a48');
       px(c, SOFA - 30, FY - 1, 96, 1, '#a4705a');
@@ -34883,8 +36222,27 @@ const CUT = (() => {
         + (st.book || '') + (st.satchel ? 's' : ''),
       w: W, floorY: FY, paint, fore, spots,
       actors: [
+        /* ============================================================
+           THEY ARE PEOPLE IN A ROOM, NOT SCENERY THAT TALKS.
+
+           Both of these were tags on a backdrop: they had a name
+           floating over them and they spoke when the script said so,
+           and there was nothing you could do about either of them.
+           An actor in this game gets a bracket round it, a label, a
+           hint and an onUse the moment it declares them -- the same
+           machinery every clerk and barman in the city already uses --
+           so the two people this whole story is about get it too. Walk
+           up, tap, and they answer; and what they answer depends on
+           what you have done to the room.
+
+           They also DO something while you are not talking to them.
+           She wipes the table down and stirs the pot; he swings his
+           legs and reads. Two idle behaviours out of a table that
+           already had ten in it.
+           ============================================================ */
         { id: 'wife', x: TABLE - 62, y: FY, face: 1, key: 'cutWife',
-          def: WIFE_DEF, job: 'wipe', profile: false,
+          def: WIFE_DEF, job: 'wipe', profile: false, mood: 'pleased',
+          label: 'CLEO', hint: 'TALK',
           tag: 'CLEO', tagCol: PIX.PAL.P },
         /* UP ON THE CUSHION. Stood on the floor at sixty-two per cent his
            head came out below the tablecloth, which is a boy hiding under
@@ -34894,6 +36252,8 @@ const CUT = (() => {
            reach his egg. */
         { id: 'boy', x: TABLE - 6, y: FY - 20, face: -1, key: 'cutBoy',
           def: BOY_DEF, scale: 0.66, still: true, profile: false,
+          job: st.pan ? 'eat' : 'read', mood: 'pleased',
+          label: 'TOBIAS', hint: 'TALK',
           tag: 'TOBIAS', tagCol: PIX.PAL.O },
       ],
       enterX: STOVE + 44, enterFace: 1,
@@ -36106,10 +37466,10 @@ const CUT = (() => {
             st.pan = true;
             st.plate = r.hits > 0;
             redress(S, M.TABLE - 20);
-            await S.say('YOU', r.hits >= 3
-              ? 'THREE OUT OF THREE. HE WILL NOT EVEN NOTICE.'
-              : (r.hits ? 'CLOSE ENOUGH. HE PUTS KETCHUP ON IT ANYWAY.'
-                : 'I HAVE BURNED ALL THREE. THERE IS TOAST.'), PIX.PAL.F);
+            await S.say('YOU', r.hits >= 2
+              ? 'BOTH OF THEM PERFECT. HE WILL NOT EVEN NOTICE.'
+              : (r.hits ? 'ONE GOOD ONE. HE CAN HAVE THAT ONE.'
+                : 'BROWN ROUND THE EDGE. HE PUTS KETCHUP ON IT ANYWAY.'), PIX.PAL.F);
           };
         }
         if (sp.id === 'sofa') {
@@ -36211,24 +37571,154 @@ const CUT = (() => {
 
       /* --- TEACH: TALK. The boy is a thing with a bracket round him too. */
       await S.pan(SCENE.def ? M.STOVE : M.STOVE, M.TABLE - 10, 1800);
+      /* ============================================================
+         THE TWO CONVERSATIONS THIS GAME IS ACTUALLY ABOUT.
+
+         Both of these used to be one line each, fired by the script,
+         with nothing you could say back. They are proper exchanges
+         now -- state-aware, with replies, with faces on them -- and
+         they can be had as many times as you like, because a boy who
+         has one thing to say is a sign, not a son.
+
+         Everything they say knows what you have done: whether the egg
+         is on the plate, whether the reader has turned up, whether
+         you have already told him off for not looking properly. And
+         both of them react -- his face goes happy when you feed him,
+         hers goes tired when you say you will be late, and yours
+         goes warm for about two seconds, which is the only place in
+         this entire game it is allowed to.
+         ============================================================ */
       const boy = S.actor('boy');
       if (boy) {
         boy.label = 'TOBIAS';
-        boy.hint = 'TALK';
+        boy.hint = () => (st.book === 'got' ? 'HE IS READY' : 'TALK');
         boy.onUse = async () => {
+          const b = S.actor('boy');
+          /* ---- after the book has turned up: he is just a happy kid ---- */
           if (st.book === 'got') {
-            await S.say('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.', PIX.PAL.O);
+            if (b) b.mood = 'happy';
+            const r0 = await S.ask('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.',
+              ['WE CAN GO THE WAY WITH THE BRIDGE.', 'WE ARE ALREADY LATE.',
+               'EAT YOUR EGG FIRST.']);
+            if (r0 === 0) {
+              S.face('happy');
+              await S.say('TOBIAS', 'YES! I WANT TO SEE IF THE BOAT IS THERE.',
+                PIX.PAL.O);
+              await S.say('YOU', 'THEN GET YOUR SHOES ON.', PIX.PAL.F);
+              S.face(null);
+            } else if (r0 === 1) {
+              await S.say('TOBIAS', 'WE ARE ALWAYS LATE. IT IS FINE.', PIX.PAL.O);
+              await S.say('CLEO', 'HE IS NOT WRONG.', PIX.PAL.P);
+            } else {
+              await S.say('TOBIAS', 'I HAVE EATEN MOST OF IT.', PIX.PAL.O);
+              await S.say('YOU', 'MOST IS NOT ALL.', PIX.PAL.F);
+            }
             return;
           }
+          /* ---- the reader is showing under the cushion ---- */
           if (st.book === 'found') {
-            await S.say('TOBIAS', 'IT WAS UNDER THE CUSHION. I LOOKED THERE.',
+            await S.say('TOBIAS', 'IT WAS UNDER THE CUSHION? I LOOKED THERE.',
               PIX.PAL.O);
+            await S.say('YOU', 'YOU LOOKED AT IT. GO AND PICK IT UP.', PIX.PAL.F);
             return;
           }
-          await S.say('TOBIAS', 'I CANNOT FIND MY READER.', PIX.PAL.O);
-          await S.say('TOBIAS', 'I HAVE LOOKED EVERYWHERE. TWICE.', PIX.PAL.O);
-          await S.say('YOU', 'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.', PIX.PAL.F);
-          st.asked = true;
+          /* ---- the first proper conversation in the game ---- */
+          if (!st.asked) {
+            await S.say('TOBIAS', 'I CANNOT FIND MY READER.', PIX.PAL.O);
+            await S.say('TOBIAS', 'I HAVE LOOKED EVERYWHERE. TWICE.', PIX.PAL.O);
+            const r1 = await S.ask('YOU', 'WHERE HAVE YOU LOOKED?',
+              ['EVERYWHERE IS NOT A PLACE. NAME THREE.',
+               'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.',
+               'TAKE MINE. IT HAS PICTURES OF GUNS IN IT.']);
+            if (r1 === 0) {
+              await S.say('TOBIAS', 'THE HALL. MY BAG. UNDER THE TABLE.', PIX.PAL.O);
+              await S.say('YOU', 'THEN IT IS SOMEWHERE YOU SIT AND DO NOT LOOK.',
+                PIX.PAL.F);
+            } else if (r1 === 2) {
+              if (b) b.mood = 'happy';
+              S.face('happy');
+              await S.say('TOBIAS', 'CAN I REALLY?', PIX.PAL.O);
+              await S.say('CLEO', 'HE CANNOT. FIND THE READER.', PIX.PAL.P);
+              S.face(null);
+            } else {
+              await S.say('TOBIAS', 'WHAT IS THE DIFFERENCE.', PIX.PAL.O);
+              await S.say('YOU', 'ABOUT THIRTY YEARS AND A BADGE.', PIX.PAL.F);
+            }
+            st.asked = true;
+            return;
+          }
+          /* ---- and afterwards he has more than one thing to say ---- */
+          const lines = st.pan
+            ? ['THE WHITE IS THE BEST BIT.', 'IS THERE MORE.',
+               'CAN I HAVE THE CRUSTS.']
+            : ['I AM HUNGRY.', 'MUM SAYS YOU BURN THEM.',
+               'ARE YOU MAKING EGGS OR NOT.'];
+          await S.say('TOBIAS', lines[(st._bt = (st._bt || 0) + 1) % lines.length],
+            PIX.PAL.O);
+        };
+      }
+
+      /* ---- AND CLEO, who had no interaction at all ---- */
+      const wife = S.actor('wife');
+      if (wife) {
+        wife.label = 'CLEO';
+        wife.hint = 'TALK';
+        wife.onUse = async () => {
+          const wf = S.actor('wife');
+          if (!st.pan) {
+            const r = await S.ask('CLEO', 'HE HAS TO BE OUT OF THAT DOOR IN TEN '
+              + 'MINUTES AND HE HAS NOT EATEN.',
+              ['I AM DOING THE EGGS NOW.', 'HE CAN HAVE BREAD.',
+               'HE COULD BE LATE ONCE.']);
+            if (r === 0) {
+              if (wf) wf.mood = 'pleased';
+              await S.say('CLEO', 'THANK YOU. TWO. THE PAN IS ALREADY ON.',
+                PIX.PAL.P);
+            } else if (r === 1) {
+              if (wf) wf.mood = 'hard';
+              await S.say('CLEO', 'HE HAD BREAD YESTERDAY.', PIX.PAL.P);
+              await S.say('YOU', 'ALL RIGHT. EGGS.', PIX.PAL.F);
+            } else {
+              if (wf) wf.mood = 'hard';
+              await S.say('CLEO', 'HE COULD. YOU COULD ALSO COOK HIM AN EGG.',
+                PIX.PAL.P);
+            }
+            return;
+          }
+          if (st.book !== 'got') {
+            const r = await S.ask('CLEO', 'HE HAS LOST THAT BOOK AGAIN.',
+              ['I WILL FIND IT.', 'HE SHOULD LOOK PROPERLY.',
+               'WHERE WAS HE SITTING LAST NIGHT.']);
+            if (r === 2) {
+              await S.say('CLEO', 'ON THE SOFA. WITH HIS FEET UP, AS USUAL.',
+                PIX.PAL.P);
+              await S.say('YOU', 'THAT IS A STATEMENT AND A LOCATION.', PIX.PAL.F);
+            } else if (r === 0) {
+              if (wf) wf.mood = 'pleased';
+              await S.say('CLEO', 'YOU ALWAYS DO. IT IS VERY IRRITATING.',
+                PIX.PAL.P);
+            } else {
+              await S.say('CLEO', 'HE IS EIGHT.', PIX.PAL.P);
+            }
+            return;
+          }
+          const r = await S.ask('CLEO', 'GO ON, THEN. BEFORE THE BOTH OF YOU '
+            + 'TALK YOURSELVES INTO ANOTHER HOUR.',
+            ['I WILL BE BACK BY SIX.', 'IT MIGHT BE LATE.',
+             'COME WITH US.']);
+          if (r === 0) {
+            if (wf) wf.mood = 'happy';
+            S.face('happy');
+            await S.say('CLEO', 'SIX. I WILL HOLD YOU TO IT.', PIX.PAL.P);
+            S.face(null);
+          } else if (r === 1) {
+            if (wf) wf.mood = 'sad';
+            await S.say('CLEO', 'IT IS ALWAYS MIGHT.', PIX.PAL.P);
+            await S.say('YOU', 'IT IS ALWAYS THE JOB.', PIX.PAL.F);
+          } else {
+            await S.say('CLEO', 'AND WHO WOULD BE HERE WHEN YOU BOTH GET BACK.',
+              PIX.PAL.P);
+          }
         };
       }
       SCENE.busy(false);
