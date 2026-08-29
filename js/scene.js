@@ -755,6 +755,27 @@ const SCENE = (() => {
         a._wait = 0.7 + (Math.abs(Math.round(a._home)) % 5) * 0.2;
       }
     }
+    /* ============================================================
+       A TURN WAS A MIRROR FLIP.
+
+       me.face went from plus one to minus one between two frames and
+       the whole sprite reversed in a single tick, which at this size
+       reads as a glitch rather than as a man turning round -- and it
+       was most of what made the movement look ugly, because you do it
+       every time you tap the other side of the room.
+
+       So the FACING lags: me.turn walks toward me.face over about a
+       fifth of a second, the sprite is squashed horizontally to how
+       far through the turn it is, and the drawing itself flips at the
+       exact frame the squash is narrowest. Which is how a cartoon has
+       always turned somebody round.
+       ============================================================ */
+    if (me.turn === undefined) me.turn = me.face;
+    me.turn = U.approach(me.turn, me.face, 11, dt);
+    for (const a of (def.actors || [])) {
+      if (a.turn === undefined) a.turn = a.face || 1;
+      a.turn = U.approach(a.turn, a.face || 1, 11, dt);
+    }
     if (me.reach > 0) me.reach = Math.max(0, me.reach - dt * 1.6);
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p2 = puffs[i];
@@ -2080,12 +2101,18 @@ const SCENE = (() => {
       work = Math.round(Math.sin(wp * Math.PI * 2) * 2);
     }
     if (a.arm) arm = a.arm;                 /* a script can hold a pose */
-    const r = rig(a, a.frame || 0, face, a.back, ex, aside, arm);
+    /* the same lagged turn everybody else gets: an actor walking across a
+       cutscene and turning round at the end of it used to reverse between
+       two frames */
+    const atf = (a.turn === undefined ? face : (a.turn >= 0 ? 1 : -1));
+    const atw = Math.max(0.24, Math.abs(a.turn === undefined ? 1 : a.turn));
+    const r = rig(a, a.frame || 0, a.turn === undefined ? face : atf,
+      a.back, ex, aside, arm);
     /* AND HOW BIG HE IS. Depth already scales everybody, which is the right
        rule for a room and the wrong one for a CHILD: a boy standing next to
        his father is smaller without being further away. */
     const sc2 = sc * (a.scale || 1);
-    const w = Math.max(1, Math.round(r.w * sc2));
+    const w = Math.max(1, Math.round(r.w * sc2 * atw));
     const h = Math.max(1, Math.round(r.h * sc2) - id.rise);
     castShadow(c, Math.round(a.x), fy, w, 0.42);
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
@@ -2187,7 +2214,11 @@ const SCENE = (() => {
     const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
     /* a cutscene can pin his face and put his arm in a pose — reaching for
        the ashtray, handing the iron over the counter */
-    const r = rig(SCENE.meDef(), me.frame, me.face, back,
+    /* the drawing flips at the narrowest point of the turn, not at the
+       instant the input changed */
+    const tf = (me.turn === undefined ? me.face : me.turn) >= 0 ? 1 : -1;
+    const tw = Math.max(0.24, Math.abs(me.turn === undefined ? 1 : me.turn));
+    const r = rig(SCENE.meDef(), me.frame, tf, back,
       me.expr || myFace(T), side, me.arm);
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
@@ -2206,7 +2237,7 @@ const SCENE = (() => {
     const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
     const lean = Math.round(rc * 3) * (me.reachTo || 1);
     const g = gaitOf(T);
-    const w = Math.max(1, Math.round(r.w * sc * (1 + sq - st * 0.5 + rc * 0.04)));
+    const w = Math.max(1, Math.round(r.w * sc * tw * (1 + sq - st * 0.5 + rc * 0.04)));
     const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
     const shW = Math.round(r.w * (0.66 + sq));
     /* THE SHADOW STAYS ON THE FLOOR while he hops off it, which is the only
