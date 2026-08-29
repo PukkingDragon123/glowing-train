@@ -146,6 +146,35 @@ const PLACES = (() => {
   /* ============================================================
      1. THE CANAL LAUNDRY — the crime scene
      ============================================================ */
+
+  /* ============================================================
+     THE NEAR FLOOR.
+
+     Hand-placing furniture into a room you cannot see the whole of
+     goes wrong the same way every time: the first pass put a
+     bookcase behind the pawn shop's front door and an armchair
+     behind its window, because doors and windows are painted after
+     the dressing. There is one band that is reliably empty in every
+     room in this game, though -- the strip of floor between the
+     wall and the bottom of the frame, in FRONT of everything --
+     and a side-on room with something standing in its foreground
+     reads deeper than one without, for free.
+
+     So: low pieces only, at the very bottom rows, on the front
+     layer. A crate you can see over, a rug, a stool, a pot. Never
+     anything tall enough to hide the man you are steering.
+     ============================================================ */
+  function nearDress(c, W, FY, seed, list) {
+    const H = SCENE.H;
+    const base = FY + Math.round((H - FY) * 0.62);
+    (list || []).forEach((it, i) => {
+      const x = Math.round(W * it.at);
+      const h = it.h || 18, w = it.w || 26;
+      FURN.stand(c, it.p, x, Math.min(H - 2, base + (it.dy || 0)) - h, w, h,
+        Object.assign({ seed: seed + 17 + i, a: 1.1, len: 0.22 }, it.o || {}));
+    });
+  }
+
   function laundry() {
     const W = 430, FY = 108, seed = seedFor('laundry');
 
@@ -154,6 +183,19 @@ const PLACES = (() => {
       c.drawImage(ART.wall(W, FY + 4, { tone: 'tile', railY: 66, seed: seed % 91 }), 0, 0);
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'lino', seed: seed % 47 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#0f1316');
+
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE. Three machines, a chalk outline
+         and a lot of tile: what a laverie has as well is somewhere to
+         wait, somewhere to put the basket down, and a plant nobody
+         waters.
+         ============================================================ */
+      FURN.stand(c, 'stool', 336, FY - 32, 18, 32, { mat: 'teal' });
+      FURN.stand(c, 'stool', 358, FY - 32, 18, 32, { mat: 'teal' });
+      FURN.stand(c, 'crate', 396, FY - 22, 28, 22, { mat: 'pine', seed: seed + 7 });
+      FURN.stand(c, 'plant', 62, FY - 30, 20, 30, { mat: 'copper', dead: true, seed: seed + 8 });
+      FURN.hang(c, 'clock', 302, 12, 24, 42, { mat: 'ebony', hour: 9, min: 35 });
+      FURN.hang(c, 'sconce', 400, 26, 16, 20, { mat: 'cream' });
       sheen(c, 0, FY - 2, W, 20, 0.06);
 
       /* the way in, off the towpath */
@@ -397,6 +439,11 @@ const PLACES = (() => {
       ART.box(c, 388, FY - 42, 24, 12, { fill: '#8d9298', top: '#b3b8bd', bot: '#4a5056', ink: p.K });
       px(c, 392, FY - 39, 16, 5, '#22282e');
       px(c, 378, FY - 34, 6, 4, '#8c2230');
+      nearDress(c, W, FY, seed, [
+        { p: 'crate', at: 0.06, w: 30, h: 22, o: { mat: 'pine' } },
+        { p: 'rug', at: 0.52, w: 64, h: 12, dy: 4, o: { mat: 'petrol', trim: 'cream' } },
+        { p: 'plant', at: 0.88, w: 20, h: 26, o: { mat: 'copper', dead: true } },
+      ]);
     };
 
     const spots = [
@@ -650,6 +697,27 @@ const PLACES = (() => {
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 41 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#0d0b09');
 
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE. A pawn shop is the fullest room
+         there is -- everything in it belonged to somebody else -- and
+         this one was three shelves of tins on bare brick with two
+         hundred pixels of empty board under them.
+         ============================================================ */
+      /* PLACED WHERE THE ROOM IS EMPTY, which is not where it looks empty:
+         the first pass put a bookcase behind the front door and an armchair
+         behind the window, because the door and the window are painted
+         after them. The shelf run owns x=105 to 227 and the openings own
+         everything left of it, so the dressing lives in the right half --
+         which, at a two-hundred-and-forty pixel frame on a four-hundred
+         pixel room, is the half nobody had ever seen. */
+      FURN.stand(c, 'bookcase', 248, FY - 62, 40, 62, { mat: 'oak', seed: seed + 1 });
+      FURN.stand(c, 'armchair', 296, FY - 42, 36, 42, { mat: 'plum', wood: 'ebony', seed: seed + 2 });
+      FURN.stand(c, 'standlamp', 338, FY - 66, 20, 66, { mat: 'mustard' });
+      FURN.stand(c, 'crate', 364, FY - 24, 30, 24, { mat: 'pine', seed: seed + 3 });
+      FURN.hang(c, 'clock', 252, 14, 24, 44, { mat: 'walnut', hour: 15, min: 25 });
+      FURN.hang(c, 'picture', 300, 18, 32, 26, { mat: 'brass', seed: seed + 6 });
+      FURN.hang(c, 'sconce', 348, 22, 16, 20, { mat: 'mustard' });
+
       /* the door, with the bell over it */
       px(c, 10, 32, 44, 74, p.K);
       px(c, 13, 35, 38, 71, '#251c14');
@@ -733,6 +801,12 @@ const PLACES = (() => {
       px(c, 256, FY - 40, 26, 6, p.K);
       px(c, 257, FY - 39, 24, 4, '#ded2b4');
       px(c, 259, FY - 38, 20, 1, '#8d8672');
+      nearDress(c, W, FY, seed, [
+        { p: 'crate', at: 0.10, w: 32, h: 24, o: { mat: 'pine' } },
+        { p: 'barrel', at: 0.36, w: 24, h: 28, o: { mat: 'oak' } },
+        { p: 'rug', at: 0.60, w: 70, h: 13, dy: 4, o: { mat: 'oxblood', trim: 'mustard' } },
+        { p: 'stool', at: 0.92, w: 18, h: 28, o: { mat: 'plum' } },
+      ]);
     };
 
     const eggs = [
@@ -763,6 +837,19 @@ const PLACES = (() => {
       c.drawImage(ART.wall(W, FY + 4, { tone: 'tile', railY: 60, seed: seed % 77 }), 0, 0);
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'lino', seed: seed % 39 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#12161a');
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE. Half of this room was a teal tile
+         field with one window in it and a hundred and eighty pixels of
+         bare lino. A diner has booths down the wall.
+         ============================================================ */
+      FURN.stand(c, 'booth', 178, FY - 46, 78, 46, { mat: 'oxblood', seed: seed + 1 });
+      FURN.stand(c, 'booth', 262, FY - 46, 78, 46, { mat: 'petrol', seed: seed + 2 });
+      FURN.stand(c, 'stool', 352, FY - 34, 18, 34, { mat: 'oxblood' });
+      FURN.stand(c, 'stool', 376, FY - 34, 18, 34, { mat: 'oxblood' });
+      FURN.hang(c, 'clock', 148, 14, 24, 42, { mat: 'ebony', hour: 9, min: 35 });
+      FURN.hang(c, 'shelf', 244, 24, 58, 22, { mat: 'walnut', seed: seed + 6 });
+      FURN.hang(c, 'sconce', 344, 22, 16, 20, { mat: 'cream' });
+
       /* the checker floor this place would actually have */
       for (let x = 0; x < W; x += 12) {
         for (let y = FY; y < SCENE.H; y += 12) {
@@ -859,6 +946,11 @@ const PLACES = (() => {
         px(c, sx - 5, FY - 11, 14, 4, '#8c2230');
         px(c, sx - 5, FY - 11, 14, 1, '#c94a4a');
       }
+      nearDress(c, W, FY, seed, [
+        { p: 'stool', at: 0.08, w: 18, h: 28, o: { mat: 'oxblood' } },
+        { p: 'rug', at: 0.40, w: 60, h: 12, dy: 4, o: { mat: 'teal', trim: 'cream' } },
+        { p: 'crate', at: 0.86, w: 28, h: 20, o: { mat: 'pine' } },
+      ]);
     };
 
     const eggs = [
@@ -886,6 +978,24 @@ const PLACES = (() => {
       c.drawImage(ART.floor(W, SCENE.H - FY + 6, { tone: 'board', seed: seed % 53 }), 0, FY - 2);
       px(c, 0, FY - 3, W, 2, '#0d0b09');
       px(c, 0, FY - 1, W, 1, 'rgba(255,255,255,.05)');
+
+      /* ============================================================
+         DRESSED FROM THE CATALOGUE.
+
+         This was a brick wall with a shelf of bottles on it and forty
+         pixels of empty floorboard in front of the counter. A bar has
+         things in it: stools you sit on, a booth in the corner, a barrel
+         they never took away, and something on the walls.
+         ============================================================ */
+      FURN.stand(c, 'booth', 22, FY - 52, 86, 52, { mat: 'oxblood', seed: seed + 1 });
+      FURN.hang(c, 'picture', 122, 28, 34, 26, { mat: 'brass', seed: seed + 2 });
+      FURN.hang(c, 'picture', 166, 24, 28, 32, { mat: 'walnut', kind: 'mirror' });
+      FURN.hang(c, 'clock', 208, 18, 24, 40, { mat: 'walnut', hour: 22, min: 40 });
+      FURN.stand(c, 'barrel', 366, FY - 34, 26, 34, { mat: 'oak', seed: seed + 3 });
+      FURN.stand(c, 'crate', 398, FY - 22, 28, 22, { mat: 'pine', seed: seed + 4 });
+      FURN.stand(c, 'plant', 428, FY - 30, 20, 30, { mat: 'copper', dead: true, seed: seed + 5 });
+      FURN.hang(c, 'sconce', 300, 34, 16, 20, { mat: 'cream' });
+      FURN.hang(c, 'sconce', 404, 34, 16, 20, { mat: 'cream' });
 
       /* the door out, under a dead sign */
       px(c, 10, 34, 44, 72, p.K);
@@ -985,6 +1095,12 @@ const PLACES = (() => {
       px(c, 150, FY - 29, 6, 3, '#3a3f52');
       px(c, 152, FY - 31, 1, 2, '#c9c0a8');
       px(c, 186, FY - 32, 5, 7, 'rgba(220,240,255,.35)');
+      nearDress(c, W, FY, seed, [
+        { p: 'stool', at: 0.42, w: 20, h: 32, o: { mat: 'oxblood' } },
+        { p: 'stool', at: 0.56, w: 20, h: 32, o: { mat: 'oxblood' } },
+        { p: 'stool', at: 0.70, w: 20, h: 32, o: { mat: 'oxblood' } },
+        { p: 'barrel', at: 0.90, w: 24, h: 30, o: { mat: 'oak' } },
+      ]);
     };
 
     const spots = [
