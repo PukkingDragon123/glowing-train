@@ -1465,21 +1465,43 @@ const ART = (() => {
       + ':' + (opt.railY === undefined ? 'd' : opt.railY);
     return cached(key, () => {
       const o = cv(w, h), c = o.c;
+      /* ============================================================
+         SATURATED DARK, NOT GREY.
+
+         Measured: the cast's top tenth of pixels by chroma sits at
+         0.62 and the rooms were coming in at 0.41 to 0.56, which is
+         exactly the complaint -- the frogs are painted and the walls
+         they stand against are mud. Every one of these was a
+         near-neutral at about a third chroma. They are now deep,
+         SATURATED darks at two thirds and up, at the same value:
+         bottle green, petrol, cold teal, oxblood, tobacco, plum,
+         mustard. The value stays where it was, because this is still
+         a mafia story in a city at night. What goes up is the colour.
+         ============================================================ */
       const T = {
-        green: ['#1d2a26', '#243430', '#16211e', '#2f403a'],
-        grey:  ['#1e222c', '#262b36', '#171a22', '#333a48'],
-        tile:  ['#20282e', '#28323a', '#181e23', '#36424c'],
-        brick: ['#241c1a', '#2c2220', '#1a1413', '#3a2c28'],
-      }[opt.tone || 'green'];
+        green:   ['#0e3524', '#15462f', '#082115', '#2a7a4e'],   /* bottle green */
+        grey:    ['#0f2140', '#173058', '#08142a', '#2b5490'],   /* petrol */
+        tile:    ['#0a2d36', '#0f424f', '#051d24', '#1f7d8e'],   /* cold teal */
+        brick:   ['#3a1410', '#4d1d16', '#230b08', '#7d3320'],   /* oxblood */
+        wood:    ['#3d2408', '#523110', '#261504', '#8a5a1c'],   /* tobacco panel */
+        plum:    ['#2c1030', '#3c1642', '#1a0820', '#6e2a78'],   /* a bar at night */
+        mustard: ['#3c2f06', '#514009', '#241c03', '#96761a'],   /* a cheap diner */
+      }[opt.tone] || ['#0e3524', '#15462f', '#082115', '#2a7a4e'];
       px(c, 0, 0, w, h, T[0]);
-      /* upper field, dithered so it isn't dead flat */
-      dither(c, 0, 0, w, h, T[1], 0.14, (opt.seed || 1) * 3);
-      dither(c, 0, 0, w, h, T[2], 0.1, (opt.seed || 1) * 7);
+      /* upper field, dithered so it isn't dead flat -- but LIGHTLY: at
+         fourteen per cent of a tone this much lighter than the base, the
+         saturated walls came out as television static in colour */
+      dither(c, 0, 0, w, h, T[1], 0.085, (opt.seed || 1) * 3);
+      dither(c, 0, 0, w, h, T[2], 0.07, (opt.seed || 1) * 7);
       const railY = opt.railY === undefined ? Math.round(h * 0.62) : opt.railY;
-      /* the darker wainscot below the rail */
+      /* the darker wainscot below the rail. The darkest of the four tones is
+         still the same hue at the same chroma, so on its own it read as the
+         same wall: it takes a step down in VALUE as well to be a dado. */
       px(c, 0, railY, w, h - railY, T[2]);
-      dither(c, 0, railY, w, h - railY, T[0], 0.12, (opt.seed || 1) * 11);
+      px(c, 0, railY, w, h - railY, 'rgba(0,0,0,.30)');
+      dither(c, 0, railY, w, h - railY, T[0], 0.09, (opt.seed || 1) * 11);
       px(c, 0, railY - 2, w, 2, T[3]);
+      px(c, 0, railY - 2, w, 2, 'rgba(0,0,0,.22)');
       px(c, 0, railY, w, 1, '#0f1316');
       /* tiling, if this is a tiled room */
       if (opt.tone === 'tile') {
@@ -1558,22 +1580,24 @@ const ART = (() => {
     return cached(key, () => {
       const o = cv(w, h), c = o.c;
       if (opt.tone === 'lino') {
-        px(c, 0, 0, w, h, '#1a2028');
+        /* the same saturation pass the walls got: a chequer of two neutral
+           greys is a chequer of two neutral greys */
+        px(c, 0, 0, w, h, '#0d2028');
         for (let x = 0; x < w; x += 14) {
           for (let y = 0; y < h; y += 14) {
             const d = ((x / 14) + (y / 14)) % 2;
-            px(c, x, y, 14, 14, d ? '#1e252e' : '#161c23');
+            px(c, x, y, 14, 14, d ? '#0f2831' : '#0a1e26');
           }
         }
         /* the seams between the sheets, and the wear down the middle */
         for (let x = 0; x < w; x += 14) px(c, x, 0, 1, h, 'rgba(0,0,0,.22)');
         dither(c, 0, 2, w, Math.max(2, h - 6), 'rgba(255,255,255,.025)', 0.08, 3);
       } else {
-        px(c, 0, 0, w, h, '#2a2118');
+        px(c, 0, 0, w, h, '#331d08');
         for (let y = 0; y < h; y += 7) {
           px(c, 0, y, w, 1, 'rgba(0,0,0,.34)');
           px(c, 0, y + 1, w, 1, 'rgba(255,255,255,.04)');
-          grain(c, 0, y + 2, w, 4, '#241c14', '#382c1e', (opt.seed || 1) * 13 + y);
+          grain(c, 0, y + 2, w, 4, '#261504', '#4d2f10', (opt.seed || 1) * 13 + y);
         }
         /* board ends, staggered */
         const rng0 = U.mulberry32((opt.seed || 1) * 41);

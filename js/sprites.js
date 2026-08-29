@@ -3813,11 +3813,13 @@ SPR.buildBody = function (d, o) {
        in screen space one arm comes across the body while the other swings
        away from it — which is what a stride looks like from the front.
        Mirroring it per side (the obvious thing) makes him shrug instead. */
-    const sw = Math.round(swing * 6);
+    /* SIX PIXELS, inside a bust that then gets fitted down to two thirds:
+       four on screen, on a figure a hundred and thirty tall. Thirteen. */
+    const sw = Math.round(swing * 13);
     /* AND ONE HAND RIDES HIGHER. Sliding both arms sideways alone reads as a
        slide; the arm coming across also lifts while the trailing one hangs,
        and that vertical difference is what sells it at room size. */
-    const lift = Math.round(sgn * swing * 2);
+    const lift = Math.round(sgn * swing * 4);
     const elX0 = cx + sgn * (baseHw - (armIn ? 8 : 1)) + Math.round(sw * 0.45);
     const haX  = cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw;   // wrist leads the swing
     /* seated, the sleeve head starts BELOW the coat's shoulder line, so the
@@ -4004,8 +4006,8 @@ SPR.buildBody = function (d, o) {
      which is the only thing that can follow a swing. */
   cv.wrist = { dx: baseHw - (armIn ? 13 : 9), dy: 56, cx: cx, h: H };
   cv.wristAt = [-1, 1].map(sgn => {
-    const sw = Math.round(swing * 6);
-    const lift = Math.round(sgn * swing * 2);
+    const sw = Math.round(swing * 13);
+    const lift = Math.round(sgn * swing * 4);
     return {
       sgn,
       x: cx + sgn * (baseHw - (armIn ? 13 : 9)) + sw,
@@ -5281,11 +5283,42 @@ SPR.frogWhole = function (key, def, opts) {
        neighbour at a fractional scale drops columns and a dropped
        column is a missing eyelid or half a pinstripe.
        ============================================================ */
-    const HEAD_H = 28, NECK = 2, TORSO = 44, LEGS = 56, RISE = 2;
+    /* ============================================================
+       AND THEN BACK TO CARTOON, DELIBERATELY.
+
+       The measured pass above is correct about people and wrong about
+       this game. Taken to a head fraction of 0.21 and an aspect of
+       0.30 he came out a slim, sensible, forgettable man in a coat --
+       and the whole cast around him is saturated, bold and drawn like
+       a cartoon, so he stopped belonging to it.
+
+       Cartoon is not the same mistake as mascot. A mascot was 0.37 of
+       the height in head and half as wide as it was tall: a beach
+       ball on a barrel with no joints in it. What this is aiming at is
+       the middle -- heroic cartoon, four heads and a bit:
+
+         head    35     0.27 of the figure, hat included
+         neck     2
+         torso   44     shoulder to hip, unchanged
+         legs    48     shorter than a person's, which is most of
+                        what makes a drawing read as a cartoon
+         ----------
+                129     the rig box is unchanged, so every room's
+                        furniture is still the right size against him
+
+       And he is CHUNKY: the bust comes in at eighty-four per cent of
+       its own aspect rather than sixty-two, which widens the drawn
+       figure from thirty-seven to fifty and thickens every limb with
+       it, because SLIM is derived from it. Bold shapes, exaggerated
+       proportions -- and every joint, hand and finger the measured
+       pass built stays exactly where it is. Cartoony is a shape
+       language, not an excuse for a solid block.
+       ============================================================ */
+    const HEAD_H = 35, NECK = 2, TORSO = 44, LEGS = 48, RISE = 5;
     const hh = HEAD_H;
-    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height) * 0.80));
+    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height) * 0.78));
     const bh = TORSO + NECK;
-    const bw = Math.round(body.width * (bh / body.height) * 0.62);
+    const bw = Math.round(body.width * (bh / body.height) * 0.84);
     const W = Math.max(bw, hw) + 12;
     /* two spare rows at the top: the torso rises off planted feet rather
        than the whole frog sliding up and down together */
@@ -5301,7 +5334,22 @@ SPR.frogWhole = function (key, def, opts) {
     /* THE WALK. Two legs in opposite phase, the whole frog rising on the
        passing beats. The bob is twice the stride frequency, because you go
        up once per step and there are two steps in a cycle. */
-    const swing = Math.round(ph * 6);
+    /* ============================================================
+       THE WALK HAD NO AMPLITUDE IN IT.
+
+       Every part of the machinery was already here -- tapered bones, a
+       knee that folds, a sole that stays planted while the hips rise
+       over it, arms opposing the legs. And then every number driving it
+       was small enough to be invisible: the ankle travelled four pixels
+       on a figure a hundred and thirty tall, the foot lifted four, the
+       body rose two, and the arm swung six inside a bust that was then
+       fitted down to two thirds. Eight frames of a man standing still,
+       very slightly.
+
+       Doubled and then some, which is what a cartoon walk is: not more
+       machinery, more OF it.
+       ============================================================ */
+    const swing = Math.round(ph * 11);
     /* THE BOB WAS UPSIDE DOWN, and it moved the feet with it. You are at
        your TALLEST at the passing beat, when the supporting leg is straight
        under you, and lowest at the stride ends, where both legs are out at
@@ -5311,6 +5359,19 @@ SPR.frogWhole = function (key, def, opts) {
     const bobU = (1 + Math.cos(((frame % SPR.WALK_FRAMES) /
       SPR.WALK_FRAMES) * Math.PI * 4)) / 2;          // 1 passing, 0 at full stride
     const bob = RISE - Math.round(bobU * RISE);
+    /* THE HEAD ARRIVES LATE. A head that rises and falls in lockstep with
+       the hips is a head bolted to a torso; one frame of lag out of eight
+       is the whole of it. And the sway is the weight going from one foot to
+       the other -- the head leans one way while the shoulders go the other,
+       which is the read everybody recognises as walking. */
+    const bobU2 = (1 + Math.cos((((frame + 1) % SPR.WALK_FRAMES) /
+      SPR.WALK_FRAMES) * Math.PI * 4)) / 2;
+    /* CLAMPED TO ONE PIXEL. Taken as its own five-pixel bob the head went
+       down while the shoulders went up and swallowed his own neck: the lag
+       is a nudge off the body's bob, not a second bob. */
+    const headBob = bob + U.clamp(
+      Math.round(((RISE - bobU2 * RISE) - bob) * 0.6), -1, 1);
+    const sway = side ? 0 : Math.round(SPR.walkPhase(frame) * 2);
     const bodyTop = hh - NECK + bob;
     const cx = Math.round(W / 2);
     const groundY = H - 6;                            // where the soles rest
@@ -5373,9 +5434,9 @@ SPR.frogWhole = function (key, def, opts) {
       const st = sgn * ph;                  // -1 behind him .. +1 out in front
       const air = Math.max(0, sgn * co);    // >0 while it is swinging through
       const fold = air * 0.9 + Math.max(0, -st) * 0.3;
-      const lift = Math.round(air * 4);
+      const lift = Math.round(air * 9);
       const hx = cx + sgn * spread;
-      const ax = hx + Math.round(st * (side ? 6 : 4));   // the ankle leads
+      const ax = hx + Math.round(st * (side ? 13 : 8));  // the ankle leads
       const solY = groundY - lift;          // the sole; planted unless airborne
       const ankY = solY - 5;
       /* the knee breaks FORWARD out of the hip-ankle line as it folds. Head
@@ -5436,7 +5497,11 @@ SPR.frogWhole = function (key, def, opts) {
     /* SHOULDERS TURN. A torso seen edge-on is about two thirds the width
        it is head-on, and drawing it at full width is what made the first
        profile read as a front view with a snout drawn on it. */
-    const sbw = side ? Math.round(bw * 0.72) : bw;
+    /* seventy-two per cent of the front width was wider than his own head
+       is tall, and with the cartoon bust back it read as a hunchback: what
+       you see from the side is his DEPTH, and a man is not as deep as he
+       is wide */
+    const sbw = side ? Math.round(bw * 0.58) : bw;
     const shw = side ? Math.round(hw * 0.94) : hw;
     /* FITTED, NOT SQUASHED. drawImage with smoothing off at 0.4 scale threw
        away three columns in five: the pinstripes came out as dotted lines
@@ -5448,7 +5513,7 @@ SPR.frogWhole = function (key, def, opts) {
     const bodyFit = side
       ? SPR.profileBust(key, def, sbw, bh)
       : SPR.fit('body_' + key + ':' + frame, body, sbw, bh);
-    c.drawImage(bodyFit, Math.round((W - sbw) / 2), bodyTop);
+    c.drawImage(bodyFit, Math.round((W - sbw) / 2) + sway, bodyTop);
 
     /* HANDS. The bust stops at a shirt cuff because the duel paints the
        hands onto the felt itself. Standing up he needs his own, hung on the
@@ -5476,7 +5541,7 @@ SPR.frogWhole = function (key, def, opts) {
 
     const headFit = SPR.fit('head_' + key + ':' + ex + (side ? 's' : '') + (back ? 'b' : ''),
       head, shw, hh);
-    c.drawImage(headFit, Math.round((W - shw) / 2), bob);
+    c.drawImage(headFit, Math.round((W - shw) / 2) - sway, headBob);
 
     /* ------------------------------------------------------------
        WALKING AWAY FROM YOU.
@@ -5582,15 +5647,17 @@ SPR.frogWhole = function (key, def, opts) {
         const AF = Math.max(4, Math.round(bw2 * 0.15));
         const arm = (aph, sx, col, hsgn, near) => {
           const fold = U.clamp(0.32 + aph * 0.42, 0.05, 0.88);
-          const ex = sx - Math.round(aph * 2) - Math.round(fold * 3);
-          const hx2 = sx + Math.round(aph * 4);
+          const ex = sx - Math.round(aph * 4) - Math.round(fold * 3);
+          const hx2 = sx + Math.round(aph * 9);
           /* THE ARM HAS TO COME OUT OF THE COAT. Filled in the coat's own
              colour all you see is the ink round it, and an ink ring is a
              bubble, not a limb: the first go at this read as a row of dark
              discs stuck on his side. So the near arm is lifted a shade and
              the far one dropped, and the joints are SMALLER than the bones
              they join — a knuckle that overhangs its own limb is a balloon. */
-          const tone = near ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.42)';
+          /* seven per cent of white on a coat this dark is nothing: the
+             near arm has to come off the coat or the profile is a slab */
+          const tone = near ? 'rgba(255,255,255,.17)' : 'rgba(0,0,0,.46)';
           bone(sx, shY, ex, elY, AW, AF, col, 0, tone);
           bone(ex, elY, hx2, haY - 4, AF, Math.max(3, AF - 2), col, 1.0, tone);
           const er = Math.max(3, Math.round(AF * 0.55));
@@ -5613,9 +5680,11 @@ SPR.frogWhole = function (key, def, opts) {
            is the only way an arm behind a body can be drawn after it */
         c.save();
         c.globalCompositeOperation = 'destination-over';
-        /* the walk phase, NOT the local ph — which in this block is the
-           height of the coat panel */
-        const aw = swing / 6;
+        /* the walk phase, NOT the local ph -- which in this block is the
+           height of the coat panel. Taken as swing/6 it went out past one
+           once the swing was raised to eleven, and everything downstream
+           clamps, so it is the raw phase and the multipliers do the work. */
+        const aw = SPR.walkPhase(frame);
         /* the far arm hangs off the BACK of him and the near one off the
            front third, which is where a shoulder actually is on a body seen
            edge on -- both of them used to hang off the middle */
