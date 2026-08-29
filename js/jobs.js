@@ -265,8 +265,13 @@ const JOBS = (() => {
     for (let i = 0; i < rounds; i++) {
       const px2 = p0 + i * 8;
       ART.px(c, px2, py, 5, 4, PIX.PAL.K);
+      /* AT HOME NOTHING GOES RED. A miss in the kitchen is an egg with a
+         brown edge on it, and a red pip says you have failed your family
+         before breakfast. */
       ART.px(c, px2 + 1, py + 1, 3, 2,
-        i < s.round ? (i < s.hits ? '#6ff7d8' : '#ff6a5e') : '#3a4149');
+        i < s.round
+          ? (i < s.hits ? '#6ff7d8' : (o.kind === 'home' ? '#c8a03c' : '#ff6a5e'))
+          : '#3a4149');
     }
     povSlate(c, o, s.T, s.armAt);
   }
@@ -1581,15 +1586,30 @@ const JOBS = (() => {
     },
 
     /* three eggs, for a small frog who is going to be late */
+    /* ============================================================
+       BREAKFAST IS NOT A TRADE.
+
+       This ran on the same numbers as picking a lock -- three rounds,
+       a band a fifth of the sweep wide, three quarters of a sweep a
+       second -- because it was built out of the same widget. But the
+       house is where the game teaches you to tap something, on the one
+       morning it is going to spend the rest of itself taking away from
+       you. A skill check there is a skill check in the wrong place.
+
+       So: TWO eggs instead of three, a band nearly half the sweep
+       wide, two thirds of the speed, and it cannot be failed -- a miss
+       is an egg with a brown edge on it, which is still breakfast.
+       ============================================================ */
     async breakfast() {
       const r = await meter({
         head: 'BREAKFAST',
-        sub: 'THREE EGGS. OFF WHEN THE WHITE SETS.',
-        key: 'TAP TO PLATE THE EGG',
-        rounds: 3, band: 0.24, speed: 0.72,
+        sub: 'TWO EGGS. TAP WHEN THE WHITE SETS.',
+        key: 'TAP TO PLATE IT',
+        rounds: 2, band: 0.46, speed: 0.46, kind: 'home',
         draw: drawPan,
       });
-      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, fed: r.hits >= 2 };
+      /* fed either way: nobody in this house goes to school hungry */
+      return { hits: r.hits, perfect: r.perfect, rounds: r.rounds, fed: true };
     },
 
     /* a tray of donuts. Money, a heart back, and the cook talks. */

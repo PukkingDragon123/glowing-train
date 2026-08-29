@@ -210,32 +210,37 @@ const CUT = (() => {
       const p = P();
 
       /* ---- THE SHELL: butter paper, honey dado, scrubbed boards ---- */
-      px(c, 0, 0, W, FY, '#6b5a3c');
-      px(c, 0, 0, W, FY - 34, '#8a7448');
+      /* THE SAME SATURATION PASS THE REST OF THE GAME GOT. The house is
+         warm on purpose -- it is the one room in this story that is -- but
+         warm and PALE is not the same thing as warm. Butter paper at
+         forty-eight per cent chroma next to a cast at sixty-two read as
+         beige; this is ochre. */
+      px(c, 0, 0, W, FY, '#6a5320');
+      px(c, 0, 0, W, FY - 34, '#8f6d22');
       /* THE PAPER. A sprig every twelve by ten, and only two pixels of
          contrast in it: on a four-by-six grid at full contrast the same
          motif read as television static. */
       for (let y = 4; y < FY - 40; y += 10) {
         for (let x = ((y / 10) % 2) ? 4 : 10; x < W; x += 12) {
-          px(c, x, y, 1, 3, '#94804f');
-          px(c, x - 2, y + 1, 5, 1, '#94804f');
-          px(c, x - 1, y + 4, 3, 1, '#94804f');
+          px(c, x, y, 1, 3, '#a37d24');
+          px(c, x - 2, y + 1, 5, 1, '#a37d24');
+          px(c, x - 1, y + 4, 3, 1, '#a37d24');
         }
       }
-      ART.dither(c, 0, 0, W, FY - 34, '#826d45', 0.07, 5);
+      ART.dither(c, 0, 0, W, FY - 34, '#7d5e1a', 0.07, 5);
       /* the picture rail and the honey dado under it */
-      px(c, 0, FY - 40, W, 3, '#a98a52');
-      px(c, 0, FY - 40, W, 1, '#c4a468');
+      px(c, 0, FY - 40, W, 3, '#b58a2c');
+      px(c, 0, FY - 40, W, 1, '#d4a63c');
       px(c, 0, FY - 37, W, 2, 'rgba(70,48,24,.34)');
-      px(c, 0, FY - 34, W, 34, '#7a6038');
+      px(c, 0, FY - 34, W, 34, '#7a5518');
       for (let x = 4; x < W; x += 26) {
-        px(c, x, FY - 30, 20, 26, '#856844');
-        px(c, x, FY - 30, 20, 1, '#a08050');
+        px(c, x, FY - 30, 20, 26, '#8a611c');
+        px(c, x, FY - 30, 20, 1, '#a87c28');
         px(c, x, FY - 5, 20, 1, 'rgba(60,40,20,.40)');
         px(c, x + 19, FY - 30, 1, 26, 'rgba(60,40,20,.30)');
       }
-      px(c, 0, FY - 6, W, 6, '#5e4a2c');
-      px(c, 0, FY - 6, W, 1, '#7c6238');
+      px(c, 0, FY - 6, W, 6, '#5c3f10');
+      px(c, 0, FY - 6, W, 1, '#7e5a18');
       /* the boards, and a rag rug over them in the middle of the room */
       c.drawImage(ART.floor(W, SCENE.H - FY + 8, { tone: 'board', seed: 3 }), 0, FY - 2);
       /* SCRUBBED, NOT SOOTED. ART.floor is a police-station board at
@@ -247,8 +252,8 @@ const CUT = (() => {
       for (let x = 0; x < W; x += 7) px(c, x, FY, 1, SCENE.H - FY + 6, 'rgba(120,84,40,.14)');
       /* the ceiling: whitewash, warm, with a beam across it */
       px(c, 0, -46, W, 46, '#3a2e1c');
-      px(c, 0, 0, W, 9, '#c8b489');
-      px(c, 0, 0, W, 2, '#e0cba0');
+      px(c, 0, 0, W, 9, '#cfb266');
+      px(c, 0, 0, W, 2, '#e8c878');
       px(c, 0, 9, W, 3, 'rgba(70,48,24,.30)');
       for (let x = 0; x < W; x += 96) {
         px(c, x, 0, 6, 9, '#8a7048');
@@ -474,6 +479,27 @@ const CUT = (() => {
         px(c, SOFA + 46, FY - 32 + i, 10, 1, i % 3 ? '#b8543c' : '#c86848');
       }
       px(c, SOFA + 52, FY - 20, 5, 10, '#b8543c');
+      /* ============================================================
+         AND THE HOUSE IS DRESSED FROM THE CATALOGUE TOO.
+
+         The wall above the dado was seventy rows of ochre paper for
+         the length of the room, and the one thing on it was a
+         corkboard. The layout comment at the top of this function has
+         the span of every piece of furniture in here, so these go in
+         the gaps between them: above the range, above the table,
+         above the sofa, and in the hall.
+         ============================================================ */
+      FURN.hang(c, 'curtain', SINK - 12, 10, 86, 50, { mat: 'rose' });
+      FURN.hang(c, 'shelf', STOVE + 16, 22, 50, 20, { mat: 'pine', seed: 11 });
+      FURN.hang(c, 'clock', TABLE - 38, 12, 24, 42, { mat: 'walnut', hour: 7, min: 20 });
+      FURN.hang(c, 'picture', TABLE + 4, 16, 34, 26, { mat: 'brass', seed: 3 });
+      FURN.hang(c, 'picture', SOFA - 18, 14, 30, 34, { mat: 'walnut', kind: 'mirror' });
+      FURN.hang(c, 'sconce', SOFA + 34, 20, 16, 20, { mat: 'cream' });
+      FURN.hang(c, 'picture', HALLT - 4, 18, 32, 26, { mat: 'oak', seed: 5 });
+      FURN.stand(c, 'dresser', 226, FY - 60, 44, 60, { mat: 'pine', seed: 7 });
+      FURN.stand(c, 'plant', 336, FY - 30, 20, 30, { mat: 'copper', seed: 9 });
+      FURN.stand(c, 'standlamp', 462, FY - 62, 18, 62, { mat: 'mustard' });
+
       /* the rag rug in front of it */
       px(c, SOFA - 30, FY - 1, 96, 9, '#8a5a48');
       px(c, SOFA - 30, FY - 1, 96, 1, '#a4705a');
@@ -646,8 +672,27 @@ const CUT = (() => {
         + (st.book || '') + (st.satchel ? 's' : ''),
       w: W, floorY: FY, paint, fore, spots,
       actors: [
+        /* ============================================================
+           THEY ARE PEOPLE IN A ROOM, NOT SCENERY THAT TALKS.
+
+           Both of these were tags on a backdrop: they had a name
+           floating over them and they spoke when the script said so,
+           and there was nothing you could do about either of them.
+           An actor in this game gets a bracket round it, a label, a
+           hint and an onUse the moment it declares them -- the same
+           machinery every clerk and barman in the city already uses --
+           so the two people this whole story is about get it too. Walk
+           up, tap, and they answer; and what they answer depends on
+           what you have done to the room.
+
+           They also DO something while you are not talking to them.
+           She wipes the table down and stirs the pot; he swings his
+           legs and reads. Two idle behaviours out of a table that
+           already had ten in it.
+           ============================================================ */
         { id: 'wife', x: TABLE - 62, y: FY, face: 1, key: 'cutWife',
-          def: WIFE_DEF, job: 'wipe', profile: false,
+          def: WIFE_DEF, job: 'wipe', profile: false, mood: 'pleased',
+          label: 'CLEO', hint: 'TALK',
           tag: 'CLEO', tagCol: PIX.PAL.P },
         /* UP ON THE CUSHION. Stood on the floor at sixty-two per cent his
            head came out below the tablecloth, which is a boy hiding under
@@ -657,6 +702,8 @@ const CUT = (() => {
            reach his egg. */
         { id: 'boy', x: TABLE - 6, y: FY - 20, face: -1, key: 'cutBoy',
           def: BOY_DEF, scale: 0.66, still: true, profile: false,
+          job: st.pan ? 'eat' : 'read', mood: 'pleased',
+          label: 'TOBIAS', hint: 'TALK',
           tag: 'TOBIAS', tagCol: PIX.PAL.O },
       ],
       enterX: STOVE + 44, enterFace: 1,
@@ -1869,10 +1916,10 @@ const CUT = (() => {
             st.pan = true;
             st.plate = r.hits > 0;
             redress(S, M.TABLE - 20);
-            await S.say('YOU', r.hits >= 3
-              ? 'THREE OUT OF THREE. HE WILL NOT EVEN NOTICE.'
-              : (r.hits ? 'CLOSE ENOUGH. HE PUTS KETCHUP ON IT ANYWAY.'
-                : 'I HAVE BURNED ALL THREE. THERE IS TOAST.'), PIX.PAL.F);
+            await S.say('YOU', r.hits >= 2
+              ? 'BOTH OF THEM PERFECT. HE WILL NOT EVEN NOTICE.'
+              : (r.hits ? 'ONE GOOD ONE. HE CAN HAVE THAT ONE.'
+                : 'BROWN ROUND THE EDGE. HE PUTS KETCHUP ON IT ANYWAY.'), PIX.PAL.F);
           };
         }
         if (sp.id === 'sofa') {
@@ -1974,24 +2021,154 @@ const CUT = (() => {
 
       /* --- TEACH: TALK. The boy is a thing with a bracket round him too. */
       await S.pan(SCENE.def ? M.STOVE : M.STOVE, M.TABLE - 10, 1800);
+      /* ============================================================
+         THE TWO CONVERSATIONS THIS GAME IS ACTUALLY ABOUT.
+
+         Both of these used to be one line each, fired by the script,
+         with nothing you could say back. They are proper exchanges
+         now -- state-aware, with replies, with faces on them -- and
+         they can be had as many times as you like, because a boy who
+         has one thing to say is a sign, not a son.
+
+         Everything they say knows what you have done: whether the egg
+         is on the plate, whether the reader has turned up, whether
+         you have already told him off for not looking properly. And
+         both of them react -- his face goes happy when you feed him,
+         hers goes tired when you say you will be late, and yours
+         goes warm for about two seconds, which is the only place in
+         this entire game it is allowed to.
+         ============================================================ */
       const boy = S.actor('boy');
       if (boy) {
         boy.label = 'TOBIAS';
-        boy.hint = 'TALK';
+        boy.hint = () => (st.book === 'got' ? 'HE IS READY' : 'TALK');
         boy.onUse = async () => {
+          const b = S.actor('boy');
+          /* ---- after the book has turned up: he is just a happy kid ---- */
           if (st.book === 'got') {
-            await S.say('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.', PIX.PAL.O);
+            if (b) b.mood = 'happy';
+            const r0 = await S.ask('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.',
+              ['WE CAN GO THE WAY WITH THE BRIDGE.', 'WE ARE ALREADY LATE.',
+               'EAT YOUR EGG FIRST.']);
+            if (r0 === 0) {
+              S.face('happy');
+              await S.say('TOBIAS', 'YES! I WANT TO SEE IF THE BOAT IS THERE.',
+                PIX.PAL.O);
+              await S.say('YOU', 'THEN GET YOUR SHOES ON.', PIX.PAL.F);
+              S.face(null);
+            } else if (r0 === 1) {
+              await S.say('TOBIAS', 'WE ARE ALWAYS LATE. IT IS FINE.', PIX.PAL.O);
+              await S.say('CLEO', 'HE IS NOT WRONG.', PIX.PAL.P);
+            } else {
+              await S.say('TOBIAS', 'I HAVE EATEN MOST OF IT.', PIX.PAL.O);
+              await S.say('YOU', 'MOST IS NOT ALL.', PIX.PAL.F);
+            }
             return;
           }
+          /* ---- the reader is showing under the cushion ---- */
           if (st.book === 'found') {
-            await S.say('TOBIAS', 'IT WAS UNDER THE CUSHION. I LOOKED THERE.',
+            await S.say('TOBIAS', 'IT WAS UNDER THE CUSHION? I LOOKED THERE.',
               PIX.PAL.O);
+            await S.say('YOU', 'YOU LOOKED AT IT. GO AND PICK IT UP.', PIX.PAL.F);
             return;
           }
-          await S.say('TOBIAS', 'I CANNOT FIND MY READER.', PIX.PAL.O);
-          await S.say('TOBIAS', 'I HAVE LOOKED EVERYWHERE. TWICE.', PIX.PAL.O);
-          await S.say('YOU', 'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.', PIX.PAL.F);
-          st.asked = true;
+          /* ---- the first proper conversation in the game ---- */
+          if (!st.asked) {
+            await S.say('TOBIAS', 'I CANNOT FIND MY READER.', PIX.PAL.O);
+            await S.say('TOBIAS', 'I HAVE LOOKED EVERYWHERE. TWICE.', PIX.PAL.O);
+            const r1 = await S.ask('YOU', 'WHERE HAVE YOU LOOKED?',
+              ['EVERYWHERE IS NOT A PLACE. NAME THREE.',
+               'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.',
+               'TAKE MINE. IT HAS PICTURES OF GUNS IN IT.']);
+            if (r1 === 0) {
+              await S.say('TOBIAS', 'THE HALL. MY BAG. UNDER THE TABLE.', PIX.PAL.O);
+              await S.say('YOU', 'THEN IT IS SOMEWHERE YOU SIT AND DO NOT LOOK.',
+                PIX.PAL.F);
+            } else if (r1 === 2) {
+              if (b) b.mood = 'happy';
+              S.face('happy');
+              await S.say('TOBIAS', 'CAN I REALLY?', PIX.PAL.O);
+              await S.say('CLEO', 'HE CANNOT. FIND THE READER.', PIX.PAL.P);
+              S.face(null);
+            } else {
+              await S.say('TOBIAS', 'WHAT IS THE DIFFERENCE.', PIX.PAL.O);
+              await S.say('YOU', 'ABOUT THIRTY YEARS AND A BADGE.', PIX.PAL.F);
+            }
+            st.asked = true;
+            return;
+          }
+          /* ---- and afterwards he has more than one thing to say ---- */
+          const lines = st.pan
+            ? ['THE WHITE IS THE BEST BIT.', 'IS THERE MORE.',
+               'CAN I HAVE THE CRUSTS.']
+            : ['I AM HUNGRY.', 'MUM SAYS YOU BURN THEM.',
+               'ARE YOU MAKING EGGS OR NOT.'];
+          await S.say('TOBIAS', lines[(st._bt = (st._bt || 0) + 1) % lines.length],
+            PIX.PAL.O);
+        };
+      }
+
+      /* ---- AND CLEO, who had no interaction at all ---- */
+      const wife = S.actor('wife');
+      if (wife) {
+        wife.label = 'CLEO';
+        wife.hint = 'TALK';
+        wife.onUse = async () => {
+          const wf = S.actor('wife');
+          if (!st.pan) {
+            const r = await S.ask('CLEO', 'HE HAS TO BE OUT OF THAT DOOR IN TEN '
+              + 'MINUTES AND HE HAS NOT EATEN.',
+              ['I AM DOING THE EGGS NOW.', 'HE CAN HAVE BREAD.',
+               'HE COULD BE LATE ONCE.']);
+            if (r === 0) {
+              if (wf) wf.mood = 'pleased';
+              await S.say('CLEO', 'THANK YOU. TWO. THE PAN IS ALREADY ON.',
+                PIX.PAL.P);
+            } else if (r === 1) {
+              if (wf) wf.mood = 'hard';
+              await S.say('CLEO', 'HE HAD BREAD YESTERDAY.', PIX.PAL.P);
+              await S.say('YOU', 'ALL RIGHT. EGGS.', PIX.PAL.F);
+            } else {
+              if (wf) wf.mood = 'hard';
+              await S.say('CLEO', 'HE COULD. YOU COULD ALSO COOK HIM AN EGG.',
+                PIX.PAL.P);
+            }
+            return;
+          }
+          if (st.book !== 'got') {
+            const r = await S.ask('CLEO', 'HE HAS LOST THAT BOOK AGAIN.',
+              ['I WILL FIND IT.', 'HE SHOULD LOOK PROPERLY.',
+               'WHERE WAS HE SITTING LAST NIGHT.']);
+            if (r === 2) {
+              await S.say('CLEO', 'ON THE SOFA. WITH HIS FEET UP, AS USUAL.',
+                PIX.PAL.P);
+              await S.say('YOU', 'THAT IS A STATEMENT AND A LOCATION.', PIX.PAL.F);
+            } else if (r === 0) {
+              if (wf) wf.mood = 'pleased';
+              await S.say('CLEO', 'YOU ALWAYS DO. IT IS VERY IRRITATING.',
+                PIX.PAL.P);
+            } else {
+              await S.say('CLEO', 'HE IS EIGHT.', PIX.PAL.P);
+            }
+            return;
+          }
+          const r = await S.ask('CLEO', 'GO ON, THEN. BEFORE THE BOTH OF YOU '
+            + 'TALK YOURSELVES INTO ANOTHER HOUR.',
+            ['I WILL BE BACK BY SIX.', 'IT MIGHT BE LATE.',
+             'COME WITH US.']);
+          if (r === 0) {
+            if (wf) wf.mood = 'happy';
+            S.face('happy');
+            await S.say('CLEO', 'SIX. I WILL HOLD YOU TO IT.', PIX.PAL.P);
+            S.face(null);
+          } else if (r === 1) {
+            if (wf) wf.mood = 'sad';
+            await S.say('CLEO', 'IT IS ALWAYS MIGHT.', PIX.PAL.P);
+            await S.say('YOU', 'IT IS ALWAYS THE JOB.', PIX.PAL.F);
+          } else {
+            await S.say('CLEO', 'AND WHO WOULD BE HERE WHEN YOU BOTH GET BACK.',
+              PIX.PAL.P);
+          }
         };
       }
       SCENE.busy(false);

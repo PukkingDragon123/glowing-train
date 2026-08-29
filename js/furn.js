@@ -421,11 +421,20 @@ const FURN = (() => {
     const iw = w - t * 2 - 2, ih = h - t * 2 - 2;
     const ix = t + 1, iy = t + 1;
     if (o.kind === 'mirror') {
-      px(c, ix, iy, iw, ih, '#1b2a33');
+      /* A MIRROR IS NOT A HOLE. At five to fifteen per cent of white over a
+         near-black ground it came out as a black rectangle in a frame. What
+         a mirror on a wall actually shows is the room BEHIND you, which at
+         this size is a soft vertical ramp with the ceiling light at the top
+         of it -- bright enough to read as glass. */
+      px(c, ix, iy, iw, ih, '#3d5560');
       for (let y = 0; y < ih; y++) {
+        const t = y / Math.max(1, ih - 1);
         px(c, ix, iy + y, iw, 1,
-          'rgba(190,222,238,' + (0.05 + 0.10 * (1 - y / ih)).toFixed(3) + ')');
+          'rgba(206,232,244,' + (0.34 - t * 0.26).toFixed(3) + ')');
       }
+      /* the reflected ceiling, and the reflected far wall under it */
+      px(c, ix, iy, iw, Math.max(1, Math.round(ih * 0.22)), 'rgba(236,248,255,.26)');
+      px(c, ix, iy + Math.round(ih * 0.52), iw, 1, 'rgba(20,30,38,.30)');
       /* one raking streak, and the silvering going at a corner */
       for (let i = 0; i < ih; i++) {
         px(c, ix + Math.round(iw * 0.20) + i, iy + i, Math.max(2, iw >> 3), 1,
