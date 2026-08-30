@@ -500,6 +500,27 @@ const CUT = (() => {
       FURN.stand(c, 'plant', 336, FY - 30, 20, 30, { mat: 'copper', seed: 9 });
       FURN.stand(c, 'standlamp', 462, FY - 62, 18, 62, { mat: 'mustard' });
 
+      /* ============================================================
+         AND THE SMALL STUFF, which is what makes a room somebody's.
+
+         Furniture is what a house is fitted with. What says a CHILD
+         lives here is a pull-along duck left in the hall, blocks and
+         a ball on the floor by the sofa, a drawing pinned up crooked,
+         and the cat asleep on the hearth rug where the fire was.
+         ============================================================ */
+      FURN.stand(c, 'kettle', 140, FY - 39 - 22, 22, 22, { mat: 'steel' });
+      FURN.stand(c, 'fruit', 62, FY - 34 - 16, 26, 16, { mat: 'teal' });
+      FURN.stand(c, 'posy', 246, FY - 60 - 24, 12, 24, { mat: 'rose' });
+      FURN.hang(c, 'drawing', 302, 22, 24, 20, {});
+      FURN.stand(c, 'toys', 344, FY - 16, 30, 16, { mat: 'oxblood' });
+      /* on the rug in front of the sofa, not at 468 -- the hearth owns 466
+         to 552 and is painted after the dressing, so that is a cat behind a
+         fireplace */
+      FURN.stand(c, 'cat', 436, FY - 16, 28, 16, { mat: 'ebony' });
+      FURN.stand(c, 'slippers', 528, FY - 10, 22, 10, { mat: 'oxblood' });
+      FURN.stand(c, 'radio', 566, FY - 30 - 20, 28, 20, { mat: 'walnut', seed: 13 });
+      FURN.stand(c, 'duck', 596, FY - 18, 24, 18, { mat: 'mustard' });
+
       /* the rag rug in front of it */
       px(c, SOFA - 30, FY - 1, 96, 9, '#8a5a48');
       px(c, SOFA - 30, FY - 1, 96, 1, '#a4705a');

@@ -443,6 +443,7 @@ const PLACES = (() => {
         { p: 'crate', at: 0.06, w: 30, h: 22, o: { mat: 'pine' } },
         { p: 'rug', at: 0.52, w: 64, h: 12, dy: 4, o: { mat: 'petrol', trim: 'cream' } },
         { p: 'plant', at: 0.88, w: 20, h: 26, o: { mat: 'copper', dead: true } },
+        { p: 'slippers', at: 0.30, w: 22, h: 10, o: { mat: 'petrol' } },
       ]);
     };
 
@@ -717,6 +718,8 @@ const PLACES = (() => {
       FURN.hang(c, 'clock', 252, 14, 24, 44, { mat: 'walnut', hour: 15, min: 25 });
       FURN.hang(c, 'picture', 300, 18, 32, 26, { mat: 'brass', seed: seed + 6 });
       FURN.hang(c, 'sconce', 348, 22, 16, 20, { mat: 'mustard' });
+      FURN.stand(c, 'radio', 288, FY - 42 - 20, 30, 20, { mat: 'oak', seed: seed + 11 });
+      FURN.stand(c, 'posy', 330, FY - 42 - 24, 12, 24, { mat: 'mustard' });
 
       /* the door, with the bell over it */
       px(c, 10, 32, 44, 74, p.K);
@@ -806,6 +809,8 @@ const PLACES = (() => {
         { p: 'barrel', at: 0.36, w: 24, h: 28, o: { mat: 'oak' } },
         { p: 'rug', at: 0.60, w: 70, h: 13, dy: 4, o: { mat: 'oxblood', trim: 'mustard' } },
         { p: 'stool', at: 0.92, w: 18, h: 28, o: { mat: 'plum' } },
+        { p: 'duck', at: 0.24, w: 24, h: 18, o: { mat: 'mustard' } },
+        { p: 'toys', at: 0.78, w: 30, h: 16, o: { mat: 'petrol' } },
       ]);
     };
 
@@ -950,6 +955,7 @@ const PLACES = (() => {
         { p: 'stool', at: 0.08, w: 18, h: 28, o: { mat: 'oxblood' } },
         { p: 'rug', at: 0.40, w: 60, h: 12, dy: 4, o: { mat: 'teal', trim: 'cream' } },
         { p: 'crate', at: 0.86, w: 28, h: 20, o: { mat: 'pine' } },
+        { p: 'fruit', at: 0.22, w: 26, h: 16, dy: -2, o: { mat: 'teal' } },
       ]);
     };
 
@@ -996,6 +1002,7 @@ const PLACES = (() => {
       FURN.stand(c, 'plant', 428, FY - 30, 20, 30, { mat: 'copper', dead: true, seed: seed + 5 });
       FURN.hang(c, 'sconce', 300, 34, 16, 20, { mat: 'cream' });
       FURN.hang(c, 'sconce', 404, 34, 16, 20, { mat: 'cream' });
+      FURN.stand(c, 'radio', 246, 42, 30, 22, { mat: 'walnut', seed: seed + 9 });
 
       /* the door out, under a dead sign */
       px(c, 10, 34, 44, 72, p.K);
@@ -1100,6 +1107,7 @@ const PLACES = (() => {
         { p: 'stool', at: 0.56, w: 20, h: 32, o: { mat: 'oxblood' } },
         { p: 'stool', at: 0.70, w: 20, h: 32, o: { mat: 'oxblood' } },
         { p: 'barrel', at: 0.90, w: 24, h: 30, o: { mat: 'oak' } },
+        { p: 'cat', at: 0.16, w: 28, h: 16, o: { mat: 'ebony' } },
       ]);
     };
 

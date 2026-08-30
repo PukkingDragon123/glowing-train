@@ -1014,6 +1014,226 @@ const FURN = (() => {
     px(c, Math.round(w * 0.78), ty - 4, 8, 4, tp.lit);
   });
 
+
+  /* ============================================================
+     THE CUTE SHELF.
+
+     Everything above is furniture: things a room is fitted with.
+     What makes a room somebody's is the small stuff left lying
+     about in it, and a house with a child in it is the fullest room
+     in any game. These are all SMALL -- ten to thirty pixels -- and
+     they are all specific: not "a toy" but a wooden duck on a
+     string, not "a plant" but a jam jar with one flower in it.
+     ============================================================ */
+
+  /* a wooden pull-along duck, on a string */
+  piece('duck', (c, w, h, o) => {
+    const m = M(o.mat || 'mustard'), wd = M('pine');
+    const bh = Math.round(h * 0.56);
+    SPR.ellipse(c, Math.round(w * 0.46), h - bh, Math.round(w * 0.42), Math.round(bh * 0.52), m.ink);
+    SPR.ellipse(c, Math.round(w * 0.46), h - bh - 1, Math.round(w * 0.38), Math.round(bh * 0.46), m.mid);
+    SPR.ellipse(c, Math.round(w * 0.36), h - bh - 2, Math.round(w * 0.20), Math.round(bh * 0.24), m.lit);
+    PIX.disc(c, Math.round(w * 0.78), h - bh - Math.round(bh * 0.44), Math.round(w * 0.17), m.ink);
+    PIX.disc(c, Math.round(w * 0.78), h - bh - Math.round(bh * 0.44), Math.round(w * 0.14), m.mid);
+    px(c, Math.round(w * 0.88), h - bh - Math.round(bh * 0.44), 4, 2, M('copper').mid);
+    px(c, Math.round(w * 0.74), h - bh - Math.round(bh * 0.56), 2, 2, '#141210');
+    /* the board and the two wheels */
+    px(c, 1, h - 5, w - 2, 3, wd.ink);
+    px(c, 2, h - 5, w - 4, 2, wd.mid);
+    for (const wx of [Math.round(w * 0.22), Math.round(w * 0.70)]) {
+      PIX.disc(c, wx, h - 2, 3, wd.ink);
+      PIX.disc(c, wx, h - 2, 2, M('copper').mid);
+    }
+    for (let i = 0; i < Math.round(w * 0.5); i++) {
+      px(c, i, h - 6 - Math.round(Math.sin(i * 0.5) * 2), 1, 1, 'rgba(232,220,190,.6)');
+    }
+  });
+
+  /* a jam jar with one flower in it */
+  piece('posy', (c, w, h, o) => {
+    const g = 'rgba(206,236,246,';
+    const jh = Math.round(h * 0.44);
+    px(c, 1, h - jh, w - 2, jh, 'rgba(10,20,28,.5)');
+    px(c, 2, h - jh + 1, w - 4, jh - 2, g + '.30)');
+    px(c, 2, h - jh + 1, 2, jh - 2, g + '.52)');
+    px(c, 2, h - Math.round(jh * 0.62), w - 4, Math.round(jh * 0.5), 'rgba(140,196,214,.36)');
+    px(c, 1, h - jh, w - 2, 2, g + '.44)');
+    const st = M('bottle');
+    for (let i = 0; i < h - jh; i++) {
+      px(c, Math.round(w / 2) + Math.round(Math.sin(i * 0.2) * 1), h - jh - i, 1, 1, st.mid);
+    }
+    px(c, Math.round(w / 2) - 3, h - jh - Math.round(h * 0.3), 3, 1, st.lit);
+    const fm = M(o.mat || 'rose');
+    PIX.disc(c, Math.round(w / 2), 3, 3, fm.ink);
+    PIX.disc(c, Math.round(w / 2), 3, 2, fm.mid);
+    PIX.disc(c, Math.round(w / 2) - 1, 2, 1, fm.lit);
+    for (const dx of [-3, 3]) {
+      PIX.disc(c, Math.round(w / 2) + dx, 4, 2, fm.mid);
+    }
+    PIX.disc(c, Math.round(w / 2), 3, 1, M('mustard').lit);
+  });
+
+  /* a bowl of fruit */
+  piece('fruit', (c, w, h, o) => {
+    const b = M(o.mat || 'teal');
+    const fr = [M('oxblood'), M('mustard'), M('bottle'), M('rose')];
+    for (let i = 0; i < 4; i++) {
+      const fx = 4 + i * Math.round((w - 10) / 3.4), fy = h - Math.round(h * 0.52);
+      const m = fr[i % fr.length], r = Math.max(2, Math.round(w * 0.11));
+      PIX.disc(c, fx, fy - (i % 2) * 2, r + 1, m.ink);
+      PIX.disc(c, fx, fy - (i % 2) * 2, r, m.mid);
+      PIX.disc(c, fx - 1, fy - 1 - (i % 2) * 2, Math.max(1, r - 2), m.lit);
+    }
+    const bh2 = Math.round(h * 0.48);
+    for (let y = 0; y < bh2; y++) {
+      const t = y / Math.max(1, bh2 - 1);
+      const ww = Math.round(w * (0.98 - t * 0.34));
+      const x0 = Math.round((w - ww) / 2);
+      px(c, x0 - 1, h - bh2 + y, ww + 2, 1, b.ink);
+      px(c, x0, h - bh2 + y, ww, 1, y < 2 ? b.lit : b.mid);
+      px(c, x0, h - bh2 + y, Math.max(1, Math.round(ww * 0.2)), 1, b.lit);
+    }
+  });
+
+  /* two slippers, side by side, one kicked over */
+  piece('slippers', (c, w, h, o) => {
+    const m = M(o.mat || 'oxblood');
+    for (let i = 0; i < 2; i++) {
+      const sx = i * Math.round(w * 0.52), tilt = i;
+      const sw = Math.round(w * 0.46);
+      SPR.ellipse(c, sx + Math.round(sw / 2), h - 3 + tilt, Math.round(sw / 2), 3, m.ink);
+      SPR.ellipse(c, sx + Math.round(sw / 2), h - 4 + tilt, Math.round(sw / 2) - 1, 2, m.mid);
+      px(c, sx + 1, h - 7 + tilt, Math.round(sw * 0.6), 4, m.ink);
+      px(c, sx + 2, h - 6 + tilt, Math.round(sw * 0.6) - 2, 3, m.mid);
+      px(c, sx + 2, h - 6 + tilt, Math.round(sw * 0.5), 1, m.lit);
+    }
+  });
+
+  /* a child's drawing, pinned up crooked */
+  piece('drawing', (c, w, h, o) => {
+    px(c, 1, 1, w - 2, h - 2, 'rgba(0,0,0,.34)');
+    px(c, 0, 0, w - 2, h - 2, '#f0e6c8');
+    px(c, 0, 0, w - 2, 1, '#fbf7ec');
+    /* three frogs and a sun, in wax crayon */
+    const cols = ['#5fc97d', '#d94a52', '#7fd7ff'];
+    for (let i = 0; i < 3; i++) {
+      const fx = 3 + i * Math.round((w - 8) / 3), fy = h - 6;
+      PIX.disc(c, fx + 2, fy - 5, 2, cols[i]);
+      px(c, fx + 1, fy - 3, 3, 3, cols[i]);
+      px(c, fx, fy, 1, 2, cols[i]);
+      px(c, fx + 4, fy, 1, 2, cols[i]);
+    }
+    PIX.disc(c, w - 6, 4, 2, '#ffd75e');
+    for (let i = 0; i < 4; i++) {
+      const a = i / 4 * Math.PI * 2;
+      px(c, w - 6 + Math.round(Math.cos(a) * 4), 4 + Math.round(Math.sin(a) * 4), 1, 1, '#ffd75e');
+    }
+    px(c, 1, 2, w - 4, 1, 'rgba(120,100,70,.20)');
+    px(c, Math.round(w / 2) - 2, -1, 4, 3, '#b8232f');   /* the pin */
+    px(c, Math.round(w / 2) - 1, -1, 2, 2, '#e04a54');
+  });
+
+  /* a cat, asleep in a curl */
+  piece('cat', (c, w, h, o) => {
+    const m = M(o.mat || 'ebony');
+    SPR.ellipse(c, Math.round(w / 2), h - 3, Math.round(w * 0.46), 4, 'rgba(6,8,12,.40)');
+    SPR.ellipse(c, Math.round(w / 2), h - Math.round(h * 0.42), Math.round(w * 0.44),
+      Math.round(h * 0.40), m.ink);
+    SPR.ellipse(c, Math.round(w / 2), h - Math.round(h * 0.44), Math.round(w * 0.40),
+      Math.round(h * 0.36), m.mid);
+    SPR.ellipse(c, Math.round(w * 0.40), h - Math.round(h * 0.54), Math.round(w * 0.24),
+      Math.round(h * 0.18), m.lit);
+    /* the head, tucked in, and two ears */
+    const hx = Math.round(w * 0.74), hy = h - Math.round(h * 0.46);
+    PIX.disc(c, hx, hy, Math.round(w * 0.17) + 1, m.ink);
+    PIX.disc(c, hx, hy, Math.round(w * 0.17), m.mid);
+    px(c, hx - 4, hy - Math.round(w * 0.17) - 1, 3, 3, m.ink);
+    px(c, hx + 2, hy - Math.round(w * 0.17) - 1, 3, 3, m.ink);
+    px(c, hx - 3, hy, 2, 1, '#8fe6c0');                  /* one eye, half open */
+    px(c, hx + 2, hy, 2, 1, '#8fe6c0');
+    /* the tail, curled round */
+    for (let i = 0; i < Math.round(w * 0.5); i++) {
+      const a = i / (w * 0.5) * Math.PI * 1.1;
+      px(c, Math.round(w * 0.20 + Math.cos(a + 2.2) * w * 0.24),
+        h - 4 + Math.round(Math.sin(a + 2.2) * 3), 2, 2, m.mid);
+    }
+  });
+
+  /* a wireless set, with a dial and a cloth grille */
+  piece('radio', (c, w, h, o) => {
+    const wd = M(o.mat || 'walnut'), br = M('brass');
+    px(c, 0, 2, w, h - 2, wd.ink);
+    px(c, 1, 3, w - 2, h - 4, wd.mid);
+    grain(c, 2, 4, w - 4, h - 6, wd.dk, wd.lit, (o.seed || 1) * 5);
+    for (let i = 0; i < 4; i++) px(c, 2 + i, 2 - Math.min(2, i), w - 4 - i * 2, 1, wd.lit);
+    /* the grille */
+    const gx = 3, gw = Math.round(w * 0.52);
+    px(c, gx, 6, gw, h - 11, '#2a1f14');
+    for (let y = 7; y < h - 6; y += 2) px(c, gx + 1, y, gw - 2, 1, '#4a3a26');
+    px(c, gx, 6, gw, 1, wd.lit);
+    /* the tuning dial, lit */
+    const dx = gx + gw + 3;
+    px(c, dx, 7, w - dx - 3, 8, '#141210');
+    px(c, dx + 1, 8, w - dx - 5, 6, '#e8dcc0');
+    for (let i = 0; i < 5; i++) px(c, dx + 2 + i * 3, 9, 1, 4, '#7a6a4a');
+    px(c, dx + 4, 8, 1, 6, '#d94a52');
+    PIX.disc(c, dx + Math.round((w - dx) / 2), h - 8, 3, br.ink);
+    PIX.disc(c, dx + Math.round((w - dx) / 2), h - 8, 2, br.mid);
+  });
+
+  /* a kettle, steaming */
+  piece('kettle', (c, w, h, o) => {
+    const st = M(o.mat || 'steel');
+    const kb = h - 2;
+    SPR.ellipse(c, Math.round(w / 2), kb, Math.round(w * 0.40), 3, st.ink);
+    for (let y = kb - Math.round(h * 0.52); y <= kb; y++) {
+      const t = (y - (kb - h * 0.52)) / (h * 0.52);
+      const hw2 = Math.round(w * (0.22 + Math.sin(t * 2.2) * 0.16));
+      px(c, Math.round(w / 2) - hw2 - 1, y, hw2 * 2 + 3, 1, st.ink);
+      px(c, Math.round(w / 2) - hw2, y, hw2 * 2 + 1, 1, t < 0.5 ? st.mid : st.dk);
+      px(c, Math.round(w / 2) - hw2, y, 2, 1, st.lit);
+    }
+    px(c, Math.round(w / 2) - 4, kb - Math.round(h * 0.56), 9, 3, st.ink);
+    px(c, Math.round(w / 2) - 3, kb - Math.round(h * 0.56), 7, 2, st.lit);
+    px(c, Math.round(w / 2) - 1, kb - Math.round(h * 0.64), 3, 3, st.ink);
+    px(c, Math.round(w / 2) - 1, kb - Math.round(h * 0.64), 2, 2, st.mid);
+    /* the spout, rising, and the steam off it */
+    for (let i = 0; i < Math.round(w * 0.28); i++) {
+      px(c, Math.round(w * 0.72) + i, kb - Math.round(h * 0.34) - Math.round(i * 0.8),
+        3, 4, st.ink);
+      px(c, Math.round(w * 0.72) + i, kb - Math.round(h * 0.34) - Math.round(i * 0.8) + 1,
+        2, 2, st.lit);
+    }
+    for (let i = 0; i < 5; i++) {
+      px(c, Math.round(w * 0.94) - i + (i % 2) * 2, Math.max(0, kb - Math.round(h * 0.56) - i * 3),
+        2, 2, 'rgba(240,244,248,' + (0.30 - i * 0.05).toFixed(2) + ')');
+    }
+    /* the strap handle */
+    for (let i = 0; i < 8; i++) {
+      const a = Math.PI * (0.12 + i / 7 * 0.76);
+      px(c, Math.round(w / 2) - Math.round(Math.cos(a) * w * 0.24),
+        kb - Math.round(h * 0.56) - Math.round(Math.sin(a) * h * 0.22), 2, 2, st.dk);
+    }
+  });
+
+  /* a ball, and a pair of building blocks */
+  piece('toys', (c, w, h, o) => {
+    const b = M(o.mat || 'oxblood');
+    PIX.disc(c, Math.round(w * 0.26), h - Math.round(h * 0.42), Math.round(h * 0.40) + 1, b.ink);
+    PIX.disc(c, Math.round(w * 0.26), h - Math.round(h * 0.42), Math.round(h * 0.40), b.mid);
+    PIX.disc(c, Math.round(w * 0.20), h - Math.round(h * 0.54), Math.round(h * 0.16), b.lit);
+    px(c, Math.round(w * 0.10), h - Math.round(h * 0.44), Math.round(h * 0.66), 2, M('cream').mid);
+    const cols = [M('mustard'), M('petrol'), M('bottle')];
+    for (let i = 0; i < 3; i++) {
+      const bx = Math.round(w * 0.56) + (i % 2) * 9, by = h - 6 - Math.floor(i / 2) * 8;
+      const m = cols[i];
+      px(c, bx, by, 9, 7, m.ink);
+      px(c, bx + 1, by + 1, 7, 5, m.mid);
+      px(c, bx + 1, by + 1, 7, 1, m.lit);
+      px(c, bx + 3, by + 2, 3, 3, m.dk);
+    }
+  });
+
   /* ============================================================
      THE PUBLIC FACE
      ============================================================ */
