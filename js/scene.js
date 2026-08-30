@@ -92,10 +92,10 @@ const SCENE = (() => {
   }
 
   /* { cv, w, h } — the picture, and the room-space box it goes in */
-  function rig(d, frame, face, back, expr, side, arm) {
+  function rig(d, frame, face, back, expr, arm) {
     const down = lodFor();
-    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : '') + (side ? ':s' : ''),
-      d.def || d, frame, face, down, back, expr, side, arm);
+    const cv = SPR.rigLOD((d.key || SPR.defKey(d)) + (back ? ':b' : ''),
+      d.def || d, frame, face, down, back, expr, arm);
     return { cv, w: (cv.width * down) / FOOT, h: (cv.height * down) / FOOT };
   }
 
@@ -2132,10 +2132,23 @@ const SCENE = (() => {
     /* an actor mid-line wears the talking face; the rest of the time he
        wears whatever his mood does when it is left alone */
     const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
-    /* HE TURNS TO YOU WHEN YOU ARE CLOSE, and stands in profile the rest
-       of the time — which is what somebody minding their own business at a
-       counter looks like from across a room. */
-    const aside = !a.back && !close && a.profile !== false;
+    /* ============================================================
+       NO PROFILE. THE SIDE VIEW IS GONE.
+
+       An actor used to turn to you when you came close and stand
+       edge-on the rest of the time, and the walking rig went into
+       profile whenever it moved sideways. It was rebuilt twice --
+       once as its own drawing rather than the front bust squeezed
+       narrow, then again with a lit panel, a slimmer depth and an
+       arm with a line round it -- and it never once looked as good
+       as the front view of the same frog. A head-on cartoon with a
+       hat and two eyes reads instantly; the same animal edge-on is
+       a wedge with a coat behind it.
+
+       So there is no side view. Everybody faces the lens, and the
+       facing mirrors, which is what this game did for its first
+       twenty waves and what most 2D cartoons have always done.
+       ============================================================ */
     const fy = a.y === undefined ? floorAt(a.z) : a.y;
     const id = a.still ? { rise: 0, lean: 0, roll: 0 } : idleOf(T, Math.round(a.x));
     const sc = scaleAt(a.z);
@@ -2171,7 +2184,7 @@ const SCENE = (() => {
     const atf = (a.turn === undefined ? face : (a.turn >= 0 ? 1 : -1));
     const atw = Math.max(0.24, Math.abs(a.turn === undefined ? 1 : a.turn));
     const r = rig(a, a.frame || 0, a.turn === undefined ? face : atf,
-      a.back, ex, aside, arm);
+      a.back, ex, arm);
     /* AND HOW BIG HE IS. Depth already scales everybody, which is the right
        rule for a room and the wrong one for a CHILD: a boy standing next to
        his father is smaller without being further away. */
@@ -2275,7 +2288,6 @@ const SCENE = (() => {
        what he is doing most of the time he is moving at all — you see him
        in profile, because that is what walking sideways looks like. */
     const back = me.faceZ < 0;
-    const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
     /* a cutscene can pin his face and put his arm in a pose — reaching for
        the ashtray, handing the iron over the counter */
     /* the drawing flips at the narrowest point of the turn, not at the
@@ -2283,7 +2295,7 @@ const SCENE = (() => {
     const tf = (me.turn === undefined ? me.face : me.turn) >= 0 ? 1 : -1;
     const tw = Math.max(0.24, Math.abs(me.turn === undefined ? 1 : me.turn));
     const r = rig(SCENE.meDef(), me.frame, tf, back,
-      me.expr || myFace(T), side, me.arm);
+      me.expr || myFace(T), me.arm);
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
@@ -2549,9 +2561,8 @@ const SCENE = (() => {
        in it — the cigarette, the tray, the passport */
     meHand() {
       const back = me.faceZ < 0;
-      const side = !back && Math.abs(me.v) > 10 && !me.faceZ;
       const r = rig(SCENE.meDef(), me.frame, me.face, back,
-        me.expr || 'neutral', side, me.arm);
+        me.expr || 'neutral', me.arm);
       const h = r.cv.hand;
       if (!h) return null;
       const sc = scaleAt(me.z), w = r.w * sc, hh = r.h * sc;

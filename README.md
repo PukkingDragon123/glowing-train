@@ -1100,19 +1100,21 @@ still breathing. You get one decision:
 
 ![His chair](docs/screen-bad.png)
 
-## He turns sideways properly now
+## There is no side view
 
-![Front, side, walking, back](docs/screen-profile.png)
+Everybody faces the lens, and the facing mirrors.
 
-The side view was a wedge with a long horizontal bill on it and a gold ring
-for an eye: a duck with a bullseye. It is built from what actually makes a
-frog read side on, in order of how much each matters — the **eye bulge**
-standing proud of the skull, which is the single most recognisable thing
-about the animal; a **mouth line** running most of the head's length with a
-slight lift at the back; a short **rounded** snout, not a beak; and a full
-throat sloping back to a neck that reaches the collar. Plus a collar that
-reads edge-on instead of as a row of white teeth, and a hat with a crown
-behind its brim.
+The profile was rebuilt twice — once as its own drawing rather than the front
+bust squeezed narrow, then again with a lit panel, a slimmer depth and an arm
+with a line round it — and neither version ever looked as good as the front
+view of the same frog. A head-on cartoon with a hat and two eyes reads
+instantly; the same animal edge-on is a wedge with a coat behind it. So the
+side rig, the side bust and the side head are **deleted**, not disabled: the
+walking rig, the actors who turn to you when you come close, and the rig LOD
+cache all know about front and back and nothing else.
+
+Which is what this game did for its first twenty waves, and what most 2D
+cartoons have always done.
 
 ### And he does not smile
 
@@ -1125,7 +1127,7 @@ seconds: the dog leans on him, an errand pays off, a story comes apart.
 
 ## Cartoon, deliberately
 
-![Front and side, eight frames each](docs/screen-rig.png)
+![Eight frames, front and back](docs/screen-rig.png)
 
 The measured pass in the last section is right about people and wrong about
 this game. It is a cartoon about frogs in hats, so the original cartoon
@@ -1145,9 +1147,9 @@ The reason those numbers did not work the *first* time they were here is not
 the numbers. Back then a leg was one slab from hip to shoe with a crease
 painted across it, and an arm was a sliver of rect down the side of a coat.
 Everything the two rebuild waves earned stays: tapered bones, elbows, knees, a
-sole that plants while the hips rise over it, a side torso that is its own
-drawing, hands with a thumb and four fingers, a head that arrives a beat late,
-a turn that turns. **Chunky cartoon with real joints in it.**
+sole that plants while the hips rise over it, hands with a thumb and four
+fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
+with real joints in it.**
 
 ### A line round him
 
@@ -1160,15 +1162,10 @@ the point of a bold outline is that what is inside it has to survive being
 framed in near-black. Everything else still gets one, which is right for a
 mugshot.
 
-Three things about the profile went with it. The side torso came down from
-fifty-eight per cent of the front width to **forty-two** — at fifty-eight it
-was wider than his own skull and read as a hunchback in a bin bag. The panel
-takes eight per cent of warm light, because the side is the *lit* side and was
-somehow coming out darker than the front of the same coat. And the near arm
-stopped being lifted seventeen per cent toward white, which made it a mid-grey
-tube stuck on a near-black slab; a cartoon does the opposite — the arm is the
-same cloth as the coat and a bold dark line separates it, so the bones go down
-twice, once three pixels fatter in ink.
+The near arm stopped being lifted seventeen per cent toward white, which made
+it a mid-grey tube stuck on a near-black slab; a cartoon does the opposite —
+the arm is the same cloth as the coat and a bold dark line separates it, so the
+bones go down twice, once three pixels fatter in ink.
 
 His skin was a step and a half off the bottle-green wall he stands against and
 the default coat was two steps off pure ink. Cartoon green, cartoon cloth: the
@@ -1317,7 +1314,7 @@ thirty-four pixels wide, drawn through a **scale of one half**. Every crease
 in it landed on half a pixel and went away.
 
 So it is authored at whatever width it is asked for, in **integer pixels**,
-and cached — the same rule the side-on torso already followed, for the same
+and cached — the same rule the first-person hand already followed, for the same
 reason. A resampled crease is not a crease.
 
 It took three poses to find one that reads. Four fingers with creases and
@@ -1517,8 +1514,8 @@ js/story.js       THE CASE: chapters, the board, dialogue, errands, endings
 js/data.js        the crew, the guns, the belt, the questions, the tuning
 js/meta.js        what survives a case: stats, learned tells, her trust
 js/sprites.js     THE ONE FROG MODEL, the iron rig, mugshots, splats,
-                  plates, the side-on torso and SPR.povFist -- both
-                  authored at the size they are drawn at, in whole pixels
+                  plates and SPR.povFist -- authored at the size it is
+                  drawn at, in whole pixels
 js/engine.js      pure rules: the duel, his brain, the loot, the heat
 js/case.js        the identification game: suspects, evidence, questions
 js/duel.js        the drawn table: expressions, grips, the steady check
