@@ -5186,33 +5186,62 @@ SPR.walkPhase = function (frame) {
    then puts a rim light down the side the lamps are on — which is
    the whole difference between a drawing and a smudge.
    ============================================================ */
-SPR.inkEdge = function (cv, rim) {
+/* ============================================================
+   THE LINE ROUND HIM.
+
+   One pixel, four-connected, is a technical outline: it separates a
+   sprite from its background and it does nothing else. What makes a
+   drawing read as a CARTOON at this size is a line thick enough to
+   be a line -- two pixels, all eight ways round, so it closes over
+   the diagonals instead of leaving a staircase of single pixels down
+   every sloping edge.
+
+   And the rim goes up with it. A pixel with nothing above-left of it
+   is catching the lamp; at plus forty-six it was a suggestion, and
+   the whole point of a bold outline is that the thing inside it has
+   to be bright enough to survive being framed in near-black.
+
+   Takes the thickness in passes. Everything that is not the walking
+   rig still asks for one, because a one-pixel line is right for a
+   mugshot at portrait size.
+   ============================================================ */
+SPR.inkEdge = function (cv, rim, t) {
   const c = cv.getContext('2d');
   const W = cv.width, H = cv.height;
-  const im = c.getImageData(0, 0, W, H);
-  const d = im.data;
-  const out = new Uint8ClampedArray(d);
-  const A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      if (d[i + 3] > 24) {
-        /* a solid pixel with nothing above-left of it catches the lamp */
-        if (rim && A(x - 1, y) < 24 && A(x, y - 1) < 24) {
-          out[i] = Math.min(255, d[i] + 46);
-          out[i + 1] = Math.min(255, d[i + 1] + 46);
-          out[i + 2] = Math.min(255, d[i + 2] + 46);
+  const passes = Math.max(1, t || 1);
+  for (let pass = 0; pass < passes; pass++) {
+    const im = c.getImageData(0, 0, W, H);
+    const d = im.data;
+    const out = new Uint8ClampedArray(d);
+    const A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
+    const first = pass === 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (d[i + 3] > 24) {
+          /* a solid pixel with nothing above-left of it catches the lamp --
+             and only on the first pass, or the rim walks outward with the
+             outline and ends up as a halo */
+          if (rim && first && A(x - 1, y) < 24 && A(x, y - 1) < 24) {
+            out[i] = Math.min(255, d[i] + 62);
+            out[i + 1] = Math.min(255, d[i + 1] + 62);
+            out[i + 2] = Math.min(255, d[i + 2] + 62);
+          }
+          continue;
         }
-        continue;
-      }
-      /* a hole with something next to it becomes the outline */
-      if (A(x - 1, y) > 128 || A(x + 1, y) > 128 || A(x, y - 1) > 128 || A(x, y + 1) > 128) {
-        out[i] = 12; out[i + 1] = 10; out[i + 2] = 24; out[i + 3] = 255;
+        /* a hole with something next to it becomes the outline. Eight ways,
+           so a sloping edge gets a line rather than a staircase. */
+        if (A(x - 1, y) > 128 || A(x + 1, y) > 128
+          || A(x, y - 1) > 128 || A(x, y + 1) > 128
+          || A(x - 1, y - 1) > 128 || A(x + 1, y - 1) > 128
+          || A(x - 1, y + 1) > 128 || A(x + 1, y + 1) > 128) {
+          out[i] = 12; out[i + 1] = 10; out[i + 2] = 24; out[i + 3] = 255;
+        }
       }
     }
+    im.data.set(out);
+    c.putImageData(im, 0, 0);
   }
-  im.data.set(out);
-  c.putImageData(im, 0, 0);
   return cv;
 };
 
@@ -5314,15 +5343,46 @@ SPR.frogWhole = function (key, def, opts) {
        pass built stays exactly where it is. Cartoony is a shape
        language, not an excuse for a solid block.
        ============================================================ */
-    const HEAD_H = 35, NECK = 2, TORSO = 44, LEGS = 48, RISE = 5;
+    /* ============================================================
+       THE ORIGINAL CARTOON NUMBERS, ASKED FOR BY NAME.
+
+       These are the pre-measurement proportions, restored exactly:
+       the head scaled a shade PAST its own canvas, a bust nearly as
+       wide as the whole sprite, an eight-pixel neck overlap so the
+       head sits down into the collar, and short legs.
+
+         head    47     0.35 of the figure -- a third of him, hat in
+         neck     8     how far the head sinks into the shoulders
+         torso   44
+         legs    38     short, which is the single loudest thing a
+                        cartoon does to a body
+         ----------
+                134     and the drawn figure is about half as wide as
+                        it is tall, which measures 0.51
+
+       Which is a mascot by the numbers, and that is the point: this
+       is a cartoon about frogs in hats. The reason it did not work
+       the FIRST time these numbers were here is not the numbers -- it
+       is that back then a leg was a single slab from hip to shoe with
+       a crease painted across it and an arm was a sliver of rect down
+       the side of a coat. Everything the two rebuild waves earned
+       stays: tapered bones, elbows, knees, a sole that plants, a side
+       torso that is its own drawing, hands with a thumb and four
+       fingers. Chunky cartoon with real joints in it, rather than a
+       barrel with a beach ball on top.
+       ============================================================ */
+    const HEAD_H = 47, NECK = 8, TORSO = 44, LEGS = 38, RISE = 5;
     const hh = HEAD_H;
-    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height) * 0.78));
+    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height)));
     const bh = TORSO + NECK;
-    const bw = Math.round(body.width * (bh / body.height) * 0.84);
+    const bw = Math.round(body.width * (bh / body.height));
     const W = Math.max(bw, hw) + 12;
     /* two spare rows at the top: the torso rises off planted feet rather
-       than the whole frog sliding up and down together */
-    const H = hh + bh - NECK + LEGS + RISE;
+       than the whole frog sliding up and down together -- plus THREE more,
+       because a two-pixel outline round a head that starts on row zero gets
+       its top two rows cut off by the edge of the canvas */
+    const BRIM = 3;
+    const H = hh + bh - NECK + LEGS + RISE + BRIM;
     /* everything that used to be a hard pixel count on a 65-wide figure is
        now a fraction of the shoulders, so one number moves the whole rig */
     const SLIM = bw / 100;
@@ -5372,7 +5432,7 @@ SPR.frogWhole = function (key, def, opts) {
     const headBob = bob + U.clamp(
       Math.round(((RISE - bobU2 * RISE) - bob) * 0.6), -1, 1);
     const sway = side ? 0 : Math.round(SPR.walkPhase(frame) * 2);
-    const bodyTop = hh - NECK + bob;
+    const bodyTop = BRIM + hh - NECK + bob;
     const cx = Math.round(W / 2);
     const groundY = H - 6;                            // where the soles rest
 
@@ -5501,7 +5561,11 @@ SPR.frogWhole = function (key, def, opts) {
        is tall, and with the cartoon bust back it read as a hunchback: what
        you see from the side is his DEPTH, and a man is not as deep as he
        is wide */
-    const sbw = side ? Math.round(bw * 0.58) : bw;
+    /* At 0.58 of the front width that was fifty-eight pixels against a
+       forty-eight pixel head: wider than his own skull, and the profile
+       read as a hunchback in a bin bag. A cartoon seen from the side is
+       barely deeper than its own face. */
+    const sbw = side ? Math.round(bw * 0.42) : bw;
     const shw = side ? Math.round(hw * 0.94) : hw;
     /* FITTED, NOT SQUASHED. drawImage with smoothing off at 0.4 scale threw
        away three columns in five: the pinstripes came out as dotted lines
@@ -5541,7 +5605,7 @@ SPR.frogWhole = function (key, def, opts) {
 
     const headFit = SPR.fit('head_' + key + ':' + ex + (side ? 's' : '') + (back ? 'b' : ''),
       head, shw, hh);
-    c.drawImage(headFit, Math.round((W - shw) / 2) - sway, headBob);
+    c.drawImage(headFit, Math.round((W - shw) / 2) - sway, BRIM + headBob);
 
     /* ------------------------------------------------------------
        WALKING AWAY FROM YOU.
@@ -5657,7 +5721,18 @@ SPR.frogWhole = function (key, def, opts) {
              they join — a knuckle that overhangs its own limb is a balloon. */
           /* seven per cent of white on a coat this dark is nothing: the
              near arm has to come off the coat or the profile is a slab */
-          const tone = near ? 'rgba(255,255,255,.17)' : 'rgba(0,0,0,.46)';
+          /* AN ARM IN THE SAME COAT, WITH A LINE ROUND IT.
+
+             Lifted seventeen per cent toward white over a coat that is
+             already a dark blue-grey, the near arm came out a mid grey tube
+             stuck on a near-black slab -- lighter than the thing it is part
+             of, which is how you get a limb that reads as a separate
+             object. A cartoon does the opposite: the arm is the SAME cloth
+             as the coat and what separates it is a bold dark line. So the
+             bones go down twice, once three pixels fatter in ink. */
+          const tone = near ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.46)';
+          bone(sx, shY, ex, elY, AW + 3, AF + 3, P.K, 0, null);
+          bone(ex, elY, hx2, haY - 4, AF + 3, Math.max(3, AF - 2) + 3, P.K, 1.0, null);
           bone(sx, shY, ex, elY, AW, AF, col, 0, tone);
           bone(ex, elY, hx2, haY - 4, AF, Math.max(3, AF - 2), col, 1.0, tone);
           const er = Math.max(3, Math.round(AF * 0.55));
@@ -5725,8 +5800,9 @@ SPR.frogWhole = function (key, def, opts) {
       cv.hand = { x: wxx, y: wyy + 3 };
     }
 
-    /* and one hard line all the way round him, with a rim light on it */
-    SPR.inkEdge(cv, true);
+    /* and one hard line all the way round him, with a rim light on it.
+       TWO pixels, because this is a cartoon. */
+    SPR.inkEdge(cv, true, 2);
     return cv;
   });
 };
@@ -5920,6 +5996,11 @@ SPR.profileBust = function (key, def, w, h) {
     }
     /* the weave, so a coat this size is not a flat colour */
     ART.dither(c, 0, 0, w, h, 'rgba(0,0,0,.12)', 0.10, 17);
+    /* AND THE SIDE IS THE LIT SIDE. Painted in the coat's own colour, the
+       profile came out darker than the front view of the same coat, because
+       the front has a shirt and a tie and a watch chain breaking it up and
+       this has a lapel. Eight per cent, once, over the whole panel. */
+    ART.px(c, 0, 0, w, h, 'rgba(255,246,226,.08)');
 
     /* ---- 3. THE NECK AND THE COLLAR ---- */
     const nTop = Math.round(h * 0.02), nBot = Math.round(h * 0.13);

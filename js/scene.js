@@ -521,7 +521,13 @@ const SCENE = (() => {
       const fy = floorAt(o.z), dy = fy - def.floorY;
       const top = o.top === undefined ? fy - 44 : o.top + dy;
       const bot = o.bot === undefined ? fy + 6 : o.bot + dy;
-      if (x > o.x - w / 2 - 4 && x < o.x + w / 2 + 4 && y > top - 8 && y < bot + 4) {
+      /* GENEROUS. Four pixels of slop round a hotspot is right for a finger
+         on a phone and mean for a mouse on a desk: a click two pixels off
+         the kettle walked him to the floor next to it and did nothing,
+         which reads as the game ignoring you. Ten either side, twelve
+         above -- and the smallest box still wins, so a mug on a desk is
+         still pickable over the desk it is on. */
+      if (x > o.x - w / 2 - 10 && x < o.x + w / 2 + 10 && y > top - 12 && y < bot + 8) {
         const area = w * Math.max(1, bot - top), dd = Math.abs(x - o.x);
         if (area < bestA - 1 || (Math.abs(area - bestA) <= 1 && dd < bd)) {
           bestA = area; bd = dd; best = o;
@@ -1746,6 +1752,60 @@ const SCENE = (() => {
       }
     }
 
+    /* ============================================================
+       WHAT IS CLICKABLE, ALWAYS.
+
+       Every hotspot and every person in this game has had a bracket
+       round it on hover since the tools went in, and click-to-walk-
+       and-use has worked the whole time. The problem was never the
+       machinery: it was that a room full of things you can click
+       looked exactly like a room full of things you cannot, until
+       your pointer was already on top of one. On a phone you sweep
+       a thumb around and find out. With a mouse you look, and if
+       nothing looks clickable you decide nothing is.
+
+       So everything interactive now carries a small standing mark --
+       two ticks and a dot, dim, on a slow pulse seeded off its own
+       position so a wall of them never blinks in time. Hover still
+       puts the full bracket on, and a click still sends him. It just
+       tells you the offer is there first.
+       ============================================================ */
+    if (!busy) {
+      for (const o of targets()) {
+        if (o === hover || o.gone) continue;
+        if (!o.onUse && !o.onLook) continue;
+        if (o.egg && !glassOut()) continue;        /* secrets stay secret */
+        const fy2 = floorAt(o.z), dy2 = fy2 - def.floorY;
+        const ty = (o.top === undefined ? fy2 - 44 : o.top + dy2) - 3;
+        const mx2 = Math.round(o.x);
+        /* a DIAMOND, not a dot: one pale pixel on a busy wall is a piece of
+           grit, and the point of this is that you can see it without
+           looking for it. Amber over a person, ice over a thing. */
+        const ph2 = 0.50 + 0.34 * Math.abs(Math.sin(T * 1.9 + (Math.abs(mx2) % 19) * 0.4));
+        /* amber over a PERSON, ice over a thing -- and a person is an
+           actor, which is the thing that carries a def; spots have labels
+           too, so labels do not tell them apart */
+        const hot = !!o.def;
+        const c1 = hot ? '#ffd75e' : '#7fd7ff';
+        const c2 = hot ? '#fff3c4' : '#d6f2ff';
+        const bob2 = Math.round(Math.sin(T * 1.9 + (Math.abs(mx2) % 11)) * 1);
+        const yy = ty + bob2;
+        c.globalAlpha = ph2;
+        for (let i = 0; i < 4; i++) {                 /* the ink diamond */
+          const wd = 7 - Math.abs(i - 1) * 2;
+          ART.px(c, mx2 - (wd >> 1), yy - 2 + i, wd, 1, 'rgba(6,8,14,.72)');
+        }
+        ART.px(c, mx2 - 2, yy - 1, 5, 1, c1);
+        ART.px(c, mx2 - 1, yy - 2, 3, 1, c1);
+        ART.px(c, mx2 - 1, yy, 3, 1, c1);
+        ART.px(c, mx2, yy - 1, 1, 1, c2);
+        c.globalAlpha = ph2 * 0.34;                   /* and the halo on it */
+        ART.px(c, mx2 - 4, yy - 1, 9, 1, c1);
+        ART.px(c, mx2 - 1, yy - 4, 3, 7, c1);
+        c.globalAlpha = 1;
+      }
+    }
+
     /* WHAT THE MOUSE IS ON. Corner brackets in the tool's own colour, so a
        pointer over a room always says what is about to happen and to what. */
     {
@@ -1893,7 +1953,11 @@ const SCENE = (() => {
     c.restore();
 
     /* the diegetic label: what the thing under your hand is called */
-    const show = hover && Math.abs(hover.x - me.x) < 300 ? hover : near;
+    /* IF YOU CAN CLICK IT YOU CAN READ IT. The label was gated on the thing
+       being within three hundred pixels of HIM, which on a room twice that
+       wide meant pointing at something across the room told you nothing --
+       and clicking it sends him there, so it was gated on the wrong thing. */
+    const show = hover || near;
     if (show && !busy) plate(show);
     else { const pl = document.getElementById('scene-plate'); if (pl) pl.style.display = 'none'; }
     if (def.onHud) def.onHud(c, K, viewW(), cam);

@@ -21,9 +21,15 @@ const PIX = (() => {
     // reds
     R: '#ff6a5e', r: '#d13b45', d: '#8c2230', D: '#571220',
     // felt greens
-    F: '#4fae6d', f: '#2e7d5b', e: '#1c5540', E: '#103527',
+    /* CARTOON GREEN. At #4fae6d over a bottle-green wall the cast's own
+       skin was only a step and a half off the room it stood in; a cartoon
+       frog is a BRIGHT frog and the room is what holds the dark. */
+    F: '#5fc97d', f: '#33946a', e: '#1d6a4d', E: '#123f2e',
     // steel
-    S: '#9aa3b8', s: '#646d84', t: '#3f465c', T: '#272c3d',
+    /* and the cloth comes up with it: at #272c3d the default coat was two
+       steps off pure ink, which is why every profile of every frog in this
+       game came out as a slab with a pale smear on it */
+    S: '#a6afc6', s: '#6d7794', t: '#464e68', T: '#2e3650',
     // brass / wood
     B: '#d99a6c', b: '#a2704a', u: '#6e4a30', U: '#452c1c',
     // neon
