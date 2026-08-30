@@ -1128,18 +1128,52 @@ seconds: the dog leans on him, an errand pays off, a story comes apart.
 ![Front and side, eight frames each](docs/screen-rig.png)
 
 The measured pass in the last section is right about people and wrong about
-this game. Taken to a head fraction of 0.21 and an aspect of 0.30 he came out
-a slim, sensible, forgettable man in a coat — and the whole cast around him is
-bold and saturated and drawn like a cartoon, so he stopped belonging to it.
+this game. It is a cartoon about frogs in hats, so the original cartoon
+numbers are the right numbers:
 
-Cartoon is not the same mistake as **mascot**. The mascot was 0.37 of the
-height in head and half as wide as it was tall: a beach ball on a barrel with
-no joints in it. This is the middle — head **0.27**, aspect **0.39**, four
-heads and a bit, shorter legs than a person has, and a bust that comes in at
-eighty-four per cent of its own aspect instead of sixty-two, which widens the
-drawn figure from thirty-seven pixels to fifty and thickens every limb with
-it. Every joint, hand and finger the measured pass built stays exactly where
-it was. Cartoony is a shape language, not an excuse for a solid block.
+| | |
+|---|---|
+| head | **47 rows** — a third of him, hat included |
+| neck | **8** — how far the head sinks into the collar |
+| torso | 44 |
+| legs | **38** — short, which is the single loudest thing a cartoon does to a body |
+
+Which measures out at a head fraction of **0.30** and an aspect of **0.51** —
+a mascot, by the numbers, and that is the point.
+
+The reason those numbers did not work the *first* time they were here is not
+the numbers. Back then a leg was one slab from hip to shoe with a crease
+painted across it, and an arm was a sliver of rect down the side of a coat.
+Everything the two rebuild waves earned stays: tapered bones, elbows, knees, a
+sole that plants while the hips rise over it, a side torso that is its own
+drawing, hands with a thumb and four fingers, a head that arrives a beat late,
+a turn that turns. **Chunky cartoon with real joints in it.**
+
+### A line round him
+
+One pixel, four-connected, is a *technical* outline: it separates a sprite
+from its background and does nothing else. Two pixels, all eight ways, closes
+over the diagonals instead of leaving a staircase of single pixels down every
+sloping edge — and that is most of what makes a drawing read as a cartoon at
+this size. The rig gets two, and the rim light goes to plus sixty-two, because
+the point of a bold outline is that what is inside it has to survive being
+framed in near-black. Everything else still gets one, which is right for a
+mugshot.
+
+Three things about the profile went with it. The side torso came down from
+fifty-eight per cent of the front width to **forty-two** — at fifty-eight it
+was wider than his own skull and read as a hunchback in a bin bag. The panel
+takes eight per cent of warm light, because the side is the *lit* side and was
+somehow coming out darker than the front of the same coat. And the near arm
+stopped being lifted seventeen per cent toward white, which made it a mid-grey
+tube stuck on a near-black slab; a cartoon does the opposite — the arm is the
+same cloth as the coat and a bold dark line separates it, so the bones go down
+twice, once three pixels fatter in ink.
+
+His skin was a step and a half off the bottle-green wall he stands against and
+the default coat was two steps off pure ink. Cartoon green, cartoon cloth: the
+cast measures 0.44 mean chroma and 0.66 at the top tenth, up from 0.38 and
+0.62.
 
 ### And the walk had no amplitude in it
 
@@ -1163,6 +1197,31 @@ eleven per second, the sprite squashes horizontally to how far through the turn
 it is, and the drawing flips at the exact frame the squash is narrowest —
 seven frames end to end, measured. Every actor gets it, so a clerk pacing a
 bullpen stops reversing between frames as well.
+
+## The room says what you can click
+
+![Every offer, marked](docs/screen-clickable.png)
+
+Click-to-walk-and-use has worked the whole time, and every hotspot has had a
+bracket round it on hover since the tools went in. The problem was never the
+machinery: **a room full of things you can click looked exactly like a room
+full of things you cannot**, until the pointer was already on top of one. On a
+phone you sweep a thumb around and find out. With a mouse you look, and if
+nothing looks clickable you decide nothing is.
+
+Every hotspot and every person now carries a small standing diamond, bobbing
+on a slow count seeded off its own position so a wall of them never blinks in
+time — **amber over a person, ice over a thing** — and secrets stay invisible
+without the eyeglass, because that is the whole game of finding them. Click
+one from anywhere and he walks over and uses it when he arrives.
+
+Two more things were gated wrong. The hit box had four pixels of slop, which
+is right for a finger and mean for a mouse: a click two pixels off the kettle
+walked him to the floor next to it and did nothing, which reads as the game
+ignoring you. Ten either side now, twelve above — and the smallest box still
+wins, so a mug on a desk is still pickable over the desk it sits on. And the
+label was hidden unless the thing was within three hundred pixels of *him*, on
+rooms twice that wide, when clicking it sends him there anyway.
 
 ## Saturated dark, not grey
 
@@ -1206,6 +1265,25 @@ out of twenty saturated four-step finishes, so a room can order the same
 armchair in oxblood or in bottle green and get one that belongs in it. The
 walls went to two thirds chroma; furniture that came in grey would have undone
 it.
+
+### And the cute shelf
+
+Everything above is *furniture* — what a room is fitted with. What makes a
+room somebody's is the small stuff left lying about in it, and a house with a
+child in it is the fullest room in any game. Nine more pieces, all ten to
+thirty pixels, and all specific rather than generic: not "a toy" but a wooden
+pull-along duck on a string; not "a plant" but a jam jar with one flower in
+it. A bowl of fruit, two slippers with one kicked over, a child's drawing
+pinned up crooked with three frogs and a sun on it in wax crayon, a cat asleep
+in a curl with one eye half open, a wireless with a cloth grille and a lit
+tuning dial, a kettle steaming, and a ball with three building blocks.
+
+The house gets all of them — the kettle on the hob, the fruit on the counter,
+the posy on the dresser, the ball and blocks by the sofa, the cat on the rug
+in front of it, the slippers by the hearth, the radio on the hall table, and
+the duck left in the hall where you trip over it. The other stops get what
+suits them: a duck and a set of blocks in the pawn shop, because everything
+in there belonged to somebody else.
 
 ![The pawn shop](docs/screen-pawn.png)
 

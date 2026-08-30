@@ -3906,9 +3906,15 @@ const PIX = (() => {
     // reds
     R: '#ff6a5e', r: '#d13b45', d: '#8c2230', D: '#571220',
     // felt greens
-    F: '#4fae6d', f: '#2e7d5b', e: '#1c5540', E: '#103527',
+    /* CARTOON GREEN. At #4fae6d over a bottle-green wall the cast's own
+       skin was only a step and a half off the room it stood in; a cartoon
+       frog is a BRIGHT frog and the room is what holds the dark. */
+    F: '#5fc97d', f: '#33946a', e: '#1d6a4d', E: '#123f2e',
     // steel
-    S: '#9aa3b8', s: '#646d84', t: '#3f465c', T: '#272c3d',
+    /* and the cloth comes up with it: at #272c3d the default coat was two
+       steps off pure ink, which is why every profile of every frog in this
+       game came out as a slab with a pale smear on it */
+    S: '#a6afc6', s: '#6d7794', t: '#464e68', T: '#2e3650',
     // brass / wood
     B: '#d99a6c', b: '#a2704a', u: '#6e4a30', U: '#452c1c',
     // neon
@@ -9879,33 +9885,62 @@ SPR.walkPhase = function (frame) {
    then puts a rim light down the side the lamps are on — which is
    the whole difference between a drawing and a smudge.
    ============================================================ */
-SPR.inkEdge = function (cv, rim) {
+/* ============================================================
+   THE LINE ROUND HIM.
+
+   One pixel, four-connected, is a technical outline: it separates a
+   sprite from its background and it does nothing else. What makes a
+   drawing read as a CARTOON at this size is a line thick enough to
+   be a line -- two pixels, all eight ways round, so it closes over
+   the diagonals instead of leaving a staircase of single pixels down
+   every sloping edge.
+
+   And the rim goes up with it. A pixel with nothing above-left of it
+   is catching the lamp; at plus forty-six it was a suggestion, and
+   the whole point of a bold outline is that the thing inside it has
+   to be bright enough to survive being framed in near-black.
+
+   Takes the thickness in passes. Everything that is not the walking
+   rig still asks for one, because a one-pixel line is right for a
+   mugshot at portrait size.
+   ============================================================ */
+SPR.inkEdge = function (cv, rim, t) {
   const c = cv.getContext('2d');
   const W = cv.width, H = cv.height;
-  const im = c.getImageData(0, 0, W, H);
-  const d = im.data;
-  const out = new Uint8ClampedArray(d);
-  const A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      if (d[i + 3] > 24) {
-        /* a solid pixel with nothing above-left of it catches the lamp */
-        if (rim && A(x - 1, y) < 24 && A(x, y - 1) < 24) {
-          out[i] = Math.min(255, d[i] + 46);
-          out[i + 1] = Math.min(255, d[i + 1] + 46);
-          out[i + 2] = Math.min(255, d[i + 2] + 46);
+  const passes = Math.max(1, t || 1);
+  for (let pass = 0; pass < passes; pass++) {
+    const im = c.getImageData(0, 0, W, H);
+    const d = im.data;
+    const out = new Uint8ClampedArray(d);
+    const A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
+    const first = pass === 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (d[i + 3] > 24) {
+          /* a solid pixel with nothing above-left of it catches the lamp --
+             and only on the first pass, or the rim walks outward with the
+             outline and ends up as a halo */
+          if (rim && first && A(x - 1, y) < 24 && A(x, y - 1) < 24) {
+            out[i] = Math.min(255, d[i] + 62);
+            out[i + 1] = Math.min(255, d[i + 1] + 62);
+            out[i + 2] = Math.min(255, d[i + 2] + 62);
+          }
+          continue;
         }
-        continue;
-      }
-      /* a hole with something next to it becomes the outline */
-      if (A(x - 1, y) > 128 || A(x + 1, y) > 128 || A(x, y - 1) > 128 || A(x, y + 1) > 128) {
-        out[i] = 12; out[i + 1] = 10; out[i + 2] = 24; out[i + 3] = 255;
+        /* a hole with something next to it becomes the outline. Eight ways,
+           so a sloping edge gets a line rather than a staircase. */
+        if (A(x - 1, y) > 128 || A(x + 1, y) > 128
+          || A(x, y - 1) > 128 || A(x, y + 1) > 128
+          || A(x - 1, y - 1) > 128 || A(x + 1, y - 1) > 128
+          || A(x - 1, y + 1) > 128 || A(x + 1, y + 1) > 128) {
+          out[i] = 12; out[i + 1] = 10; out[i + 2] = 24; out[i + 3] = 255;
+        }
       }
     }
+    im.data.set(out);
+    c.putImageData(im, 0, 0);
   }
-  im.data.set(out);
-  c.putImageData(im, 0, 0);
   return cv;
 };
 
@@ -10007,15 +10042,46 @@ SPR.frogWhole = function (key, def, opts) {
        pass built stays exactly where it is. Cartoony is a shape
        language, not an excuse for a solid block.
        ============================================================ */
-    const HEAD_H = 35, NECK = 2, TORSO = 44, LEGS = 48, RISE = 5;
+    /* ============================================================
+       THE ORIGINAL CARTOON NUMBERS, ASKED FOR BY NAME.
+
+       These are the pre-measurement proportions, restored exactly:
+       the head scaled a shade PAST its own canvas, a bust nearly as
+       wide as the whole sprite, an eight-pixel neck overlap so the
+       head sits down into the collar, and short legs.
+
+         head    47     0.35 of the figure -- a third of him, hat in
+         neck     8     how far the head sinks into the shoulders
+         torso   44
+         legs    38     short, which is the single loudest thing a
+                        cartoon does to a body
+         ----------
+                134     and the drawn figure is about half as wide as
+                        it is tall, which measures 0.51
+
+       Which is a mascot by the numbers, and that is the point: this
+       is a cartoon about frogs in hats. The reason it did not work
+       the FIRST time these numbers were here is not the numbers -- it
+       is that back then a leg was a single slab from hip to shoe with
+       a crease painted across it and an arm was a sliver of rect down
+       the side of a coat. Everything the two rebuild waves earned
+       stays: tapered bones, elbows, knees, a sole that plants, a side
+       torso that is its own drawing, hands with a thumb and four
+       fingers. Chunky cartoon with real joints in it, rather than a
+       barrel with a beach ball on top.
+       ============================================================ */
+    const HEAD_H = 47, NECK = 8, TORSO = 44, LEGS = 38, RISE = 5;
     const hh = HEAD_H;
-    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height) * 0.78));
+    const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height)));
     const bh = TORSO + NECK;
-    const bw = Math.round(body.width * (bh / body.height) * 0.84);
+    const bw = Math.round(body.width * (bh / body.height));
     const W = Math.max(bw, hw) + 12;
     /* two spare rows at the top: the torso rises off planted feet rather
-       than the whole frog sliding up and down together */
-    const H = hh + bh - NECK + LEGS + RISE;
+       than the whole frog sliding up and down together -- plus THREE more,
+       because a two-pixel outline round a head that starts on row zero gets
+       its top two rows cut off by the edge of the canvas */
+    const BRIM = 3;
+    const H = hh + bh - NECK + LEGS + RISE + BRIM;
     /* everything that used to be a hard pixel count on a 65-wide figure is
        now a fraction of the shoulders, so one number moves the whole rig */
     const SLIM = bw / 100;
@@ -10065,7 +10131,7 @@ SPR.frogWhole = function (key, def, opts) {
     const headBob = bob + U.clamp(
       Math.round(((RISE - bobU2 * RISE) - bob) * 0.6), -1, 1);
     const sway = side ? 0 : Math.round(SPR.walkPhase(frame) * 2);
-    const bodyTop = hh - NECK + bob;
+    const bodyTop = BRIM + hh - NECK + bob;
     const cx = Math.round(W / 2);
     const groundY = H - 6;                            // where the soles rest
 
@@ -10194,7 +10260,11 @@ SPR.frogWhole = function (key, def, opts) {
        is tall, and with the cartoon bust back it read as a hunchback: what
        you see from the side is his DEPTH, and a man is not as deep as he
        is wide */
-    const sbw = side ? Math.round(bw * 0.58) : bw;
+    /* At 0.58 of the front width that was fifty-eight pixels against a
+       forty-eight pixel head: wider than his own skull, and the profile
+       read as a hunchback in a bin bag. A cartoon seen from the side is
+       barely deeper than its own face. */
+    const sbw = side ? Math.round(bw * 0.42) : bw;
     const shw = side ? Math.round(hw * 0.94) : hw;
     /* FITTED, NOT SQUASHED. drawImage with smoothing off at 0.4 scale threw
        away three columns in five: the pinstripes came out as dotted lines
@@ -10234,7 +10304,7 @@ SPR.frogWhole = function (key, def, opts) {
 
     const headFit = SPR.fit('head_' + key + ':' + ex + (side ? 's' : '') + (back ? 'b' : ''),
       head, shw, hh);
-    c.drawImage(headFit, Math.round((W - shw) / 2) - sway, headBob);
+    c.drawImage(headFit, Math.round((W - shw) / 2) - sway, BRIM + headBob);
 
     /* ------------------------------------------------------------
        WALKING AWAY FROM YOU.
@@ -10350,7 +10420,18 @@ SPR.frogWhole = function (key, def, opts) {
              they join — a knuckle that overhangs its own limb is a balloon. */
           /* seven per cent of white on a coat this dark is nothing: the
              near arm has to come off the coat or the profile is a slab */
-          const tone = near ? 'rgba(255,255,255,.17)' : 'rgba(0,0,0,.46)';
+          /* AN ARM IN THE SAME COAT, WITH A LINE ROUND IT.
+
+             Lifted seventeen per cent toward white over a coat that is
+             already a dark blue-grey, the near arm came out a mid grey tube
+             stuck on a near-black slab -- lighter than the thing it is part
+             of, which is how you get a limb that reads as a separate
+             object. A cartoon does the opposite: the arm is the SAME cloth
+             as the coat and what separates it is a bold dark line. So the
+             bones go down twice, once three pixels fatter in ink. */
+          const tone = near ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.46)';
+          bone(sx, shY, ex, elY, AW + 3, AF + 3, P.K, 0, null);
+          bone(ex, elY, hx2, haY - 4, AF + 3, Math.max(3, AF - 2) + 3, P.K, 1.0, null);
           bone(sx, shY, ex, elY, AW, AF, col, 0, tone);
           bone(ex, elY, hx2, haY - 4, AF, Math.max(3, AF - 2), col, 1.0, tone);
           const er = Math.max(3, Math.round(AF * 0.55));
@@ -10418,8 +10499,9 @@ SPR.frogWhole = function (key, def, opts) {
       cv.hand = { x: wxx, y: wyy + 3 };
     }
 
-    /* and one hard line all the way round him, with a rim light on it */
-    SPR.inkEdge(cv, true);
+    /* and one hard line all the way round him, with a rim light on it.
+       TWO pixels, because this is a cartoon. */
+    SPR.inkEdge(cv, true, 2);
     return cv;
   });
 };
@@ -10613,6 +10695,11 @@ SPR.profileBust = function (key, def, w, h) {
     }
     /* the weave, so a coat this size is not a flat colour */
     ART.dither(c, 0, 0, w, h, 'rgba(0,0,0,.12)', 0.10, 17);
+    /* AND THE SIDE IS THE LIT SIDE. Painted in the coat's own colour, the
+       profile came out darker than the front view of the same coat, because
+       the front has a shirt and a tie and a watch chain breaking it up and
+       this has a lapel. Eight per cent, once, over the whole panel. */
+    ART.px(c, 0, 0, w, h, 'rgba(255,246,226,.08)');
 
     /* ---- 3. THE NECK AND THE COLLAR ---- */
     const nTop = Math.round(h * 0.02), nBot = Math.round(h * 0.13);
@@ -13709,6 +13796,226 @@ const FURN = (() => {
     px(c, Math.round(w * 0.52), ty - 6, 5, 6, 'rgba(226,240,248,.44)');
     px(c, Math.round(w * 0.52), ty - 7, 5, 1, st.mid);
     px(c, Math.round(w * 0.78), ty - 4, 8, 4, tp.lit);
+  });
+
+
+  /* ============================================================
+     THE CUTE SHELF.
+
+     Everything above is furniture: things a room is fitted with.
+     What makes a room somebody's is the small stuff left lying
+     about in it, and a house with a child in it is the fullest room
+     in any game. These are all SMALL -- ten to thirty pixels -- and
+     they are all specific: not "a toy" but a wooden duck on a
+     string, not "a plant" but a jam jar with one flower in it.
+     ============================================================ */
+
+  /* a wooden pull-along duck, on a string */
+  piece('duck', (c, w, h, o) => {
+    const m = M(o.mat || 'mustard'), wd = M('pine');
+    const bh = Math.round(h * 0.56);
+    SPR.ellipse(c, Math.round(w * 0.46), h - bh, Math.round(w * 0.42), Math.round(bh * 0.52), m.ink);
+    SPR.ellipse(c, Math.round(w * 0.46), h - bh - 1, Math.round(w * 0.38), Math.round(bh * 0.46), m.mid);
+    SPR.ellipse(c, Math.round(w * 0.36), h - bh - 2, Math.round(w * 0.20), Math.round(bh * 0.24), m.lit);
+    PIX.disc(c, Math.round(w * 0.78), h - bh - Math.round(bh * 0.44), Math.round(w * 0.17), m.ink);
+    PIX.disc(c, Math.round(w * 0.78), h - bh - Math.round(bh * 0.44), Math.round(w * 0.14), m.mid);
+    px(c, Math.round(w * 0.88), h - bh - Math.round(bh * 0.44), 4, 2, M('copper').mid);
+    px(c, Math.round(w * 0.74), h - bh - Math.round(bh * 0.56), 2, 2, '#141210');
+    /* the board and the two wheels */
+    px(c, 1, h - 5, w - 2, 3, wd.ink);
+    px(c, 2, h - 5, w - 4, 2, wd.mid);
+    for (const wx of [Math.round(w * 0.22), Math.round(w * 0.70)]) {
+      PIX.disc(c, wx, h - 2, 3, wd.ink);
+      PIX.disc(c, wx, h - 2, 2, M('copper').mid);
+    }
+    for (let i = 0; i < Math.round(w * 0.5); i++) {
+      px(c, i, h - 6 - Math.round(Math.sin(i * 0.5) * 2), 1, 1, 'rgba(232,220,190,.6)');
+    }
+  });
+
+  /* a jam jar with one flower in it */
+  piece('posy', (c, w, h, o) => {
+    const g = 'rgba(206,236,246,';
+    const jh = Math.round(h * 0.44);
+    px(c, 1, h - jh, w - 2, jh, 'rgba(10,20,28,.5)');
+    px(c, 2, h - jh + 1, w - 4, jh - 2, g + '.30)');
+    px(c, 2, h - jh + 1, 2, jh - 2, g + '.52)');
+    px(c, 2, h - Math.round(jh * 0.62), w - 4, Math.round(jh * 0.5), 'rgba(140,196,214,.36)');
+    px(c, 1, h - jh, w - 2, 2, g + '.44)');
+    const st = M('bottle');
+    for (let i = 0; i < h - jh; i++) {
+      px(c, Math.round(w / 2) + Math.round(Math.sin(i * 0.2) * 1), h - jh - i, 1, 1, st.mid);
+    }
+    px(c, Math.round(w / 2) - 3, h - jh - Math.round(h * 0.3), 3, 1, st.lit);
+    const fm = M(o.mat || 'rose');
+    PIX.disc(c, Math.round(w / 2), 3, 3, fm.ink);
+    PIX.disc(c, Math.round(w / 2), 3, 2, fm.mid);
+    PIX.disc(c, Math.round(w / 2) - 1, 2, 1, fm.lit);
+    for (const dx of [-3, 3]) {
+      PIX.disc(c, Math.round(w / 2) + dx, 4, 2, fm.mid);
+    }
+    PIX.disc(c, Math.round(w / 2), 3, 1, M('mustard').lit);
+  });
+
+  /* a bowl of fruit */
+  piece('fruit', (c, w, h, o) => {
+    const b = M(o.mat || 'teal');
+    const fr = [M('oxblood'), M('mustard'), M('bottle'), M('rose')];
+    for (let i = 0; i < 4; i++) {
+      const fx = 4 + i * Math.round((w - 10) / 3.4), fy = h - Math.round(h * 0.52);
+      const m = fr[i % fr.length], r = Math.max(2, Math.round(w * 0.11));
+      PIX.disc(c, fx, fy - (i % 2) * 2, r + 1, m.ink);
+      PIX.disc(c, fx, fy - (i % 2) * 2, r, m.mid);
+      PIX.disc(c, fx - 1, fy - 1 - (i % 2) * 2, Math.max(1, r - 2), m.lit);
+    }
+    const bh2 = Math.round(h * 0.48);
+    for (let y = 0; y < bh2; y++) {
+      const t = y / Math.max(1, bh2 - 1);
+      const ww = Math.round(w * (0.98 - t * 0.34));
+      const x0 = Math.round((w - ww) / 2);
+      px(c, x0 - 1, h - bh2 + y, ww + 2, 1, b.ink);
+      px(c, x0, h - bh2 + y, ww, 1, y < 2 ? b.lit : b.mid);
+      px(c, x0, h - bh2 + y, Math.max(1, Math.round(ww * 0.2)), 1, b.lit);
+    }
+  });
+
+  /* two slippers, side by side, one kicked over */
+  piece('slippers', (c, w, h, o) => {
+    const m = M(o.mat || 'oxblood');
+    for (let i = 0; i < 2; i++) {
+      const sx = i * Math.round(w * 0.52), tilt = i;
+      const sw = Math.round(w * 0.46);
+      SPR.ellipse(c, sx + Math.round(sw / 2), h - 3 + tilt, Math.round(sw / 2), 3, m.ink);
+      SPR.ellipse(c, sx + Math.round(sw / 2), h - 4 + tilt, Math.round(sw / 2) - 1, 2, m.mid);
+      px(c, sx + 1, h - 7 + tilt, Math.round(sw * 0.6), 4, m.ink);
+      px(c, sx + 2, h - 6 + tilt, Math.round(sw * 0.6) - 2, 3, m.mid);
+      px(c, sx + 2, h - 6 + tilt, Math.round(sw * 0.5), 1, m.lit);
+    }
+  });
+
+  /* a child's drawing, pinned up crooked */
+  piece('drawing', (c, w, h, o) => {
+    px(c, 1, 1, w - 2, h - 2, 'rgba(0,0,0,.34)');
+    px(c, 0, 0, w - 2, h - 2, '#f0e6c8');
+    px(c, 0, 0, w - 2, 1, '#fbf7ec');
+    /* three frogs and a sun, in wax crayon */
+    const cols = ['#5fc97d', '#d94a52', '#7fd7ff'];
+    for (let i = 0; i < 3; i++) {
+      const fx = 3 + i * Math.round((w - 8) / 3), fy = h - 6;
+      PIX.disc(c, fx + 2, fy - 5, 2, cols[i]);
+      px(c, fx + 1, fy - 3, 3, 3, cols[i]);
+      px(c, fx, fy, 1, 2, cols[i]);
+      px(c, fx + 4, fy, 1, 2, cols[i]);
+    }
+    PIX.disc(c, w - 6, 4, 2, '#ffd75e');
+    for (let i = 0; i < 4; i++) {
+      const a = i / 4 * Math.PI * 2;
+      px(c, w - 6 + Math.round(Math.cos(a) * 4), 4 + Math.round(Math.sin(a) * 4), 1, 1, '#ffd75e');
+    }
+    px(c, 1, 2, w - 4, 1, 'rgba(120,100,70,.20)');
+    px(c, Math.round(w / 2) - 2, -1, 4, 3, '#b8232f');   /* the pin */
+    px(c, Math.round(w / 2) - 1, -1, 2, 2, '#e04a54');
+  });
+
+  /* a cat, asleep in a curl */
+  piece('cat', (c, w, h, o) => {
+    const m = M(o.mat || 'ebony');
+    SPR.ellipse(c, Math.round(w / 2), h - 3, Math.round(w * 0.46), 4, 'rgba(6,8,12,.40)');
+    SPR.ellipse(c, Math.round(w / 2), h - Math.round(h * 0.42), Math.round(w * 0.44),
+      Math.round(h * 0.40), m.ink);
+    SPR.ellipse(c, Math.round(w / 2), h - Math.round(h * 0.44), Math.round(w * 0.40),
+      Math.round(h * 0.36), m.mid);
+    SPR.ellipse(c, Math.round(w * 0.40), h - Math.round(h * 0.54), Math.round(w * 0.24),
+      Math.round(h * 0.18), m.lit);
+    /* the head, tucked in, and two ears */
+    const hx = Math.round(w * 0.74), hy = h - Math.round(h * 0.46);
+    PIX.disc(c, hx, hy, Math.round(w * 0.17) + 1, m.ink);
+    PIX.disc(c, hx, hy, Math.round(w * 0.17), m.mid);
+    px(c, hx - 4, hy - Math.round(w * 0.17) - 1, 3, 3, m.ink);
+    px(c, hx + 2, hy - Math.round(w * 0.17) - 1, 3, 3, m.ink);
+    px(c, hx - 3, hy, 2, 1, '#8fe6c0');                  /* one eye, half open */
+    px(c, hx + 2, hy, 2, 1, '#8fe6c0');
+    /* the tail, curled round */
+    for (let i = 0; i < Math.round(w * 0.5); i++) {
+      const a = i / (w * 0.5) * Math.PI * 1.1;
+      px(c, Math.round(w * 0.20 + Math.cos(a + 2.2) * w * 0.24),
+        h - 4 + Math.round(Math.sin(a + 2.2) * 3), 2, 2, m.mid);
+    }
+  });
+
+  /* a wireless set, with a dial and a cloth grille */
+  piece('radio', (c, w, h, o) => {
+    const wd = M(o.mat || 'walnut'), br = M('brass');
+    px(c, 0, 2, w, h - 2, wd.ink);
+    px(c, 1, 3, w - 2, h - 4, wd.mid);
+    grain(c, 2, 4, w - 4, h - 6, wd.dk, wd.lit, (o.seed || 1) * 5);
+    for (let i = 0; i < 4; i++) px(c, 2 + i, 2 - Math.min(2, i), w - 4 - i * 2, 1, wd.lit);
+    /* the grille */
+    const gx = 3, gw = Math.round(w * 0.52);
+    px(c, gx, 6, gw, h - 11, '#2a1f14');
+    for (let y = 7; y < h - 6; y += 2) px(c, gx + 1, y, gw - 2, 1, '#4a3a26');
+    px(c, gx, 6, gw, 1, wd.lit);
+    /* the tuning dial, lit */
+    const dx = gx + gw + 3;
+    px(c, dx, 7, w - dx - 3, 8, '#141210');
+    px(c, dx + 1, 8, w - dx - 5, 6, '#e8dcc0');
+    for (let i = 0; i < 5; i++) px(c, dx + 2 + i * 3, 9, 1, 4, '#7a6a4a');
+    px(c, dx + 4, 8, 1, 6, '#d94a52');
+    PIX.disc(c, dx + Math.round((w - dx) / 2), h - 8, 3, br.ink);
+    PIX.disc(c, dx + Math.round((w - dx) / 2), h - 8, 2, br.mid);
+  });
+
+  /* a kettle, steaming */
+  piece('kettle', (c, w, h, o) => {
+    const st = M(o.mat || 'steel');
+    const kb = h - 2;
+    SPR.ellipse(c, Math.round(w / 2), kb, Math.round(w * 0.40), 3, st.ink);
+    for (let y = kb - Math.round(h * 0.52); y <= kb; y++) {
+      const t = (y - (kb - h * 0.52)) / (h * 0.52);
+      const hw2 = Math.round(w * (0.22 + Math.sin(t * 2.2) * 0.16));
+      px(c, Math.round(w / 2) - hw2 - 1, y, hw2 * 2 + 3, 1, st.ink);
+      px(c, Math.round(w / 2) - hw2, y, hw2 * 2 + 1, 1, t < 0.5 ? st.mid : st.dk);
+      px(c, Math.round(w / 2) - hw2, y, 2, 1, st.lit);
+    }
+    px(c, Math.round(w / 2) - 4, kb - Math.round(h * 0.56), 9, 3, st.ink);
+    px(c, Math.round(w / 2) - 3, kb - Math.round(h * 0.56), 7, 2, st.lit);
+    px(c, Math.round(w / 2) - 1, kb - Math.round(h * 0.64), 3, 3, st.ink);
+    px(c, Math.round(w / 2) - 1, kb - Math.round(h * 0.64), 2, 2, st.mid);
+    /* the spout, rising, and the steam off it */
+    for (let i = 0; i < Math.round(w * 0.28); i++) {
+      px(c, Math.round(w * 0.72) + i, kb - Math.round(h * 0.34) - Math.round(i * 0.8),
+        3, 4, st.ink);
+      px(c, Math.round(w * 0.72) + i, kb - Math.round(h * 0.34) - Math.round(i * 0.8) + 1,
+        2, 2, st.lit);
+    }
+    for (let i = 0; i < 5; i++) {
+      px(c, Math.round(w * 0.94) - i + (i % 2) * 2, Math.max(0, kb - Math.round(h * 0.56) - i * 3),
+        2, 2, 'rgba(240,244,248,' + (0.30 - i * 0.05).toFixed(2) + ')');
+    }
+    /* the strap handle */
+    for (let i = 0; i < 8; i++) {
+      const a = Math.PI * (0.12 + i / 7 * 0.76);
+      px(c, Math.round(w / 2) - Math.round(Math.cos(a) * w * 0.24),
+        kb - Math.round(h * 0.56) - Math.round(Math.sin(a) * h * 0.22), 2, 2, st.dk);
+    }
+  });
+
+  /* a ball, and a pair of building blocks */
+  piece('toys', (c, w, h, o) => {
+    const b = M(o.mat || 'oxblood');
+    PIX.disc(c, Math.round(w * 0.26), h - Math.round(h * 0.42), Math.round(h * 0.40) + 1, b.ink);
+    PIX.disc(c, Math.round(w * 0.26), h - Math.round(h * 0.42), Math.round(h * 0.40), b.mid);
+    PIX.disc(c, Math.round(w * 0.20), h - Math.round(h * 0.54), Math.round(h * 0.16), b.lit);
+    px(c, Math.round(w * 0.10), h - Math.round(h * 0.44), Math.round(h * 0.66), 2, M('cream').mid);
+    const cols = [M('mustard'), M('petrol'), M('bottle')];
+    for (let i = 0; i < 3; i++) {
+      const bx = Math.round(w * 0.56) + (i % 2) * 9, by = h - 6 - Math.floor(i / 2) * 8;
+      const m = cols[i];
+      px(c, bx, by, 9, 7, m.ink);
+      px(c, bx + 1, by + 1, 7, 5, m.mid);
+      px(c, bx + 1, by + 1, 7, 1, m.lit);
+      px(c, bx + 3, by + 2, 3, 3, m.dk);
+    }
   });
 
   /* ============================================================
@@ -17544,7 +17851,13 @@ const SCENE = (() => {
       const fy = floorAt(o.z), dy = fy - def.floorY;
       const top = o.top === undefined ? fy - 44 : o.top + dy;
       const bot = o.bot === undefined ? fy + 6 : o.bot + dy;
-      if (x > o.x - w / 2 - 4 && x < o.x + w / 2 + 4 && y > top - 8 && y < bot + 4) {
+      /* GENEROUS. Four pixels of slop round a hotspot is right for a finger
+         on a phone and mean for a mouse on a desk: a click two pixels off
+         the kettle walked him to the floor next to it and did nothing,
+         which reads as the game ignoring you. Ten either side, twelve
+         above -- and the smallest box still wins, so a mug on a desk is
+         still pickable over the desk it is on. */
+      if (x > o.x - w / 2 - 10 && x < o.x + w / 2 + 10 && y > top - 12 && y < bot + 8) {
         const area = w * Math.max(1, bot - top), dd = Math.abs(x - o.x);
         if (area < bestA - 1 || (Math.abs(area - bestA) <= 1 && dd < bd)) {
           bestA = area; bd = dd; best = o;
@@ -18769,6 +19082,60 @@ const SCENE = (() => {
       }
     }
 
+    /* ============================================================
+       WHAT IS CLICKABLE, ALWAYS.
+
+       Every hotspot and every person in this game has had a bracket
+       round it on hover since the tools went in, and click-to-walk-
+       and-use has worked the whole time. The problem was never the
+       machinery: it was that a room full of things you can click
+       looked exactly like a room full of things you cannot, until
+       your pointer was already on top of one. On a phone you sweep
+       a thumb around and find out. With a mouse you look, and if
+       nothing looks clickable you decide nothing is.
+
+       So everything interactive now carries a small standing mark --
+       two ticks and a dot, dim, on a slow pulse seeded off its own
+       position so a wall of them never blinks in time. Hover still
+       puts the full bracket on, and a click still sends him. It just
+       tells you the offer is there first.
+       ============================================================ */
+    if (!busy) {
+      for (const o of targets()) {
+        if (o === hover || o.gone) continue;
+        if (!o.onUse && !o.onLook) continue;
+        if (o.egg && !glassOut()) continue;        /* secrets stay secret */
+        const fy2 = floorAt(o.z), dy2 = fy2 - def.floorY;
+        const ty = (o.top === undefined ? fy2 - 44 : o.top + dy2) - 3;
+        const mx2 = Math.round(o.x);
+        /* a DIAMOND, not a dot: one pale pixel on a busy wall is a piece of
+           grit, and the point of this is that you can see it without
+           looking for it. Amber over a person, ice over a thing. */
+        const ph2 = 0.50 + 0.34 * Math.abs(Math.sin(T * 1.9 + (Math.abs(mx2) % 19) * 0.4));
+        /* amber over a PERSON, ice over a thing -- and a person is an
+           actor, which is the thing that carries a def; spots have labels
+           too, so labels do not tell them apart */
+        const hot = !!o.def;
+        const c1 = hot ? '#ffd75e' : '#7fd7ff';
+        const c2 = hot ? '#fff3c4' : '#d6f2ff';
+        const bob2 = Math.round(Math.sin(T * 1.9 + (Math.abs(mx2) % 11)) * 1);
+        const yy = ty + bob2;
+        c.globalAlpha = ph2;
+        for (let i = 0; i < 4; i++) {                 /* the ink diamond */
+          const wd = 7 - Math.abs(i - 1) * 2;
+          ART.px(c, mx2 - (wd >> 1), yy - 2 + i, wd, 1, 'rgba(6,8,14,.72)');
+        }
+        ART.px(c, mx2 - 2, yy - 1, 5, 1, c1);
+        ART.px(c, mx2 - 1, yy - 2, 3, 1, c1);
+        ART.px(c, mx2 - 1, yy, 3, 1, c1);
+        ART.px(c, mx2, yy - 1, 1, 1, c2);
+        c.globalAlpha = ph2 * 0.34;                   /* and the halo on it */
+        ART.px(c, mx2 - 4, yy - 1, 9, 1, c1);
+        ART.px(c, mx2 - 1, yy - 4, 3, 7, c1);
+        c.globalAlpha = 1;
+      }
+    }
+
     /* WHAT THE MOUSE IS ON. Corner brackets in the tool's own colour, so a
        pointer over a room always says what is about to happen and to what. */
     {
@@ -18916,7 +19283,11 @@ const SCENE = (() => {
     c.restore();
 
     /* the diegetic label: what the thing under your hand is called */
-    const show = hover && Math.abs(hover.x - me.x) < 300 ? hover : near;
+    /* IF YOU CAN CLICK IT YOU CAN READ IT. The label was gated on the thing
+       being within three hundred pixels of HIM, which on a room twice that
+       wide meant pointing at something across the room told you nothing --
+       and clicking it sends him there, so it was gated on the wrong thing. */
+    const show = hover || near;
     if (show && !busy) plate(show);
     else { const pl = document.getElementById('scene-plate'); if (pl) pl.style.display = 'none'; }
     if (def.onHud) def.onHud(c, K, viewW(), cam);
@@ -22577,6 +22948,7 @@ const PLACES = (() => {
         { p: 'crate', at: 0.06, w: 30, h: 22, o: { mat: 'pine' } },
         { p: 'rug', at: 0.52, w: 64, h: 12, dy: 4, o: { mat: 'petrol', trim: 'cream' } },
         { p: 'plant', at: 0.88, w: 20, h: 26, o: { mat: 'copper', dead: true } },
+        { p: 'slippers', at: 0.30, w: 22, h: 10, o: { mat: 'petrol' } },
       ]);
     };
 
@@ -22851,6 +23223,8 @@ const PLACES = (() => {
       FURN.hang(c, 'clock', 252, 14, 24, 44, { mat: 'walnut', hour: 15, min: 25 });
       FURN.hang(c, 'picture', 300, 18, 32, 26, { mat: 'brass', seed: seed + 6 });
       FURN.hang(c, 'sconce', 348, 22, 16, 20, { mat: 'mustard' });
+      FURN.stand(c, 'radio', 288, FY - 42 - 20, 30, 20, { mat: 'oak', seed: seed + 11 });
+      FURN.stand(c, 'posy', 330, FY - 42 - 24, 12, 24, { mat: 'mustard' });
 
       /* the door, with the bell over it */
       px(c, 10, 32, 44, 74, p.K);
@@ -22940,6 +23314,8 @@ const PLACES = (() => {
         { p: 'barrel', at: 0.36, w: 24, h: 28, o: { mat: 'oak' } },
         { p: 'rug', at: 0.60, w: 70, h: 13, dy: 4, o: { mat: 'oxblood', trim: 'mustard' } },
         { p: 'stool', at: 0.92, w: 18, h: 28, o: { mat: 'plum' } },
+        { p: 'duck', at: 0.24, w: 24, h: 18, o: { mat: 'mustard' } },
+        { p: 'toys', at: 0.78, w: 30, h: 16, o: { mat: 'petrol' } },
       ]);
     };
 
@@ -23084,6 +23460,7 @@ const PLACES = (() => {
         { p: 'stool', at: 0.08, w: 18, h: 28, o: { mat: 'oxblood' } },
         { p: 'rug', at: 0.40, w: 60, h: 12, dy: 4, o: { mat: 'teal', trim: 'cream' } },
         { p: 'crate', at: 0.86, w: 28, h: 20, o: { mat: 'pine' } },
+        { p: 'fruit', at: 0.22, w: 26, h: 16, dy: -2, o: { mat: 'teal' } },
       ]);
     };
 
@@ -23130,6 +23507,7 @@ const PLACES = (() => {
       FURN.stand(c, 'plant', 428, FY - 30, 20, 30, { mat: 'copper', dead: true, seed: seed + 5 });
       FURN.hang(c, 'sconce', 300, 34, 16, 20, { mat: 'cream' });
       FURN.hang(c, 'sconce', 404, 34, 16, 20, { mat: 'cream' });
+      FURN.stand(c, 'radio', 246, 42, 30, 22, { mat: 'walnut', seed: seed + 9 });
 
       /* the door out, under a dead sign */
       px(c, 10, 34, 44, 72, p.K);
@@ -23234,6 +23612,7 @@ const PLACES = (() => {
         { p: 'stool', at: 0.56, w: 20, h: 32, o: { mat: 'oxblood' } },
         { p: 'stool', at: 0.70, w: 20, h: 32, o: { mat: 'oxblood' } },
         { p: 'barrel', at: 0.90, w: 24, h: 30, o: { mat: 'oak' } },
+        { p: 'cat', at: 0.16, w: 28, h: 16, o: { mat: 'ebony' } },
       ]);
     };
 
@@ -36049,6 +36428,27 @@ const CUT = (() => {
       FURN.stand(c, 'dresser', 226, FY - 60, 44, 60, { mat: 'pine', seed: 7 });
       FURN.stand(c, 'plant', 336, FY - 30, 20, 30, { mat: 'copper', seed: 9 });
       FURN.stand(c, 'standlamp', 462, FY - 62, 18, 62, { mat: 'mustard' });
+
+      /* ============================================================
+         AND THE SMALL STUFF, which is what makes a room somebody's.
+
+         Furniture is what a house is fitted with. What says a CHILD
+         lives here is a pull-along duck left in the hall, blocks and
+         a ball on the floor by the sofa, a drawing pinned up crooked,
+         and the cat asleep on the hearth rug where the fire was.
+         ============================================================ */
+      FURN.stand(c, 'kettle', 140, FY - 39 - 22, 22, 22, { mat: 'steel' });
+      FURN.stand(c, 'fruit', 62, FY - 34 - 16, 26, 16, { mat: 'teal' });
+      FURN.stand(c, 'posy', 246, FY - 60 - 24, 12, 24, { mat: 'rose' });
+      FURN.hang(c, 'drawing', 302, 22, 24, 20, {});
+      FURN.stand(c, 'toys', 344, FY - 16, 30, 16, { mat: 'oxblood' });
+      /* on the rug in front of the sofa, not at 468 -- the hearth owns 466
+         to 552 and is painted after the dressing, so that is a cat behind a
+         fireplace */
+      FURN.stand(c, 'cat', 436, FY - 16, 28, 16, { mat: 'ebony' });
+      FURN.stand(c, 'slippers', 528, FY - 10, 22, 10, { mat: 'oxblood' });
+      FURN.stand(c, 'radio', 566, FY - 30 - 20, 28, 20, { mat: 'walnut', seed: 13 });
+      FURN.stand(c, 'duck', 596, FY - 18, 24, 18, { mat: 'mustard' });
 
       /* the rag rug in front of it */
       px(c, SOFA - 30, FY - 1, 96, 9, '#8a5a48');
