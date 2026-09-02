@@ -1942,128 +1942,6 @@ SPR.frogFist = function (ctx, cx, cy, d, o) {
   ctx.restore();
 };
 
-/* ============================================================
-   A FROG IN PROFILE, CLOSE.
-   Seen from the side he is a different animal from the one the
-   table shows you: one bulb instead of two, a snout carrying
-   most of the length of the skull, a mouth line running nearly
-   back to the drum, and no chin to speak of.
-
-   Faces LEFT. Origin is the middle of the skull, which is
-   nominally 46x33 — scale it with the transform, never by
-   passing sizes in, or the outlines stop being one pixel.
-   ============================================================ */
-SPR.frogProfile = function (ctx, cx, cy, d, o) {
-  o = o || {};
-  const P = PIX.PAL, INK = P.K;
-  const skin = P[d.skin[0]] || P.F, shade = P[d.skin[1]] || P.f, dark = P[d.skin[2]] || P.e;
-
-  /* THE HAT GOES ON FIRST. A frog's eyes sit on top of his skull, so a
-     fedora rides behind them: the bulb has to come out over the brim, and
-     the only way to get that is to lay the hat down before the head. */
-  if (o.hat !== false && d.hat) {
-    const hc = P[d.hatCol] || P.T, hb = P[d.band] || P.d, lt = P[LIGHTER[d.hatCol]] || P.t;
-    SPR.rrect(ctx, cx - 8, cy - 68, 48, 38, 15, INK);
-    SPR.rrect(ctx, cx - 6, cy - 66, 44, 36, 14, hc);
-    PIX.rect(ctx, cx - 6, cy - 58, 9, 28, lt);                  // the lit side of the crown
-    PIX.rect(ctx, cx + 4, cy - 62, 6, 22, 'rgba(0,0,0,.26)');   // the pinch in the crown
-    PIX.rect(ctx, cx - 6, cy - 44, 44, 9, INK);
-    PIX.rect(ctx, cx - 6, cy - 43, 44, 7, hb);                  // the band
-    /* the brim, dipping toward the front the way a worn one does */
-    SPR.ellipse(ctx, cx + 4, cy - 34, 48, 8, INK);
-    SPR.ellipse(ctx, cx + 4, cy - 36, 45, 6, hc);
-    SPR.ellipse(ctx, cx - 28, cy - 30, 22, 5, INK);
-    SPR.ellipse(ctx, cx - 28, cy - 32, 19, 4, hc);
-    SPR.ellipse(ctx, cx + 8, cy - 38, 38, 3, lt);
-  }
-
-  /* ink pass, then fill pass, over every lump at once — they bury each
-     other's outlines and it comes out one silhouette, not five blobs */
-  /* On a frog the mouth IS the bottom of the head: the line runs from the
-     tip of the snout back past the drum and there is barely a jaw under
-     it. Build the mass to end there, with only a shallow lip and the
-     throat sac below. */
-  const mass = (col, g) => {
-    SPR.ellipse(ctx, cx + 16, cy - 6, 28 + g, 23 + g, col);     // cranium, tall at the back
-    SPR.ellipse(ctx, cx - 8, cy - 2, 33 + g, 20 + g, col);      // the middle of the skull
-    SPR.ellipse(ctx, cx - 34, cy + 2, 24 + g, 14 + g, col);     // snout, tapering forward
-    PIX.disc(ctx, cx - 52, cy + 3, 9 + g, col);                 // the blunt tip of it
-    SPR.ellipse(ctx, cx - 6, cy + 10, 34 + g, 7 + g, col);      // the lower lip
-    SPR.ellipse(ctx, cx + 16, cy + 12, 20 + g, 10 + g, col);    // the throat sac
-    PIX.disc(ctx, cx - 14, cy - 28, 20 + g, col);               // the one eye bulb
-  };
-  mass(INK, 2);
-  mass(skin, 0);
-
-  /* the lamp is out over the table, in front of him and above: the back of
-     the head and everything under the jaw roll away from it */
-  SPR.ellipse(ctx, cx + 26, cy + 2, 20, 19, shade);
-  SPR.ellipse(ctx, cx + 32, cy + 8, 14, 12, dark);
-  SPR.ellipse(ctx, cx - 6, cy + 14, 30, 4, shade);              // under the lip
-  SPR.ellipse(ctx, cx - 44, cy + 8, 12, 6, shade);              // under the snout
-
-  /* freckling, seeded off him, so it never crawls between frames */
-  const rng = SPR.defRng(d);
-  for (let i = 0; i < 30; i++) {
-    const a = rng() * Math.PI * 2, rr = Math.sqrt(rng());
-    PIX.disc(ctx, Math.round(cx - 8 + Math.cos(a) * 36 * rr),
-      Math.round(cy - 2 + Math.sin(a) * 18 * rr), rng() < 0.28 ? 3 : 2, shade);
-  }
-  if (d.warts) {
-    for (let i = 0; i < 7; i++) {
-      const a = rng() * Math.PI * 2, rr = 0.5 + rng() * 0.5;
-      const wx = Math.round(cx + 2 + Math.cos(a) * 30 * rr);
-      const wy = Math.round(cy - 4 + Math.sin(a) * 16 * rr);
-      PIX.disc(ctx, wx, wy, 3, dark); PIX.disc(ctx, wx - 1, wy - 1, 2, shade);
-    }
-  }
-
-  /* the mouth: from the tip of the snout back to under the drum, stepped
-     along its own length so it never anti-aliases */
-  const line = [[-60, 1], [-46, 6], [-28, 9], [-6, 10], [14, 9], [32, 4]];
-  for (let i = 0; i < line.length - 1; i++) {
-    const a = line[i], b = line[i + 1], n = b[0] - a[0];
-    for (let s = 0; s < n; s++) {
-      const t = s / n;
-      const px = Math.round(cx + a[0] + n * t);
-      const py = Math.round(cy + a[1] + (b[1] - a[1]) * t);
-      PIX.rect(ctx, px, py, 1, 3, INK);
-      PIX.rect(ctx, px, py + 3, 1, 2, shade);
-      if (s % 2 === 0) PIX.rect(ctx, px, py - 2, 1, 2, 'rgba(255,255,255,.07)');
-    }
-  }
-  PIX.disc(ctx, cx - 54, cy - 6, 2, INK);                       // nostril
-  PIX.rect(ctx, cx - 58, cy - 10, 5, 2, 'rgba(255,255,255,.12)');
-
-  /* the eye. Near-expressionless: a heavy lid, a slit that only tracks,
-     and a blink that is the only thing it ever does. */
-  PIX.disc(ctx, cx - 14, cy - 28, 18, shade);
-  PIX.disc(ctx, cx - 17, cy - 31, 14, skin);
-  if (o.blink) {
-    SPR.ellipse(ctx, cx - 23, cy - 29, 15, 13, shade);
-    PIX.rect(ctx, cx - 38, cy - 29, 31, 2, INK);
-  } else {
-    SPR.ellipse(ctx, cx - 24, cy - 29, 14, 13, INK);
-    SPR.ellipse(ctx, cx - 24, cy - 29, 12, 11, o.gold ? P.Y : P.O);
-    SPR.ellipse(ctx, cx - 27, cy - 29, 4, 10, INK);             // slit pupil
-    PIX.rect(ctx, cx - 32, cy - 35, 3, 3, 'rgba(255,255,255,.8)');
-    /* the lid comes down over the top third of it, always */
-    SPR.ellipse(ctx, cx - 20, cy - 42, 20, 9, skin);
-    PIX.rect(ctx, cx - 39, cy - 38, 35, 2, 'rgba(0,0,0,.45)');
-  }
-
-  /* the drum on the side of the head */
-  PIX.disc(ctx, cx + 22, cy - 6, 11, INK);
-  PIX.disc(ctx, cx + 22, cy - 6, 9, shade);
-  PIX.disc(ctx, cx + 22, cy - 6, 6, dark);
-  PIX.disc(ctx, cx + 19, cy - 9, 3, shade);
-
-  /* wet — a slick over the crown of the bulb, one down the snout */
-  for (let i = -5; i <= 5; i++) {
-    PIX.rect(ctx, cx - 18 + i * 3, cy - 44 + Math.round(i * i * 0.5), 3, 2, 'rgba(255,255,255,.13)');
-  }
-  PIX.rect(ctx, cx - 50, cy - 4, 16, 2, 'rgba(255,255,255,.10)');
-};
 
 const FROG_DEFS = {
   player:    { skin: ['F', 'f', 'e'], fat: false, suit: 'T', shirt: 'W', tie: 'd',
@@ -2124,20 +2002,6 @@ SPR.silhouette = function (key, src, col) {
     c.globalCompositeOperation = 'source-in';
     c.fillStyle = col;
     c.fillRect(0, 0, cv.width, cv.height);
-    return cv;
-  });
-};
-
-/* the profile head, baked once, so it can be rimmed and reused */
-SPR.PROF_OX = 120;
-SPR.PROF_OY = 130;
-SPR.profileCv = function (d, blink) {
-  return SPR.cached('prof:' + SPR.defKey(d) + (blink ? ':b' : ''), () => {
-    const cv = document.createElement('canvas');
-    cv.width = 220; cv.height = 200;
-    const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    SPR.frogProfile(c, SPR.PROF_OX, SPR.PROF_OY, d, { blink: blink });
     return cv;
   });
 };
@@ -5155,9 +5019,9 @@ SPR.frogWhole = function (key, def, opts) {
        is that back then a leg was a single slab from hip to shoe with
        a crease painted across it and an arm was a sliver of rect down
        the side of a coat. Everything the two rebuild waves earned
-       stays: tapered bones, elbows, knees, a sole that plants, a side
-       torso that is its own drawing, hands with a thumb and four
-       fingers. Chunky cartoon with real joints in it, rather than a
+       stays: tapered bones, elbows, knees, a sole that plants, hands
+       with a thumb and four fingers, a head that arrives a beat late.
+       Chunky cartoon with real joints in it, rather than a
        barrel with a beach ball on top.
        ============================================================ */
     const HEAD_H = 47, NECK = 8, TORSO = 44, LEGS = 38, RISE = 5;
@@ -5384,33 +5248,100 @@ SPR.frogWhole = function (key, def, opts) {
          cloth between the sleeves, a yoke seam across the shoulders and a
          vent down the middle */
       const bx2 = Math.round((W - bw) / 2);
-      const px0 = bx2 + Math.round(bw * 0.24), pw = Math.round(bw * 0.52);
-      const py0 = bodyTop + Math.round(bh * 0.16), ph = Math.round(bh * 0.80);
-      PIX.rect(c, px0, py0, pw, ph, coatC);
-      PIX.rect(c, px0, py0, pw, 2, 'rgba(255,255,255,.07)');
+      /* the bust was measured: the torso occupies 0.20 to 0.80 of the body
+         canvas, the shirt collar sits in its top tenth and the tie knot in
+         the tenth under that. A panel starting at 0.16 of the height left
+         both of them showing, so a frog walking away from you was wearing
+         his tie on his back. It starts at 0.04 now. */
+      /* the bust was measured too: the arms sit outside 0.30 and 0.68 of
+         its width, so the panel runs between them and the sleeves keep
+         their own silhouette instead of being swallowed by a slab. */
+      const px0 = bx2 + Math.round(bw * 0.28), pw = Math.round(bw * 0.44);
+      const py0 = bodyTop + Math.round(bh * 0.04), ph = Math.round(bh * 0.94);
+      /* THE SHOULDERS ARE NOT SQUARE. Three inset rows off the top and the
+         panel stops being a wardrobe with a frog's head on it. */
+      /* the welt pocket and the white pocket square sit at 0.28 of the bust,
+         right on the panel's own left edge, so they peek out from behind a
+         man walking away. One patch of cloth over that corner. */
+      PIX.rect(c, bx2 + Math.round(bw * 0.24), bodyTop + Math.round(bh * 0.16),
+        Math.round(bw * 0.14), Math.round(bh * 0.16), coatC);
+      [2, 1, 0].forEach((n, i2) => PIX.rect(c, px0 + n, py0 + i2, pw - n * 2, 1, coatC));
+      PIX.rect(c, px0, py0 + 3, pw, ph - 3, coatC);
+      /* SAME CLOTH AS THE FRONT. A flat panel of coat colour is a slab, and
+         the chalk stripe is most of what says `suit` at this size — the back
+         of a pinstripe jacket has it too. */
+      const CO2 = SPR.costumeOf(def);
+      const OUT2 = (CO2 && (CO2.overcoat || CO2.jacket)) || null;
+      if (OUT2 && OUT2.stripe === 'chalk') {
+        const gap = OUT2.stripeGap || 5;
+        for (let sx = 3; sx < pw - 3; sx += gap) {
+          PIX.rect(c, px0 + sx, py0 + 3, 1, ph - 4, 'rgba(244,239,224,.22)');
+        }
+      }
+      PIX.rect(c, px0 + 2, py0, pw - 4, 2, 'rgba(255,255,255,.07)');
       PIX.rect(c, px0, py0 + 6, pw, 1, 'rgba(0,0,0,.34)');          // the yoke
       PIX.rect(c, px0 + Math.round(pw / 2), py0 + 7, 1, ph - 7, 'rgba(0,0,0,.30)');
       PIX.rect(c, px0 + pw - 3, py0 + 2, 3, ph - 2, 'rgba(0,0,0,.20)');
+      /* the vent: a slot up from the hem, which is the one detail that says
+         you are looking at the back of a jacket and not the front of one */
+      PIX.rect(c, px0 + Math.round(pw / 2) - 1, py0 + ph - 12, 2, 12, 'rgba(0,0,0,.42)');
       const hx = Math.round((W - hw) / 2);
       const sk = P[def.skin[0]] || P.F;
       const sh = P[def.skin[1]] || P.f;
       const dk = P[def.skin[2]] || P.e;
-      /* the skull, from behind: a dome of skin inside the existing outline */
+      /* THE SKULL FROM BEHIND, AND HIS HAT LEFT ALONE.
+
+         This used to paint a dome of skin over the middle of the head
+         canvas and take the crown of the hat with it: a frog walking away
+         from you was bare-headed with a brim floating behind his ears. The
+         head canvas was measured -- 46x42, the brim bottom at 0.28 of the
+         height, the lenses right under it at 0.30, the collar from 0.86 --
+         so the repaint runs from just below the brim at 0.28 down to 0.83,
+         which covers the glasses and the face and leaves the hat alone, and
+         it lands on the head's own drawn position rather than the body's
+         bob. */
       const cx2 = hx + Math.round(hw / 2);
-      const ey = bob + Math.round(hh * 0.46);
-      SPR.ellipse(c, cx2, ey, Math.round(hw * 0.40), Math.round(hh * 0.30), sk);
-      SPR.ellipse(c, cx2, ey + Math.round(hh * 0.06), Math.round(hw * 0.36),
-        Math.round(hh * 0.22), sh);
-      /* the two humps a frog's eyes make, seen from behind */
-      const eo = Math.round(hw * 0.19);
-      SPR.ellipse(c, cx2 - eo, ey - Math.round(hh * 0.16), 7, 5, sk);
-      SPR.ellipse(c, cx2 + eo, ey - Math.round(hh * 0.16), 7, 5, sk);
-      PIX.rect(c, cx2 - eo - 7, ey - Math.round(hh * 0.16), 14, 1, sh);
-      PIX.rect(c, cx2 + eo - 7, ey - Math.round(hh * 0.16), 14, 1, sh);
+      const hy = BRIM + headBob;                 // where the head actually is
+      const at = (f) => hy + Math.round(hh * f);
+      /* the brim bottom is at 0.28 and the lens tops are one row under it,
+         so a band of skin goes across there and the dome starts at 0.29.
+         Taking the dome up any higher instead eats the crown, and a frog
+         walking away from you in a skullcap is worse than one in a hat. */
+      PIX.rect(c, cx2 - Math.round(hw * 0.36), at(0.28),
+        Math.round(hw * 0.72), Math.max(2, Math.round(hh * 0.05)), sk);
+      SPR.ellipse(c, cx2, at(0.565), Math.round(hw * 0.40), Math.round(hh * 0.275), sk);
+      SPR.ellipse(c, cx2, at(0.65), Math.round(hw * 0.36), Math.round(hh * 0.18), sh);
+      /* THE TWO HUMPS A FROG'S EYES MAKE, SEEN FROM BEHIND, and the crease
+         between them. Without these the back of his head is a green pill:
+         they are the one piece of shape back there, so they go on TOP of the
+         skull with a lit crown and a shadow under each, and the sagittal
+         line runs down between them. */
+      const eo = Math.round(hw * 0.20);
+      const ehy = at(0.40);
+      const er = Math.max(5, Math.round(hw * 0.17));
+      [-1, 1].forEach(sg => {
+        const ex2 = cx2 + sg * eo;
+        SPR.ellipse(c, ex2, ehy, er, Math.max(4, Math.round(er * 0.74)), sk);
+        /* the hump only reads if it is LIT on top and CUT UNDER: same skin
+           either side of a one-pixel line is one shape, not two */
+        PIX.rect(c, ex2 - er + 2, ehy - Math.round(er * 0.62),
+          (er - 2) * 2, 2, 'rgba(255,255,255,.22)');
+        PIX.rect(c, ex2 - er + 1, ehy + Math.round(er * 0.62), (er - 1) * 2, 1, dk);
+        PIX.rect(c, ex2 - er + 2, ehy + Math.round(er * 0.62) + 1,
+          (er - 2) * 2, 1, sh);
+        /* the ear drum, which is a real thing on the side of a frog's head
+           and the only landmark back here that is not symmetry */
+        PIX.disc(c, ex2 + sg * Math.round(er * 0.72), ehy + Math.round(er * 0.28),
+          2, sh);
+        PIX.rect(c, ex2 + sg * Math.round(er * 0.72) - 1,
+          ehy + Math.round(er * 0.28) - 1, 2, 1, dk);
+      });
+      PIX.rect(c, cx2, at(0.34), 1, Math.round(hh * 0.32), sh);
+      PIX.rect(c, cx2 - 1, at(0.34), 1, Math.round(hh * 0.32), 'rgba(0,0,0,.22)');
       /* the nape, and the collar under it */
-      PIX.rect(c, cx2 - Math.round(hw * 0.30), ey + Math.round(hh * 0.22),
+      PIX.rect(c, cx2 - Math.round(hw * 0.30), at(0.84),
         Math.round(hw * 0.60), 3, dk);
-      PIX.rect(c, cx2 - Math.round(hw * 0.22), ey + Math.round(hh * 0.28),
+      PIX.rect(c, cx2 - Math.round(hw * 0.22), at(0.88),
         Math.round(hw * 0.44), 2, 'rgba(0,0,0,.35)');
     }
 

@@ -1116,6 +1116,29 @@ cache all know about front and back and nothing else.
 Which is what this game did for its first twenty waves, and what most 2D
 cartoons have always done.
 
+### Which makes the back view matter
+
+With the profile gone, walking away from you is the only view that is not
+head-on, and it turned out to be carrying three faults nobody had looked at.
+The head canvas was measured — 46x42, the brim bottom at 0.28 of the height,
+the lenses one row under it, the collar from 0.86 — and against those numbers:
+
+- the skin repaint was **taking the crown of the hat with it**, so a frog
+  walking away was bare-headed with a brim floating behind his ears. It now
+  starts just below the brim and lands on the head's own drawn position
+  rather than on the body's bob.
+- the coat back was **a flat slab** with no chalk stripe, because the stripe
+  lookup was reading a field the costume does not have. Same cloth as the
+  front now, plus a vent up from the hem and three inset rows off each
+  shoulder so it is a jacket and not a wardrobe.
+- his **tie and pocket square were showing on his back**. The panel starts
+  six pixels higher and the welt corner gets its own patch of cloth.
+
+And the back of his head is no longer a green pill: the two humps a frog's
+eyes make are lit on top and cut underneath, the sagittal crease runs between
+them, and each ear drum is a two-pixel disc — the one landmark back there that
+is not symmetry.
+
 ### And he does not smile
 
 Good standing used to put him in the cheerful rotation, which on a man who
