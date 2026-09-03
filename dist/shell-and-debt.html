@@ -6026,11 +6026,17 @@ SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
      is a rounded mass with three grooves in it and a thumb on the near side.
      Anything more detailed than that turns to soup the moment the room
      scales it, and anything less is the cabbage this used to be. */
+  /* ROUNDER. These tables used to hold a flat four-and-four for four rows
+     running, which is a nine-wide rectangle with a chamfer on it -- at room
+     scale a little green brick on the end of each arm. A hand is a BALL
+     with digits curled into it, so every table now bows: narrow at the
+     wrist, widest a third of the way down, narrow again at the fingertips,
+     one step at a time so the edge stays a circle and not a diamond. */
   const SIL = {
-    hang:  [[2, 2], [3, 3], [4, 4], [4, 4], [4, 4], [4, 4], [3, 4], [3, 3], [2, 2]],
-    fist:  [[2, 2], [3, 4], [4, 5], [4, 5], [4, 5], [4, 4], [3, 3]],
-    point: [[2, 2], [3, 3], [4, 9], [4, 10], [4, 4], [4, 4], [3, 3]],
-    grip:  [[2, 3], [3, 5], [4, 6], [4, 6], [4, 6], [3, 5], [2, 3]],
+    hang:  [[2, 2], [4, 4], [5, 5], [5, 6], [5, 6], [5, 6], [5, 5], [4, 4], [3, 3], [2, 2]],
+    fist:  [[2, 3], [4, 5], [5, 6], [6, 7], [6, 7], [5, 6], [4, 5], [2, 3]],
+    point: [[2, 2], [4, 4], [5, 10], [5, 11], [5, 5], [4, 4], [3, 3], [2, 2]],
+    grip:  [[2, 4], [4, 6], [5, 7], [5, 8], [5, 8], [5, 7], [4, 5], [2, 3]],
   };
   const raw = SIL[pose] || SIL.hang;
   /* the table, scaled and de-duplicated: at k = 0.6 two source rows land on
@@ -6417,6 +6423,71 @@ SPR.povHand = function (ctx, cx, cy, d, sgn, k, grip) {
   SPR.povPaw(ctx, cx, cy, d, sgn, k, grip);
 };
 
+/* ============================================================
+   THE RAG.
+
+   DUEL.reach carried a `rag: true` flag from the day the trail
+   was added and NOTHING ever read it, so going over a stain on
+   the boards was done with a bare green fist and a two-pixel
+   vibration. This is the cloth: a bunched mass over the knuckles
+   with folds in it and a hem that hangs below the hand, and it
+   takes the colour up as you use it -- `soak` from 0 to 1 walks
+   it from grey linen to something you would not want to hold.
+
+   Drawn AFTER the hand, because the hand is holding it.
+   cx, cy is the same wrist the paw was drawn at. k matches the
+   hand's k so the two are the same size.
+   ============================================================ */
+SPR.povRag = function (ctx, cx, cy, k, sgn, soak) {
+  k = k || 0.6;
+  soak = U.clamp(soak || 0, 0, 1);
+  /* IT IS HELD, NOT WORN. At fifty-six by forty it covered the whole fist
+     and came out as a bread roll with two green fingertips on top of it;
+     the cloth is smaller than the hand and hangs off the FRONT of it, so
+     the knuckles still read and you can see what is doing the wiping. */
+  const w = Math.max(9, Math.round(38 * k));
+  const h = Math.max(7, Math.round(24 * k));
+  const x0 = Math.round(cx - (sgn < 0 ? w * 0.66 : w * 0.34));
+  const y0 = Math.round(cy + h * 0.16);
+  /* linen, going over to blood */
+  const mix = (a, b) => Math.round(a + (b - a) * soak);
+  const lit = 'rgb(' + mix(214, 150) + ',' + mix(208, 40) + ',' + mix(190, 52) + ')';
+  const mid = 'rgb(' + mix(168, 106) + ',' + mix(162, 24) + ',' + mix(144, 34) + ')';
+  const dk = 'rgb(' + mix(112, 62) + ',' + mix(106, 14) + ',' + mix(92, 22) + ')';
+  const INK = PIX.PAL.K;
+  /* the bunched mass: three overlapping lumps, so the silhouette is cloth
+     and not a folded napkin */
+  const lump = (fx, fy, rx, ry, col) =>
+    SPR.ellipse(ctx, x0 + Math.round(w * fx), y0 + Math.round(h * fy),
+      Math.max(2, Math.round(w * rx)), Math.max(2, Math.round(h * ry)), col);
+  lump(0.44, 0.44, 0.52, 0.50, INK);
+  lump(0.78, 0.62, 0.28, 0.36, INK);
+  lump(0.44, 0.42, 0.48, 0.44, mid);
+  lump(0.78, 0.60, 0.24, 0.30, mid);
+  lump(0.34, 0.28, 0.32, 0.24, lit);
+  /* folds: two creases running out of the grip */
+  for (let i = 0; i < 2; i++) {
+    const fy = y0 + Math.round(h * (0.40 + i * 0.26));
+    PIX.rect(ctx, x0 + Math.round(w * 0.14), fy, Math.round(w * 0.64), 1, dk);
+    PIX.rect(ctx, x0 + Math.round(w * 0.18), fy + 1, Math.round(w * 0.50), 1,
+      'rgba(255,255,255,.14)');
+  }
+  /* the hem, hanging below the hand with a corner off one side */
+  const hy = y0 + Math.round(h * 0.80);
+  PIX.rect(ctx, x0 + Math.round(w * 0.12), hy, Math.round(w * 0.74), 2, INK);
+  PIX.rect(ctx, x0 + Math.round(w * 0.14), hy, Math.round(w * 0.70), 1, dk);
+  /* ONE CORNER HANGS. A cloth with a level hem is a flannel; the corner
+     off one side is the whole difference between the two. */
+  const cw = Math.max(3, Math.round(w * 0.22));
+  const cx0 = x0 + (sgn < 0 ? Math.round(w * 0.04) : Math.round(w * 0.74));
+  const ch = Math.max(3, Math.round(h * 0.44));
+  for (let i = 0; i < ch; i++) {
+    const ww = Math.max(1, cw - Math.round((i / ch) * cw));
+    PIX.rect(ctx, cx0 + (sgn < 0 ? cw - ww : 0) - 1, hy + 1 + i, ww + 2, 1, INK);
+    PIX.rect(ctx, cx0 + (sgn < 0 ? cw - ww : 0), hy + 1 + i, ww, 1, i < 2 ? mid : dk);
+  }
+};
+
 /* a forearm entering from off-frame, in your pinstripe sleeve */
 SPR.povSleeve = SPR.povTube;
 
@@ -6494,10 +6565,33 @@ SPR.povFist = function (d, w, o) {
     /* to the power of six tenths, so the mass is FULL at the top and bottom
        and only tapers right at the ends: a plain sine came out a lens, and
        left a wedge of nothing between the thumb and the top of the hand */
+    /* AND THE BACK EDGE BOWS TOO. It came off seven per cent of the width,
+       which is a straight vertical wall at any size the game asks for: the
+       front of the hand was a curve and the back was a plank, and the whole
+       thing read as a green brick with a stripe on it. Both edges bow now,
+       and the arc is taken to a lower power so the taper is spread over the
+       mass instead of crammed into the last two rows. */
     const arcAt = (y) => Math.pow(Math.sin(Math.PI
-      * U.clamp((y / (H - 1) - 0.02) / 0.96, 0, 1)), 0.60);
-    const EL = (y) => Math.round(w * 0.26 - arcAt(y) * w * 0.22);
-    const ER = (y) => w - 1 - Math.round((1 - arcAt(y)) * w * 0.07);
+      * U.clamp((y / (H - 1) - 0.02) / 0.96, 0, 1)), 0.62);
+    /* BOTH EDGES OFF THE SAME ARC, from the same centre line. Insetting
+       each edge by its own fraction of the width leaves row zero fifty-three
+       per cent wide however hard the arc bows -- a flat top with a corner at
+       each end, which is what kept reading as a wedge. Off a shared centre
+       the top and bottom rows converge to a point and the silhouette is a
+       ball, biased toward the wrist side because a fist is deepest at the
+       knuckles. */
+    /* the centre line sits right of middle so the phalanges that wrap off
+       the front edge have canvas to wrap INTO -- at 0.46 the front of the
+       mass reached x = 2 and the fingertips were being clipped by the left
+       edge of the sprite */
+    /* AN OVAL, NOT A BALL. Both edges off one arc at equal reach made a
+       sphere -- a green tennis ball with a sausage on it, knuckles and all
+       gone. A fist is deep front-to-back and shallow across: the FRONT edge
+       barely bows, because that is the straightish line the knuckles sit on,
+       and the BACK edge does all the rounding. */
+    const CX = w * 0.50;
+    const EL = (y) => Math.round(CX - arcAt(y) * w * 0.17);
+    const ER = (y) => Math.round(CX + arcAt(y) * w * 0.44);
     const ft = Math.max(3, Math.round(H * 0.17));          /* one phalanx thick */
 
     /* ---- 1. THE PHALANGES, wrapping away off the front edge. Drawn first,
@@ -6512,10 +6606,11 @@ SPR.povFist = function (d, w, o) {
       PIX.rect(c, x0, y, x1 - x0, 1, 'rgba(255,255,255,.18)');
       PIX.rect(c, x0, y + ft - 1, x1 - x0, 1, 'rgba(0,0,0,.30)');
       /* the tip, curled back under: a pad with a small nail on it */
-      if (len >= u(5)) {
+      if (len >= u(6)) {
         PIX.rect(c, x0 - 1, y, u(3) + 2, ft + 1, INK);
         PIX.rect(c, x0, y + 1, u(3), ft - 1, shade);
-        PIX.rect(c, x0, y + 1, Math.max(1, u(2)), Math.max(1, ft - 2), NAIL);
+        /* the nail only at a size where two pixels of it is not just noise */
+        if (u(2) >= 2) PIX.rect(c, x0 + 1, y + 2, u(2) - 1, Math.max(1, ft - 3), NAIL);
       }
     }
 
@@ -6551,46 +6646,50 @@ SPR.povFist = function (d, w, o) {
       PIX.rect(c, kx - r, ky + r + 1, r + u(4), 1, 'rgba(255,255,255,.07)');
     }
 
-    /* ---- 4. THE THUMB, across the top on the diagonal ---- */
+    /* ---- 4. THE THUMB, across the top on the diagonal ----
+            AS A ROUND TUBE, NOT A RUN OF COLUMNS. Stepping columns of equal
+            height along a diagonal and inking each one draws a
+            parallelogram: the thumb came out as a flat green plate laid
+            across the top of the hand with a hard black edge, which is most
+            of why the whole fist read as a wedge. Discs down the same line
+            give a tube with round ends for free, and the taper toward the
+            tip is what says thumb. ---- */
     const tt = ft + Math.max(1, u(2));
-    const ax = Math.round(w * 0.66), ay = Math.max(1, Math.round(H * 0.07));
-    const bx = Math.max(0, Math.round(w * 0.09)), by = Math.round(H * 0.33);
-    const steps = Math.max(3, ax - bx);
+    const ax = Math.round(w * 0.62), ay = Math.max(2, Math.round(H * 0.11));
+    const bx = Math.max(1, Math.round(w * 0.12)), by = Math.round(H * 0.34);
+    const steps = Math.max(4, Math.round(Math.hypot(ax - bx, by - ay)));
+    const R0 = Math.max(2, Math.round(tt * 0.56)), R1 = Math.max(2, Math.round(tt * 0.42));
     const col = (i) => {
       const t = i / steps;
       return { x: Math.round(ax + (bx - ax) * t), y: Math.round(ay + (by - ay) * t),
-        h: tt - Math.round(t * u(1)) };
+        r: Math.round(R0 + (R1 - R0) * t) };
     };
-    /* ALL THE INK FIRST, THEN ALL THE SKIN. Drawn per column -- ink at
-       x minus one through x plus one, then skin at x -- each column's
-       outline painted over the skin the column before it had just laid
-       down, and the thumb came out as a black diagonal with one green
-       pixel at the end of it. */
+    /* ALL THE INK FIRST, THEN ALL THE SKIN -- otherwise each disc's outline
+       paints over the fill the disc before it laid down. */
+    for (let i = 0; i <= steps; i++) { const q = col(i); PIX.disc(c, q.x, q.y, q.r + 1, INK); }
+    for (let i = 0; i <= steps; i++) { const q = col(i); PIX.disc(c, q.x, q.y, q.r, skin); }
+    /* lit along the top of the tube, shaded along the bottom */
     for (let i = 0; i <= steps; i++) {
       const q = col(i);
-      PIX.rect(c, q.x - 1, q.y - 1, 3, q.h + 2, INK);
-    }
-    for (let i = 0; i <= steps; i++) {
-      const q = col(i);
-      PIX.rect(c, q.x, q.y, 1, q.h, skin);
-      PIX.rect(c, q.x, q.y, 1, 1, 'rgba(255,255,255,.22)');
-      PIX.rect(c, q.x, q.y + q.h - 1, 1, 1, 'rgba(0,0,0,.40)');
+      PIX.rect(c, q.x, q.y - q.r, 1, Math.max(1, u(1)), 'rgba(255,255,255,.20)');
+      PIX.rect(c, q.x, q.y + q.r - 1, 1, Math.max(1, u(1)), 'rgba(0,0,0,.34)');
     }
     /* its one crease, square across the shaft */
-    const cxx = Math.round(ax + (bx - ax) * 0.46);
-    const cyy = Math.round(ay + (by - ay) * 0.46);
-    PIX.rect(c, cxx, cyy, 1, tt, 'rgba(0,0,0,.42)');
-    PIX.rect(c, cxx + 1, cyy, 1, tt, 'rgba(255,255,255,.14)');
-    /* and the NAIL: broad, flat, lying on top of the tip. This is the whole
-       tell that it is a thumb and not a fifth finger. */
-    const nw = Math.max(3, u(4)), nh = Math.max(2, tt - u(3));
-    const nx = bx, ny = by + 1;
-    PIX.rect(c, nx - 1, ny - 1, nw + 2, nh + 2, INK);
-    PIX.rect(c, nx, ny, nw, nh, shade);
-    PIX.rect(c, nx + 1, ny, nw - 1, nh, NAIL);
-    PIX.rect(c, nx + 1, ny, nw - 1, 1, 'rgba(255,252,244,.78)');
-    PIX.rect(c, nx, ny + nh - 1, nw, 1, 'rgba(0,0,0,.26)');
-    PIX.rect(c, nx + nw - 1, ny, 1, nh, 'rgba(0,0,0,.20)');
+    const cq = col(Math.round(steps * 0.46));
+    PIX.rect(c, cq.x, cq.y - cq.r + 1, 1, cq.r * 2 - 2, 'rgba(0,0,0,.40)');
+    PIX.rect(c, cq.x + 1, cq.y - cq.r + 1, 1, cq.r * 2 - 2, 'rgba(255,255,255,.13)');
+    /* and the NAIL: broad, flat, lying on top of the tip, with its corners
+       taken off so it is a nail and not a postage stamp */
+    /* LYING ALONG THE THUMB, not a square blob on the end of it: six by six
+       of pale grey on the tip read as a bolt through his hand. */
+    const nw = Math.max(3, u(3)), nh = Math.max(2, R1 - Math.max(1, u(1)));
+    const nx = bx - Math.max(1, u(1)), ny = by - (nh >> 1);
+    for (let r2 = 0; r2 < nh; r2++) {
+      const inw = (r2 === 0 || r2 === nh - 1) ? 1 : 0;
+      PIX.rect(c, nx + inw - 1, ny + r2, nw - inw * 2 + 2, 1, INK);
+      PIX.rect(c, nx + inw, ny + r2, nw - inw * 2, 1, r2 === 0 ? 'rgba(255,252,244,.78)' : NAIL);
+    }
+    PIX.rect(c, nx + 1, ny + nh - 1, nw - 2, 1, 'rgba(0,0,0,.24)');
     /* the web, where it leaves the hand */
     PIX.rect(c, ax - u(3), ay + tt, u(5), 1, 'rgba(0,0,0,.34)');
 
@@ -9723,7 +9822,26 @@ SPR.frogWhole = function (key, def, opts) {
        Chunky cartoon with real joints in it, rather than a
        barrel with a beach ball on top.
        ============================================================ */
-    const HEAD_H = 47, NECK = 8, TORSO = 44, LEGS = 38, RISE = 5;
+    /* ============================================================
+       BIGGER HEAD. A third was a mascot; this is a CARTOON mascot.
+
+       47 / 8 / 44 / 38 measured out at a head 0.30 of the figure,
+       which is twice a person and still shy of what the drawing
+       wants. The head goes to 58 and the torso and legs come in to
+       pay for it, so he does not also get taller:
+
+         head  47 -> 58    now 0.42 of the whole figure
+         neck   8 -> 11    it sinks further into the collar, or the
+                           extra eleven rows arrive as neck
+         torso 44 -> 39
+         legs  38 -> 33    short legs are the loudest cartoon cue
+                           there is, and a big head over short legs
+                           is the whole silhouette
+
+       The total comes out at 138 against 137, so nothing that
+       depends on his height in a room has to move.
+       ============================================================ */
+    const HEAD_H = 58, NECK = 11, TORSO = 39, LEGS = 33, RISE = 5;
     const hh = HEAD_H;
     const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height)));
     const bh = TORSO + NECK;
@@ -9781,8 +9899,12 @@ SPR.frogWhole = function (key, def, opts) {
     /* CLAMPED TO ONE PIXEL. Taken as its own five-pixel bob the head went
        down while the shoulders went up and swallowed his own neck: the lag
        is a nudge off the body's bob, not a second bob. */
+    /* FOLLOW-THROUGH. The head arrives a beat after the shoulders, which was
+       clamped to a single pixel back when the head was a third of him. At
+       forty per cent and with the room bouncing him three pixels a step,
+       one pixel of lag is invisible: two reads as weight. */
     const headBob = bob + U.clamp(
-      Math.round(((RISE - bobU2 * RISE) - bob) * 0.6), -1, 1);
+      Math.round(((RISE - bobU2 * RISE) - bob) * 0.7), -2, 2);
     const sway = Math.round(SPR.walkPhase(frame) * 2);
     const bodyTop = BRIM + hh - NECK + bob;
     const cx = Math.round(W / 2);
@@ -17425,21 +17547,25 @@ const SCENE = (() => {
       const dx = a._goto - a.x;
       const sp = a._gspeed || 26;
       if (Math.abs(dx) <= sp * dt) {
-        a.x = a._goto; a._goto = undefined; a.frame = 0;
+        a.x = a._goto; a._goto = undefined; a.frame = 0; a._step = null;
         if (a._gthen) { const f = a._gthen; a._gthen = null; f(); }
         continue;
       }
       a.x += Math.sign(dx) * sp * dt;
       a.face = Math.sign(dx);
-      a.frame = Math.floor((a._gw = (a._gw || 0) + dt * (sp * 0.29))) % (SPR.WALK_FRAMES || 8);
+      a._gw = (a._gw || 0) + dt * (sp * 0.29);
+      a.frame = Math.floor(a._gw) % (SPR.WALK_FRAMES || 8);
+      a._step = { ph: a._gw % 1, amt: Math.min(1, sp / 40) };
     }
     for (const a of (def.actors || [])) {
       if (a.job !== 'pace' || a.gone || a.talking || a._goto !== undefined) continue;
       if (a._home === undefined) { a._home = a.x; a._dir = 1; a._wait = 0; }
-      if (a._wait > 0) { a._wait -= dt; a.frame = 0; continue; }
+      if (a._wait > 0) { a._wait -= dt; a.frame = 0; a._step = null; continue; }
       a.x += a._dir * 13 * dt;
       a.face = a._dir;
-      a.frame = Math.floor((a._pw = (a._pw || 0) + dt * 7)) % 8;
+      a._pw = (a._pw || 0) + dt * 7;
+      a.frame = Math.floor(a._pw) % 8;
+      a._step = { ph: a._pw % 1, amt: 0.62 };
       const span = a.beat || 22;
       if ((a._dir > 0 && a.x > a._home + span) || (a._dir < 0 && a.x < a._home - span)) {
         a._dir = -a._dir;
@@ -18695,21 +18821,58 @@ const SCENE = (() => {
      crosses a room tells you how the day is going before you look
      at anything else.
      ============================================================ */
-  function gaitOf(T) {
+  /* ============================================================
+     THE BOUNCE.
+
+     Everybody in this game walked FLAT. The legs cycled, the arms
+     swung, the head lagged a pixel -- and the body itself travelled
+     along a perfectly level line, because the only vertical motion
+     in the gait was a hop gated behind good karma and a limp gated
+     behind low hearts. A cartoon walk does not work like that. The
+     body rises over the leg that is carrying it and drops onto the
+     one that is landing, TWICE a stride, and it squashes on the
+     drop and stretches at the top.
+
+     So: one shared bounce, taken off the walk phase, used by the
+     player and by every actor who is going somewhere.
+
+       hop      up over each pass of the stride, two per stride
+       squash   +ve wider-and-shorter at the contacts, -ve taller
+                -and-narrower at the top of each pass
+       tip      the lean into the direction of travel
+
+     Everything is scaled by `amt`, which is how fast the figure is
+     actually moving, so a stroll is a nod and a run is a bounce.
+     ============================================================ */
+  function stepBounce(ph, amt) {
+    const up = Math.abs(Math.sin(ph * Math.PI * 2));
+    return {
+      hop: up * 3.4 * amt,
+      /* at the contacts up is 0 and he is squashed; at the pass up is 1
+         and he is stretched. Centred on 0.44 rather than 0.5 because a
+         walk spends longer in contact than in the air. */
+      squash: (0.44 - up) * 0.13 * amt,
+    };
+  }
+
+  function gaitOf() {
     const speed = Math.hypot(Math.abs(me.v), Math.abs(me.vz) * (band() || 1));
-    if (speed < 8) return { hop: 0, drop: 0, tip: 0 };
+    if (speed < 6) return { hop: 0, drop: 0, tip: 0, squash: 0 };
     /* where in the stride he is: the walk counter, not the clock */
-    const ph = (me.walk % 1);
+    const NF2 = SPR.WALK_FRAMES || 8;
+    const ph = (me.walk / NF2) % 1;
+    const amt = Math.min(1, speed / 62);
+    const b = stepBounce(ph, amt);
     const k = (typeof STORY !== 'undefined' && STORY.karma) ? STORY.karma() : null;
     const hurt = (typeof G !== 'undefined' && (G.hearts || 6) <= 2);
     const glad = k && k.band >= 2;
-    /* THE HOP: up on the pass of the stride, and only if he is pleased */
-    const hop = glad ? Math.max(0, Math.sin(ph * Math.PI * 2)) * 2 : 0;
+    /* pleased with himself, he skips: the same bounce again on top */
+    const hop = b.hop * (glad ? 1.55 : 1);
     /* THE DRAG: down on one foot of the two, and only if he is hurt */
     const drop = hurt ? (ph < 0.5 ? 1 : 0) : 0;
     /* everybody leans a little into where they are going */
-    const tip = Math.round(Math.sign(me.v) * Math.min(1, Math.abs(me.v) / 60));
-    return { hop: Math.round(hop), drop, tip };
+    const tip = Math.round(Math.sign(me.v) * Math.min(2, Math.abs(me.v) / 34));
+    return { hop: Math.round(hop), drop, tip, squash: b.squash };
   }
 
   /* ============================================================
@@ -18874,16 +19037,22 @@ const SCENE = (() => {
        rule for a room and the wrong one for a CHILD: a boy standing next to
        his father is smaller without being further away. */
     const sc2 = sc * (a.scale || 1);
-    const w = Math.max(1, Math.round(r.w * sc2 * atw));
-    const h = Math.max(1, Math.round(r.h * sc2) - id.rise);
-    castShadow(c, Math.round(a.x), fy, w, 0.42);
+    /* AND HE BOUNCES IF HE IS WALKING. An actor crossing a room on the same
+       flat line as the furniture is the thing that made a busy room read as
+       a diorama with one moving part. */
+    const ab = a._step ? stepBounce(a._step.ph, a._step.amt) : { hop: 0, squash: 0 };
+    const w = Math.max(1, Math.round(r.w * sc2 * atw * (1 + ab.squash)));
+    const h = Math.max(1, Math.round(r.h * sc2 * (1 - ab.squash)) - id.rise);
+    const ahop = Math.round(ab.hop);
+    castShadow(c, Math.round(a.x), fy + Math.round(ab.hop * 0.4), w,
+      0.42 - ab.hop * 0.08);
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
-      Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
+      Math.round(fy - h + 1 - ahop + (work ? Math.abs(work) - 1 : 0)), w, h);
     /* AND WHAT IS IN HIS HANDS — in the hand the rig reports, so the glass
        arrives at his mouth and the rag arrives on the counter. */
     if (job && job.prop) {
       const dx = Math.round(a.x - w / 2) + id.lean + work;
-      const dy = Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0));
+      const dy = Math.round(fy - h + 1 - ahop + (work ? Math.abs(work) - 1 : 0));
       const hd = r.cv.hand;
       const hx = hd ? Math.round(dx + hd.x * (w / r.cv.width))
         : Math.round(a.x + (w * 0.52) * face);
@@ -18997,10 +19166,13 @@ const SCENE = (() => {
     /* the reach: a lean toward whatever he is doing, and a little crouch */
     const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
     const lean = Math.round(rc * 3) * (me.reachTo || 1);
-    const g = gaitOf(T);
-    const w = Math.max(1, Math.round(r.w * sc * tw * (1 + sq - st * 0.5 + rc * 0.04)));
-    const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
-    const shW = Math.round(r.w * (0.66 + sq));
+    const g = gaitOf();
+    /* the walk's own squash rides on top of the landing squash: wider and
+       shorter at each contact, taller and narrower over each pass */
+    const gq = g.squash || 0;
+    const w = Math.max(1, Math.round(r.w * sc * tw * (1 + sq + gq - st * 0.5 + rc * 0.04)));
+    const h = Math.max(1, Math.round(r.h * sc * (1 - sq - gq + st - rc * 0.05)) - id.rise);
+    const shW = Math.round(r.w * (0.66 + sq + gq));
     /* THE SHADOW STAYS ON THE FLOOR while he hops off it, which is the only
        thing that makes a hop read as leaving the ground rather than as the
        whole sprite sliding up the screen. */
@@ -19166,6 +19338,13 @@ const SCENE = (() => {
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
     /* the harness compares the shot at both available scales */
     debugForceK(k) { forceK = k || 0; scale(); },
+    /* the live gait, so a probe can prove the bounce is actually moving him
+       rather than take a picture of one frame of it and guess */
+    debugGait() {
+      const g = gaitOf();
+      return { hop: g.hop, squash: +(g.squash || 0).toFixed(4), tip: g.tip,
+        walk: +me.walk.toFixed(3), v: Math.round(me.v) };
+    },
     /* the harness asks what is under a point, so the egg rules can be
        asserted rather than eyeballed */
     debugPick(x, y) { return pick(x, y === undefined ? (def ? def.floorY - 10 : 100) : y); },
@@ -25814,33 +25993,135 @@ const JOBS = (() => {
     ART.px(c, 150, 118, 9, 3, '#e6ded0');
     ART.px(c, 157, 118, 4, 3, '#3a3630');
 
-    /* WHAT YOU ARE HERE FOR, at the middle of the frame with a shadow */
+    /* WHAT YOU ARE HERE FOR. It goes DOWN as you clear it -- three passes
+       took three taps and left the pavement exactly as filthy as it started,
+       which is the sort of thing that makes a job feel like a slot machine. */
     const mx = Math.round(W * s.centre), my = 82;
-    SPR.ellipse(c, mx + 5, my + 5, 20, 6, 'rgba(0,0,0,.34)');
-    SPR.ellipse(c, mx, my, 17, 8, '#33240f');
-    SPR.ellipse(c, mx, my - 3, 14, 6, '#553c1c');
-    SPR.ellipse(c, mx - 4, my - 6, 7, 4, '#6b4f26');
-    SPR.ellipse(c, mx - 5, my - 7, 3, 2, 'rgba(255,236,196,.22)');
-    for (let i = 0; i < 4; i++) {
-      SPR.ellipse(c, mx - 16 + i * 11, my + 7 + (i % 2) * 4, 4, 2, 'rgba(45,32,14,.55)');
+    const gone = U.clamp(s.hits / s.rounds, 0, 1);
+    const mk = 1 - gone * 0.82;
+    if (mk > 0.2) {
+      const R = (n) => Math.max(1, Math.round(n * mk));
+      SPR.ellipse(c, mx + 5, my + 5, R(20), R(6), 'rgba(0,0,0,.34)');
+      SPR.ellipse(c, mx, my, R(17), R(8), '#33240f');
+      SPR.ellipse(c, mx, my - R(3), R(14), R(6), '#553c1c');
+      SPR.ellipse(c, mx - R(4), my - R(6), R(7), R(4), '#6b4f26');
+      SPR.ellipse(c, mx - R(5), my - R(7), R(3), R(2), 'rgba(255,236,196,.22)');
+      for (let i = 0; i < 4; i++) {
+        SPR.ellipse(c, mx - R(16) + i * R(11), my + R(7) + (i % 2) * R(4),
+          R(4), R(2), 'rgba(45,32,14,.55)');
+      }
+      for (let i = 0; i < 4; i++) {                         /* and the flies */
+        ART.px(c, mx - 10 + Math.round(Math.sin(s.T * 5 + i * 2) * 13),
+          my - 22 + Math.round(Math.cos(s.T * 4 + i * 1.7) * 8), 2, 2, 'rgba(18,16,14,.66)');
+      }
+    } else {
+      /* a clean wet patch where it was */
+      SPR.ellipse(c, mx, my, 15, 5, 'rgba(150,160,150,.16)');
+      SPR.ellipse(c, mx - 3, my - 1, 6, 2, 'rgba(220,230,226,.14)');
     }
-    for (let i = 0; i < 4; i++) {                           /* and the flies */
-      ART.px(c, mx - 10 + Math.round(Math.sin(s.T * 5 + i * 2) * 13),
-        my - 22 + Math.round(Math.cos(s.T * 4 + i * 1.7) * 8), 2, 2, 'rgba(18,16,14,.66)');
+    /* ============================================================
+       THE SCOOP AND THE BRUSH, ONE IN EACH HAND.
+
+       What was here was a flat grey rect with a stick drawn THROUGH
+       the middle of it and a hand forty pixels past its far end
+       holding nothing. On screen it read as an open laptop lying on
+       the pavement, and the second hand sat on the needle strip with
+       air in it. Two faults, both geometric:
+
+         the pan was a rect      a pan you are looking down into is a
+                                 trapezoid -- floor, two side walls,
+                                 a back wall -- and the thing that
+                                 says `pan` is the LIP on the stone
+         the hands held nothing  the grips have to be ON the tools,
+                                 so the handle ends in the right hand
+                                 and the brush block sits in the left
+
+       So: the pan is authored as a tray in perspective with its lip
+       against the paving, the handle leaves its back corner and runs
+       up into the right fist, and the left hand comes in with the
+       brush and sweeps at the pan's mouth on the same beat. Both
+       travel with the needle; the mess does not move.
+       ============================================================ */
+    /* THE TRAVEL IS CLAMPED SO THE BRUSH STAYS IN THE PICTURE. The pan
+       swept from 30 to 148 and the brush hangs thirty-eight pixels to its
+       left, which put the whole left hand off the frame at the near end. */
+    const px = Math.round(58 + s.x * (W - 116));      // the pan's centre
+    /* IT IS CARRIED, NOT DRAGGED. On the stone the pan and the brush both
+       crossed the mess and the three of them came out as one brown smudge,
+       so the whole rig rides a dozen rows higher with its shadow left down
+       on the paving, and it THUMPS the last of the way when you land one. */
+    const PY = 54 + Math.round((s.flash || 0) * 9);   // its back edge, in the air
+    const PH = 15;                                    // how deep it is, in rows
+    const lipW = 40, backW = 26;
+    const wAt = (i2) => Math.round(backW + (i2 / (PH - 1)) * (lipW - backW));
+    /* the shadow it throws, DOWN ON THE STONE where the pan is not: that
+       is the whole of what says the thing is held in the air */
+    const shY = 92 - Math.round((s.flash || 0) * 4);
+    for (let i2 = 0; i2 < 5; i2++) {
+      const w = wAt(PH - 1) - i2 * 4;
+      ART.px(c, px - (w >> 1) + i2 * 2 + 3, shY + i2, w, 1, 'rgba(0,0,0,.30)');
     }
-    /* THE SCOOP, in your two hands, travelling with the needle */
-    const sx = Math.round(18 + s.x * (W - 66));
-    povArm(c, { x0: 214, y0: 154, x1: sx + 42, y1: 82, w0: 26, w1: 15, sgn: 1, k: 0.56 });
-    povArm(c, { x0: 6, y0: 158, x1: sx - 8, y1: 100, w0: 26, w1: 15, sgn: -1, k: 0.52 });
-    ART.px(c, sx + 10, 70, 42, 5, '#221a12');               /* the shaft */
-    ART.px(c, sx + 10, 70, 42, 2, '#453322');
-    SPR.ellipse(c, sx + 14, 88, 24, 6, 'rgba(0,0,0,.30)');  /* its shadow */
-    ART.px(c, sx - 3, 64, 32, 18, '#0e0c0a');
-    ART.px(c, sx - 2, 65, 30, 16, '#8e969e');
-    ART.px(c, sx - 2, 65, 30, 4, '#bcc4cc');
-    ART.px(c, sx - 2, 78, 30, 3, 'rgba(0,0,0,.36)');
-    ART.px(c, sx, 67, 26, 1, 'rgba(255,255,255,.34)');
-    ART.px(c, sx - 3, 81, 32, 2, '#5c646c');                /* the lip on the stone */
+    ART.px(c, px - 13, shY + 1, 26, 3, 'rgba(0,0,0,.22)');
+    /* the back wall, standing up off the stone */
+    ART.px(c, px - (backW >> 1) - 1, PY - 9, backW + 2, 11, '#0d1014');
+    ART.px(c, px - (backW >> 1), PY - 8, backW, 9, '#5e666f');
+    ART.px(c, px - (backW >> 1), PY - 8, backW, 2, '#89929c');
+    ART.px(c, px - (backW >> 1), PY - 1, backW, 2, 'rgba(0,0,0,.40)');
+    /* the floor of the pan, which is the bit you are aiming */
+    for (let i2 = 0; i2 < PH; i2++) {
+      const w = wAt(i2), t = i2 / (PH - 1);
+      const g = Math.round(112 + t * 46);
+      ART.px(c, px - (w >> 1) - 1, PY + i2, w + 2, 1, '#0d1014');
+      ART.px(c, px - (w >> 1), PY + i2, w, 1,
+        'rgb(' + g + ',' + (g + 4) + ',' + (g + 12) + ')');
+      /* the two side walls catch the lamp on one edge and lose it on the other */
+      ART.px(c, px - (w >> 1), PY + i2, 2, 1, 'rgba(255,255,255,.24)');
+      ART.px(c, px + (w >> 1) - 2, PY + i2, 2, 1, 'rgba(0,0,0,.26)');
+    }
+    /* THE LIP. One bright line where the steel meets the paving, which is
+       the whole reason this reads as a pan and not a card lying flat. */
+    ART.px(c, px - (lipW >> 1) - 1, PY + PH, lipW + 2, 2, '#0d1014');
+    ART.px(c, px - (lipW >> 1), PY + PH, lipW, 1, '#d2dae4');
+    /* and what is already in it, once you have landed one */
+    if (s.hits > 0) {
+      SPR.ellipse(c, px, PY + 6, 11, 4, '#3d2a11');
+      SPR.ellipse(c, px - 2, PY + 5, 7, 2, '#5b4020');
+    }
+    /* THE HANDLE, out of the pan's back corner, THROUGH the fist, and a
+       stub out the top of it. A shaft that stops inside the hand reads as
+       a hand resting on nothing; the stub is what makes it held. */
+    const shaft = (x0, y0, x1, y1, at) => {
+      SPR.povTube(c, x0, y0, x1, y1, 7, 5, '#4a3722', '#241a0e',
+        'rgba(255,236,190,.22)');
+      return [Math.round(x0 + (x1 - x0) * at), Math.round(y0 + (y1 - y0) * at)];
+    };
+    const [gx, gy] = shaft(px + 8, PY - 6, px + 52, PY - 42, 0.70);
+    ART.px(c, px + 5, PY - 9, 8, 5, '#20304a');       // the socket
+    ART.px(c, px + 5, PY - 9, 8, 2, '#3d5578');
+    povArm(c, { x0: 220, y0: 152, x1: gx, y1: gy, w0: 26, w1: 13, sgn: 1, k: 0.46,
+      fist: true, hy: 4 });
+    /* THE BRUSH, in the left hand, sweeping at the pan's mouth. It sits
+       CLEAR of the pan and clear of the mess -- drawn over either, the
+       three of them came out as one brown smudge. */
+    const swp = Math.sin(s.T * 7) * 0.5 + 0.5;        // the stroke
+    const bxp = px - 38 - Math.round(swp * 6), byp = PY + 8 + Math.round(swp * 3);
+    const [hx2, hy2] = shaft(bxp + 8, byp - 5, bxp - 30, byp - 44, 0.70);
+    ART.px(c, bxp - 3, byp - 6, 22, 7, '#0d1014');    // the block
+    ART.px(c, bxp - 2, byp - 5, 20, 5, '#6b4d24');
+    ART.px(c, bxp - 2, byp - 5, 20, 2, '#8f6a33');
+    for (let i2 = 0; i2 < 10; i2++) {                 // the bristles
+      const h = 5 + (i2 % 3);
+      ART.px(c, bxp - 1 + i2 * 2, byp + 1, 1, h, i2 % 2 ? '#c8a468' : '#a8813f');
+    }
+    ART.px(c, bxp - 2, byp + 9, 20, 1, 'rgba(0,0,0,.30)');
+    povArm(c, { x0: 0, y0: 158, x1: hx2, y1: hy2, w0: 26, w1: 13,
+      sgn: -1, k: 0.42, fist: true, hy: 4 });
+    /* the grit it kicks up off the stone */
+    for (let i2 = 0; i2 < 5; i2++) {
+      const t = (s.T * 2.4 + i2 * 0.4) % 1;
+      ART.px(c, bxp + 6 + Math.round(t * 22), byp + 6 - Math.round(Math.sin(t * 3.1) * 9),
+        1, 1, 'rgba(210,198,170,' + (0.5 - t * 0.4).toFixed(2) + ')');
+    }
   }
 
   /* ---------------------------------------------------------
@@ -32115,7 +32396,14 @@ const DUEL = {
         return;
       }
       const art = SPR.floorStain(st.seed, st.r);
+      /* IT GOES DOWN UNDER THE CLOTH. The stain used to sit at full strength
+         through all four passes and then vanish on the frame the engine
+         marked it done, which read as a cut, not a wipe. */
+      const R2 = DUEL.reach;
+      const under = R2 && R2.rag && Math.abs(R2.x - st.x) < 4 ? (R2.wipe || 0) : 0;
+      if (under > 0) x.globalAlpha = Math.max(0.12, 1 - under * 0.8);
       x.drawImage(art, Math.round(sp[0] - art.width / 2), Math.round(sp[1] - art.height / 2));
+      if (under > 0) x.globalAlpha = 1;
       if (DUEL.hoverStain === i && !DUEL.busy && !G.loot.caught) {
         const r = st.r + 4, rr = Math.round(r * 0.7);
         [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => {
@@ -32138,17 +32426,23 @@ const DUEL = {
     DUEL.busy = true;
     DUEL.hurry = false;
     DUEL.hoverStain = -1;
-    DUEL.reach = { x: sp[0], y: sp[1], dig: 0, rag: true };
+    DUEL.reach = { x: sp[0], y: sp[1], dig: 0, rag: true, soak: 0 };
     DUEL.fist.tx = sp[0]; DUEL.fist.ty = sp[1] - 6;
     LOOT.sync();
     await DUEL.sleep(220);
-    for (let n = 0; n < 3; n++) {
+    /* FOUR PASSES, ALTERNATING, AND THE CLOTH TAKES IT UP. Three passes at
+       one speed with the stain popping off at the end read as a stutter and
+       then a cut; the rag darkening pass by pass is what makes it a wipe. */
+    for (let n = 0; n < 4; n++) {
       DUEL.reach.dig = 1;
-      DUEL.fist.tx = sp[0] - st.r + (n % 2) * st.r * 2;
+      DUEL.reach.soak = (n + 1) / 4;
+      DUEL.reach.wipe = (n + 1) / 4;
+      DUEL.fist.tx = sp[0] + (n % 2 ? 1 : -1) * (st.r + 2);
+      DUEL.fist.ty = sp[1] - 4;
       SFX.tick();
-      await DUEL.sleep(120);
+      await DUEL.sleep(132 - n * 16);        // the strokes speed up
       DUEL.reach.dig = 0;
-      await DUEL.sleep(60);
+      await DUEL.sleep(52);
     }
     const ev = E.mop(i);
     SFX.click();
@@ -32374,8 +32668,16 @@ const DUEL = {
     SPR.povHand(x, lhx, lhy, def, -1, HK, false);
 
     /* --- your gun hand, or the one that is out over him --- */
-    const dig = DUEL.reach ? DUEL.reach.dig * (DUEL.t % 4 < 2 ? 1 : -1) * 2 : 0;
-    const fx = Math.round(f.x) + dig, fy = Math.round(f.y) + (dig ? 1 : 0);
+    /* THE JITTER IS FOR DIGGING, NOT FOR WIPING. A hand going through a
+       pocket shakes; a hand going over a stain SWEEPS, and the two used to
+       share one two-pixel vibration. The rag gets a lateral smear and a
+       lift instead -- it comes up off the boards between passes. */
+    const R = DUEL.reach;
+    const dig = R && !R.rag ? R.dig * (DUEL.t % 4 < 2 ? 1 : -1) * 2 : 0;
+    const smear = R && R.rag ? Math.round(Math.sin(DUEL.t / 2.2) * 3 * R.dig) : 0;
+    const lift = R && R.rag ? Math.round((1 - R.dig) * 5) : 0;
+    const fx = Math.round(f.x) + dig + smear;
+    const fy = Math.round(f.y) + (dig ? 1 : 0) - lift;
     /* it shrinks as it reaches away from you — that is the whole depth cue */
     const away = U.clamp((FY - 6 - fy) / 72, 0, 1);
     const hk = HK - away * 0.5, sh = hk / HK;
@@ -32387,6 +32689,8 @@ const DUEL = {
       32, Math.max(11, Math.round(21 - away * 9)), sC, sD, sL, sS);
     SPR.povCuff(x, fx, fy + Math.round(9 * sh), def, 1);
     SPR.povHand(x, fx, fy, def, 1, hk, mine && !DUEL.corpse);
+    /* and the cloth in it, if that is what he is holding */
+    if (R && R.rag && SPR.povRag) SPR.povRag(x, fx, fy, hk, 1, R.soak || 0);
 
     x.restore();
     return { aimSelf, aimFoe, mine, bob: Math.round(bob) + drop };

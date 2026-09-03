@@ -852,6 +852,29 @@ at the quay, **dust for prints** at the Brigade — and, this being Paris:
 
 ![The pavement](docs/screen-scoop.png)
 
+  It was the one trade the first-person pass never actually reached. On screen
+  the scoop read as an **open laptop lying on the pavement**: the pan was a
+  flat grey rect with the handle drawn straight *through* the middle of it,
+  the hand holding that handle sat forty pixels past its far end with nothing
+  in it, and the second hand was down on the needle strip holding air. Three
+  faults, all geometric —
+
+  - a pan you are looking down into is a **trapezoid** — floor, two side
+    walls, a back wall — and the thing that actually says *pan* is the **lip**
+    where the steel meets the paving
+  - the grips have to be **on** the tools, so the handle now leaves the pan's
+    back corner, passes through the fist and comes out the top as a stub; a
+    shaft that stops inside a hand reads as a hand resting on nothing
+  - dragged along the stone, the pan and the brush both crossed the mess and
+    the three of them came out as one brown smudge. The whole rig is
+    **carried** a dozen rows higher with its shadow left down on the paving,
+    and it thumps the last of the way when you land one
+
+  So it is a scoop in one hand and a **brush** in the other, sweeping at the
+  pan's mouth on its own beat, and the mess **goes down** as you clear it —
+  three passes used to leave the pavement exactly as filthy as it started,
+  which is the sort of thing that makes a job feel like a slot machine.
+
 - **THE THREE CUPS.** A frog with a folding table on the Butte. Play him and
   he is faster than your eye. Warn the mark off and he loses his rent. Or run
   the table yourself, which pays and costs.
@@ -1054,9 +1077,20 @@ hat, coat, vest, hand, boot, mouth.
 - **TIME** — real seconds, shorter every chapter.
 - **NOISE** — every pocket makes some; a boot or a gold tooth makes a lot.
 - **THE TRAIL** — dragging a frog through a doorway leaves marks. Tap one and
-  your arm goes out with the mop: three passes each, and the boards come back.
+  your arm goes out with the **rag**: four passes each, and the boards come
+  back.
 
 ![The mop](docs/screen-mop.png)
+
+  `DUEL.reach` had carried a `rag: true` flag since the day the trail was added
+  and **nothing ever read it**, so going over a stain on the boards was done
+  with a bare green fist and a two-pixel vibration — the same jitter a hand
+  gets going through a pocket. A hand in a pocket shakes; a hand on a stain
+  **sweeps**. There is a cloth in it now: a bunched mass with folds and a
+  corner hanging off one side, and it takes the colour up as you use it, from
+  grey linen to something you would not want to hold. The stain goes down
+  under it pass by pass instead of sitting at full strength through all four
+  and vanishing on the frame the engine marks it done, which read as a cut.
 
 Get heard and a uniform comes through the back door tapping his nightstick:
 **bribe** him or walk. After a lieutenant, the department wants protection
@@ -1156,15 +1190,25 @@ The measured pass in the last section is right about people and wrong about
 this game. It is a cartoon about frogs in hats, so the original cartoon
 numbers are the right numbers:
 
-| | |
-|---|---|
-| head | **47 rows** — a third of him, hat included |
-| neck | **8** — how far the head sinks into the collar |
-| torso | 44 |
-| legs | **38** — short, which is the single loudest thing a cartoon does to a body |
+| | was | now |
+|---|---|---|
+| head | 47 rows | **58** — two fifths of him, hat included |
+| neck | 8 | **11** — how far the head sinks into the collar |
+| torso | 44 | **39** |
+| legs | 38 | **33** — short, which is the single loudest thing a cartoon does to a body |
 
-Which measures out at a head fraction of **0.30** and an aspect of **0.51** —
-a mascot, by the numbers, and that is the point.
+47 measured out at a head fraction of 0.30 — twice a person, and still shy of
+what the drawing wanted. At **58** it measures **0.41**, with the aspect
+unmoved at 0.51 and the total height 138 against 137, so nothing that depends
+on how tall he stands in a room had to move. The torso and the legs pay for
+the head; a big head over short legs is the whole silhouette.
+
+The measuring probe had to be fixed to see it. It found the head by walking
+down to the first row wider than seventy-two per cent of the widest, which
+works right up until the hat brim is wide enough to trip it — at which point
+it reported a head **seven per cent** of the figure. It looks for the neck
+now: the narrowest row between the brim and the shoulders, which is a neck
+however wide the hat is.
 
 The reason those numbers did not work the *first* time they were here is not
 the numbers. Back then a leg was one slab from hip to shoe with a crease
@@ -1173,6 +1217,59 @@ Everything the two rebuild waves earned stays: tapered bones, elbows, knees, a
 sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
+
+## Round hands, and a walk that bounces
+
+![Every hand the game draws](docs/screen-hands.png)
+
+### The hands were bricks
+
+Both of them, by the numbers. The standing hand's silhouette table held a flat
+four-and-four for four rows running — a nine-wide rectangle with a chamfer on
+it, which at room scale is a little green brick on the end of each arm. Every
+table bows now: narrow at the wrist, widest a third of the way down, narrow
+again at the fingertips, one step at a time so the edge stays a circle and not
+a diamond.
+
+The first-person fist had two separate faults doing the same thing. Its front
+edge came off an arc and its **back edge came off seven per cent of the
+width** — a straight vertical wall at any size the game asks for, so the front
+of the hand was a curve and the back was a plank. And the **thumb was a run of
+equal-height columns** stepped along a diagonal and inked one at a time, which
+is the definition of a parallelogram: a flat green plate laid across the top of
+the hand with a hard black edge on it.
+
+Both edges bow off one centre line now — the front barely, because that is the
+straightish line the knuckles sit on, the back doing all the rounding, so the
+mass is an oval that is deep front-to-back and shallow across. The thumb is a
+row of discs down the same diagonal, which gives a tube with round ends for
+free, and its nail lies along the shaft instead of sitting on the tip as a
+six-by-six square of pale grey that read as a bolt through his hand.
+
+### And the walk bounces
+
+Everybody in this game walked **flat**. The legs cycled, the arms swung, the
+head lagged a pixel — and the body itself travelled along a perfectly level
+line, because the only vertical motion in the whole gait was a hop gated
+behind good karma and a limp gated behind low hearts. A cartoon walk does not
+work like that.
+
+One shared bounce now, taken off the walk phase and used by the player and by
+every actor who is going somewhere:
+
+| | |
+|---|---|
+| **hop** | up over each pass of the stride — **twice** a stride, measured at 0→3 px, and 0→5 when he is pleased with himself |
+| **squash** | wider-and-shorter at the contacts, taller-and-narrower at the top of each pass, measured at **+0.048 → −0.063** |
+| **tip** | the lean into the direction of travel |
+
+Everything scales with how fast the figure is actually moving, so a stroll is a
+nod and a run is a bounce. The head's follow-through went from one pixel of lag
+to two, because at two fifths of the figure and with the room bouncing him
+three pixels a step, one pixel is invisible.
+
+An actor crossing a room on the same flat line as the furniture is the thing
+that made a busy room read as a diorama with one moving part.
 
 ### A line round him
 
@@ -1474,7 +1571,7 @@ the frog leaning into a cut-in are the same frog.
 34. The blood-splat kill wipe, coming off like a sleeve on glass
 35. The drag loader — you, him, one swinging bulb, a smear on the boards
 36. First-person searching: your arm out, dust off the lining, his weight
-37. The mop — three passes a stain
+37. The rag — four passes a stain
 38. The bribe — chips arcing into a glove, one at a time
 39. The last-heart dread: a closing vignette and a heartbeat, twice a bar
 40. The ambulance — the wagon in the rain, then the corridor from a gurney
@@ -1544,7 +1641,7 @@ js/case.js        the identification game: suspects, evidence, questions
 js/duel.js        the drawn table: expressions, grips, the steady check
 js/cine.js        every cutscene, and the film rig they all run on
 js/cops.js        the uniforms: the walk-in, the bribe, the bust
-js/loot.js        out back: first-person searching, the meters, the mop
+js/loot.js        out back: first-person searching, the meters, the rag
 js/tutor.js       the drawn speech plate, the reply rack, and the handler
 js/ui.js          the story HUD, the live title room, the duel frame, help
 js/btn.js         the arcade buttons the few remaining screens use

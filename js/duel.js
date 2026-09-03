@@ -1283,7 +1283,14 @@ const DUEL = {
         return;
       }
       const art = SPR.floorStain(st.seed, st.r);
+      /* IT GOES DOWN UNDER THE CLOTH. The stain used to sit at full strength
+         through all four passes and then vanish on the frame the engine
+         marked it done, which read as a cut, not a wipe. */
+      const R2 = DUEL.reach;
+      const under = R2 && R2.rag && Math.abs(R2.x - st.x) < 4 ? (R2.wipe || 0) : 0;
+      if (under > 0) x.globalAlpha = Math.max(0.12, 1 - under * 0.8);
       x.drawImage(art, Math.round(sp[0] - art.width / 2), Math.round(sp[1] - art.height / 2));
+      if (under > 0) x.globalAlpha = 1;
       if (DUEL.hoverStain === i && !DUEL.busy && !G.loot.caught) {
         const r = st.r + 4, rr = Math.round(r * 0.7);
         [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(o => {
@@ -1306,17 +1313,23 @@ const DUEL = {
     DUEL.busy = true;
     DUEL.hurry = false;
     DUEL.hoverStain = -1;
-    DUEL.reach = { x: sp[0], y: sp[1], dig: 0, rag: true };
+    DUEL.reach = { x: sp[0], y: sp[1], dig: 0, rag: true, soak: 0 };
     DUEL.fist.tx = sp[0]; DUEL.fist.ty = sp[1] - 6;
     LOOT.sync();
     await DUEL.sleep(220);
-    for (let n = 0; n < 3; n++) {
+    /* FOUR PASSES, ALTERNATING, AND THE CLOTH TAKES IT UP. Three passes at
+       one speed with the stain popping off at the end read as a stutter and
+       then a cut; the rag darkening pass by pass is what makes it a wipe. */
+    for (let n = 0; n < 4; n++) {
       DUEL.reach.dig = 1;
-      DUEL.fist.tx = sp[0] - st.r + (n % 2) * st.r * 2;
+      DUEL.reach.soak = (n + 1) / 4;
+      DUEL.reach.wipe = (n + 1) / 4;
+      DUEL.fist.tx = sp[0] + (n % 2 ? 1 : -1) * (st.r + 2);
+      DUEL.fist.ty = sp[1] - 4;
       SFX.tick();
-      await DUEL.sleep(120);
+      await DUEL.sleep(132 - n * 16);        // the strokes speed up
       DUEL.reach.dig = 0;
-      await DUEL.sleep(60);
+      await DUEL.sleep(52);
     }
     const ev = E.mop(i);
     SFX.click();
@@ -1542,8 +1555,16 @@ const DUEL = {
     SPR.povHand(x, lhx, lhy, def, -1, HK, false);
 
     /* --- your gun hand, or the one that is out over him --- */
-    const dig = DUEL.reach ? DUEL.reach.dig * (DUEL.t % 4 < 2 ? 1 : -1) * 2 : 0;
-    const fx = Math.round(f.x) + dig, fy = Math.round(f.y) + (dig ? 1 : 0);
+    /* THE JITTER IS FOR DIGGING, NOT FOR WIPING. A hand going through a
+       pocket shakes; a hand going over a stain SWEEPS, and the two used to
+       share one two-pixel vibration. The rag gets a lateral smear and a
+       lift instead -- it comes up off the boards between passes. */
+    const R = DUEL.reach;
+    const dig = R && !R.rag ? R.dig * (DUEL.t % 4 < 2 ? 1 : -1) * 2 : 0;
+    const smear = R && R.rag ? Math.round(Math.sin(DUEL.t / 2.2) * 3 * R.dig) : 0;
+    const lift = R && R.rag ? Math.round((1 - R.dig) * 5) : 0;
+    const fx = Math.round(f.x) + dig + smear;
+    const fy = Math.round(f.y) + (dig ? 1 : 0) - lift;
     /* it shrinks as it reaches away from you — that is the whole depth cue */
     const away = U.clamp((FY - 6 - fy) / 72, 0, 1);
     const hk = HK - away * 0.5, sh = hk / HK;
@@ -1555,6 +1576,8 @@ const DUEL = {
       32, Math.max(11, Math.round(21 - away * 9)), sC, sD, sL, sS);
     SPR.povCuff(x, fx, fy + Math.round(9 * sh), def, 1);
     SPR.povHand(x, fx, fy, def, 1, hk, mine && !DUEL.corpse);
+    /* and the cloth in it, if that is what he is holding */
+    if (R && R.rag && SPR.povRag) SPR.povRag(x, fx, fy, hk, 1, R.soak || 0);
 
     x.restore();
     return { aimSelf, aimFoe, mine, bob: Math.round(bob) + drop };

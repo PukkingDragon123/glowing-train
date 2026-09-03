@@ -1030,33 +1030,135 @@ const JOBS = (() => {
     ART.px(c, 150, 118, 9, 3, '#e6ded0');
     ART.px(c, 157, 118, 4, 3, '#3a3630');
 
-    /* WHAT YOU ARE HERE FOR, at the middle of the frame with a shadow */
+    /* WHAT YOU ARE HERE FOR. It goes DOWN as you clear it -- three passes
+       took three taps and left the pavement exactly as filthy as it started,
+       which is the sort of thing that makes a job feel like a slot machine. */
     const mx = Math.round(W * s.centre), my = 82;
-    SPR.ellipse(c, mx + 5, my + 5, 20, 6, 'rgba(0,0,0,.34)');
-    SPR.ellipse(c, mx, my, 17, 8, '#33240f');
-    SPR.ellipse(c, mx, my - 3, 14, 6, '#553c1c');
-    SPR.ellipse(c, mx - 4, my - 6, 7, 4, '#6b4f26');
-    SPR.ellipse(c, mx - 5, my - 7, 3, 2, 'rgba(255,236,196,.22)');
-    for (let i = 0; i < 4; i++) {
-      SPR.ellipse(c, mx - 16 + i * 11, my + 7 + (i % 2) * 4, 4, 2, 'rgba(45,32,14,.55)');
+    const gone = U.clamp(s.hits / s.rounds, 0, 1);
+    const mk = 1 - gone * 0.82;
+    if (mk > 0.2) {
+      const R = (n) => Math.max(1, Math.round(n * mk));
+      SPR.ellipse(c, mx + 5, my + 5, R(20), R(6), 'rgba(0,0,0,.34)');
+      SPR.ellipse(c, mx, my, R(17), R(8), '#33240f');
+      SPR.ellipse(c, mx, my - R(3), R(14), R(6), '#553c1c');
+      SPR.ellipse(c, mx - R(4), my - R(6), R(7), R(4), '#6b4f26');
+      SPR.ellipse(c, mx - R(5), my - R(7), R(3), R(2), 'rgba(255,236,196,.22)');
+      for (let i = 0; i < 4; i++) {
+        SPR.ellipse(c, mx - R(16) + i * R(11), my + R(7) + (i % 2) * R(4),
+          R(4), R(2), 'rgba(45,32,14,.55)');
+      }
+      for (let i = 0; i < 4; i++) {                         /* and the flies */
+        ART.px(c, mx - 10 + Math.round(Math.sin(s.T * 5 + i * 2) * 13),
+          my - 22 + Math.round(Math.cos(s.T * 4 + i * 1.7) * 8), 2, 2, 'rgba(18,16,14,.66)');
+      }
+    } else {
+      /* a clean wet patch where it was */
+      SPR.ellipse(c, mx, my, 15, 5, 'rgba(150,160,150,.16)');
+      SPR.ellipse(c, mx - 3, my - 1, 6, 2, 'rgba(220,230,226,.14)');
     }
-    for (let i = 0; i < 4; i++) {                           /* and the flies */
-      ART.px(c, mx - 10 + Math.round(Math.sin(s.T * 5 + i * 2) * 13),
-        my - 22 + Math.round(Math.cos(s.T * 4 + i * 1.7) * 8), 2, 2, 'rgba(18,16,14,.66)');
+    /* ============================================================
+       THE SCOOP AND THE BRUSH, ONE IN EACH HAND.
+
+       What was here was a flat grey rect with a stick drawn THROUGH
+       the middle of it and a hand forty pixels past its far end
+       holding nothing. On screen it read as an open laptop lying on
+       the pavement, and the second hand sat on the needle strip with
+       air in it. Two faults, both geometric:
+
+         the pan was a rect      a pan you are looking down into is a
+                                 trapezoid -- floor, two side walls,
+                                 a back wall -- and the thing that
+                                 says `pan` is the LIP on the stone
+         the hands held nothing  the grips have to be ON the tools,
+                                 so the handle ends in the right hand
+                                 and the brush block sits in the left
+
+       So: the pan is authored as a tray in perspective with its lip
+       against the paving, the handle leaves its back corner and runs
+       up into the right fist, and the left hand comes in with the
+       brush and sweeps at the pan's mouth on the same beat. Both
+       travel with the needle; the mess does not move.
+       ============================================================ */
+    /* THE TRAVEL IS CLAMPED SO THE BRUSH STAYS IN THE PICTURE. The pan
+       swept from 30 to 148 and the brush hangs thirty-eight pixels to its
+       left, which put the whole left hand off the frame at the near end. */
+    const px = Math.round(58 + s.x * (W - 116));      // the pan's centre
+    /* IT IS CARRIED, NOT DRAGGED. On the stone the pan and the brush both
+       crossed the mess and the three of them came out as one brown smudge,
+       so the whole rig rides a dozen rows higher with its shadow left down
+       on the paving, and it THUMPS the last of the way when you land one. */
+    const PY = 54 + Math.round((s.flash || 0) * 9);   // its back edge, in the air
+    const PH = 15;                                    // how deep it is, in rows
+    const lipW = 40, backW = 26;
+    const wAt = (i2) => Math.round(backW + (i2 / (PH - 1)) * (lipW - backW));
+    /* the shadow it throws, DOWN ON THE STONE where the pan is not: that
+       is the whole of what says the thing is held in the air */
+    const shY = 92 - Math.round((s.flash || 0) * 4);
+    for (let i2 = 0; i2 < 5; i2++) {
+      const w = wAt(PH - 1) - i2 * 4;
+      ART.px(c, px - (w >> 1) + i2 * 2 + 3, shY + i2, w, 1, 'rgba(0,0,0,.30)');
     }
-    /* THE SCOOP, in your two hands, travelling with the needle */
-    const sx = Math.round(18 + s.x * (W - 66));
-    povArm(c, { x0: 214, y0: 154, x1: sx + 42, y1: 82, w0: 26, w1: 15, sgn: 1, k: 0.56 });
-    povArm(c, { x0: 6, y0: 158, x1: sx - 8, y1: 100, w0: 26, w1: 15, sgn: -1, k: 0.52 });
-    ART.px(c, sx + 10, 70, 42, 5, '#221a12');               /* the shaft */
-    ART.px(c, sx + 10, 70, 42, 2, '#453322');
-    SPR.ellipse(c, sx + 14, 88, 24, 6, 'rgba(0,0,0,.30)');  /* its shadow */
-    ART.px(c, sx - 3, 64, 32, 18, '#0e0c0a');
-    ART.px(c, sx - 2, 65, 30, 16, '#8e969e');
-    ART.px(c, sx - 2, 65, 30, 4, '#bcc4cc');
-    ART.px(c, sx - 2, 78, 30, 3, 'rgba(0,0,0,.36)');
-    ART.px(c, sx, 67, 26, 1, 'rgba(255,255,255,.34)');
-    ART.px(c, sx - 3, 81, 32, 2, '#5c646c');                /* the lip on the stone */
+    ART.px(c, px - 13, shY + 1, 26, 3, 'rgba(0,0,0,.22)');
+    /* the back wall, standing up off the stone */
+    ART.px(c, px - (backW >> 1) - 1, PY - 9, backW + 2, 11, '#0d1014');
+    ART.px(c, px - (backW >> 1), PY - 8, backW, 9, '#5e666f');
+    ART.px(c, px - (backW >> 1), PY - 8, backW, 2, '#89929c');
+    ART.px(c, px - (backW >> 1), PY - 1, backW, 2, 'rgba(0,0,0,.40)');
+    /* the floor of the pan, which is the bit you are aiming */
+    for (let i2 = 0; i2 < PH; i2++) {
+      const w = wAt(i2), t = i2 / (PH - 1);
+      const g = Math.round(112 + t * 46);
+      ART.px(c, px - (w >> 1) - 1, PY + i2, w + 2, 1, '#0d1014');
+      ART.px(c, px - (w >> 1), PY + i2, w, 1,
+        'rgb(' + g + ',' + (g + 4) + ',' + (g + 12) + ')');
+      /* the two side walls catch the lamp on one edge and lose it on the other */
+      ART.px(c, px - (w >> 1), PY + i2, 2, 1, 'rgba(255,255,255,.24)');
+      ART.px(c, px + (w >> 1) - 2, PY + i2, 2, 1, 'rgba(0,0,0,.26)');
+    }
+    /* THE LIP. One bright line where the steel meets the paving, which is
+       the whole reason this reads as a pan and not a card lying flat. */
+    ART.px(c, px - (lipW >> 1) - 1, PY + PH, lipW + 2, 2, '#0d1014');
+    ART.px(c, px - (lipW >> 1), PY + PH, lipW, 1, '#d2dae4');
+    /* and what is already in it, once you have landed one */
+    if (s.hits > 0) {
+      SPR.ellipse(c, px, PY + 6, 11, 4, '#3d2a11');
+      SPR.ellipse(c, px - 2, PY + 5, 7, 2, '#5b4020');
+    }
+    /* THE HANDLE, out of the pan's back corner, THROUGH the fist, and a
+       stub out the top of it. A shaft that stops inside the hand reads as
+       a hand resting on nothing; the stub is what makes it held. */
+    const shaft = (x0, y0, x1, y1, at) => {
+      SPR.povTube(c, x0, y0, x1, y1, 7, 5, '#4a3722', '#241a0e',
+        'rgba(255,236,190,.22)');
+      return [Math.round(x0 + (x1 - x0) * at), Math.round(y0 + (y1 - y0) * at)];
+    };
+    const [gx, gy] = shaft(px + 8, PY - 6, px + 52, PY - 42, 0.70);
+    ART.px(c, px + 5, PY - 9, 8, 5, '#20304a');       // the socket
+    ART.px(c, px + 5, PY - 9, 8, 2, '#3d5578');
+    povArm(c, { x0: 220, y0: 152, x1: gx, y1: gy, w0: 26, w1: 13, sgn: 1, k: 0.46,
+      fist: true, hy: 4 });
+    /* THE BRUSH, in the left hand, sweeping at the pan's mouth. It sits
+       CLEAR of the pan and clear of the mess -- drawn over either, the
+       three of them came out as one brown smudge. */
+    const swp = Math.sin(s.T * 7) * 0.5 + 0.5;        // the stroke
+    const bxp = px - 38 - Math.round(swp * 6), byp = PY + 8 + Math.round(swp * 3);
+    const [hx2, hy2] = shaft(bxp + 8, byp - 5, bxp - 30, byp - 44, 0.70);
+    ART.px(c, bxp - 3, byp - 6, 22, 7, '#0d1014');    // the block
+    ART.px(c, bxp - 2, byp - 5, 20, 5, '#6b4d24');
+    ART.px(c, bxp - 2, byp - 5, 20, 2, '#8f6a33');
+    for (let i2 = 0; i2 < 10; i2++) {                 // the bristles
+      const h = 5 + (i2 % 3);
+      ART.px(c, bxp - 1 + i2 * 2, byp + 1, 1, h, i2 % 2 ? '#c8a468' : '#a8813f');
+    }
+    ART.px(c, bxp - 2, byp + 9, 20, 1, 'rgba(0,0,0,.30)');
+    povArm(c, { x0: 0, y0: 158, x1: hx2, y1: hy2, w0: 26, w1: 13,
+      sgn: -1, k: 0.42, fist: true, hy: 4 });
+    /* the grit it kicks up off the stone */
+    for (let i2 = 0; i2 < 5; i2++) {
+      const t = (s.T * 2.4 + i2 * 0.4) % 1;
+      ART.px(c, bxp + 6 + Math.round(t * 22), byp + 6 - Math.round(Math.sin(t * 3.1) * 9),
+        1, 1, 'rgba(210,198,170,' + (0.5 - t * 0.4).toFixed(2) + ')');
+    }
   }
 
   /* ---------------------------------------------------------

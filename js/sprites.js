@@ -1327,11 +1327,17 @@ SPR.handPose = function (ctx, x, y, d, sgn, pose, opts) {
      is a rounded mass with three grooves in it and a thumb on the near side.
      Anything more detailed than that turns to soup the moment the room
      scales it, and anything less is the cabbage this used to be. */
+  /* ROUNDER. These tables used to hold a flat four-and-four for four rows
+     running, which is a nine-wide rectangle with a chamfer on it -- at room
+     scale a little green brick on the end of each arm. A hand is a BALL
+     with digits curled into it, so every table now bows: narrow at the
+     wrist, widest a third of the way down, narrow again at the fingertips,
+     one step at a time so the edge stays a circle and not a diamond. */
   const SIL = {
-    hang:  [[2, 2], [3, 3], [4, 4], [4, 4], [4, 4], [4, 4], [3, 4], [3, 3], [2, 2]],
-    fist:  [[2, 2], [3, 4], [4, 5], [4, 5], [4, 5], [4, 4], [3, 3]],
-    point: [[2, 2], [3, 3], [4, 9], [4, 10], [4, 4], [4, 4], [3, 3]],
-    grip:  [[2, 3], [3, 5], [4, 6], [4, 6], [4, 6], [3, 5], [2, 3]],
+    hang:  [[2, 2], [4, 4], [5, 5], [5, 6], [5, 6], [5, 6], [5, 5], [4, 4], [3, 3], [2, 2]],
+    fist:  [[2, 3], [4, 5], [5, 6], [6, 7], [6, 7], [5, 6], [4, 5], [2, 3]],
+    point: [[2, 2], [4, 4], [5, 10], [5, 11], [5, 5], [4, 4], [3, 3], [2, 2]],
+    grip:  [[2, 4], [4, 6], [5, 7], [5, 8], [5, 8], [5, 7], [4, 5], [2, 3]],
   };
   const raw = SIL[pose] || SIL.hang;
   /* the table, scaled and de-duplicated: at k = 0.6 two source rows land on
@@ -1718,6 +1724,71 @@ SPR.povHand = function (ctx, cx, cy, d, sgn, k, grip) {
   SPR.povPaw(ctx, cx, cy, d, sgn, k, grip);
 };
 
+/* ============================================================
+   THE RAG.
+
+   DUEL.reach carried a `rag: true` flag from the day the trail
+   was added and NOTHING ever read it, so going over a stain on
+   the boards was done with a bare green fist and a two-pixel
+   vibration. This is the cloth: a bunched mass over the knuckles
+   with folds in it and a hem that hangs below the hand, and it
+   takes the colour up as you use it -- `soak` from 0 to 1 walks
+   it from grey linen to something you would not want to hold.
+
+   Drawn AFTER the hand, because the hand is holding it.
+   cx, cy is the same wrist the paw was drawn at. k matches the
+   hand's k so the two are the same size.
+   ============================================================ */
+SPR.povRag = function (ctx, cx, cy, k, sgn, soak) {
+  k = k || 0.6;
+  soak = U.clamp(soak || 0, 0, 1);
+  /* IT IS HELD, NOT WORN. At fifty-six by forty it covered the whole fist
+     and came out as a bread roll with two green fingertips on top of it;
+     the cloth is smaller than the hand and hangs off the FRONT of it, so
+     the knuckles still read and you can see what is doing the wiping. */
+  const w = Math.max(9, Math.round(38 * k));
+  const h = Math.max(7, Math.round(24 * k));
+  const x0 = Math.round(cx - (sgn < 0 ? w * 0.66 : w * 0.34));
+  const y0 = Math.round(cy + h * 0.16);
+  /* linen, going over to blood */
+  const mix = (a, b) => Math.round(a + (b - a) * soak);
+  const lit = 'rgb(' + mix(214, 150) + ',' + mix(208, 40) + ',' + mix(190, 52) + ')';
+  const mid = 'rgb(' + mix(168, 106) + ',' + mix(162, 24) + ',' + mix(144, 34) + ')';
+  const dk = 'rgb(' + mix(112, 62) + ',' + mix(106, 14) + ',' + mix(92, 22) + ')';
+  const INK = PIX.PAL.K;
+  /* the bunched mass: three overlapping lumps, so the silhouette is cloth
+     and not a folded napkin */
+  const lump = (fx, fy, rx, ry, col) =>
+    SPR.ellipse(ctx, x0 + Math.round(w * fx), y0 + Math.round(h * fy),
+      Math.max(2, Math.round(w * rx)), Math.max(2, Math.round(h * ry)), col);
+  lump(0.44, 0.44, 0.52, 0.50, INK);
+  lump(0.78, 0.62, 0.28, 0.36, INK);
+  lump(0.44, 0.42, 0.48, 0.44, mid);
+  lump(0.78, 0.60, 0.24, 0.30, mid);
+  lump(0.34, 0.28, 0.32, 0.24, lit);
+  /* folds: two creases running out of the grip */
+  for (let i = 0; i < 2; i++) {
+    const fy = y0 + Math.round(h * (0.40 + i * 0.26));
+    PIX.rect(ctx, x0 + Math.round(w * 0.14), fy, Math.round(w * 0.64), 1, dk);
+    PIX.rect(ctx, x0 + Math.round(w * 0.18), fy + 1, Math.round(w * 0.50), 1,
+      'rgba(255,255,255,.14)');
+  }
+  /* the hem, hanging below the hand with a corner off one side */
+  const hy = y0 + Math.round(h * 0.80);
+  PIX.rect(ctx, x0 + Math.round(w * 0.12), hy, Math.round(w * 0.74), 2, INK);
+  PIX.rect(ctx, x0 + Math.round(w * 0.14), hy, Math.round(w * 0.70), 1, dk);
+  /* ONE CORNER HANGS. A cloth with a level hem is a flannel; the corner
+     off one side is the whole difference between the two. */
+  const cw = Math.max(3, Math.round(w * 0.22));
+  const cx0 = x0 + (sgn < 0 ? Math.round(w * 0.04) : Math.round(w * 0.74));
+  const ch = Math.max(3, Math.round(h * 0.44));
+  for (let i = 0; i < ch; i++) {
+    const ww = Math.max(1, cw - Math.round((i / ch) * cw));
+    PIX.rect(ctx, cx0 + (sgn < 0 ? cw - ww : 0) - 1, hy + 1 + i, ww + 2, 1, INK);
+    PIX.rect(ctx, cx0 + (sgn < 0 ? cw - ww : 0), hy + 1 + i, ww, 1, i < 2 ? mid : dk);
+  }
+};
+
 /* a forearm entering from off-frame, in your pinstripe sleeve */
 SPR.povSleeve = SPR.povTube;
 
@@ -1795,10 +1866,33 @@ SPR.povFist = function (d, w, o) {
     /* to the power of six tenths, so the mass is FULL at the top and bottom
        and only tapers right at the ends: a plain sine came out a lens, and
        left a wedge of nothing between the thumb and the top of the hand */
+    /* AND THE BACK EDGE BOWS TOO. It came off seven per cent of the width,
+       which is a straight vertical wall at any size the game asks for: the
+       front of the hand was a curve and the back was a plank, and the whole
+       thing read as a green brick with a stripe on it. Both edges bow now,
+       and the arc is taken to a lower power so the taper is spread over the
+       mass instead of crammed into the last two rows. */
     const arcAt = (y) => Math.pow(Math.sin(Math.PI
-      * U.clamp((y / (H - 1) - 0.02) / 0.96, 0, 1)), 0.60);
-    const EL = (y) => Math.round(w * 0.26 - arcAt(y) * w * 0.22);
-    const ER = (y) => w - 1 - Math.round((1 - arcAt(y)) * w * 0.07);
+      * U.clamp((y / (H - 1) - 0.02) / 0.96, 0, 1)), 0.62);
+    /* BOTH EDGES OFF THE SAME ARC, from the same centre line. Insetting
+       each edge by its own fraction of the width leaves row zero fifty-three
+       per cent wide however hard the arc bows -- a flat top with a corner at
+       each end, which is what kept reading as a wedge. Off a shared centre
+       the top and bottom rows converge to a point and the silhouette is a
+       ball, biased toward the wrist side because a fist is deepest at the
+       knuckles. */
+    /* the centre line sits right of middle so the phalanges that wrap off
+       the front edge have canvas to wrap INTO -- at 0.46 the front of the
+       mass reached x = 2 and the fingertips were being clipped by the left
+       edge of the sprite */
+    /* AN OVAL, NOT A BALL. Both edges off one arc at equal reach made a
+       sphere -- a green tennis ball with a sausage on it, knuckles and all
+       gone. A fist is deep front-to-back and shallow across: the FRONT edge
+       barely bows, because that is the straightish line the knuckles sit on,
+       and the BACK edge does all the rounding. */
+    const CX = w * 0.50;
+    const EL = (y) => Math.round(CX - arcAt(y) * w * 0.17);
+    const ER = (y) => Math.round(CX + arcAt(y) * w * 0.44);
     const ft = Math.max(3, Math.round(H * 0.17));          /* one phalanx thick */
 
     /* ---- 1. THE PHALANGES, wrapping away off the front edge. Drawn first,
@@ -1813,10 +1907,11 @@ SPR.povFist = function (d, w, o) {
       PIX.rect(c, x0, y, x1 - x0, 1, 'rgba(255,255,255,.18)');
       PIX.rect(c, x0, y + ft - 1, x1 - x0, 1, 'rgba(0,0,0,.30)');
       /* the tip, curled back under: a pad with a small nail on it */
-      if (len >= u(5)) {
+      if (len >= u(6)) {
         PIX.rect(c, x0 - 1, y, u(3) + 2, ft + 1, INK);
         PIX.rect(c, x0, y + 1, u(3), ft - 1, shade);
-        PIX.rect(c, x0, y + 1, Math.max(1, u(2)), Math.max(1, ft - 2), NAIL);
+        /* the nail only at a size where two pixels of it is not just noise */
+        if (u(2) >= 2) PIX.rect(c, x0 + 1, y + 2, u(2) - 1, Math.max(1, ft - 3), NAIL);
       }
     }
 
@@ -1852,46 +1947,50 @@ SPR.povFist = function (d, w, o) {
       PIX.rect(c, kx - r, ky + r + 1, r + u(4), 1, 'rgba(255,255,255,.07)');
     }
 
-    /* ---- 4. THE THUMB, across the top on the diagonal ---- */
+    /* ---- 4. THE THUMB, across the top on the diagonal ----
+            AS A ROUND TUBE, NOT A RUN OF COLUMNS. Stepping columns of equal
+            height along a diagonal and inking each one draws a
+            parallelogram: the thumb came out as a flat green plate laid
+            across the top of the hand with a hard black edge, which is most
+            of why the whole fist read as a wedge. Discs down the same line
+            give a tube with round ends for free, and the taper toward the
+            tip is what says thumb. ---- */
     const tt = ft + Math.max(1, u(2));
-    const ax = Math.round(w * 0.66), ay = Math.max(1, Math.round(H * 0.07));
-    const bx = Math.max(0, Math.round(w * 0.09)), by = Math.round(H * 0.33);
-    const steps = Math.max(3, ax - bx);
+    const ax = Math.round(w * 0.62), ay = Math.max(2, Math.round(H * 0.11));
+    const bx = Math.max(1, Math.round(w * 0.12)), by = Math.round(H * 0.34);
+    const steps = Math.max(4, Math.round(Math.hypot(ax - bx, by - ay)));
+    const R0 = Math.max(2, Math.round(tt * 0.56)), R1 = Math.max(2, Math.round(tt * 0.42));
     const col = (i) => {
       const t = i / steps;
       return { x: Math.round(ax + (bx - ax) * t), y: Math.round(ay + (by - ay) * t),
-        h: tt - Math.round(t * u(1)) };
+        r: Math.round(R0 + (R1 - R0) * t) };
     };
-    /* ALL THE INK FIRST, THEN ALL THE SKIN. Drawn per column -- ink at
-       x minus one through x plus one, then skin at x -- each column's
-       outline painted over the skin the column before it had just laid
-       down, and the thumb came out as a black diagonal with one green
-       pixel at the end of it. */
+    /* ALL THE INK FIRST, THEN ALL THE SKIN -- otherwise each disc's outline
+       paints over the fill the disc before it laid down. */
+    for (let i = 0; i <= steps; i++) { const q = col(i); PIX.disc(c, q.x, q.y, q.r + 1, INK); }
+    for (let i = 0; i <= steps; i++) { const q = col(i); PIX.disc(c, q.x, q.y, q.r, skin); }
+    /* lit along the top of the tube, shaded along the bottom */
     for (let i = 0; i <= steps; i++) {
       const q = col(i);
-      PIX.rect(c, q.x - 1, q.y - 1, 3, q.h + 2, INK);
-    }
-    for (let i = 0; i <= steps; i++) {
-      const q = col(i);
-      PIX.rect(c, q.x, q.y, 1, q.h, skin);
-      PIX.rect(c, q.x, q.y, 1, 1, 'rgba(255,255,255,.22)');
-      PIX.rect(c, q.x, q.y + q.h - 1, 1, 1, 'rgba(0,0,0,.40)');
+      PIX.rect(c, q.x, q.y - q.r, 1, Math.max(1, u(1)), 'rgba(255,255,255,.20)');
+      PIX.rect(c, q.x, q.y + q.r - 1, 1, Math.max(1, u(1)), 'rgba(0,0,0,.34)');
     }
     /* its one crease, square across the shaft */
-    const cxx = Math.round(ax + (bx - ax) * 0.46);
-    const cyy = Math.round(ay + (by - ay) * 0.46);
-    PIX.rect(c, cxx, cyy, 1, tt, 'rgba(0,0,0,.42)');
-    PIX.rect(c, cxx + 1, cyy, 1, tt, 'rgba(255,255,255,.14)');
-    /* and the NAIL: broad, flat, lying on top of the tip. This is the whole
-       tell that it is a thumb and not a fifth finger. */
-    const nw = Math.max(3, u(4)), nh = Math.max(2, tt - u(3));
-    const nx = bx, ny = by + 1;
-    PIX.rect(c, nx - 1, ny - 1, nw + 2, nh + 2, INK);
-    PIX.rect(c, nx, ny, nw, nh, shade);
-    PIX.rect(c, nx + 1, ny, nw - 1, nh, NAIL);
-    PIX.rect(c, nx + 1, ny, nw - 1, 1, 'rgba(255,252,244,.78)');
-    PIX.rect(c, nx, ny + nh - 1, nw, 1, 'rgba(0,0,0,.26)');
-    PIX.rect(c, nx + nw - 1, ny, 1, nh, 'rgba(0,0,0,.20)');
+    const cq = col(Math.round(steps * 0.46));
+    PIX.rect(c, cq.x, cq.y - cq.r + 1, 1, cq.r * 2 - 2, 'rgba(0,0,0,.40)');
+    PIX.rect(c, cq.x + 1, cq.y - cq.r + 1, 1, cq.r * 2 - 2, 'rgba(255,255,255,.13)');
+    /* and the NAIL: broad, flat, lying on top of the tip, with its corners
+       taken off so it is a nail and not a postage stamp */
+    /* LYING ALONG THE THUMB, not a square blob on the end of it: six by six
+       of pale grey on the tip read as a bolt through his hand. */
+    const nw = Math.max(3, u(3)), nh = Math.max(2, R1 - Math.max(1, u(1)));
+    const nx = bx - Math.max(1, u(1)), ny = by - (nh >> 1);
+    for (let r2 = 0; r2 < nh; r2++) {
+      const inw = (r2 === 0 || r2 === nh - 1) ? 1 : 0;
+      PIX.rect(c, nx + inw - 1, ny + r2, nw - inw * 2 + 2, 1, INK);
+      PIX.rect(c, nx + inw, ny + r2, nw - inw * 2, 1, r2 === 0 ? 'rgba(255,252,244,.78)' : NAIL);
+    }
+    PIX.rect(c, nx + 1, ny + nh - 1, nw - 2, 1, 'rgba(0,0,0,.24)');
     /* the web, where it leaves the hand */
     PIX.rect(c, ax - u(3), ay + tt, u(5), 1, 'rgba(0,0,0,.34)');
 
@@ -5024,7 +5123,26 @@ SPR.frogWhole = function (key, def, opts) {
        Chunky cartoon with real joints in it, rather than a
        barrel with a beach ball on top.
        ============================================================ */
-    const HEAD_H = 47, NECK = 8, TORSO = 44, LEGS = 38, RISE = 5;
+    /* ============================================================
+       BIGGER HEAD. A third was a mascot; this is a CARTOON mascot.
+
+       47 / 8 / 44 / 38 measured out at a head 0.30 of the figure,
+       which is twice a person and still shy of what the drawing
+       wants. The head goes to 58 and the torso and legs come in to
+       pay for it, so he does not also get taller:
+
+         head  47 -> 58    now 0.42 of the whole figure
+         neck   8 -> 11    it sinks further into the collar, or the
+                           extra eleven rows arrive as neck
+         torso 44 -> 39
+         legs  38 -> 33    short legs are the loudest cartoon cue
+                           there is, and a big head over short legs
+                           is the whole silhouette
+
+       The total comes out at 138 against 137, so nothing that
+       depends on his height in a room has to move.
+       ============================================================ */
+    const HEAD_H = 58, NECK = 11, TORSO = 39, LEGS = 33, RISE = 5;
     const hh = HEAD_H;
     const hw = Math.max(6, Math.round(head.width * (HEAD_H / head.height)));
     const bh = TORSO + NECK;
@@ -5082,8 +5200,12 @@ SPR.frogWhole = function (key, def, opts) {
     /* CLAMPED TO ONE PIXEL. Taken as its own five-pixel bob the head went
        down while the shoulders went up and swallowed his own neck: the lag
        is a nudge off the body's bob, not a second bob. */
+    /* FOLLOW-THROUGH. The head arrives a beat after the shoulders, which was
+       clamped to a single pixel back when the head was a third of him. At
+       forty per cent and with the room bouncing him three pixels a step,
+       one pixel of lag is invisible: two reads as weight. */
     const headBob = bob + U.clamp(
-      Math.round(((RISE - bobU2 * RISE) - bob) * 0.6), -1, 1);
+      Math.round(((RISE - bobU2 * RISE) - bob) * 0.7), -2, 2);
     const sway = Math.round(SPR.walkPhase(frame) * 2);
     const bodyTop = BRIM + hh - NECK + bob;
     const cx = Math.round(W / 2);

@@ -740,21 +740,25 @@ const SCENE = (() => {
       const dx = a._goto - a.x;
       const sp = a._gspeed || 26;
       if (Math.abs(dx) <= sp * dt) {
-        a.x = a._goto; a._goto = undefined; a.frame = 0;
+        a.x = a._goto; a._goto = undefined; a.frame = 0; a._step = null;
         if (a._gthen) { const f = a._gthen; a._gthen = null; f(); }
         continue;
       }
       a.x += Math.sign(dx) * sp * dt;
       a.face = Math.sign(dx);
-      a.frame = Math.floor((a._gw = (a._gw || 0) + dt * (sp * 0.29))) % (SPR.WALK_FRAMES || 8);
+      a._gw = (a._gw || 0) + dt * (sp * 0.29);
+      a.frame = Math.floor(a._gw) % (SPR.WALK_FRAMES || 8);
+      a._step = { ph: a._gw % 1, amt: Math.min(1, sp / 40) };
     }
     for (const a of (def.actors || [])) {
       if (a.job !== 'pace' || a.gone || a.talking || a._goto !== undefined) continue;
       if (a._home === undefined) { a._home = a.x; a._dir = 1; a._wait = 0; }
-      if (a._wait > 0) { a._wait -= dt; a.frame = 0; continue; }
+      if (a._wait > 0) { a._wait -= dt; a.frame = 0; a._step = null; continue; }
       a.x += a._dir * 13 * dt;
       a.face = a._dir;
-      a.frame = Math.floor((a._pw = (a._pw || 0) + dt * 7)) % 8;
+      a._pw = (a._pw || 0) + dt * 7;
+      a.frame = Math.floor(a._pw) % 8;
+      a._step = { ph: a._pw % 1, amt: 0.62 };
       const span = a.beat || 22;
       if ((a._dir > 0 && a.x > a._home + span) || (a._dir < 0 && a.x < a._home - span)) {
         a._dir = -a._dir;
@@ -2010,21 +2014,58 @@ const SCENE = (() => {
      crosses a room tells you how the day is going before you look
      at anything else.
      ============================================================ */
-  function gaitOf(T) {
+  /* ============================================================
+     THE BOUNCE.
+
+     Everybody in this game walked FLAT. The legs cycled, the arms
+     swung, the head lagged a pixel -- and the body itself travelled
+     along a perfectly level line, because the only vertical motion
+     in the gait was a hop gated behind good karma and a limp gated
+     behind low hearts. A cartoon walk does not work like that. The
+     body rises over the leg that is carrying it and drops onto the
+     one that is landing, TWICE a stride, and it squashes on the
+     drop and stretches at the top.
+
+     So: one shared bounce, taken off the walk phase, used by the
+     player and by every actor who is going somewhere.
+
+       hop      up over each pass of the stride, two per stride
+       squash   +ve wider-and-shorter at the contacts, -ve taller
+                -and-narrower at the top of each pass
+       tip      the lean into the direction of travel
+
+     Everything is scaled by `amt`, which is how fast the figure is
+     actually moving, so a stroll is a nod and a run is a bounce.
+     ============================================================ */
+  function stepBounce(ph, amt) {
+    const up = Math.abs(Math.sin(ph * Math.PI * 2));
+    return {
+      hop: up * 3.4 * amt,
+      /* at the contacts up is 0 and he is squashed; at the pass up is 1
+         and he is stretched. Centred on 0.44 rather than 0.5 because a
+         walk spends longer in contact than in the air. */
+      squash: (0.44 - up) * 0.13 * amt,
+    };
+  }
+
+  function gaitOf() {
     const speed = Math.hypot(Math.abs(me.v), Math.abs(me.vz) * (band() || 1));
-    if (speed < 8) return { hop: 0, drop: 0, tip: 0 };
+    if (speed < 6) return { hop: 0, drop: 0, tip: 0, squash: 0 };
     /* where in the stride he is: the walk counter, not the clock */
-    const ph = (me.walk % 1);
+    const NF2 = SPR.WALK_FRAMES || 8;
+    const ph = (me.walk / NF2) % 1;
+    const amt = Math.min(1, speed / 62);
+    const b = stepBounce(ph, amt);
     const k = (typeof STORY !== 'undefined' && STORY.karma) ? STORY.karma() : null;
     const hurt = (typeof G !== 'undefined' && (G.hearts || 6) <= 2);
     const glad = k && k.band >= 2;
-    /* THE HOP: up on the pass of the stride, and only if he is pleased */
-    const hop = glad ? Math.max(0, Math.sin(ph * Math.PI * 2)) * 2 : 0;
+    /* pleased with himself, he skips: the same bounce again on top */
+    const hop = b.hop * (glad ? 1.55 : 1);
     /* THE DRAG: down on one foot of the two, and only if he is hurt */
     const drop = hurt ? (ph < 0.5 ? 1 : 0) : 0;
     /* everybody leans a little into where they are going */
-    const tip = Math.round(Math.sign(me.v) * Math.min(1, Math.abs(me.v) / 60));
-    return { hop: Math.round(hop), drop, tip };
+    const tip = Math.round(Math.sign(me.v) * Math.min(2, Math.abs(me.v) / 34));
+    return { hop: Math.round(hop), drop, tip, squash: b.squash };
   }
 
   /* ============================================================
@@ -2189,16 +2230,22 @@ const SCENE = (() => {
        rule for a room and the wrong one for a CHILD: a boy standing next to
        his father is smaller without being further away. */
     const sc2 = sc * (a.scale || 1);
-    const w = Math.max(1, Math.round(r.w * sc2 * atw));
-    const h = Math.max(1, Math.round(r.h * sc2) - id.rise);
-    castShadow(c, Math.round(a.x), fy, w, 0.42);
+    /* AND HE BOUNCES IF HE IS WALKING. An actor crossing a room on the same
+       flat line as the furniture is the thing that made a busy room read as
+       a diorama with one moving part. */
+    const ab = a._step ? stepBounce(a._step.ph, a._step.amt) : { hop: 0, squash: 0 };
+    const w = Math.max(1, Math.round(r.w * sc2 * atw * (1 + ab.squash)));
+    const h = Math.max(1, Math.round(r.h * sc2 * (1 - ab.squash)) - id.rise);
+    const ahop = Math.round(ab.hop);
+    castShadow(c, Math.round(a.x), fy + Math.round(ab.hop * 0.4), w,
+      0.42 - ab.hop * 0.08);
     c.drawImage(r.cv, Math.round(a.x - w / 2) + id.lean + work,
-      Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0)), w, h);
+      Math.round(fy - h + 1 - ahop + (work ? Math.abs(work) - 1 : 0)), w, h);
     /* AND WHAT IS IN HIS HANDS — in the hand the rig reports, so the glass
        arrives at his mouth and the rag arrives on the counter. */
     if (job && job.prop) {
       const dx = Math.round(a.x - w / 2) + id.lean + work;
-      const dy = Math.round(fy - h + 1 + (work ? Math.abs(work) - 1 : 0));
+      const dy = Math.round(fy - h + 1 - ahop + (work ? Math.abs(work) - 1 : 0));
       const hd = r.cv.hand;
       const hx = hd ? Math.round(dx + hd.x * (w / r.cv.width))
         : Math.round(a.x + (w * 0.52) * face);
@@ -2312,10 +2359,13 @@ const SCENE = (() => {
     /* the reach: a lean toward whatever he is doing, and a little crouch */
     const rc = me.reach > 0 ? Math.sin((1 - me.reach / 0.42) * Math.PI) : 0;
     const lean = Math.round(rc * 3) * (me.reachTo || 1);
-    const g = gaitOf(T);
-    const w = Math.max(1, Math.round(r.w * sc * tw * (1 + sq - st * 0.5 + rc * 0.04)));
-    const h = Math.max(1, Math.round(r.h * sc * (1 - sq + st - rc * 0.05)) - id.rise);
-    const shW = Math.round(r.w * (0.66 + sq));
+    const g = gaitOf();
+    /* the walk's own squash rides on top of the landing squash: wider and
+       shorter at each contact, taller and narrower over each pass */
+    const gq = g.squash || 0;
+    const w = Math.max(1, Math.round(r.w * sc * tw * (1 + sq + gq - st * 0.5 + rc * 0.04)));
+    const h = Math.max(1, Math.round(r.h * sc * (1 - sq - gq + st - rc * 0.05)) - id.rise);
+    const shW = Math.round(r.w * (0.66 + sq + gq));
     /* THE SHADOW STAYS ON THE FLOOR while he hops off it, which is the only
        thing that makes a hop read as leaving the ground rather than as the
        whole sprite sliding up the screen. */
@@ -2481,6 +2531,13 @@ const SCENE = (() => {
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
     /* the harness compares the shot at both available scales */
     debugForceK(k) { forceK = k || 0; scale(); },
+    /* the live gait, so a probe can prove the bounce is actually moving him
+       rather than take a picture of one frame of it and guess */
+    debugGait() {
+      const g = gaitOf();
+      return { hop: g.hop, squash: +(g.squash || 0).toFixed(4), tip: g.tip,
+        walk: +me.walk.toFixed(3), v: Math.round(me.v) };
+    },
     /* the harness asks what is under a point, so the egg rules can be
        asserted rather than eyeballed */
     debugPick(x, y) { return pick(x, y === undefined ? (def ? def.floorY - 10 : 100) : y); },
