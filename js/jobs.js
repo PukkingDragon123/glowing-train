@@ -294,18 +294,61 @@ const JOBS = (() => {
 
       /* the same whole-number scale rule the rooms use: a trade is a shot,
          so it is drawn at the size a shot is drawn at */
-      const K = U.clamp(Math.floor(Math.min(window.innerWidth / FW,
-        window.innerHeight / FH)), 1, 8);
+      /* ============================================================
+         AND IT FILLS THE SCREEN.
+
+         The scale was floor(min(w/214, h/132)) and the canvas was
+         exactly 214 by 132 of those, which on a 1280 by 800 window
+         works out at K=5 and a 1070 by 660 picture: two hundred and
+         ten pixels of black down each side and a hundred and forty
+         top and bottom. A trade was supposed to be a shot and it was
+         still a card floating in a dark room.
+
+         Whole-number scaling is not the thing to give up -- that is
+         what keeps the pixels square. What has to give is the fixed
+         214 by 132 CANVAS. So: K fits the HEIGHT, the canvas is as
+         many whole frame-pixels as the window holds at that K, the
+         composition is drawn into a 214 by 132 offscreen exactly as
+         authored and blitted to the middle of it, and the gap either
+         side is filled by stretching the frame's own EDGE COLUMN
+         outward. Every one of these sets is horizontally banded where
+         it meets the frame edge -- wall courses, tile, kerb, the
+         pavement plane -- so a clamped edge continues the set instead
+         of showing a seam. Same for the rows above and below.
+         ============================================================ */
+      const K = U.clamp(Math.floor(window.innerHeight / FH), 1, 10);
+      const CW = U.clamp(Math.ceil(window.innerWidth / K), FW, FW * 3);
+      const CH = U.clamp(Math.ceil(window.innerHeight / K), FH, FH * 2);
+      const padL = Math.floor((CW - FW) / 2), padR = CW - FW - padL;
+      const padT = Math.floor((CH - FH) / 2), padB = CH - FH - padT;
 
       const wrap = U.el('div', 'job-card');
       const cv = document.createElement('canvas');
-      cv.width = FW * K; cv.height = FH * K;
+      cv.width = CW * K; cv.height = CH * K;
       cv.className = 'pix job-cv';
       wrap.appendChild(cv);
       root.appendChild(wrap);
-      const c = cv.getContext('2d');
+      const dst = cv.getContext('2d');
+      dst.imageSmoothingEnabled = false;
+      /* the composition, at its authored size, in its own canvas */
+      const fcv = document.createElement('canvas');
+      fcv.width = FW; fcv.height = FH;
+      const c = fcv.getContext('2d');
       c.imageSmoothingEnabled = false;
-      c.scale(K, K);
+      /* one blit of the shot, plus four one-pixel slices stretched out to
+         the edges of the screen */
+      const present = () => {
+        const x0 = padL * K, y0 = padT * K, w0 = FW * K, h0 = FH * K;
+        dst.drawImage(fcv, 0, 0, FW, FH, x0, y0, w0, h0);
+        if (padL > 0) dst.drawImage(fcv, 0, 0, 1, FH, 0, y0, padL * K, h0);
+        if (padR > 0) dst.drawImage(fcv, FW - 1, 0, 1, FH, x0 + w0, y0, padR * K, h0);
+        /* the top and bottom take the whole width that is now painted, so
+           the corners are filled too */
+        if (padT > 0) dst.drawImage(cv, 0, y0, cv.width, 1, 0, 0, cv.width, padT * K);
+        if (padB > 0) {
+          dst.drawImage(cv, 0, y0 + h0 - 1, cv.width, 1, 0, y0 + h0, cv.width, padB * K);
+        }
+      };
       requestAnimationFrame(() => wrap.classList.add('in'));
 
       let round = 0, hits = 0, perfect = 0;
@@ -348,6 +391,7 @@ const JOBS = (() => {
         c.fillRect(0, 0, FW, FH);
         o.draw(c, FW, FH, s);
         povFrame(c, o, s, rounds);
+        present();
         if (!done) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);

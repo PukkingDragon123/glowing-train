@@ -1218,6 +1218,94 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## Four things that were wrong
+
+![Six frames of one sweep](docs/screen-wipe.png)
+
+### She was wiping the table with a hand that teleported
+
+The wife's job is `wipe`, and `wipe` alternated the near arm between two
+poses — `wipe` and `reach`. Those two put the wrist at 0.66 and 0.58 of the
+figure's height: **eight per cent apart, eleven pixels on this rig**. So her
+hand jumped up and down twice a second while her whole body slid four pixels
+sideways underneath it, which is two motions going in different directions and
+neither of them a wipe.
+
+The rig caches a canvas per arm pose, so a continuous arm angle is not on
+offer. Four poses are. The wrist now tracks **across** at one height and the
+caller ping-pongs `1-2-3-4-3-2` through them — six frames of one sweep out and
+back. Measured off the finished sprites, the hand travels **x 69 → 80 → 91 →
+101 → 91 → 80 with y fixed at 93**: thirty-two pixels of sweep and one pixel of
+vertical wobble, where it used to be eleven.
+
+### The dialogue portrait was a stranger
+
+The plate looks its speaker up in a table of **eleven hand-written names**, and
+the game says lines as far more than eleven speakers. Everything not on the
+list fell through to a fallback that hands out one of nine spare civilian faces
+with the skin recoloured by a hash of the name — which is a perfectly good face
+for a hawker nobody ever drew, and completely wrong for somebody standing on
+screen at the time. **His wife spoke as CLEO and got a randomly tinted
+waitress. His son spoke as TOBIAS and got a randomly tinted pawnbroker.**
+Neither of their defs is even reachable from the dialogue code: they are
+`const`s inside the cutscene module.
+
+So the plate **asks the stage first**. Every actor in a room already carries
+its own def and the name it is labelled with — the same string the line is
+spoken under — so matching on that makes the portrait the speaker by
+construction, for the family, for every witness, and for anybody added later
+without touching that file.
+
+Verified by comparing pixels rather than by looking: CLEO's plate portrait and
+her own head both come back `46x42 #9a5593`, TOBIAS's both `46x42 #59926d`, and
+across **every actor in every room the game can build there is now not one
+mismatch**. A lock still correctly has no face. The precinct's two clerks were
+both labelled `A CLERK`, so only one of them could ever be looked up; the
+second one is `THE OTHER CLERK` now.
+
+### The minigames were a card in a dark room
+
+The scale was `floor(min(w/214, h/132))` and the canvas was exactly 214×132 of
+those, which on a 1280×800 window works out at K=5 and a **1070×660 picture:
+two hundred and ten pixels of black down each side and a hundred and forty top
+and bottom**. A trade was supposed to be a shot and it was still a card
+floating in the dark.
+
+Whole-number scaling is not the thing to give up — that is what keeps the
+pixels square. What had to give is the fixed **canvas**. Now K fits the height,
+the canvas is as many whole frame-pixels as the window holds at that K, the
+composition is drawn into a 214×132 offscreen exactly as authored and blitted
+to the middle of it, and the gap either side is filled by **stretching the
+frame's own edge column outward**. Every one of these sets is horizontally
+banded where it meets the frame edge — wall courses, tile, kerb, the pavement
+plane — so a clamped edge continues the set instead of showing a seam. Same
+canvas, measured: **1284×804** in a 1280×800 window.
+
+![The house, close in](docs/screen-house-close.png)
+
+### And the furniture had no line round it
+
+The cast carries an ink outline and the furniture did not, so a room came out
+as outlined frogs standing in front of flat colour blocks. All **35** catalogue
+pieces get one now, and so do the big set pieces built directly into the family
+house — the range, the larder press, the sink unit — through a new `ART.inked`,
+which runs a block of drawing into a canvas of its own (translated, so the code
+keeps using the room's coordinates unchanged), outlines it, and blits it back.
+
+**One** pixel, not the cast's two: a room whose chairs are outlined as heavily
+as the frogs sitting on them has no foreground left.
+
+The first attempt turned the line **inward** — any opaque pixel next to a hole
+becomes ink — because that needs no spare canvas and keeps each piece's exact
+bounds, which is what the room uses to place it and to put its shadow down. It
+also eats anything thin. A tap is three pixels wide and a brass rail is two
+rows tall; inked a pixel from each side they came back as a black stick and a
+black arc. So the drawing is done two pixels smaller inside its own canvas and
+the line is dilated **out** into the pixel that leaves free: same bounds, same
+placement, nothing thin lost. Soft work — steam off the kettle, the glow in
+the oven door — is drawn after the call rather than inside it, or every puff
+comes back as a black-edged dot.
+
 ## Round hands, and a walk that bounces
 
 ![Every hand the game draws](docs/screen-hands.png)

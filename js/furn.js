@@ -72,8 +72,31 @@ const FURN = (() => {
   function make(key, w, h, draw) {
     const k = key + ':' + w + 'x' + h;
     if (CACHE[k]) return CACHE[k];
-    const o = cv(Math.max(2, w), Math.max(2, h));
-    draw(o.c, Math.max(2, w), Math.max(2, h));
+    /* ============================================================
+       AND A LINE ROUND IT.
+
+       The cast carries an ink outline and the furniture did not, so a
+       room came out as outlined frogs standing in front of flat colour
+       blocks. Every piece gets one now -- ONE pixel, not the cast's two,
+       because a room whose chairs are outlined as heavily as the frogs
+       sitting on them has no foreground left.
+
+       It goes OUTWARD, into a margin, and the first attempt at this went
+       inward instead: any opaque pixel next to a hole became ink, which
+       needs no spare canvas and keeps the piece's exact bounds. It also
+       EATS anything thin. A tap is three pixels wide and a brass rail is
+       two rows tall; inked a pixel from each side they came back as a
+       black stick and a black arc. So the drawing is done two pixels
+       smaller inside its own canvas and the outline is dilated out into
+       the pixel that leaves free -- same bounds, same placement, and
+       nothing thin is lost.
+       ============================================================ */
+    const W = Math.max(4, w), H = Math.max(4, h);
+    const o = cv(W, H);
+    o.c.translate(1, 1);
+    draw(o.c, W - 2, H - 2);
+    o.c.setTransform(1, 0, 0, 1, 0, 0);
+    if (typeof SPR !== 'undefined' && SPR.inkEdge) SPR.inkEdge(o.cv, false, 1);
     o.cv.foot = h - 1;
     CACHE[k] = o.cv;
     return o.cv;

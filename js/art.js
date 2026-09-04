@@ -1667,6 +1667,40 @@ const ART = (() => {
      The side it spreads to is the side away from the light, which
      for an interior in this game is overhead and slightly left.
      ============================================================ */
+  /* ============================================================
+     A LINE ROUND SOMETHING DRAWN IN PLACE.
+
+     FURN pieces each own a canvas, so one call inks the lot of
+     them. The big set pieces built directly into a room -- the
+     stove, the larder, the table, the sofa -- do not: they are a
+     few dozen rects painted straight onto the room at absolute
+     coordinates, and there is no silhouette to walk.
+
+     This gives them one. `draw` runs into a canvas of its own,
+     translated so it can keep using the room's coordinates
+     unchanged, gets the same inward ink line the furniture gets,
+     and is blitted back where it was. The box has to CONTAIN the
+     thing WITH a pixel of slack all round for the line to grow into
+     -- anything outside it is clipped -- and soft work like steam or
+     lamp glow is better drawn after the call than inside it, or every
+     puff gets outlined.
+
+     The line is dilated OUTWARD, like the cast's. Turning it inward
+     instead needs no slack, and eats anything thin: a tap three
+     pixels wide and a brass rail two rows tall both came back solid
+     black.
+     ============================================================ */
+  function inked(c, x, y, w, h, draw, t) {
+    x = Math.round(x); y = Math.round(y);
+    w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h));
+    const o = cv(w, h);
+    o.c.translate(-x, -y);
+    draw(o.c);
+    if (typeof SPR !== 'undefined' && SPR.inkEdge) SPR.inkEdge(o.cv, false, t || 1);
+    c.drawImage(o.cv, x, y);
+    return o.cv;
+  }
+
   function stand(c, img, x, y, o) {
     o = o || {};
     const w = img.width, h = img.height;
@@ -1830,6 +1864,6 @@ const ART = (() => {
   return {
     cv, cached, px, box, dither, grain, rivets, paint, art,
     desk, chair, cabinet, lockers, cell, window: window_, radiator,
-    corkboard, bed, barCounter, crate, hangLamp, pipes, wall, floor, vista, stand,
+    corkboard, bed, barCounter, crate, hangLamp, pipes, wall, floor, vista, stand, inked,
   };
 })();

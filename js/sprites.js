@@ -4921,7 +4921,26 @@ SPR.ARM_POSE = {
   up:    { ex: 0.20, ey: 0.58, wx: 0.26, wy: 0.38, hand: 'hang' },
   point: { ex: 0.20, ey: 0.60, wx: 0.44, wy: 0.53, hand: 'point' },
   hold:  { ex: 0.18, ey: 0.62, wx: 0.16, wy: 0.58, hand: 'grip' },
+  /* ============================================================
+     THE WIPE IS FOUR POSES, NOT TWO.
+
+     A frog wiping a table alternated between `wipe` and `reach`,
+     and those two put the wrist at wy 0.66 and 0.58 -- eight per
+     cent of the figure apart, eleven pixels on this rig -- so her
+     hand TELEPORTED up and down twice a second while her whole
+     body slid four pixels sideways under it. It read as a fault,
+     because it is one: a two-frame switch is not a cycle.
+
+     The rig caches a canvas per pose, so a continuous arm angle is
+     not on offer. Four poses are: the wrist tracks ACROSS at one
+     height, and the caller ping-pongs 0-1-2-3-2-1 through them,
+     which is six frames of one sweep out and back.
+     ============================================================ */
   wipe:  { ex: 0.20, ey: 0.62, wx: 0.36, wy: 0.66, hand: 'grip' },
+  wipe1: { ex: 0.19, ey: 0.63, wx: 0.13, wy: 0.65, hand: 'grip' },
+  wipe2: { ex: 0.20, ey: 0.62, wx: 0.23, wy: 0.65, hand: 'grip' },
+  wipe3: { ex: 0.21, ey: 0.62, wx: 0.33, wy: 0.65, hand: 'grip' },
+  wipe4: { ex: 0.22, ey: 0.61, wx: 0.42, wy: 0.66, hand: 'grip' },
   type:  { ex: 0.17, ey: 0.62, wx: 0.24, wy: 0.66, hand: 'grip' },
   fist:  { ex: 0.20, ey: 0.60, wx: 0.34, wy: 0.50, hand: 'fist' },
 };

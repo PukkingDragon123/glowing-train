@@ -2210,8 +2210,16 @@ const SCENE = (() => {
         lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
         arm = ph > 0.20 && ph < 0.62 ? 'up' : 'reach';
       } else if (job.body === 'swing') {
-        work = Math.round(sw * 4);
-        arm = sw > 0 ? 'wipe' : 'reach';
+        /* SIX FRAMES OF ONE SWEEP, out and back. This used to flip between
+           two poses whose wrists sit eleven pixels apart on the y, so the
+           hand jumped rather than travelled -- and the body slid four
+           pixels sideways to cover for it, which just added a second
+           motion going the wrong way. The body leans WITH the hand now,
+           half as far. */
+        const SW = [1, 2, 3, 4, 3, 2];
+        const i2 = Math.min(SW.length - 1, Math.floor(ph * SW.length));
+        arm = 'wipe' + SW[i2];
+        work = Math.round((SW[i2] - 2.5) * 0.8);
       } else if (job.body === 'turn') work = sw > 0 ? 1 : -1;
       a._ph = ph;
     } else if (a.busyAt) {

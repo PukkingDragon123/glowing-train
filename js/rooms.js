@@ -240,7 +240,12 @@ const ROOMS = (() => {
     actors.push({ id: 'clerk2', x: 462, y: FY, key: 'clerk2',
       def: Object.assign({}, DILL_DEF, { skin: ['G', 'g', 'h'], glasses: 'round' }),
       face: -1, job: 'read', mood: 'watch',
-      label: 'A CLERK', hint: 'HE IS READING', onUse: () => STORY.smallTalk('dill') });
+      /* TWO CLERKS, TWO LABELS. Both were 'A CLERK', and the dialogue
+         portrait finds its speaker by matching the name on the plate
+         against the actors in the room -- so with one label between them
+         only the first one could ever be looked up. */
+      label: 'THE OTHER CLERK', hint: 'HE IS READING',
+      onUse: () => STORY.smallTalk('dill') });
     actors.push({ id: 'sarge', x: 100, y: FY, key: 'sarge',
       def: Object.assign({}, DILL_DEF, { skin: ['e', 'e', 'K'], fat: true }),
       face: 1, job: 'pace', beat: 40, mood: 'hard',

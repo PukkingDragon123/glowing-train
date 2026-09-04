@@ -55,6 +55,40 @@ const CAST = () => ({
   'DILL': typeof DILL_DEF !== 'undefined' ? DILL_DEF : null,
 });
 
+/* ============================================================
+   THE ROOM ALREADY KNOWS WHO IS TALKING.
+
+   CAST above is eleven hand-written names, and the game says lines
+   as far more than eleven speakers. Anything not on the list fell
+   through to the hash fallback and was handed one of nine spare
+   civilian faces with its skin moved -- which is a fine face for a
+   hawker nobody ever drew, and completely wrong for somebody
+   standing on screen at the time. His wife says a line as CLEO and
+   got a randomly tinted waitress; his son says one as TOBIAS and
+   got a randomly tinted pawnbroker. Neither of their defs is even
+   reachable from here: WIFE_DEF and BOY_DEF are consts inside the
+   cutscene module.
+
+   So ASK THE STAGE first. Every actor in a room carries its own
+   def and the name it is labelled with, which is the same string
+   the line is spoken under. Match on that and the portrait is the
+   speaker by construction -- for the family, for every witness,
+   and for anybody added later without touching this file.
+   ============================================================ */
+function stageArt(n) {
+  if (typeof SCENE === 'undefined' || !SCENE.def) return null;
+  for (const a of (SCENE.def.actors || [])) {
+    if (!a || !a.def) continue;
+    const names = [a.label, a.tag, a.name, a.id];
+    for (const v of names) {
+      if (v && String(v).toUpperCase() === n) {
+        return SPR.frogCustom('stage:' + (a.key || a.id || n), a.def);
+      }
+    }
+  }
+  return null;
+}
+
 function speakerArt(name) {
   if (!name) return null;
   const n = String(name).toUpperCase();
@@ -64,6 +98,8 @@ function speakerArt(name) {
     const d = (typeof DUEL !== 'undefined' && DUEL.myDef) ? DUEL.myDef() : null;
     return d ? SPR.frogCustom('me', d) : null;
   }
+  const onStage = stageArt(n);
+  if (onStage) return onStage;
   const known = CAST()[n];
   if (known) return SPR.frogCustom('cast:' + n, known);
   /* ------------------------------------------------------------
@@ -513,6 +549,9 @@ const TUTOR = {
   },
 
   /* the player has heard enough */
+  /* which face the plate would put on a line by this speaker -- so a probe
+     can compare it with the actor's own head instead of squinting at it */
+  debugSpeakerArt(name) { return speakerArt(name); },
   skipAll() {
     TUTOR.STEPS.forEach(s => TUTOR.mark(s.id));
     TUTOR.mark('opening');

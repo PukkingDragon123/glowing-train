@@ -9620,7 +9620,26 @@ SPR.ARM_POSE = {
   up:    { ex: 0.20, ey: 0.58, wx: 0.26, wy: 0.38, hand: 'hang' },
   point: { ex: 0.20, ey: 0.60, wx: 0.44, wy: 0.53, hand: 'point' },
   hold:  { ex: 0.18, ey: 0.62, wx: 0.16, wy: 0.58, hand: 'grip' },
+  /* ============================================================
+     THE WIPE IS FOUR POSES, NOT TWO.
+
+     A frog wiping a table alternated between `wipe` and `reach`,
+     and those two put the wrist at wy 0.66 and 0.58 -- eight per
+     cent of the figure apart, eleven pixels on this rig -- so her
+     hand TELEPORTED up and down twice a second while her whole
+     body slid four pixels sideways under it. It read as a fault,
+     because it is one: a two-frame switch is not a cycle.
+
+     The rig caches a canvas per pose, so a continuous arm angle is
+     not on offer. Four poses are: the wrist tracks ACROSS at one
+     height, and the caller ping-pongs 0-1-2-3-2-1 through them,
+     which is six frames of one sweep out and back.
+     ============================================================ */
   wipe:  { ex: 0.20, ey: 0.62, wx: 0.36, wy: 0.66, hand: 'grip' },
+  wipe1: { ex: 0.19, ey: 0.63, wx: 0.13, wy: 0.65, hand: 'grip' },
+  wipe2: { ex: 0.20, ey: 0.62, wx: 0.23, wy: 0.65, hand: 'grip' },
+  wipe3: { ex: 0.21, ey: 0.62, wx: 0.33, wy: 0.65, hand: 'grip' },
+  wipe4: { ex: 0.22, ey: 0.61, wx: 0.42, wy: 0.66, hand: 'grip' },
   type:  { ex: 0.17, ey: 0.62, wx: 0.24, wy: 0.66, hand: 'grip' },
   fist:  { ex: 0.20, ey: 0.60, wx: 0.34, wy: 0.50, hand: 'fist' },
 };
@@ -12090,6 +12109,40 @@ const ART = (() => {
      The side it spreads to is the side away from the light, which
      for an interior in this game is overhead and slightly left.
      ============================================================ */
+  /* ============================================================
+     A LINE ROUND SOMETHING DRAWN IN PLACE.
+
+     FURN pieces each own a canvas, so one call inks the lot of
+     them. The big set pieces built directly into a room -- the
+     stove, the larder, the table, the sofa -- do not: they are a
+     few dozen rects painted straight onto the room at absolute
+     coordinates, and there is no silhouette to walk.
+
+     This gives them one. `draw` runs into a canvas of its own,
+     translated so it can keep using the room's coordinates
+     unchanged, gets the same inward ink line the furniture gets,
+     and is blitted back where it was. The box has to CONTAIN the
+     thing WITH a pixel of slack all round for the line to grow into
+     -- anything outside it is clipped -- and soft work like steam or
+     lamp glow is better drawn after the call than inside it, or every
+     puff gets outlined.
+
+     The line is dilated OUTWARD, like the cast's. Turning it inward
+     instead needs no slack, and eats anything thin: a tap three
+     pixels wide and a brass rail two rows tall both came back solid
+     black.
+     ============================================================ */
+  function inked(c, x, y, w, h, draw, t) {
+    x = Math.round(x); y = Math.round(y);
+    w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h));
+    const o = cv(w, h);
+    o.c.translate(-x, -y);
+    draw(o.c);
+    if (typeof SPR !== 'undefined' && SPR.inkEdge) SPR.inkEdge(o.cv, false, t || 1);
+    c.drawImage(o.cv, x, y);
+    return o.cv;
+  }
+
   function stand(c, img, x, y, o) {
     o = o || {};
     const w = img.width, h = img.height;
@@ -12253,7 +12306,7 @@ const ART = (() => {
   return {
     cv, cached, px, box, dither, grain, rivets, paint, art,
     desk, chair, cabinet, lockers, cell, window: window_, radiator,
-    corkboard, bed, barCounter, crate, hangLamp, pipes, wall, floor, vista, stand,
+    corkboard, bed, barCounter, crate, hangLamp, pipes, wall, floor, vista, stand, inked,
   };
 })();
 </script>
@@ -12333,8 +12386,31 @@ const FURN = (() => {
   function make(key, w, h, draw) {
     const k = key + ':' + w + 'x' + h;
     if (CACHE[k]) return CACHE[k];
-    const o = cv(Math.max(2, w), Math.max(2, h));
-    draw(o.c, Math.max(2, w), Math.max(2, h));
+    /* ============================================================
+       AND A LINE ROUND IT.
+
+       The cast carries an ink outline and the furniture did not, so a
+       room came out as outlined frogs standing in front of flat colour
+       blocks. Every piece gets one now -- ONE pixel, not the cast's two,
+       because a room whose chairs are outlined as heavily as the frogs
+       sitting on them has no foreground left.
+
+       It goes OUTWARD, into a margin, and the first attempt at this went
+       inward instead: any opaque pixel next to a hole became ink, which
+       needs no spare canvas and keeps the piece's exact bounds. It also
+       EATS anything thin. A tap is three pixels wide and a brass rail is
+       two rows tall; inked a pixel from each side they came back as a
+       black stick and a black arc. So the drawing is done two pixels
+       smaller inside its own canvas and the outline is dilated out into
+       the pixel that leaves free -- same bounds, same placement, and
+       nothing thin is lost.
+       ============================================================ */
+    const W = Math.max(4, w), H = Math.max(4, h);
+    const o = cv(W, H);
+    o.c.translate(1, 1);
+    draw(o.c, W - 2, H - 2);
+    o.c.setTransform(1, 0, 0, 1, 0, 0);
+    if (typeof SPR !== 'undefined' && SPR.inkEdge) SPR.inkEdge(o.cv, false, 1);
     o.cv.foot = h - 1;
     CACHE[k] = o.cv;
     return o.cv;
@@ -19017,8 +19093,16 @@ const SCENE = (() => {
         lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
         arm = ph > 0.20 && ph < 0.62 ? 'up' : 'reach';
       } else if (job.body === 'swing') {
-        work = Math.round(sw * 4);
-        arm = sw > 0 ? 'wipe' : 'reach';
+        /* SIX FRAMES OF ONE SWEEP, out and back. This used to flip between
+           two poses whose wrists sit eleven pixels apart on the y, so the
+           hand jumped rather than travelled -- and the body slid four
+           pixels sideways to cover for it, which just added a second
+           motion going the wrong way. The body leans WITH the hand now,
+           half as far. */
+        const SW = [1, 2, 3, 4, 3, 2];
+        const i2 = Math.min(SW.length - 1, Math.floor(ph * SW.length));
+        arm = 'wipe' + SW[i2];
+        work = Math.round((SW[i2] - 2.5) * 0.8);
       } else if (job.body === 'turn') work = sw > 0 ? 1 : -1;
       a._ph = ph;
     } else if (a.busyAt) {
@@ -25257,18 +25341,61 @@ const JOBS = (() => {
 
       /* the same whole-number scale rule the rooms use: a trade is a shot,
          so it is drawn at the size a shot is drawn at */
-      const K = U.clamp(Math.floor(Math.min(window.innerWidth / FW,
-        window.innerHeight / FH)), 1, 8);
+      /* ============================================================
+         AND IT FILLS THE SCREEN.
+
+         The scale was floor(min(w/214, h/132)) and the canvas was
+         exactly 214 by 132 of those, which on a 1280 by 800 window
+         works out at K=5 and a 1070 by 660 picture: two hundred and
+         ten pixels of black down each side and a hundred and forty
+         top and bottom. A trade was supposed to be a shot and it was
+         still a card floating in a dark room.
+
+         Whole-number scaling is not the thing to give up -- that is
+         what keeps the pixels square. What has to give is the fixed
+         214 by 132 CANVAS. So: K fits the HEIGHT, the canvas is as
+         many whole frame-pixels as the window holds at that K, the
+         composition is drawn into a 214 by 132 offscreen exactly as
+         authored and blitted to the middle of it, and the gap either
+         side is filled by stretching the frame's own EDGE COLUMN
+         outward. Every one of these sets is horizontally banded where
+         it meets the frame edge -- wall courses, tile, kerb, the
+         pavement plane -- so a clamped edge continues the set instead
+         of showing a seam. Same for the rows above and below.
+         ============================================================ */
+      const K = U.clamp(Math.floor(window.innerHeight / FH), 1, 10);
+      const CW = U.clamp(Math.ceil(window.innerWidth / K), FW, FW * 3);
+      const CH = U.clamp(Math.ceil(window.innerHeight / K), FH, FH * 2);
+      const padL = Math.floor((CW - FW) / 2), padR = CW - FW - padL;
+      const padT = Math.floor((CH - FH) / 2), padB = CH - FH - padT;
 
       const wrap = U.el('div', 'job-card');
       const cv = document.createElement('canvas');
-      cv.width = FW * K; cv.height = FH * K;
+      cv.width = CW * K; cv.height = CH * K;
       cv.className = 'pix job-cv';
       wrap.appendChild(cv);
       root.appendChild(wrap);
-      const c = cv.getContext('2d');
+      const dst = cv.getContext('2d');
+      dst.imageSmoothingEnabled = false;
+      /* the composition, at its authored size, in its own canvas */
+      const fcv = document.createElement('canvas');
+      fcv.width = FW; fcv.height = FH;
+      const c = fcv.getContext('2d');
       c.imageSmoothingEnabled = false;
-      c.scale(K, K);
+      /* one blit of the shot, plus four one-pixel slices stretched out to
+         the edges of the screen */
+      const present = () => {
+        const x0 = padL * K, y0 = padT * K, w0 = FW * K, h0 = FH * K;
+        dst.drawImage(fcv, 0, 0, FW, FH, x0, y0, w0, h0);
+        if (padL > 0) dst.drawImage(fcv, 0, 0, 1, FH, 0, y0, padL * K, h0);
+        if (padR > 0) dst.drawImage(fcv, FW - 1, 0, 1, FH, x0 + w0, y0, padR * K, h0);
+        /* the top and bottom take the whole width that is now painted, so
+           the corners are filled too */
+        if (padT > 0) dst.drawImage(cv, 0, y0, cv.width, 1, 0, 0, cv.width, padT * K);
+        if (padB > 0) {
+          dst.drawImage(cv, 0, y0 + h0 - 1, cv.width, 1, 0, y0 + h0, cv.width, padB * K);
+        }
+      };
       requestAnimationFrame(() => wrap.classList.add('in'));
 
       let round = 0, hits = 0, perfect = 0;
@@ -25311,6 +25438,7 @@ const JOBS = (() => {
         c.fillRect(0, 0, FW, FH);
         o.draw(c, FW, FH, s);
         povFrame(c, o, s, rounds);
+        present();
         if (!done) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
@@ -26937,7 +27065,12 @@ const ROOMS = (() => {
     actors.push({ id: 'clerk2', x: 462, y: FY, key: 'clerk2',
       def: Object.assign({}, DILL_DEF, { skin: ['G', 'g', 'h'], glasses: 'round' }),
       face: -1, job: 'read', mood: 'watch',
-      label: 'A CLERK', hint: 'HE IS READING', onUse: () => STORY.smallTalk('dill') });
+      /* TWO CLERKS, TWO LABELS. Both were 'A CLERK', and the dialogue
+         portrait finds its speaker by matching the name on the plate
+         against the actors in the room -- so with one label between them
+         only the first one could ever be looked up. */
+      label: 'THE OTHER CLERK', hint: 'HE IS READING',
+      onUse: () => STORY.smallTalk('dill') });
     actors.push({ id: 'sarge', x: 100, y: FY, key: 'sarge',
       def: Object.assign({}, DILL_DEF, { skin: ['e', 'e', 'K'], fat: true }),
       face: 1, job: 'pace', beat: 40, mood: 'hard',
@@ -35891,6 +36024,7 @@ const CUT = (() => {
       for (let i = 0; i < 6; i++) {
         px(c, wx + 5 + i * 2, wy + wh - 13 + (i % 3), 2, 6, '#4e7c42');
       }
+      ART.inked(c, wx - 12, FY - 48, ww + 26, 46, (c) => {
       px(c, wx - 8, FY - 30, ww + 18, 6, '#c8ac74');    /* the draining board */
       px(c, wx - 8, FY - 30, ww + 18, 1, '#e4c88c');
       px(c, wx - 4, FY - 24, ww + 10, 20, '#8a7048');   /* the cupboard under it */
@@ -35907,6 +36041,7 @@ const CUT = (() => {
         px(c, wx - 6 + i * 9, FY - 36, 7, 6, ['#f0e8d4', '#e8dcd0', '#f0e8d4'][i]);
         px(c, wx - 6 + i * 9, FY - 36, 7, 1, '#fbf7ec');
       }
+      });
       /* and the shaft it throws across the floor, painted, warm */
       for (let i = 0; i < 12; i++) {
         const t = i / 11;
@@ -35917,6 +36052,7 @@ const CUT = (() => {
 
       /* ---- THE STOVE. Cream enamel with a black hob and a brass rail:
              a kitchen range, not the grey monolith this was. ---- */
+      ART.inked(c, STOVE - 9, FY - 58, 62, 57, (c) => {
       px(c, STOVE - 4, FY - 36, 50, 34, '#4a3c2e');     /* the ink under it */
       px(c, STOVE - 3, FY - 35, 48, 32, '#dcd0b4');
       px(c, STOVE - 3, FY - 35, 48, 2, '#f0e6cc');
@@ -35951,11 +36087,16 @@ const CUT = (() => {
       px(c, STOVE + 15, FY - 48, 4, 2, '#4a4448');
       px(c, STOVE + 2, FY - 53, 10, 4, '#4a4448');      /* the handle */
       px(c, STOVE + 3, FY - 53, 8, 2, '#a8b0b6');
+      });
+      /* THE STEAM STAYS OUTSIDE THE INK. It is eight soft alpha puffs
+         climbing out of the frame the range is drawn in, and run through
+         the outline pass each one comes back as a black-edged dot. */
       for (let i = 0; i < 8; i++) {
         px(c, STOVE + 18 + Math.round(Math.sin(i * 0.85) * 3), FY - 52 - i * 3,
           2, 2, 'rgba(252,246,232,' + (0.26 - i * 0.03).toFixed(3) + ')');
       }
       /* the pan, with the eggs in it if he has cooked them */
+      ART.inked(c, STOVE + 10, FY - 50, 40, 12, (c) => {
       SPR.ellipse(c, STOVE + 24, FY - 42, 11, 4, '#26232a');
       SPR.ellipse(c, STOVE + 24, FY - 43, 10, 3, '#48434c');
       SPR.ellipse(c, STOVE + 24, FY - 44, 8, 2, '#5e5860');
@@ -35967,8 +36108,12 @@ const CUT = (() => {
         px(c, STOVE + 26, FY - 45, 7, 3, '#f6e8a8');
         px(c, STOVE + 28, FY - 44, 3, 2, '#f0a83c');
       }
+      });
 
-      /* ---- THE LARDER, and the two best things in the room on it ---- */
+      /* ---- THE LARDER, and the two best things in the room on it ----
+             inside ART.inked, so the whole press gets the same one-pixel
+             black line the furniture and the cast have. See ART.inked. */
+      ART.inked(c, LARDER - 9, FY - 77, 56, 76, (c) => {
       px(c, LARDER, FY - 74, 44, 72, '#8e6e44');
       px(c, LARDER, FY - 74, 44, 3, '#ac8a58');
       px(c, LARDER + 40, FY - 74, 4, 72, 'rgba(60,40,20,.34)');
@@ -35999,6 +36144,7 @@ const CUT = (() => {
         px(c, LARDER - 6, hy, 5, 1, '#6a5030');
         px(c, LARDER - 6, hy - 3, 3, 2, '#6a5030');
       }
+      });
 
       /* ---- THE TABLE, three places laid, one of them low ---- */
       /* the top of the table only: the cloth hanging off the near edge and
@@ -40206,6 +40352,40 @@ const CAST = () => ({
   'DILL': typeof DILL_DEF !== 'undefined' ? DILL_DEF : null,
 });
 
+/* ============================================================
+   THE ROOM ALREADY KNOWS WHO IS TALKING.
+
+   CAST above is eleven hand-written names, and the game says lines
+   as far more than eleven speakers. Anything not on the list fell
+   through to the hash fallback and was handed one of nine spare
+   civilian faces with its skin moved -- which is a fine face for a
+   hawker nobody ever drew, and completely wrong for somebody
+   standing on screen at the time. His wife says a line as CLEO and
+   got a randomly tinted waitress; his son says one as TOBIAS and
+   got a randomly tinted pawnbroker. Neither of their defs is even
+   reachable from here: WIFE_DEF and BOY_DEF are consts inside the
+   cutscene module.
+
+   So ASK THE STAGE first. Every actor in a room carries its own
+   def and the name it is labelled with, which is the same string
+   the line is spoken under. Match on that and the portrait is the
+   speaker by construction -- for the family, for every witness,
+   and for anybody added later without touching this file.
+   ============================================================ */
+function stageArt(n) {
+  if (typeof SCENE === 'undefined' || !SCENE.def) return null;
+  for (const a of (SCENE.def.actors || [])) {
+    if (!a || !a.def) continue;
+    const names = [a.label, a.tag, a.name, a.id];
+    for (const v of names) {
+      if (v && String(v).toUpperCase() === n) {
+        return SPR.frogCustom('stage:' + (a.key || a.id || n), a.def);
+      }
+    }
+  }
+  return null;
+}
+
 function speakerArt(name) {
   if (!name) return null;
   const n = String(name).toUpperCase();
@@ -40215,6 +40395,8 @@ function speakerArt(name) {
     const d = (typeof DUEL !== 'undefined' && DUEL.myDef) ? DUEL.myDef() : null;
     return d ? SPR.frogCustom('me', d) : null;
   }
+  const onStage = stageArt(n);
+  if (onStage) return onStage;
   const known = CAST()[n];
   if (known) return SPR.frogCustom('cast:' + n, known);
   /* ------------------------------------------------------------
@@ -40664,6 +40846,9 @@ const TUTOR = {
   },
 
   /* the player has heard enough */
+  /* which face the plate would put on a line by this speaker -- so a probe
+     can compare it with the actor's own head instead of squinting at it */
+  debugSpeakerArt(name) { return speakerArt(name); },
   skipAll() {
     TUTOR.STEPS.forEach(s => TUTOR.mark(s.id));
     TUTOR.mark('opening');

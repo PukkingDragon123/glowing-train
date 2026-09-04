@@ -292,6 +292,7 @@ const CUT = (() => {
       for (let i = 0; i < 6; i++) {
         px(c, wx + 5 + i * 2, wy + wh - 13 + (i % 3), 2, 6, '#4e7c42');
       }
+      ART.inked(c, wx - 12, FY - 48, ww + 26, 46, (c) => {
       px(c, wx - 8, FY - 30, ww + 18, 6, '#c8ac74');    /* the draining board */
       px(c, wx - 8, FY - 30, ww + 18, 1, '#e4c88c');
       px(c, wx - 4, FY - 24, ww + 10, 20, '#8a7048');   /* the cupboard under it */
@@ -308,6 +309,7 @@ const CUT = (() => {
         px(c, wx - 6 + i * 9, FY - 36, 7, 6, ['#f0e8d4', '#e8dcd0', '#f0e8d4'][i]);
         px(c, wx - 6 + i * 9, FY - 36, 7, 1, '#fbf7ec');
       }
+      });
       /* and the shaft it throws across the floor, painted, warm */
       for (let i = 0; i < 12; i++) {
         const t = i / 11;
@@ -318,6 +320,7 @@ const CUT = (() => {
 
       /* ---- THE STOVE. Cream enamel with a black hob and a brass rail:
              a kitchen range, not the grey monolith this was. ---- */
+      ART.inked(c, STOVE - 9, FY - 58, 62, 57, (c) => {
       px(c, STOVE - 4, FY - 36, 50, 34, '#4a3c2e');     /* the ink under it */
       px(c, STOVE - 3, FY - 35, 48, 32, '#dcd0b4');
       px(c, STOVE - 3, FY - 35, 48, 2, '#f0e6cc');
@@ -352,11 +355,16 @@ const CUT = (() => {
       px(c, STOVE + 15, FY - 48, 4, 2, '#4a4448');
       px(c, STOVE + 2, FY - 53, 10, 4, '#4a4448');      /* the handle */
       px(c, STOVE + 3, FY - 53, 8, 2, '#a8b0b6');
+      });
+      /* THE STEAM STAYS OUTSIDE THE INK. It is eight soft alpha puffs
+         climbing out of the frame the range is drawn in, and run through
+         the outline pass each one comes back as a black-edged dot. */
       for (let i = 0; i < 8; i++) {
         px(c, STOVE + 18 + Math.round(Math.sin(i * 0.85) * 3), FY - 52 - i * 3,
           2, 2, 'rgba(252,246,232,' + (0.26 - i * 0.03).toFixed(3) + ')');
       }
       /* the pan, with the eggs in it if he has cooked them */
+      ART.inked(c, STOVE + 10, FY - 50, 40, 12, (c) => {
       SPR.ellipse(c, STOVE + 24, FY - 42, 11, 4, '#26232a');
       SPR.ellipse(c, STOVE + 24, FY - 43, 10, 3, '#48434c');
       SPR.ellipse(c, STOVE + 24, FY - 44, 8, 2, '#5e5860');
@@ -368,8 +376,12 @@ const CUT = (() => {
         px(c, STOVE + 26, FY - 45, 7, 3, '#f6e8a8');
         px(c, STOVE + 28, FY - 44, 3, 2, '#f0a83c');
       }
+      });
 
-      /* ---- THE LARDER, and the two best things in the room on it ---- */
+      /* ---- THE LARDER, and the two best things in the room on it ----
+             inside ART.inked, so the whole press gets the same one-pixel
+             black line the furniture and the cast have. See ART.inked. */
+      ART.inked(c, LARDER - 9, FY - 77, 56, 76, (c) => {
       px(c, LARDER, FY - 74, 44, 72, '#8e6e44');
       px(c, LARDER, FY - 74, 44, 3, '#ac8a58');
       px(c, LARDER + 40, FY - 74, 4, 72, 'rgba(60,40,20,.34)');
@@ -400,6 +412,7 @@ const CUT = (() => {
         px(c, LARDER - 6, hy, 5, 1, '#6a5030');
         px(c, LARDER - 6, hy - 3, 3, 2, '#6a5030');
       }
+      });
 
       /* ---- THE TABLE, three places laid, one of them low ---- */
       /* the top of the table only: the cloth hanging off the near edge and
