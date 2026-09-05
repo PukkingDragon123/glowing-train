@@ -1495,11 +1495,15 @@ const STORY = {
     const place = G.place;
     const isProp = hit && place && CITY.propsAt(place).indexOf(hit.id) >= 0;
 
-    if (hit && hit.look) lines.push(hit.look);
-    /* A SCRIPTED SCENE ANSWERS ITS OWN GLASS. The prologue hides a boy's
-       school reader under a sofa cushion and the only way to find it is to
-       hold the glass up to the cushions, which is the whole investigation
-       loop taught six years before the game calls it one. See js/cut.js. */
+    /* A LOOK LINE CAN BE A FUNCTION, like a label and a hint already can.
+       The prologue's spots answer differently once you have picked the
+       thing up, and pushing the function itself put a closure into the
+       line list, where the wrapper reached for .split on it. */
+    if (hit && hit.look) {
+      lines.push(typeof hit.look === 'function' ? hit.look() : hit.look);
+    }
+    /* A SCRIPTED SCENE ANSWERS ITS OWN GLASS: a scene's spots can add a
+       line of their own on top of the label. See js/cut.js. */
     if (hit && hit.onLook) {
       const extra = hit.onLook();
       if (extra) lines.push(extra);

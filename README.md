@@ -49,21 +49,29 @@ teaches them by *needing* them:
   plate on the counter fills up as they land. The first thing you ever do
   with your hands is make an egg for your son, and it is the identical action
   you will spend six years doing to locks, prints, taps and a pistol.
-- **Talk to somebody.** The boy at the table cannot find his school reader.
-  He has looked everywhere. Twice.
+- **Talk to somebody.** The boy at the table cannot find his things for
+  school. His pencil case and his crayons and his bag. All of them.
 
 ![Three at the table](docs/screen-home-table.png)
 
-- **Look closely.** The reader is under the left sofa cushion, and the only
-  way to find it is the eyeglass — the room five times closer in a brass
-  ring, with the lines under it. Which means the first case you ever work is
-  a missing library book in your own front room, and the game never once
-  calls it a case.
+- **Fetch three things.** The pencil case is down the side of a sofa cushion
+  with a pencil out the end of it, the crayons are in a tin on the mantel
+  where he could not reach them, and the backpack is on the end hook in the
+  hall. One tap each, a tally stamped as they come in, and the bag fills up
+  in front of you — a pencil and a red crayon sticking out of the side pocket
+  once the other two are in it.
 
 ![The cushions](docs/screen-home-glass.png)
 
-Then the bag off the hook, the shoes, the door, and the car. *Be back by six.
-It is your turn to cook properly.*
+  This used to be **one school reader hidden under a cushion behind a
+  spyglass gate**: hold the tool over the sofa to reveal it, tap again to
+  pick it up, and a line of dialogue to tell you the tool existed. Two gates
+  and an inventory item in the tutorial, before you had walked twenty pixels.
+  A search you can see is a better first search than a search you have to be
+  taught how to run.
+
+Then the shoes, the door, and the car. *Be back by six. It is your turn to
+cook properly.*
 
 ![The hooks](docs/screen-home-hall.png)
 
@@ -101,11 +109,11 @@ the moment it declares them, which is the machinery every clerk and barman in
 the city already uses. So the two people this whole story is about use it too.
 Walk up, tap, and they answer. Both conversations branch three ways with real
 replies, both know what you have done to the room — whether the egg is on the
-plate, whether the reader has turned up, whether you have already told him off
-for not looking properly — both react with their faces, and both can be had
-again, because a boy with one thing to say is a sign rather than a son. She
-goes tired when you say you might be late. He goes happy when you offer him
-your own book. Yours goes warm for about two seconds, which is the only place
+plate, how many of his three things are still in the house, whether you have
+already told him off for not looking properly — both react with their faces,
+and both can be had again, because a boy with one thing to say is a sign
+rather than a son. He counts down what is left by name. She goes tired when
+you say you might be late. He goes happy when you offer him your own pencil. Yours goes warm for about two seconds, which is the only place
 in this game that is allowed.
 
 They also *do* something while you are not talking to them: she wipes the
@@ -1217,6 +1225,55 @@ Everything the two rebuild waves earned stays: tapered bones, elbows, knees, a
 sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
+
+## Furniture with a section on it
+
+![The catalogue](docs/screen-furniture.png)
+
+Every catalogue piece was a rect with a lit row along the top and some
+speckled grain in the middle — four steps of colour, which is a colour with a
+highlight on it. At the sizes rooms ask for (a dresser is sixty rows tall)
+four steps means a flat field with a line on it, and the eye reads flat field.
+
+Each material now derives **two more steps** from the ones it already has:
+`hi`, the lit step taken most of the way to white, for the specular on a
+moulding or a brass pull; and `sh`, halfway between the body and the shade,
+for the step a bevel needs between its face and its edge. Derived rather than
+hand-authored, so twenty materials do not become forty entries that drift
+apart.
+
+And the primitives every piece is built from were rewritten around them, which
+lifts all 35 at once:
+
+| | |
+|---|---|
+| **panel** | ink, a chamfer lit at the top-left and shaded at the bottom-right, a **scribe line** one step in, the field, the figure, and a specular on the corner |
+| **figure** | wood has a few long cathedral arcs running up it. `grain` scattered single pixels, which at this size is dirt — **three arcs say wood where four hundred speckles say static** |
+| **moulding** | two steps, because one is a border and two is a moulding: an ovolo one pixel in, lit the other way, so the frame has a section instead of an edge |
+| **legs** | tapered, with three turned collars and a **pad at the bottom** — a leg of constant width is a table leg the way a rect is a table |
+| **pull** | a brass backplate and a bail, which is the one piece of hardware that says *furniture* rather than *box* |
+| **keyhole** | an escutcheon, for anything that locks |
+
+## And the house has a third dressing pass
+
+![The house, close in](docs/screen-house-close.png)
+
+It was furnished, then it was decorated, and it was still a bit tidy for a
+house with a six-year-old in it on a Tuesday morning. The layer that says
+somebody **lives** here rather than has furnished here: a box of kindling by
+the range, a radiator under the mirror, a plant in the hall — and the things
+on the surfaces, which is where a kitchen keeps its life. A milk bottle with a
+foil cap, a jar of jam with a paper label, a loaf on a board with the cut end
+showing. A teapot and a sugar bowl on the table. Yesterday's paper folded once
+over the sofa arm. A worn path down the boards from the door to the kitchen,
+because that is the line every morning in this house takes, and a scuffed
+skirting where a small frog kicks it.
+
+Two things were tried and taken out again, and both for the same reason —
+**the room is painted in layers and the dressing goes in early**. A hatstand
+at the door was behind the door; moved down the hall, it was behind the
+backpack. And the catalogue's stool is a bar stool, a round seat on a steel
+pedestal, which at sixteen by thirty in a kitchen read as a mushroom.
 
 ## Four things that were wrong
 

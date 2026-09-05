@@ -66,7 +66,83 @@ const FURN = (() => {
     glass:    { lit: 'rgba(214,240,250,.46)', mid: 'rgba(140,190,214,.26)',
                 dk: 'rgba(60,100,124,.30)', ink: 'rgba(10,20,28,.60)' },
   };
+  /* ============================================================
+     AND TWO MORE STEPS, DERIVED.
+
+     Four steps is a colour with a highlight on it, which is what
+     every one of these pieces was: ink, body, shade, and one lit
+     row along the top. At the sizes rooms ask for -- a dresser is
+     sixty rows tall -- four steps means a flat field with a line
+     on it, and the eye reads flat field.
+
+     So each material gets a fifth and sixth step worked out from
+     the ones it already has: `hi`, the lit step taken most of the
+     way to white, for the specular on a moulding or a brass pull;
+     and `sh`, halfway between the body and the shade, for the
+     step a bevel needs between its face and its edge. Derived
+     rather than hand-authored so twenty materials do not become
+     forty entries that can drift apart.
+     ============================================================ */
+  const hex = (h) => {
+    if (typeof h !== 'string' || h[0] !== '#') return null;
+    return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16),
+      parseInt(h.slice(5, 7), 16)];
+  };
+  const mix = (a, b, t) => {
+    const A = hex(a), B = hex(b);
+    if (!A || !B) return a;
+    return '#' + [0, 1, 2].map(i =>
+      Math.round(A[i] + (B[i] - A[i]) * t).toString(16).padStart(2, '0')).join('');
+  };
+  Object.keys(MAT).forEach(k => {
+    const m = MAT[k];
+    m.hi = hex(m.lit) ? mix(m.lit, '#ffffff', 0.42) : m.lit;
+    m.sh = hex(m.mid) ? mix(m.mid, m.dk, 0.5) : m.mid;
+  });
   const M = (name) => MAT[name] || MAT.walnut;
+
+  /* ---- WOOD FIGURE, not noise. `grain` scatters single pixels, which at
+         this size is dirt. Timber has a few long cathedral arcs running up
+         it, and three of those say `wood` where four hundred speckles say
+         `static`. ---- */
+  function figure(c, x, y, w, h, m, seed) {
+    const n = Math.max(2, Math.round(w / 13));
+    for (let i = 0; i < n; i++) {
+      const bx = x + Math.round((i + 0.5) * (w / n));
+      const amp = 1 + ((seed + i * 7) % 3);
+      const per = 7 + ((seed + i * 5) % 9);
+      for (let yy = 0; yy < h; yy++) {
+        const dx = Math.round(Math.sin((yy / per) + i * 1.7) * amp);
+        const cx2 = bx + dx;
+        if (cx2 < x || cx2 >= x + w) continue;
+        px(c, cx2, y + yy, 1, 1, m.sh);
+        if (cx2 + 1 < x + w) px(c, cx2 + 1, y + yy, 1, 1, m.lit);
+      }
+    }
+  }
+
+  /* ---- A DRAWER PULL: a backplate and a bail, which is the one piece of
+         hardware that says `furniture` rather than `box`. ---- */
+  function pull(c, x, y, w, m) {
+    const B = MAT.brass;
+    const pw = Math.max(5, w);
+    px(c, x - 1, y - 1, pw + 2, 6, B.ink);
+    px(c, x, y, pw, 4, B.dk);
+    px(c, x, y, pw, 1, B.mid);
+    px(c, x + 1, y + 2, pw - 2, 2, B.mid);
+    px(c, x + 1, y + 2, pw - 2, 1, B.lit);
+    px(c, x + Math.round(pw / 2) - 1, y + 1, 2, 1, B.hi);
+  }
+
+  /* ---- AND AN ESCUTCHEON, for anything that locks ---- */
+  function keyhole(c, x, y, m) {
+    const B = MAT.brass;
+    px(c, x - 1, y - 1, 5, 8, B.ink);
+    px(c, x, y, 3, 6, B.dk);
+    px(c, x, y, 3, 1, B.lit);
+    px(c, x + 1, y + 2, 1, 3, '#0a0806');
+    px(c, x + 1, y + 1, 1, 1, '#0a0806');
+  }
 
   const CACHE = {};
   function make(key, w, h, draw) {
@@ -103,18 +179,40 @@ const FURN = (() => {
   }
 
   /* ---- a panel with a bevel: the unit almost everything is built from ---- */
+  /* ---- A RAISED PANEL, in six steps rather than a rect with a lit row.
+         ink round it, a chamfer lit at the top-left and shaded at the
+         bottom-right, a scribe line one step in, the field, the figure,
+         and a specular on the top-left corner of the chamfer. ---- */
   function panel(c, x, y, w, h, m, o) {
     o = o || {};
+    const t = Math.max(1, Math.min(3, o.bevel || (w > 26 && h > 16 ? 2 : 1)));
     px(c, x - 1, y - 1, w + 2, h + 2, m.ink);
     px(c, x, y, w, h, m.mid);
-    px(c, x, y, w, Math.max(1, o.top || 1), m.lit);
-    px(c, x, y + h - Math.max(1, o.bot || 1), w, Math.max(1, o.bot || 1), m.dk);
-    px(c, x, y, Math.max(1, o.left || 1), h, m.lit);
-    px(c, x + w - Math.max(1, o.right || 1), y, Math.max(1, o.right || 1), h, m.dk);
-    if (o.grain !== false) grain(c, x + 1, y + 1, w - 2, h - 2, m.dk, m.lit, (o.seed || 3) * 7);
+    /* the chamfer */
+    px(c, x, y, w, t, m.lit);
+    px(c, x, y, t, h, m.lit);
+    px(c, x, y + h - t, w, t, m.dk);
+    px(c, x + w - t, y, t, h, m.dk);
+    /* the scribe line where the chamfer meets the field */
+    if (w > 10 && h > 8) {
+      px(c, x + t, y + t, w - t * 2, 1, m.sh);
+      px(c, x + t, y + t, 1, h - t * 2, m.sh);
+      px(c, x + t, y + h - t - 1, w - t * 2, 1, 'rgba(255,255,255,.10)');
+      px(c, x + w - t - 1, y + t, 1, h - t * 2, 'rgba(255,255,255,.08)');
+    }
+    if (o.grain !== false && w > 12 && h > 10) {
+      figure(c, x + t + 1, y + t + 1, w - (t + 1) * 2, h - (t + 1) * 2, m,
+        (o.seed || 3) * 7);
+    } else if (o.grain !== false) {
+      grain(c, x + 1, y + 1, w - 2, h - 2, m.dk, m.lit, (o.seed || 3) * 7);
+    }
+    px(c, x, y, Math.min(3, t + 1), 1, m.hi);
+    px(c, x, y, 1, Math.min(3, t + 1), m.hi);
   }
 
   /* ---- a moulded frame round an opening: a door, a mirror, a picture ---- */
+  /* ---- a moulded frame round an opening: TWO steps, because one is a
+         border and two is a moulding ---- */
   function moulding(c, x, y, w, h, m, t) {
     t = t || 3;
     px(c, x - 1, y - 1, w + 2, h + 2, m.ink);
@@ -122,8 +220,15 @@ const FURN = (() => {
     px(c, x, y + h - t, w, t, m.dk);
     px(c, x, y, t, h, m.lit);
     px(c, x + w - t, y, t, h, m.dk);
-    px(c, x + t, y + t, w - t * 2, 1, 'rgba(0,0,0,.34)');
-    px(c, x + t, y + h - t - 1, w - t * 2, 1, 'rgba(255,255,255,.10)');
+    /* the second step: an ovolo one pixel in, lit the other way, so the
+       frame has a section instead of an edge */
+    px(c, x + 1, y + 1, w - 2, 1, m.hi);
+    px(c, x + 1, y + 1, 1, h - 2, m.hi);
+    px(c, x + 1, y + h - 2, w - 2, 1, m.sh);
+    px(c, x + w - 2, y + 1, 1, h - 2, m.sh);
+    px(c, x + t, y + t, w - t * 2, 1, 'rgba(0,0,0,.40)');
+    px(c, x + t, y + t + 1, w - t * 2, 1, 'rgba(0,0,0,.18)');
+    px(c, x + t, y + h - t - 1, w - t * 2, 1, 'rgba(255,255,255,.12)');
   }
 
   /* ---- turned legs, which is what stops a table being a plank on blocks ---- */
@@ -132,16 +237,28 @@ const FURN = (() => {
     const lw = Math.max(3, Math.round(w * (o.lw || 0.07)));
     for (let i = 0; i < n; i++) {
       const lx = Math.round(x + (w - lw) * (n === 1 ? 0.5 : i / (n - 1)));
-      px(c, lx - 1, y, lw + 2, h, m.ink);
-      px(c, lx, y, lw, h, m.mid);
-      px(c, lx, y, Math.max(1, lw >> 1), h, m.lit);
-      px(c, lx + lw - 1, y, 1, h, m.dk);
-      /* the turning: three collars down it */
+      /* TAPERED, and with a foot on it. A leg of constant width is a
+         table leg the way a rect is a table: the taper and the pad at
+         the bottom are the whole difference. */
+      for (let yy = 0; yy < h; yy++) {
+        const t2 = yy / Math.max(1, h - 1);
+        const ww = Math.max(2, lw - Math.round(t2 * (lw > 5 ? 2 : 1)));
+        const lx2 = lx + ((lw - ww) >> 1);
+        px(c, lx2 - 1, y + yy, ww + 2, 1, m.ink);
+        px(c, lx2, y + yy, ww, 1, m.mid);
+        px(c, lx2, y + yy, Math.max(1, ww >> 1), 1, m.lit);
+        px(c, lx2 + ww - 1, y + yy, 1, 1, m.dk);
+      }
+      /* the turning: three collars down it, each with a lit shoulder */
       for (let k = 1; k <= 3; k++) {
         const ky = y + Math.round(h * (k / 4));
+        px(c, lx - 1, ky, lw + 2, 3, m.ink);
         px(c, lx - 1, ky, lw + 2, 2, m.dk);
-        px(c, lx - 1, ky, lw + 2, 1, m.lit);
+        px(c, lx - 1, ky, lw + 2, 1, m.hi);
       }
+      /* and the pad it stands on */
+      px(c, lx - 2, y + h - 2, lw + 4, 2, m.ink);
+      px(c, lx - 1, y + h - 2, lw + 2, 1, m.mid);
       if (o.castor) {
         px(c, lx - 1, y + h - 2, lw + 2, 3, MAT.steel.ink);
         px(c, lx, y + h - 2, lw, 2, MAT.steel.mid);

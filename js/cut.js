@@ -471,14 +471,34 @@ const CUT = (() => {
       px(c, SOFA - 40, FY - 34, 10, 2, '#6a8c74');
       px(c, SOFA + 46, FY - 34, 10, 32, '#547660');
       px(c, SOFA + 46, FY - 34, 10, 2, '#6a8c74');
-      /* two seat cushions, and the left one is sitting proud of the frame */
-      px(c, SOFA - 30, FY - 24 - (st.book === 'found' ? 0 : 2), 36, 10, '#5e8068');
-      px(c, SOFA - 30, FY - 24 - (st.book === 'found' ? 0 : 2), 36, 2, '#74987e');
+      /* two seat cushions, and the left one is sitting proud of the frame
+         because there is a PENCIL CASE down the side of it */
+      const prd = st.kit && st.kit.pencils ? 0 : 2;
+      px(c, SOFA - 30, FY - 24 - prd, 36, 10, '#5e8068');
+      px(c, SOFA - 30, FY - 24 - prd, 36, 2, '#74987e');
       px(c, SOFA + 8, FY - 24, 36, 10, '#5e8068');
       px(c, SOFA + 8, FY - 24, 36, 2, '#74987e');
-      if (st.book === 'found') {                                /* a corner showing */
-        px(c, SOFA - 12, FY - 26, 10, 3, '#a8442c');
-        px(c, SOFA - 12, FY - 26, 10, 1, '#c4583c');
+      if (!st.kit || !st.kit.pencils) {
+        /* ============================================================
+           HIS PENCIL CASE, IN PLAIN SIGHT.
+
+           This spot used to hide a school reader that only turned up
+           if you held the spyglass over the cushion first, and then
+           needed a second tap to pick up. Two gates and a tool on the
+           first search in the game. It is a stripy zip case with a
+           pencil out the end of it, sitting where anybody would see
+           it, and one tap has it.
+           ============================================================ */
+        /* ON THE FAR CUSHION, not the near one. The spot's own x is where
+           the game stands you to use it, so anything drawn within ten
+           pixels of it spends the whole search behind your own coat. */
+        for (let i = 0; i < 7; i++) {
+          px(c, SOFA + 12 + i * 2, FY - 28, 2, 5, i % 2 ? '#d8484c' : '#f0e8d4');
+        }
+        px(c, SOFA + 12, FY - 29, 14, 1, '#f8f2e0');            /* the zip */
+        px(c, SOFA + 12, FY - 24, 14, 1, 'rgba(40,20,20,.40)');
+        px(c, SOFA + 26, FY - 27, 5, 2, '#e0b048');             /* a pencil out of it */
+        px(c, SOFA + 31, FY - 27, 2, 2, '#2c2a34');
       }
       /* two scatter cushions, one of them embroidered */
       px(c, SOFA - 26, FY - 36, 14, 12, '#c8a44c');
@@ -512,6 +532,87 @@ const CUT = (() => {
       FURN.stand(c, 'dresser', 226, FY - 60, 44, 60, { mat: 'pine', seed: 7 });
       FURN.stand(c, 'plant', 336, FY - 30, 20, 30, { mat: 'copper', seed: 9 });
       FURN.stand(c, 'standlamp', 462, FY - 62, 18, 62, { mat: 'mustard' });
+
+      /* ============================================================
+         A THIRD DRESSING PASS.
+
+         The room was furnished and it was decorated, and it was
+         still a bit tidy for a house with a six-year-old in it on a
+         Tuesday morning. This is the layer that says somebody LIVES
+         here rather than has furnished here: a stool pulled out from
+         the sink, a radiator under the mirror, a plant and a hatstand
+         in the hall, a box of kindling by the range -- and the things
+         on the surfaces, which is where a kitchen keeps its life.
+         ============================================================ */
+      /* NO STOOL BY THE SINK. The catalogue's stool is a bar stool -- a
+         round seat on a steel pedestal -- and at sixteen by thirty in a
+         kitchen it read as a mushroom. */
+      FURN.stand(c, 'crate', 148, FY - 20, 22, 20, { mat: 'oak', seed: 13 });
+      FURN.hang(c, 'radiator', 466, FY - 22, 36, 14, { mat: 'cream' });
+      /* NO HATSTAND. There is nowhere in this hall to put one: the front
+         door is painted after the dressing so 686 is behind it, and at 646
+         it is behind the backpack, which is painted after it too. The hall
+         already has a coat rack, a table, a hat, a radio, shoes and a duck
+         in it -- a hatstand next to a row of coat hooks is the same
+         sentence twice. */
+      FURN.stand(c, 'plant', 672, FY - 34, 22, 34, { mat: 'teal', seed: 4 });
+
+      /* THE LARDER TOP: milk, jam, and a loaf on a board */
+      ART.inked(c, LARDER + 1, FY - 88, 46, 16, (c) => {
+        px(c, LARDER + 4, FY - 84, 6, 11, '#dfe8ea');            /* the milk bottle */
+        px(c, LARDER + 4, FY - 84, 6, 2, '#f4fbfc');
+        px(c, LARDER + 5, FY - 87, 4, 3, '#dfe8ea');
+        px(c, LARDER + 5, FY - 88, 4, 2, '#c8a44c');             /* the foil cap */
+        px(c, LARDER + 4, FY - 78, 6, 5, 'rgba(255,255,255,.34)');
+        px(c, LARDER + 13, FY - 81, 8, 8, '#8e3a2c');            /* the jam */
+        px(c, LARDER + 13, FY - 81, 8, 2, '#a84e3c');
+        px(c, LARDER + 14, FY - 83, 6, 2, '#c8a44c');
+        px(c, LARDER + 14, FY - 78, 6, 3, '#d8cdb4');            /* the label */
+        px(c, LARDER + 25, FY - 76, 18, 3, '#a98a52');           /* the board */
+        px(c, LARDER + 25, FY - 76, 18, 1, '#c8a468');
+        px(c, LARDER + 27, FY - 82, 13, 6, '#c08a4c');           /* the loaf */
+        px(c, LARDER + 27, FY - 82, 13, 2, '#dca868');
+        for (let i = 0; i < 3; i++) {                            /* the scores */
+          px(c, LARDER + 29 + i * 4, FY - 83, 2, 2, '#e8c48c');
+        }
+        px(c, LARDER + 40, FY - 80, 4, 4, '#e8dcc0');            /* the cut end */
+      });
+
+      /* THE TABLE TOP: a teapot, and the sugar */
+      ART.inked(c, TABLE + 4, FY - 48, 34, 18, (c) => {
+        px(c, TABLE + 8, FY - 42, 16, 11, '#b8543c');            /* the teapot */
+        px(c, TABLE + 8, FY - 42, 16, 2, '#d0684c');
+        px(c, TABLE + 8, FY - 34, 16, 2, 'rgba(40,12,8,.44)');
+        px(c, TABLE + 11, FY - 45, 9, 3, '#b8543c');             /* the lid */
+        px(c, TABLE + 14, FY - 47, 3, 2, '#c8b06a');             /* the knob */
+        px(c, TABLE + 23, FY - 40, 5, 2, '#b8543c');             /* the spout */
+        px(c, TABLE + 26, FY - 39, 3, 3, '#9e4632');
+        px(c, TABLE + 5, FY - 39, 4, 5, '#b8543c');              /* the handle */
+        px(c, TABLE + 5, FY - 39, 2, 5, '#9e4632');
+        px(c, TABLE + 27, FY - 36, 8, 5, '#f0e8d4');             /* the sugar bowl */
+        px(c, TABLE + 27, FY - 36, 8, 1, '#fbf7ec');
+        px(c, TABLE + 29, FY - 37, 4, 1, '#e4dcc4');
+      });
+
+      /* THE SOFA ARM: yesterday's paper, folded once */
+      ART.inked(c, SOFA + 42, FY - 40, 20, 12, (c) => {
+        px(c, SOFA + 45, FY - 37, 14, 5, '#d8cdb4');
+        px(c, SOFA + 45, FY - 37, 14, 1, '#e8e0cc');
+        px(c, SOFA + 45, FY - 33, 14, 1, 'rgba(60,50,36,.44)');
+        for (let i = 0; i < 3; i++) px(c, SOFA + 47, FY - 36 + i * 2, 10, 1, 'rgba(60,50,36,.34)');
+        px(c, SOFA + 47, FY - 36, 5, 1, '#3a3228');
+      });
+
+      /* AND THE WEAR. A worn path in the boards from the door to the
+         kitchen, because that is the line every morning in this house
+         takes, and a scuffed skirting where a small frog kicks it. */
+      for (let i = 0; i < 5; i++) {
+        px(c, 20, FY - 5 + i, W - 40, 1, 'rgba(212,196,158,' + (0.05 - i * 0.008).toFixed(3) + ')');
+      }
+      for (let i = 0; i < 26; i++) {
+        const sx2 = 40 + ((i * 149) % (W - 90));
+        px(c, sx2, FY - 3 - (i % 3), 3 + (i % 4), 1, 'rgba(30,18,8,.22)');
+      }
 
       /* ============================================================
          AND THE SMALL STUFF, which is what makes a room somebody's.
@@ -573,6 +674,17 @@ const CUT = (() => {
       px(c, HEARTH + 17, FY - 76, 1, 4, '#f0e8d4');
       px(c, HEARTH + 24, FY - 70, 3, 10, '#c8b06a');
       px(c, HEARTH + 23, FY - 60, 5, 2, '#c8b06a');
+      /* HIS CRAYONS, left up here last night where he could not reach them */
+      if (!st.kit || !st.kit.crayons) {
+        px(c, HEARTH + 4, FY - 66, 13, 6, '#6a4a2a');           /* the tin */
+        px(c, HEARTH + 4, FY - 66, 13, 1, '#8a6438');
+        px(c, HEARTH + 4, FY - 61, 13, 1, 'rgba(30,16,8,.44)');
+        const CR = ['#d8484c', '#48a0d8', '#e0b048', '#5aa050', '#c86a92'];
+        for (let i = 0; i < 5; i++) {
+          px(c, HEARTH + 5 + i * 2, FY - 70, 2, 4, CR[i]);
+          px(c, HEARTH + 5 + i * 2, FY - 71, 2, 1, '#f4eeda');
+        }
+      }
       /* the standing lamp beside it, on, because the hall is still dim */
       px(c, HEARTH + 40, FY - 8, 12, 6, '#8e6e44');
       px(c, HEARTH + 45, FY - 58, 2, 50, '#a98a52');
@@ -599,12 +711,36 @@ const CUT = (() => {
       coat(HOOKS - 8, 14, 40, '#3a4048', '#4e5660', '#242a30');
       coat(HOOKS + 8, 14, 36, '#7c4458', '#96566c', '#542c3c');
       coat(HOOKS + 24, 11, 22, '#c07038', '#d8884a', '#8e4e22');
-      /* the satchel on the fourth hook, or gone if he has taken it */
-      if (!st.satchel) {
-        px(c, HOOKS + 38, FY - 56, 14, 12, '#8e5a2c');
-        px(c, HOOKS + 38, FY - 56, 14, 2, '#a8703c');
-        px(c, HOOKS + 40, FY - 50, 10, 3, '#6e4420');
-        px(c, HOOKS + 44, FY - 58, 3, 3, '#8e5a2c');
+      /* ============================================================
+         HIS BACKPACK, on the fourth hook, and it FILLS UP.
+
+         It was a flat brown rectangle that either was there or was
+         not. It is a bag now -- flap, buckle, side pocket, two straps
+         -- and once his pencil case and his crayons are in it a
+         pencil and a red crayon are sticking out of the pocket, so
+         the room shows you the errand is done rather than a line of
+         dialogue telling you.
+         ============================================================ */
+      if (!st.kit || !st.kit.bag) {
+        const bx = HOOKS + 36, by = FY - 58;
+        px(c, bx + 4, by - 2, 3, 4, '#6e4420');                 /* the loop */
+        px(c, bx, by + 2, 18, 16, '#8e5a2c');                   /* the body */
+        px(c, bx, by + 2, 18, 2, '#a8703c');
+        px(c, bx + 15, by + 2, 3, 16, 'rgba(50,28,10,.36)');
+        px(c, bx, by + 2, 18, 7, '#a06638');                    /* the flap */
+        px(c, bx, by + 8, 18, 1, 'rgba(40,22,8,.50)');
+        px(c, bx + 7, by + 7, 4, 3, '#3a2c22');                 /* the buckle */
+        px(c, bx + 8, by + 8, 2, 1, '#c8b06a');
+        px(c, bx + 2, by + 11, 8, 6, '#7c4c24');                /* the side pocket */
+        px(c, bx + 2, by + 11, 8, 1, '#96602e');
+        for (let i = 0; i < 2; i++) {                           /* the straps */
+          px(c, bx + 3 + i * 9, by + 17, 3, 4, '#6e4420');
+        }
+        if (st.kit && st.kit.pencils && st.kit.crayons) {
+          px(c, bx + 4, by + 8, 2, 4, '#e0b048');               /* a pencil */
+          px(c, bx + 4, by + 8, 2, 1, '#2c2a34');
+          px(c, bx + 7, by + 9, 2, 3, '#d8484c');               /* and a crayon */
+        }
       }
       /* two pairs of shoes, and one pair is small */
       px(c, HOOKS - 8, FY - 8, 13, 6, '#3a2c22');
@@ -703,7 +839,8 @@ const CUT = (() => {
 
     return {
       id: 'cut_home:' + (st.pan ? 'p' : '') + (st.plate ? 'e' : '')
-        + (st.book || '') + (st.satchel ? 's' : ''),
+        + (st.kit ? (st.kit.pencils ? 'P' : '') + (st.kit.crayons ? 'C' : '')
+          + (st.kit.bag ? 'B' : '') : ''),
       w: W, floorY: FY, paint, fore, spots,
       actors: [
         /* ============================================================
@@ -1921,7 +2058,25 @@ const CUT = (() => {
      exactly what it means.
      ============================================================ */
   async function prologue() {
-    const st = { pan: false, plate: false, book: 'sofa', satchel: false };
+    /* ============================================================
+       THREE THINGS, AND YOU CAN SEE ALL THREE.
+
+       The first search in this game used to be one school reader
+       hidden under a cushion behind a SPYGLASS gate: hold the tool
+       over the sofa to reveal it, tap again to pick it up, and a
+       line of dialogue to tell you the tool exists. Two gates and an
+       inventory item, in the tutorial, before you have walked twenty
+       pixels.
+
+       It is his school kit now -- pencil case, crayons, backpack --
+       all three drawn where anybody would see them, one tap each, no
+       tool. The tally is stamped as you go, the bag fills up in
+       front of you, and the door will not open until he has the lot.
+       ============================================================ */
+    const st = { pan: false, plate: false,
+      kit: { pencils: false, crayons: false, bag: false } };
+    const kitLeft = () => ['pencils', 'crayons', 'bag'].filter(k => !st.kit[k]).length;
+    const kitDone = () => kitLeft() === 0;
     let H = home(st);
     const M = H.marks;
 
@@ -1956,57 +2111,59 @@ const CUT = (() => {
                 : 'BROWN ROUND THE EDGE. HE PUTS KETCHUP ON IT ANYWAY.'), PIX.PAL.F);
           };
         }
-        if (sp.id === 'sofa') {
-          sp.look = st.book === 'found'
-            ? 'ONE CORNER OF A SCHOOL READER, STICKING OUT.'
-            : 'THE LEFT ONE IS SITTING TWO INCHES PROUD OF THE FRAME.';
-          sp.onLook = () => {
-            if (st.book === 'found') return null;
-            st.book = 'found';
-            SFX.tone(880, 0.06, 'square', 0.05);
-            setTimeout(() => redress(S, M.SOFA + 10), 900);
-            return 'THERE IS SOMETHING UNDER IT. SQUARE, AND ABOUT AN INCH THICK.';
-          };
+        /* ---- the three things, one tap each ---- */
+        const KIT = {
+          pencils: { at: 'sofa', name: 'HIS PENCIL CASE',
+            look: 'THE CUSHION IS SITTING PROUD, AND THERE IS A ZIP SHOWING.',
+            got: 'IT WAS DOWN THE SIDE OF THE CUSHION. IT IS ALWAYS DOWN THE '
+              + 'SIDE OF THE CUSHION.', tone: 880 },
+          crayons: { at: 'hearth', name: 'HIS CRAYONS',
+            look: 'A TIN OF CRAYONS ON THE MANTEL, WHERE HE CANNOT REACH THEM.',
+            got: 'HE WAS DRAWING UP HERE LAST NIGHT AND I PUT THEM WHERE HE '
+              + 'COULD NOT GET AT THEM.', tone: 990 },
+          bag: { at: 'hooks', name: 'HIS BACKPACK',
+            look: 'THREE COATS, TWO PAIRS OF SHOES, AND A BAG ON THE END HOOK.',
+            got: 'BAG. THAT IS THE LOT.', tone: 660 },
+        };
+        const LEFT = () => Object.keys(KIT).filter(k => !st.kit[k]).length;
+        Object.keys(KIT).forEach(k => {
+          const K = KIT[k];
+          if (sp.id !== K.at) return;
+          sp.label = st.kit[k] ? sp.label : K.name;
+          sp.hint = () => (st.kit[k] ? 'LOOK' : 'TAKE');
+          sp.look = () => (st.kit[k] ? K.look.replace(/^THE|^A /, 'NOTHING ON ') : K.look);
           sp.onUse = async () => {
-            if (st.book !== 'found') {
-              await S.say('YOU', 'CUSHIONS. IF I START PULLING THE ROOM APART '
-                + 'I WILL BE HERE UNTIL LUNCH.', PIX.PAL.F);
-              await S.say('YOU', 'THERE IS A GLASS IN MY COAT. USE THE GLASS.', PIX.PAL.F);
+            if (st.kit[k]) {
+              await S.say('YOU', 'GOT THAT ONE.', PIX.PAL.F);
               return;
             }
-            st.book = 'got';
-            redress(S, M.SOFA + 10);
-            await S.say('TOBIAS', 'THAT IS IT! THAT IS THE ONE WITH THE MAP IN IT.',
-              PIX.PAL.O);
-          };
-        }
-        if (sp.id === 'hearth') {
-          sp.look = 'A CLOCK SIX MINUTES FAST, WHICH IS THE ONLY REASON '
-            + 'ANYBODY IN THIS HOUSE IS EVER ON TIME.';
-          sp.onUse = async () => {
-            await S.say('YOU', 'TWENTY PAST SEVEN. BY THAT CLOCK, WHICH LIES.',
-              PIX.PAL.F);
-          };
-        }
-        if (sp.id === 'hooks') {
-          sp.look = 'THREE COATS. ONE OF THEM COMES UP TO MY KNEE.';
-          sp.onUse = async () => {
-            if (st.book !== 'got') {
-              await S.say('YOU', 'HIS BAG IS HERE. THE READER THAT GOES IN IT IS NOT.',
-                PIX.PAL.F);
-              return;
+            st.kit[k] = true;
+            SFX.tone(K.tone, 0.07, 'square', 0.055);
+            setTimeout(() => SFX.tone(K.tone * 1.5, 0.09, 'triangle', 0.05), 70);
+            redress(S, SCENE.me ? SCENE.me.x : undefined);
+            const n = LEFT();
+            if (typeof UI !== 'undefined' && UI.stampSmall) {
+              UI.stampSmall(K.name + (n ? '  -  ' + n + ' TO GO' : '  -  THAT IS EVERYTHING'));
             }
-            st.satchel = true;
-            redress(S, M.HOOKS);
-            SFX.tone(320, 0.06, 'square', 0.05);
-            await S.say('YOU', 'BAG. READER. SHOES. NOBODY IS LATE.', PIX.PAL.F);
+            await S.say('YOU', K.got, PIX.PAL.F);
+            if (!n) {
+              const b2 = S.actor('boy');
+              if (b2) b2.mood = 'happy';
+              S.face('happy');
+              await S.say('TOBIAS', 'YOU FOUND ALL OF IT.', PIX.PAL.O);
+              S.face(null);
+            }
           };
-        }
+        });
         if (sp.id === 'door') {
           sp.look = 'A MORNING WITH NOTHING WRONG WITH IT.';
           sp.onUse = async () => {
-            if (!st.satchel) {
-              await S.say('YOU', 'NOT WITHOUT HIS BAG.', PIX.PAL.F);
+            const n = ['pencils', 'crayons', 'bag'].filter(k => !st.kit[k]).length;
+            if (n) {
+              await S.say('YOU', n === 1
+                ? 'ONE MORE THING AND WE CAN GO.'
+                : 'NOT WITHOUT HIS THINGS. ' + n + ' STILL IN THIS HOUSE SOMEWHERE.',
+                PIX.PAL.F);
               return;
             }
             st.done = true;
@@ -2075,11 +2232,11 @@ const CUT = (() => {
       const boy = S.actor('boy');
       if (boy) {
         boy.label = 'TOBIAS';
-        boy.hint = () => (st.book === 'got' ? 'HE IS READY' : 'TALK');
+        boy.hint = () => (kitDone() ? 'HE IS READY' : 'TALK');
         boy.onUse = async () => {
           const b = S.actor('boy');
           /* ---- after the book has turned up: he is just a happy kid ---- */
-          if (st.book === 'got') {
+          if (kitDone()) {
             if (b) b.mood = 'happy';
             const r0 = await S.ask('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.',
               ['WE CAN GO THE WAY WITH THE BRIDGE.', 'WE ARE ALREADY LATE.',
@@ -2099,30 +2256,36 @@ const CUT = (() => {
             }
             return;
           }
-          /* ---- the reader is showing under the cushion ---- */
-          if (st.book === 'found') {
-            await S.say('TOBIAS', 'IT WAS UNDER THE CUSHION? I LOOKED THERE.',
-              PIX.PAL.O);
-            await S.say('YOU', 'YOU LOOKED AT IT. GO AND PICK IT UP.', PIX.PAL.F);
+          /* ---- some of it in, some of it not: he counts ---- */
+          if (st.asked) {
+            const n = kitLeft();
+            const HAVE = [['pencils', 'MY PENCIL CASE'], ['crayons', 'MY CRAYONS'],
+              ['bag', 'MY BAG']].filter(k => !st.kit[k[0]]).map(k => k[1]);
+            await S.say('TOBIAS', n === 1
+              ? 'JUST ' + HAVE[0] + ' NOW.'
+              : 'STILL ' + HAVE.join(' AND ') + '.', PIX.PAL.O);
+            if (n === 1) await S.say('YOU', 'THEN WE ARE NEARLY OUT OF THE DOOR.', PIX.PAL.F);
             return;
           }
           /* ---- the first proper conversation in the game ---- */
           if (!st.asked) {
-            await S.say('TOBIAS', 'I CANNOT FIND MY READER.', PIX.PAL.O);
-            await S.say('TOBIAS', 'I HAVE LOOKED EVERYWHERE. TWICE.', PIX.PAL.O);
-            const r1 = await S.ask('YOU', 'WHERE HAVE YOU LOOKED?',
-              ['EVERYWHERE IS NOT A PLACE. NAME THREE.',
+            await S.say('TOBIAS', 'I CANNOT FIND MY THINGS FOR SCHOOL.', PIX.PAL.O);
+            await S.say('TOBIAS', 'MY PENCIL CASE AND MY CRAYONS AND MY BAG. '
+              + 'ALL OF THEM.', PIX.PAL.O);
+            const r1 = await S.ask('YOU', 'ALL THREE AT ONCE?',
+              ['THEN WE FIND ALL THREE. WHERE WERE YOU SITTING?',
                'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.',
-               'TAKE MINE. IT HAS PICTURES OF GUNS IN IT.']);
+               'TAKE MINE. IT IS A NOTEBOOK AND A PENCIL AND NO CRAYONS.']);
             if (r1 === 0) {
-              await S.say('TOBIAS', 'THE HALL. MY BAG. UNDER THE TABLE.', PIX.PAL.O);
-              await S.say('YOU', 'THEN IT IS SOMEWHERE YOU SIT AND DO NOT LOOK.',
-                PIX.PAL.F);
+              if (b) b.mood = 'happy';
+              await S.say('TOBIAS', 'ON THE SOFA. AND THE FLOOR. AND THE SOFA AGAIN.',
+                PIX.PAL.O);
+              await S.say('YOU', 'THEN WE START AT THE SOFA.', PIX.PAL.F);
             } else if (r1 === 2) {
               if (b) b.mood = 'happy';
               S.face('happy');
               await S.say('TOBIAS', 'CAN I REALLY?', PIX.PAL.O);
-              await S.say('CLEO', 'HE CANNOT. FIND THE READER.', PIX.PAL.P);
+              await S.say('CLEO', 'HE CANNOT. FIND HIS OWN.', PIX.PAL.P);
               S.face(null);
             } else {
               await S.say('TOBIAS', 'WHAT IS THE DIFFERENCE.', PIX.PAL.O);
@@ -2169,14 +2332,14 @@ const CUT = (() => {
             }
             return;
           }
-          if (st.book !== 'got') {
-            const r = await S.ask('CLEO', 'HE HAS LOST THAT BOOK AGAIN.',
+          if (!kitDone()) {
+            const r = await S.ask('CLEO', 'HE HAS LOST HALF HIS SCHOOL BAG AGAIN.',
               ['I WILL FIND IT.', 'HE SHOULD LOOK PROPERLY.',
                'WHERE WAS HE SITTING LAST NIGHT.']);
             if (r === 2) {
-              await S.say('CLEO', 'ON THE SOFA. WITH HIS FEET UP, AS USUAL.',
-                PIX.PAL.P);
-              await S.say('YOU', 'THAT IS A STATEMENT AND A LOCATION.', PIX.PAL.F);
+              await S.say('CLEO', 'ON THE SOFA. WITH HIS FEET UP, AS USUAL. '
+                + 'AND HIS CRAYONS WENT ON THE MANTEL.', PIX.PAL.P);
+              await S.say('YOU', 'THAT IS TWO STATEMENTS AND TWO LOCATIONS.', PIX.PAL.F);
             } else if (r === 0) {
               if (wf) wf.mood = 'pleased';
               await S.say('CLEO', 'YOU ALWAYS DO. IT IS VERY IRRITATING.',
@@ -2212,18 +2375,20 @@ const CUT = (() => {
       for (let i = 0; i < 900 && !st.asked; i++) { gate(); await U.sleep(120); }
       SCENE.busy(true);
 
-      /* --- TEACH: THE GLASS. Three places to look and one of them is
-             holding a book. This is the whole game, in a living room. --- */
-      if (typeof TOOLS !== 'undefined') TOOLS.set('glass');
-      await S.say('YOU', 'THE HEARTH, THE HOOKS, THE CUSHIONS. '
-        + 'HOLD THE GLASS UP TO THEM.', PIX.PAL.F);
+      /* --- TEACH: FETCH THREE THINGS. The tool tutorial used to live
+             here -- set the glass, say a line about holding it up to
+             things, wait for one book to come out from under a cushion.
+             A boy's school kit does the same teaching without a tool
+             and without a gate: three named things, three taps, and a
+             tally on screen as they come in. --- */
+      await S.say('YOU', 'PENCIL CASE. CRAYONS. BAG. '
+        + 'THE CUSHIONS, THE MANTEL AND THE HOOKS.', PIX.PAL.F);
       hudOn(true);
       SCENE.busy(false);
       if (typeof UI !== 'undefined' && UI.stampSmall) {
-        UI.stampSmall('THE EYEGLASS: TAP A THING FROM WHERE YOU STAND');
+        UI.stampSmall('WALK UP TO A THING AND TAP IT TO TAKE IT');
       }
-      for (let i = 0; i < 1400 && st.book !== 'got'; i++) { gate(); await U.sleep(120); }
-      if (typeof TOOLS !== 'undefined') TOOLS.set('hand');
+      for (let i = 0; i < 1400 && !kitDone(); i++) { gate(); await U.sleep(120); }
       SCENE.busy(true);
       await S.say('CLEO', 'HE IS A POLICEMAN, TOBIAS. IT IS ALL HE DOES.',
         PIX.PAL.P);
