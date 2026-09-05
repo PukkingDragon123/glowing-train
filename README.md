@@ -1226,6 +1226,94 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## The errand has a checklist, and finding something is a moment
+
+![The list, pinned up](docs/screen-kit-list.png)
+
+Three things to find needs somewhere you can see all three at once. A stamp in
+the corner tells you what you just picked up and then goes away; a **list**
+tells you what is left, which is the thing you actually want to know while you
+are walking round a room looking for it.
+
+It is drawn rather than DOM, like everything else here: a torn sheet of buff
+stock with a pin through the top, a ruled margin, a tick box per line — and
+each item's **own sprite** beside its name. The sprites are the same catalogue
+pieces the room draws, at eighteen pixels instead of seventy, so the thing on
+the list is visibly the thing on the sofa. Found ones go grey, get a green
+tick, and take a line through the name.
+
+![Found it](docs/screen-kit-card.png)
+
+And picking one up is a card, not a receipt. The screen dims, the thing comes
+up **four times the size the room ever shows it**, its name under it in
+double-height type, and a line from whoever cares that you found it. Three
+rising tones, and it goes on a tap or after a second and a half.
+
+### And you click to search
+
+The item used to appear on the same frame as the tap, which is a state change
+rather than a search. `SCENE.rummage` is a repeated reach: he puts a hand in,
+moves something, puts it in again — four beats over about a second and a
+half, with **dust coming up off whatever he is disturbing** and his face
+pinned to a squint — and only then is it in his hand.
+
+### The school kit, drawn twice
+
+| | |
+|---|---|
+| **pencil case** | a stripy zip case at a thirteenth-of-the-width pitch, a zip tape with teeth and a brass pull, and a pencil out the end with a steel ferrule at the blunt end and a cone of bare wood down to a lead at the sharp one |
+| **crayons** | six in a shallow tin, each with a paper wrap and a worn tip, one of them a stub, and the lid propped against the back |
+| **backpack** | taller than it is wide, because at eighty per cent of the width it was a toolbox — flap, buckle, side pocket, name tag, and two straps arcing out at the **sides** where they can be seen rather than under the body where they cannot |
+
+Each is authored in fractions like the rest of the catalogue, so the same
+drawing serves eighteen pixels on a sofa and seventy on the card.
+
+### And a test that was lying
+
+The smoke run failed once on `[alibi] the story never came apart` and then
+passed on a re-run with the same seed and the same result — a flake, and a
+flake is a test that will lie to you later. The step asked a witness a
+question by clicking **index zero** of the reply rack on the assumption that
+the story question is always on top. It usually is, but an errand at the same
+counter outranks the whole rack and offers itself instead, and then index zero
+is `TAKE IT` and the step reports that the story never came apart. Which it
+did not, because nobody asked.
+
+Every word in that rack is rendered as a canvas of pixels, so the buttons
+carried no text at all — nothing for a screen reader, and nothing for a test
+that wants to answer a *particular* question. They carry `data-label` and an
+`aria-label` now, and the harness clicks the button whose label matches,
+naming the whole rack when there is no match. A real regression now reads as a
+real regression.
+
+## The house, at a much higher pixel count
+
+![The house, close in](docs/screen-house-close.png)
+
+Three things were doing most of the work of making a warm room look flat, and
+all three were the shell rather than the furniture.
+
+**The paper** was one sprig every twelve by ten in a single tint, on a field
+of two flat ochres — three colours across seventy rows of wall, which at this
+camera is a beige field with a rash on it. It is a **trellis paper** now: a
+lattice ruled across the whole wall in a tint off the ground, a four-petal
+sprig where the lines cross, a bud between them on the half-drop, a vertical
+shade every second column so the paper has a weave rather than a texture, and
+the whole thing knocked back a step as it runs away from the window. Six tints
+at a sixteen-by-twelve pitch.
+
+**The rail and the dado** were three rows of flat colour and a shadow, which
+is a band rather than a moulding. The rail is a bead, a fillet and a cove; the
+dado is panelled, each panel with its own chamfer and scribe line; the
+skirting has a torus, a fillet and a plinth.
+
+**The floor** was a generic tile with a honey wash and a line every seven
+pixels — a brown field with a comb dragged through it. It is boards: each one
+its own width and its own tone, grain running the length of it, a lit edge on
+one side of every joint and a dark one on the other, nails at the near end,
+and a staggered butt joint on **every fourth** board — one on every board, in
+thirty rows of floor, is not a boarded floor, it is parquet.
+
 ## Furniture with a section on it
 
 ![The catalogue](docs/screen-furniture.png)

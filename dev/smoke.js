@@ -122,6 +122,43 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForTimeout(320);
     return count;
   };
+  /* ============================================================
+     ANSWER THE QUESTION YOU MEANT TO ANSWER.
+
+     `reply(0)` clicks whatever is at the top of the rack, and the
+     alibi step relied on the story question always being there. It
+     usually is -- STORY.askWitness puts stories above descriptions --
+     but an errand at the same counter outranks the whole rack and
+     offers itself instead, and then index zero is `TAKE IT` and the
+     step reports that the story never came apart. Which it did not,
+     because nobody asked.
+
+     This clicks the button whose text MATCHES, and says so plainly
+     when there is not one, so a real regression reads as a real
+     regression rather than as a flake.
+     ============================================================ */
+  const replyMatching = async (re, what) => {
+    const up = await page.waitForSelector('#tutor-root.asking .reply-btn', { timeout: 9000 })
+      .catch(() => null);
+    if (!up) { errors.push('[ask] no rack came up for ' + what); return -1; }
+    await page.evaluate(() => { if (TUTOR.typing && TUTOR.finishTyping) TUTOR.finishTyping(); });
+    await page.waitForTimeout(180);
+    const btns = page.locator('#tutor-root.asking .reply-btn');
+    const n = await btns.count();
+    const labels = [];
+    for (let i = 0; i < n; i++) {
+      labels.push(((await btns.nth(i).getAttribute('data-label')) || '').toUpperCase());
+    }
+    let hit = labels.findIndex(t => re.test(t));
+    if (hit < 0) {
+      errors.push('[ask] no ' + what + ' on offer: ' + JSON.stringify(labels));
+      return -1;
+    }
+    await btns.nth(hit).click({ timeout: 6000 }).catch(() => {});
+    await page.waitForTimeout(320);
+    return hit;
+  };
+
   /* a plate types itself on; a picture of half a word looks like a bug */
   const finishType = async () => {
     await page.evaluate(() => { if (TUTOR.typing && TUTOR.finishTyping) TUTOR.finishTyping(); });
@@ -730,7 +767,8 @@ fs.mkdirSync(SHOTS, { recursive: true });
         .catch(() => errors.push('[alibi] nobody offered to talk about a name'));
       await page.waitForTimeout(400);
       await shot('14e-press');
-      await reply(0);                                    // the story question is first
+      /* the story question is the one that starts WAS <name> IN HERE */
+      await replyMatching(/^WAS\b/, 'a story question')
       await page.waitForTimeout(1200);
       await clearPlates(12);
       await page.waitForTimeout(600);

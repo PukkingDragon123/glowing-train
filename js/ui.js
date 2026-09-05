@@ -1101,6 +1101,165 @@ const UI = {
     UI._sbTo = setTimeout(() => { z.innerHTML = ''; }, 950);
   },
 
+  /* ============================================================
+     A CHECKLIST, PINNED UP.
+
+     An errand with three things in it needs somewhere you can see
+     all three at once. A stamp in the corner tells you what you
+     just picked up and then goes away; a list tells you what is
+     left, which is the thing you actually want to know while you
+     are walking round a room looking for it.
+
+     Drawn, not DOM: a torn sheet of buff stock with a pin through
+     the top of it, the item's own sprite beside each line, and a
+     box that gets a tick in it. The sprites are the SAME catalogue
+     pieces the room draws, at eighteen pixels instead of seventy,
+     so the thing on the list is visibly the thing on the sofa.
+
+     items: [{ art, name, done }] where art is a canvas.
+     ============================================================ */
+  kitList(title, items, K) {
+    K = K || 2;
+    const IW = 20, ROW = 22, PAD = 7;
+    let tw = 0;
+    items.forEach(it => {
+      const t = PIXFONT.render(it.name, { scale: 1, color: '#22201c' });
+      tw = Math.max(tw, t.width);
+    });
+    const head = PIXFONT.render(title, { scale: 1, color: '#8a2418' });
+    const W = Math.max(head.width + PAD * 2, PAD * 2 + IW + 5 + tw + 5 + 9);
+    const H = PAD * 2 + 12 + items.length * ROW;
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix';
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    /* the paper: buff stock, a ruled margin, and a torn bottom edge */
+    ART.px(c, 0, 0, W, H, '#1a1610');
+    ART.px(c, 1, 1, W - 2, H - 2, '#e8dfc4');
+    ART.px(c, 1, 1, W - 2, 1, '#f6efd8');
+    ART.px(c, 1, H - 3, W - 2, 2, 'rgba(90,76,44,.24)');
+    for (let x = 1; x < W - 1; x += 3) {
+      ART.px(c, x, H - 2, 2, 1, (x / 3 | 0) % 2 ? '#e8dfc4' : '#1a1610');
+    }
+    ART.px(c, PAD - 3, 12, 1, H - 18, 'rgba(160,60,40,.34)');
+    /* the pin */
+    PIX.disc(c, Math.round(W / 2), 4, 3, '#1a1610');
+    PIX.disc(c, Math.round(W / 2), 4, 2, '#c03a2c');
+    ART.px(c, Math.round(W / 2) - 1, 3, 1, 1, '#e8705c');
+    c.drawImage(head, PAD, 7);
+    items.forEach((it, i) => {
+      const y = PAD + 12 + i * ROW;
+      /* the box, and the tick in it */
+      ART.px(c, PAD - 2, y + 5, 9, 9, '#1a1610');
+      ART.px(c, PAD - 1, y + 6, 7, 7, it.done ? '#cfe0c4' : '#f4eeda');
+      if (it.done) {
+        for (let k = 0; k < 3; k++) ART.px(c, PAD + k, y + 10 + k, 1, 1, '#2f7a3c');
+        for (let k = 0; k < 4; k++) ART.px(c, PAD + 2 + k, y + 12 - k, 1, 1, '#2f7a3c');
+      }
+      /* the thing itself */
+      if (it.art) {
+        const sc = Math.min(IW / it.art.width, (ROW - 4) / it.art.height, 1);
+        const iw = Math.max(1, Math.round(it.art.width * sc));
+        const ih = Math.max(1, Math.round(it.art.height * sc));
+        c.save();
+        if (it.done) c.globalAlpha = 0.42;
+        c.drawImage(it.art, PAD + 9, y + Math.round((ROW - 2 - ih) / 2), iw, ih);
+        c.restore();
+      }
+      const t = PIXFONT.render(it.name, { scale: 1, color: it.done ? '#8a8470' : '#22201c' });
+      c.drawImage(t, PAD + 9 + IW + 4, y + Math.round((ROW - t.height) / 2));
+      /* and a line through it once it is in */
+      if (it.done) {
+        ART.px(c, PAD + 9 + IW + 3, y + Math.round(ROW / 2) - 1,
+          t.width + 2, 1, 'rgba(60,50,36,.62)');
+      }
+    });
+    return cv;
+  },
+
+  /* mount (or refresh) the checklist in the corner. Pass null to clear. */
+  showKit(title, items) {
+    let z = document.getElementById('kit-list');
+    if (!items) { if (z) z.remove(); return; }
+    if (!z) {
+      z = U.el('div'); z.id = 'kit-list';
+      document.body.appendChild(z);
+      requestAnimationFrame(() => z.classList.add('in'));
+    }
+    const K = window.innerWidth > 1500 ? 3 : 2;
+    z.innerHTML = '';
+    z.appendChild(UI.kitList(title, items, K));
+    return z;
+  },
+
+  /* ============================================================
+     AND THE CARD WHEN YOU ACTUALLY GET ONE.
+
+     A stamp in the corner is a receipt. This is the moment: the
+     screen dims, a card comes up with the thing drawn four times
+     the size the room ever shows it, its name under it, and a line
+     from whoever cares that you found it.
+     ============================================================ */
+  gotItem(art, name, line, ms) {
+    return new Promise(res => {
+      const root = U.el('div'); root.id = 'got-item';
+      const K = window.innerWidth < 620 ? 3 : 4;
+      const IW = 76, PAD = 10;
+      const nm = PIXFONT.render(name, { scale: 2, color: '#22201c' });
+      const ln = line ? PIXFONT.render(line, { scale: 1, color: '#6a5a3c' }) : null;
+      const W = Math.max(IW + PAD * 2, nm.width + PAD * 2,
+        ln ? ln.width + PAD * 2 : 0);
+      const H = PAD * 2 + 10 + IW + 6 + nm.height + (ln ? ln.height + 4 : 0);
+      const cv = document.createElement('canvas');
+      cv.width = W * K; cv.height = H * K;
+      cv.className = 'pix';
+      const c = cv.getContext('2d');
+      c.imageSmoothingEnabled = false;
+      c.scale(K, K);
+      /* the card */
+      ART.px(c, 0, 0, W, H, '#1a1610');
+      ART.px(c, 1, 1, W - 2, H - 2, '#efe6cc');
+      ART.px(c, 1, 1, W - 2, 2, '#fbf6e4');
+      ART.px(c, 1, H - 3, W - 2, 2, 'rgba(90,76,44,.26)');
+      ART.px(c, 4, 4, W - 8, H - 8, 'rgba(0,0,0,0)');
+      /* a ruled border inside it */
+      ART.px(c, 4, 4, W - 8, 1, 'rgba(140,60,40,.44)');
+      ART.px(c, 4, H - 5, W - 8, 1, 'rgba(140,60,40,.44)');
+      ART.px(c, 4, 4, 1, H - 8, 'rgba(140,60,40,.44)');
+      ART.px(c, W - 5, 4, 1, H - 8, 'rgba(140,60,40,.44)');
+      const cap = PIXFONT.render('FOUND IT', { scale: 1, color: '#8a2418' });
+      c.drawImage(cap, Math.round((W - cap.width) / 2), 7);
+      /* the thing, as big as the card will take */
+      if (art) {
+        const sc = Math.min(IW / art.width, IW / art.height);
+        const iw = Math.max(1, Math.round(art.width * sc));
+        const ih = Math.max(1, Math.round(art.height * sc));
+        const ix = Math.round((W - iw) / 2), iy = PAD + 10 + Math.round((IW - ih) / 2);
+        /* a soft plate under it so it is not floating on paper */
+        SPR.ellipse(c, Math.round(W / 2), iy + ih + 1,
+          Math.round(iw * 0.46), 3, 'rgba(90,76,44,.20)');
+        c.drawImage(art, ix, iy, iw, ih);
+      }
+      c.drawImage(nm, Math.round((W - nm.width) / 2), PAD + 10 + IW + 6);
+      if (ln) c.drawImage(ln, Math.round((W - ln.width) / 2), PAD + 10 + IW + 8 + nm.height);
+      root.appendChild(cv);
+      document.body.appendChild(root);
+      requestAnimationFrame(() => root.classList.add('in'));
+      SFX.tone(660, 0.06, 'square', 0.05);
+      setTimeout(() => SFX.tone(990, 0.10, 'triangle', 0.05), 80);
+      setTimeout(() => SFX.tone(1320, 0.12, 'triangle', 0.04), 170);
+      const done = () => {
+        root.classList.add('out');
+        setTimeout(() => { root.remove(); res(); }, 220);
+        window.removeEventListener('pointerdown', done);
+      };
+      setTimeout(() => window.addEventListener('pointerdown', done), 200);
+      setTimeout(done, ms || 1700);
+    });
+  },
+
   stampSmall(text, kind) {
     const z = document.getElementById('stamp-small');
     if (!z) return;

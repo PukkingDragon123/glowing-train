@@ -423,6 +423,14 @@ const TUTOR = {
         rack.innerHTML = '';
         replies.forEach((r, i) => {
           const b = U.el('button', 'reply-btn' + (r.dim ? ' dim' : ''));
+          /* THE LABEL, IN TEXT, ON THE BUTTON. Every word in this rack is
+             rendered as a canvas of pixels, so the button carries no text
+             at all -- which is fine for a player and useless to a screen
+             reader or to a test that wants to answer a PARTICULAR
+             question rather than whichever one happens to be on top. */
+          const lbl = (typeof r === 'string' ? r : r.label) || '';
+          b.dataset.label = lbl;
+          b.setAttribute('aria-label', lbl + (r.note ? ' - ' + r.note : ''));
           /* THE NUMBER, NOT A CHEVRON. The number keys already worked and
              nothing said so; now the key is printed on the thing it
              presses, which is the only honest place for it. */

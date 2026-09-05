@@ -2619,6 +2619,44 @@ const SCENE = (() => {
 
     /* take the detective out of his own shot, or put him back */
     hideMe(v) { me.hidden = !!v; },
+    /* ============================================================
+       GOING THROUGH SOMETHING.
+
+       Using a thing leans him two pixels toward it for a beat, which
+       is right for opening a door and wrong for looking for a pencil
+       case down the side of a sofa. A search is REPEATED: he puts a
+       hand in, moves something, puts it in again, and dust comes up
+       off whatever he is disturbing. Four of those and it has taken
+       long enough that finding the thing feels earned rather than
+       like a state flag being set.
+
+       Returns a promise so a script can await the rummage and put the
+       card up afterwards.
+       ============================================================ */
+    rummage(x, ms) {
+      const T = Math.max(600, ms || 1400);
+      const n = Math.max(2, Math.round(T / 340));
+      me.face = x >= me.x ? 1 : -1;
+      me.arm = 'reach';
+      return new Promise(res => {
+        let i = 0;
+        const beat2 = () => {
+          if (i >= n) {
+            me.arm = '';
+            me.reach = 0.18;
+            res();
+            return;
+          }
+          i++;
+          me.reach = 0.42;
+          me.reachTo = Math.sign(x - me.x) || me.face;
+          kickDust(0.30 + (i % 2) * 0.2);
+          if (typeof SFX !== 'undefined' && SFX.tick) SFX.tick();
+          setTimeout(beat2, Math.round(T / n));
+        };
+        beat2();
+      });
+    },
     /* pin his face and his near arm for a beat, or hand them back */
     meFace(k) { me.expr = k || null; },
     meArm(k) { me.arm = k || ''; },

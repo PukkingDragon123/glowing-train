@@ -1375,6 +1375,179 @@ const FURN = (() => {
   });
 
   /* ============================================================
+     A SMALL BOY'S SCHOOL KIT.
+
+     These three are drawn twice: once at sixteen pixels lying on a
+     sofa, and once at seventy on the card that comes up when you
+     find one. So they are authored in fractions like everything
+     else here, and they carry more detail than the room can show --
+     the stripes on a pencil case, the paper wraps on six crayons,
+     the buckle and the name tag on a bag -- because the card is
+     where that detail gets looked at.
+     ============================================================ */
+
+  /* the zip case, stripy, with a pencil out the end of it */
+  piece('penbox', (c, w, h, o) => {
+    const A = M(o.mat || 'oxblood'), B = M('cream');
+    const bw = Math.round(w * 0.82), bh = Math.round(h * 0.56);
+    const bx = 1, by = h - bh - 1;
+    /* the body, in candy stripes running across it */
+    px(c, bx, by, bw, bh, A.ink);
+    const sw = Math.max(2, Math.round(bw / 13));
+    for (let i = 0; i * sw < bw - 2; i++) {
+      const m = i % 2 ? A : B;
+      const ww = Math.min(sw, bw - 2 - i * sw);
+      px(c, bx + 1 + i * sw, by + 1, ww, bh - 2, m.mid);
+      px(c, bx + 1 + i * sw, by + 1, ww, Math.max(1, Math.round(bh * 0.18)), m.lit);
+      px(c, bx + 1 + i * sw, by + bh - 2, ww, 1, m.dk);
+    }
+    /* the zip: a tape, teeth, and a pull with a tab on it */
+    const zy = by + Math.max(1, Math.round(bh * 0.24));
+    px(c, bx, zy, bw, Math.max(2, Math.round(bh * 0.18)), M('steel').dk);
+    for (let i = 1; i < bw - 1; i += 2) px(c, bx + i, zy, 1, 1, M('steel').lit);
+    const pxx = bx + Math.round(bw * 0.66);
+    px(c, pxx, zy - 1, Math.max(3, Math.round(w * 0.09)),
+      Math.max(3, Math.round(bh * 0.34)), M('brass').ink);
+    px(c, pxx + 1, zy, Math.max(2, Math.round(w * 0.07)),
+      Math.max(2, Math.round(bh * 0.24)), M('brass').mid);
+    px(c, pxx + 1, zy, Math.max(1, Math.round(w * 0.04)), 1, M('brass').hi);
+    /* A PENCIL OUT OF THE NEAR END. Thin, long, and with both ends on it:
+       a ferrule and a pink eraser at the blunt end, and a cone of bare wood
+       down to a lead at the sharp one. A gold bar with a notch in it is a
+       gold bar. */
+    const pl = Math.round(w * 0.26), py = by + Math.round(bh * 0.34);
+    const ph2 = Math.max(2, Math.round(h * 0.09));
+    const x0 = bx + bw - 2;
+    px(c, x0, py - 1, pl + 4, ph2 + 2, '#141210');
+    px(c, x0 + 1, py, pl, ph2, M('mustard').mid);
+    px(c, x0 + 1, py, pl, 1, M('mustard').lit);
+    px(c, x0 + 1, py + ph2 - 1, pl, 1, M('mustard').sh);
+    /* the sharpened cone, then the lead */
+    const cone = Math.max(2, Math.round(w * 0.06));
+    for (let i = 0; i < cone; i++) {
+      const hh2 = Math.max(1, ph2 - Math.round((i / cone) * (ph2 - 1)));
+      px(c, x0 + 1 + pl + i, py + ((ph2 - hh2) >> 1), 1, hh2, '#e8d4a8');
+    }
+    px(c, x0 + 1 + pl + cone, py + ((ph2 - 1) >> 1), 1, 1, '#2c2a34');
+    /* and the ferrule and eraser at the other end, tucked in the case */
+    px(c, x0 - 2, py, 2, ph2, M('steel').mid);
+    px(c, x0 - 2, py, 2, 1, M('steel').lit);
+  });
+
+  /* the tin of crayons, open, with six of them standing in it */
+  piece('crayons', (c, w, h, o) => {
+    /* A SHALLOW TRAY, NOT A CHEST. At forty-two per cent of the height the
+       tin swallowed the crayons and left six coloured tips showing over a
+       brown slab, which reads as a sideboard. The tin is a quarter of the
+       height now and the crayons stand two thirds proud of it. */
+    const t = M(o.mat || 'copper');
+    const bh = Math.round(h * 0.26), by = h - bh - 1;
+    /* THE LID, PROPPED AGAINST THE BACK OF THE TIN. On row one it floated
+       clear of everything with a band of paper between it and the crayons,
+       which reads as a shelf rather than a lid. */
+    const lh = Math.max(2, Math.round(h * 0.11));
+    const ly = Math.max(1, Math.round(h * 0.14));
+    px(c, Math.round(w * 0.10), ly, Math.round(w * 0.82), lh + 2, t.ink);
+    px(c, Math.round(w * 0.11), ly + 1, Math.round(w * 0.80), lh, t.dk);
+    px(c, Math.round(w * 0.11), ly + 1, Math.round(w * 0.80), 1, t.lit);
+    /* the hinge line where it folds back */
+    px(c, Math.round(w * 0.11), ly + lh, Math.round(w * 0.80), 1, t.sh);
+    /* the crayons, each with a paper wrap and a used tip */
+    const CR = ['#d8484c', '#48a0d8', '#e0b048', '#5aa050', '#c86a92', '#8a5ad8'];
+    const n = 6, cw = Math.max(2, Math.round(w * 0.72 / n));
+    for (let i = 0; i < n; i++) {
+      const cx2 = Math.round(w * 0.16) + i * cw + 1;
+      const ch = Math.round(h * 0.62) - (i === 3 ? Math.round(h * 0.18) : 0);
+      const cy = by + bh - ch;
+      px(c, cx2 - 1, cy - 1, cw, ch + 2, '#141210');
+      px(c, cx2, cy, cw - 2, ch, CR[i]);
+      px(c, cx2, cy, 1, ch, 'rgba(255,255,255,.30)');
+      /* the wrap */
+      px(c, cx2, cy + Math.round(ch * 0.34), cw - 2, Math.max(2, Math.round(ch * 0.30)),
+        '#f0e8d4');
+      px(c, cx2, cy + Math.round(ch * 0.34), cw - 2, 1, '#fbf7ec');
+      /* the tip, worn round */
+      px(c, cx2, cy, cw - 2, 1, 'rgba(255,255,255,.45)');
+    }
+    /* the tin itself, over the bottom of them */
+    px(c, 1, by, w - 2, bh, t.ink);
+    px(c, 2, by + 1, w - 4, bh - 2, t.mid);
+    px(c, 2, by + 1, w - 4, Math.max(1, Math.round(bh * 0.22)), t.lit);
+    px(c, 2, by + bh - 2, w - 4, 1, t.dk);
+    for (let i = 3; i < w - 3; i += 4) px(c, i, by + Math.round(bh * 0.55), 2, 1, t.sh);
+  });
+
+  /* the backpack: flap, buckle, side pocket, straps, a name tag */
+  piece('satchel', (c, w, h, o) => {
+    /* A BAG IS TALLER THAN IT IS WIDE. At eighty per cent of the width and
+       seventy-two of the height it came out square, which is a toolbox. */
+    const m = M(o.mat || 'oak');
+    const bw = Math.round(w * 0.68), bx = Math.round((w - Math.round(w * 0.68)) / 2);
+    const bh = Math.round(h * 0.82), by = h - bh - 1;
+    /* the straps first, arcing out at the SIDES where they can be seen,
+       rather than under the body where they cannot */
+    const stw2 = Math.max(2, Math.round(w * 0.07));
+    for (let i = 0; i < 2; i++) {
+      const sg = i ? 1 : -1;
+      for (let yy = 0; yy < Math.round(bh * 0.82); yy++) {
+        const t2 = yy / Math.max(1, Math.round(bh * 0.82) - 1);
+        const off = Math.round(Math.sin(t2 * Math.PI) * w * 0.10);
+        const sx = (sg < 0 ? bx : bx + bw - stw2) + sg * off;
+        px(c, sx - 1, by + Math.round(bh * 0.12) + yy, stw2 + 2, 1, m.ink);
+        px(c, sx, by + Math.round(bh * 0.12) + yy, stw2, 1, m.dk);
+      }
+    }
+    /* the body */
+    px(c, bx - 1, by - 1, bw + 2, bh + 2, m.ink);
+    px(c, bx, by, bw, bh, m.mid);
+    px(c, bx, by, bw, Math.max(1, Math.round(bh * 0.06)), m.lit);
+    px(c, bx + bw - Math.max(1, Math.round(bw * 0.08)), by,
+      Math.max(1, Math.round(bw * 0.08)), bh, m.sh);
+    figure(c, bx + 1, by + 1, bw - 2, bh - 2, m, 5);
+    /* the flap, over the top third */
+    const fh = Math.round(bh * 0.32);
+    px(c, bx - 1, by - 1, bw + 2, fh + 2, m.ink);
+    px(c, bx, by, bw, fh, m.lit);
+    px(c, bx, by + 1, bw, Math.max(1, Math.round(fh * 0.16)), m.hi);
+    px(c, bx, by + fh - 1, bw, 1, m.dk);
+    /* the buckle strap down the middle of it */
+    const stw = Math.max(3, Math.round(bw * 0.14));
+    const sx2 = bx + Math.round((bw - stw) / 2);
+    px(c, sx2 - 1, by + Math.round(fh * 0.30), stw + 2, Math.round(fh * 0.90), m.ink);
+    px(c, sx2, by + Math.round(fh * 0.30), stw, Math.round(fh * 0.85), m.dk);
+    const B = M('brass');
+    px(c, sx2 - 1, by + fh - 2, stw + 2, Math.max(3, Math.round(h * 0.10)), B.ink);
+    px(c, sx2, by + fh - 1, stw, Math.max(2, Math.round(h * 0.08)) - 1, B.mid);
+    px(c, sx2 + 1, by + fh - 1, Math.max(1, stw - 3), 1, B.hi);
+    /* the side pocket */
+    const pw = Math.round(bw * 0.34), pyy = by + fh + Math.round(bh * 0.14);
+    px(c, bx + 1, pyy - 1, pw + 2, Math.round(bh * 0.34) + 2, m.ink);
+    px(c, bx + 2, pyy, pw, Math.round(bh * 0.34), m.dk);
+    px(c, bx + 2, pyy, pw, 1, m.mid);
+    /* a name tag on the other side */
+    const tw = Math.round(bw * 0.30);
+    px(c, bx + bw - tw - 3, pyy, tw + 2, Math.max(4, Math.round(bh * 0.18)), '#141210');
+    px(c, bx + bw - tw - 2, pyy + 1, tw, Math.max(2, Math.round(bh * 0.18)) - 2, '#e8e0cc');
+    for (let i = 0; i < 2; i++) {
+      px(c, bx + bw - tw, pyy + 2 + i * 2, Math.max(2, tw - 4), 1, 'rgba(60,50,36,.60)');
+    }
+    /* and what is in it, if the errand is done */
+    if (o.kind === 'full') {
+      const px0 = bx + 3;
+      px(c, px0, pyy - Math.round(bh * 0.22), 2, Math.round(bh * 0.26), '#141210');
+      px(c, px0, pyy - Math.round(bh * 0.22), 1, Math.round(bh * 0.26), M('mustard').mid);
+      px(c, px0, pyy - Math.round(bh * 0.22), 1, 2, '#2c2a34');
+      px(c, px0 + 4, pyy - Math.round(bh * 0.16), 2, Math.round(bh * 0.20), '#141210');
+      px(c, px0 + 4, pyy - Math.round(bh * 0.16), 1, Math.round(bh * 0.20), '#d8484c');
+    }
+    /* the loop it hangs by */
+    px(c, bx + Math.round(bw * 0.44), by - Math.round(h * 0.08),
+      Math.round(bw * 0.14), Math.round(h * 0.09) + 1, m.ink);
+    px(c, bx + Math.round(bw * 0.46), by - Math.round(h * 0.08) + 1,
+      Math.max(1, Math.round(bw * 0.10)), Math.round(h * 0.09) - 1, m.dk);
+  });
+
+  /* ============================================================
      THE PUBLIC FACE
      ============================================================ */
   return {

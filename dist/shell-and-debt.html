@@ -3506,6 +3506,50 @@ body.in-cut #obj-plate,
 body.in-cut #note-rail,
 body.in-cut #phone-tab { opacity: 0; pointer-events: none; }
 body.in-cut:not(.cut-hud) #tool-belt { opacity: 0; pointer-events: none; }
+
+/* ============================================================
+   THE ERRAND CHECKLIST, and the card when you find something.
+
+   Both are drawn canvases -- the list is a torn sheet with a pin
+   through it, the card is a ruled ticket -- so all this does is
+   put them somewhere and give them a way in and out.
+   ============================================================ */
+#kit-list {
+  position: fixed;
+  right: 14px;
+  top: 14px;
+  z-index: 60;
+  opacity: 0;
+  transform: translateX(14px) rotate(1.2deg);
+  transition: opacity 220ms ease, transform 260ms cubic-bezier(.2, 1.5, .4, 1);
+  pointer-events: none;
+  filter: drop-shadow(2px 4px 0 rgba(6, 8, 12, .45));
+}
+#kit-list.in { opacity: 1; transform: none; }
+#kit-list canvas { image-rendering: pixelated; display: block; }
+body.talking #kit-list { opacity: 0; transform: translateX(10px); }
+
+#got-item {
+  position: fixed;
+  inset: 0;
+  z-index: 82;
+  display: grid;
+  place-items: center;
+  background: rgba(6, 8, 12, .58);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+#got-item.in { opacity: 1; }
+#got-item.out { opacity: 0; }
+#got-item canvas {
+  image-rendering: pixelated;
+  display: block;
+  transform: scale(.86) rotate(-2deg);
+  transition: transform 280ms cubic-bezier(.2, 1.7, .4, 1);
+  filter: drop-shadow(3px 6px 0 rgba(6, 8, 12, .5));
+}
+#got-item.in canvas { transform: none; }
+#got-item.out canvas { transform: scale(1.03); }
 </style>
 </head>
 <body>
@@ -13689,6 +13733,179 @@ const FURN = (() => {
   });
 
   /* ============================================================
+     A SMALL BOY'S SCHOOL KIT.
+
+     These three are drawn twice: once at sixteen pixels lying on a
+     sofa, and once at seventy on the card that comes up when you
+     find one. So they are authored in fractions like everything
+     else here, and they carry more detail than the room can show --
+     the stripes on a pencil case, the paper wraps on six crayons,
+     the buckle and the name tag on a bag -- because the card is
+     where that detail gets looked at.
+     ============================================================ */
+
+  /* the zip case, stripy, with a pencil out the end of it */
+  piece('penbox', (c, w, h, o) => {
+    const A = M(o.mat || 'oxblood'), B = M('cream');
+    const bw = Math.round(w * 0.82), bh = Math.round(h * 0.56);
+    const bx = 1, by = h - bh - 1;
+    /* the body, in candy stripes running across it */
+    px(c, bx, by, bw, bh, A.ink);
+    const sw = Math.max(2, Math.round(bw / 13));
+    for (let i = 0; i * sw < bw - 2; i++) {
+      const m = i % 2 ? A : B;
+      const ww = Math.min(sw, bw - 2 - i * sw);
+      px(c, bx + 1 + i * sw, by + 1, ww, bh - 2, m.mid);
+      px(c, bx + 1 + i * sw, by + 1, ww, Math.max(1, Math.round(bh * 0.18)), m.lit);
+      px(c, bx + 1 + i * sw, by + bh - 2, ww, 1, m.dk);
+    }
+    /* the zip: a tape, teeth, and a pull with a tab on it */
+    const zy = by + Math.max(1, Math.round(bh * 0.24));
+    px(c, bx, zy, bw, Math.max(2, Math.round(bh * 0.18)), M('steel').dk);
+    for (let i = 1; i < bw - 1; i += 2) px(c, bx + i, zy, 1, 1, M('steel').lit);
+    const pxx = bx + Math.round(bw * 0.66);
+    px(c, pxx, zy - 1, Math.max(3, Math.round(w * 0.09)),
+      Math.max(3, Math.round(bh * 0.34)), M('brass').ink);
+    px(c, pxx + 1, zy, Math.max(2, Math.round(w * 0.07)),
+      Math.max(2, Math.round(bh * 0.24)), M('brass').mid);
+    px(c, pxx + 1, zy, Math.max(1, Math.round(w * 0.04)), 1, M('brass').hi);
+    /* A PENCIL OUT OF THE NEAR END. Thin, long, and with both ends on it:
+       a ferrule and a pink eraser at the blunt end, and a cone of bare wood
+       down to a lead at the sharp one. A gold bar with a notch in it is a
+       gold bar. */
+    const pl = Math.round(w * 0.26), py = by + Math.round(bh * 0.34);
+    const ph2 = Math.max(2, Math.round(h * 0.09));
+    const x0 = bx + bw - 2;
+    px(c, x0, py - 1, pl + 4, ph2 + 2, '#141210');
+    px(c, x0 + 1, py, pl, ph2, M('mustard').mid);
+    px(c, x0 + 1, py, pl, 1, M('mustard').lit);
+    px(c, x0 + 1, py + ph2 - 1, pl, 1, M('mustard').sh);
+    /* the sharpened cone, then the lead */
+    const cone = Math.max(2, Math.round(w * 0.06));
+    for (let i = 0; i < cone; i++) {
+      const hh2 = Math.max(1, ph2 - Math.round((i / cone) * (ph2 - 1)));
+      px(c, x0 + 1 + pl + i, py + ((ph2 - hh2) >> 1), 1, hh2, '#e8d4a8');
+    }
+    px(c, x0 + 1 + pl + cone, py + ((ph2 - 1) >> 1), 1, 1, '#2c2a34');
+    /* and the ferrule and eraser at the other end, tucked in the case */
+    px(c, x0 - 2, py, 2, ph2, M('steel').mid);
+    px(c, x0 - 2, py, 2, 1, M('steel').lit);
+  });
+
+  /* the tin of crayons, open, with six of them standing in it */
+  piece('crayons', (c, w, h, o) => {
+    /* A SHALLOW TRAY, NOT A CHEST. At forty-two per cent of the height the
+       tin swallowed the crayons and left six coloured tips showing over a
+       brown slab, which reads as a sideboard. The tin is a quarter of the
+       height now and the crayons stand two thirds proud of it. */
+    const t = M(o.mat || 'copper');
+    const bh = Math.round(h * 0.26), by = h - bh - 1;
+    /* THE LID, PROPPED AGAINST THE BACK OF THE TIN. On row one it floated
+       clear of everything with a band of paper between it and the crayons,
+       which reads as a shelf rather than a lid. */
+    const lh = Math.max(2, Math.round(h * 0.11));
+    const ly = Math.max(1, Math.round(h * 0.14));
+    px(c, Math.round(w * 0.10), ly, Math.round(w * 0.82), lh + 2, t.ink);
+    px(c, Math.round(w * 0.11), ly + 1, Math.round(w * 0.80), lh, t.dk);
+    px(c, Math.round(w * 0.11), ly + 1, Math.round(w * 0.80), 1, t.lit);
+    /* the hinge line where it folds back */
+    px(c, Math.round(w * 0.11), ly + lh, Math.round(w * 0.80), 1, t.sh);
+    /* the crayons, each with a paper wrap and a used tip */
+    const CR = ['#d8484c', '#48a0d8', '#e0b048', '#5aa050', '#c86a92', '#8a5ad8'];
+    const n = 6, cw = Math.max(2, Math.round(w * 0.72 / n));
+    for (let i = 0; i < n; i++) {
+      const cx2 = Math.round(w * 0.16) + i * cw + 1;
+      const ch = Math.round(h * 0.62) - (i === 3 ? Math.round(h * 0.18) : 0);
+      const cy = by + bh - ch;
+      px(c, cx2 - 1, cy - 1, cw, ch + 2, '#141210');
+      px(c, cx2, cy, cw - 2, ch, CR[i]);
+      px(c, cx2, cy, 1, ch, 'rgba(255,255,255,.30)');
+      /* the wrap */
+      px(c, cx2, cy + Math.round(ch * 0.34), cw - 2, Math.max(2, Math.round(ch * 0.30)),
+        '#f0e8d4');
+      px(c, cx2, cy + Math.round(ch * 0.34), cw - 2, 1, '#fbf7ec');
+      /* the tip, worn round */
+      px(c, cx2, cy, cw - 2, 1, 'rgba(255,255,255,.45)');
+    }
+    /* the tin itself, over the bottom of them */
+    px(c, 1, by, w - 2, bh, t.ink);
+    px(c, 2, by + 1, w - 4, bh - 2, t.mid);
+    px(c, 2, by + 1, w - 4, Math.max(1, Math.round(bh * 0.22)), t.lit);
+    px(c, 2, by + bh - 2, w - 4, 1, t.dk);
+    for (let i = 3; i < w - 3; i += 4) px(c, i, by + Math.round(bh * 0.55), 2, 1, t.sh);
+  });
+
+  /* the backpack: flap, buckle, side pocket, straps, a name tag */
+  piece('satchel', (c, w, h, o) => {
+    /* A BAG IS TALLER THAN IT IS WIDE. At eighty per cent of the width and
+       seventy-two of the height it came out square, which is a toolbox. */
+    const m = M(o.mat || 'oak');
+    const bw = Math.round(w * 0.68), bx = Math.round((w - Math.round(w * 0.68)) / 2);
+    const bh = Math.round(h * 0.82), by = h - bh - 1;
+    /* the straps first, arcing out at the SIDES where they can be seen,
+       rather than under the body where they cannot */
+    const stw2 = Math.max(2, Math.round(w * 0.07));
+    for (let i = 0; i < 2; i++) {
+      const sg = i ? 1 : -1;
+      for (let yy = 0; yy < Math.round(bh * 0.82); yy++) {
+        const t2 = yy / Math.max(1, Math.round(bh * 0.82) - 1);
+        const off = Math.round(Math.sin(t2 * Math.PI) * w * 0.10);
+        const sx = (sg < 0 ? bx : bx + bw - stw2) + sg * off;
+        px(c, sx - 1, by + Math.round(bh * 0.12) + yy, stw2 + 2, 1, m.ink);
+        px(c, sx, by + Math.round(bh * 0.12) + yy, stw2, 1, m.dk);
+      }
+    }
+    /* the body */
+    px(c, bx - 1, by - 1, bw + 2, bh + 2, m.ink);
+    px(c, bx, by, bw, bh, m.mid);
+    px(c, bx, by, bw, Math.max(1, Math.round(bh * 0.06)), m.lit);
+    px(c, bx + bw - Math.max(1, Math.round(bw * 0.08)), by,
+      Math.max(1, Math.round(bw * 0.08)), bh, m.sh);
+    figure(c, bx + 1, by + 1, bw - 2, bh - 2, m, 5);
+    /* the flap, over the top third */
+    const fh = Math.round(bh * 0.32);
+    px(c, bx - 1, by - 1, bw + 2, fh + 2, m.ink);
+    px(c, bx, by, bw, fh, m.lit);
+    px(c, bx, by + 1, bw, Math.max(1, Math.round(fh * 0.16)), m.hi);
+    px(c, bx, by + fh - 1, bw, 1, m.dk);
+    /* the buckle strap down the middle of it */
+    const stw = Math.max(3, Math.round(bw * 0.14));
+    const sx2 = bx + Math.round((bw - stw) / 2);
+    px(c, sx2 - 1, by + Math.round(fh * 0.30), stw + 2, Math.round(fh * 0.90), m.ink);
+    px(c, sx2, by + Math.round(fh * 0.30), stw, Math.round(fh * 0.85), m.dk);
+    const B = M('brass');
+    px(c, sx2 - 1, by + fh - 2, stw + 2, Math.max(3, Math.round(h * 0.10)), B.ink);
+    px(c, sx2, by + fh - 1, stw, Math.max(2, Math.round(h * 0.08)) - 1, B.mid);
+    px(c, sx2 + 1, by + fh - 1, Math.max(1, stw - 3), 1, B.hi);
+    /* the side pocket */
+    const pw = Math.round(bw * 0.34), pyy = by + fh + Math.round(bh * 0.14);
+    px(c, bx + 1, pyy - 1, pw + 2, Math.round(bh * 0.34) + 2, m.ink);
+    px(c, bx + 2, pyy, pw, Math.round(bh * 0.34), m.dk);
+    px(c, bx + 2, pyy, pw, 1, m.mid);
+    /* a name tag on the other side */
+    const tw = Math.round(bw * 0.30);
+    px(c, bx + bw - tw - 3, pyy, tw + 2, Math.max(4, Math.round(bh * 0.18)), '#141210');
+    px(c, bx + bw - tw - 2, pyy + 1, tw, Math.max(2, Math.round(bh * 0.18)) - 2, '#e8e0cc');
+    for (let i = 0; i < 2; i++) {
+      px(c, bx + bw - tw, pyy + 2 + i * 2, Math.max(2, tw - 4), 1, 'rgba(60,50,36,.60)');
+    }
+    /* and what is in it, if the errand is done */
+    if (o.kind === 'full') {
+      const px0 = bx + 3;
+      px(c, px0, pyy - Math.round(bh * 0.22), 2, Math.round(bh * 0.26), '#141210');
+      px(c, px0, pyy - Math.round(bh * 0.22), 1, Math.round(bh * 0.26), M('mustard').mid);
+      px(c, px0, pyy - Math.round(bh * 0.22), 1, 2, '#2c2a34');
+      px(c, px0 + 4, pyy - Math.round(bh * 0.16), 2, Math.round(bh * 0.20), '#141210');
+      px(c, px0 + 4, pyy - Math.round(bh * 0.16), 1, Math.round(bh * 0.20), '#d8484c');
+    }
+    /* the loop it hangs by */
+    px(c, bx + Math.round(bw * 0.44), by - Math.round(h * 0.08),
+      Math.round(bw * 0.14), Math.round(h * 0.09) + 1, m.ink);
+    px(c, bx + Math.round(bw * 0.46), by - Math.round(h * 0.08) + 1,
+      Math.max(1, Math.round(bw * 0.10)), Math.round(h * 0.09) - 1, m.dk);
+  });
+
+  /* ============================================================
      THE PUBLIC FACE
      ============================================================ */
   return {
@@ -19619,6 +19836,44 @@ const SCENE = (() => {
 
     /* take the detective out of his own shot, or put him back */
     hideMe(v) { me.hidden = !!v; },
+    /* ============================================================
+       GOING THROUGH SOMETHING.
+
+       Using a thing leans him two pixels toward it for a beat, which
+       is right for opening a door and wrong for looking for a pencil
+       case down the side of a sofa. A search is REPEATED: he puts a
+       hand in, moves something, puts it in again, and dust comes up
+       off whatever he is disturbing. Four of those and it has taken
+       long enough that finding the thing feels earned rather than
+       like a state flag being set.
+
+       Returns a promise so a script can await the rummage and put the
+       card up afterwards.
+       ============================================================ */
+    rummage(x, ms) {
+      const T = Math.max(600, ms || 1400);
+      const n = Math.max(2, Math.round(T / 340));
+      me.face = x >= me.x ? 1 : -1;
+      me.arm = 'reach';
+      return new Promise(res => {
+        let i = 0;
+        const beat2 = () => {
+          if (i >= n) {
+            me.arm = '';
+            me.reach = 0.18;
+            res();
+            return;
+          }
+          i++;
+          me.reach = 0.42;
+          me.reachTo = Math.sign(x - me.x) || me.face;
+          kickDust(0.30 + (i % 2) * 0.2);
+          if (typeof SFX !== 'undefined' && SFX.tick) SFX.tick();
+          setTimeout(beat2, Math.round(T / n));
+        };
+        beat2();
+      });
+    },
     /* pin his face and his near arm for a beat, or hand them back */
     meFace(k) { me.expr = k || null; },
     meArm(k) { me.arm = k || ''; },
@@ -30859,6 +31114,165 @@ const UI = {
     UI._sbTo = setTimeout(() => { z.innerHTML = ''; }, 950);
   },
 
+  /* ============================================================
+     A CHECKLIST, PINNED UP.
+
+     An errand with three things in it needs somewhere you can see
+     all three at once. A stamp in the corner tells you what you
+     just picked up and then goes away; a list tells you what is
+     left, which is the thing you actually want to know while you
+     are walking round a room looking for it.
+
+     Drawn, not DOM: a torn sheet of buff stock with a pin through
+     the top of it, the item's own sprite beside each line, and a
+     box that gets a tick in it. The sprites are the SAME catalogue
+     pieces the room draws, at eighteen pixels instead of seventy,
+     so the thing on the list is visibly the thing on the sofa.
+
+     items: [{ art, name, done }] where art is a canvas.
+     ============================================================ */
+  kitList(title, items, K) {
+    K = K || 2;
+    const IW = 20, ROW = 22, PAD = 7;
+    let tw = 0;
+    items.forEach(it => {
+      const t = PIXFONT.render(it.name, { scale: 1, color: '#22201c' });
+      tw = Math.max(tw, t.width);
+    });
+    const head = PIXFONT.render(title, { scale: 1, color: '#8a2418' });
+    const W = Math.max(head.width + PAD * 2, PAD * 2 + IW + 5 + tw + 5 + 9);
+    const H = PAD * 2 + 12 + items.length * ROW;
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix';
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    /* the paper: buff stock, a ruled margin, and a torn bottom edge */
+    ART.px(c, 0, 0, W, H, '#1a1610');
+    ART.px(c, 1, 1, W - 2, H - 2, '#e8dfc4');
+    ART.px(c, 1, 1, W - 2, 1, '#f6efd8');
+    ART.px(c, 1, H - 3, W - 2, 2, 'rgba(90,76,44,.24)');
+    for (let x = 1; x < W - 1; x += 3) {
+      ART.px(c, x, H - 2, 2, 1, (x / 3 | 0) % 2 ? '#e8dfc4' : '#1a1610');
+    }
+    ART.px(c, PAD - 3, 12, 1, H - 18, 'rgba(160,60,40,.34)');
+    /* the pin */
+    PIX.disc(c, Math.round(W / 2), 4, 3, '#1a1610');
+    PIX.disc(c, Math.round(W / 2), 4, 2, '#c03a2c');
+    ART.px(c, Math.round(W / 2) - 1, 3, 1, 1, '#e8705c');
+    c.drawImage(head, PAD, 7);
+    items.forEach((it, i) => {
+      const y = PAD + 12 + i * ROW;
+      /* the box, and the tick in it */
+      ART.px(c, PAD - 2, y + 5, 9, 9, '#1a1610');
+      ART.px(c, PAD - 1, y + 6, 7, 7, it.done ? '#cfe0c4' : '#f4eeda');
+      if (it.done) {
+        for (let k = 0; k < 3; k++) ART.px(c, PAD + k, y + 10 + k, 1, 1, '#2f7a3c');
+        for (let k = 0; k < 4; k++) ART.px(c, PAD + 2 + k, y + 12 - k, 1, 1, '#2f7a3c');
+      }
+      /* the thing itself */
+      if (it.art) {
+        const sc = Math.min(IW / it.art.width, (ROW - 4) / it.art.height, 1);
+        const iw = Math.max(1, Math.round(it.art.width * sc));
+        const ih = Math.max(1, Math.round(it.art.height * sc));
+        c.save();
+        if (it.done) c.globalAlpha = 0.42;
+        c.drawImage(it.art, PAD + 9, y + Math.round((ROW - 2 - ih) / 2), iw, ih);
+        c.restore();
+      }
+      const t = PIXFONT.render(it.name, { scale: 1, color: it.done ? '#8a8470' : '#22201c' });
+      c.drawImage(t, PAD + 9 + IW + 4, y + Math.round((ROW - t.height) / 2));
+      /* and a line through it once it is in */
+      if (it.done) {
+        ART.px(c, PAD + 9 + IW + 3, y + Math.round(ROW / 2) - 1,
+          t.width + 2, 1, 'rgba(60,50,36,.62)');
+      }
+    });
+    return cv;
+  },
+
+  /* mount (or refresh) the checklist in the corner. Pass null to clear. */
+  showKit(title, items) {
+    let z = document.getElementById('kit-list');
+    if (!items) { if (z) z.remove(); return; }
+    if (!z) {
+      z = U.el('div'); z.id = 'kit-list';
+      document.body.appendChild(z);
+      requestAnimationFrame(() => z.classList.add('in'));
+    }
+    const K = window.innerWidth > 1500 ? 3 : 2;
+    z.innerHTML = '';
+    z.appendChild(UI.kitList(title, items, K));
+    return z;
+  },
+
+  /* ============================================================
+     AND THE CARD WHEN YOU ACTUALLY GET ONE.
+
+     A stamp in the corner is a receipt. This is the moment: the
+     screen dims, a card comes up with the thing drawn four times
+     the size the room ever shows it, its name under it, and a line
+     from whoever cares that you found it.
+     ============================================================ */
+  gotItem(art, name, line, ms) {
+    return new Promise(res => {
+      const root = U.el('div'); root.id = 'got-item';
+      const K = window.innerWidth < 620 ? 3 : 4;
+      const IW = 76, PAD = 10;
+      const nm = PIXFONT.render(name, { scale: 2, color: '#22201c' });
+      const ln = line ? PIXFONT.render(line, { scale: 1, color: '#6a5a3c' }) : null;
+      const W = Math.max(IW + PAD * 2, nm.width + PAD * 2,
+        ln ? ln.width + PAD * 2 : 0);
+      const H = PAD * 2 + 10 + IW + 6 + nm.height + (ln ? ln.height + 4 : 0);
+      const cv = document.createElement('canvas');
+      cv.width = W * K; cv.height = H * K;
+      cv.className = 'pix';
+      const c = cv.getContext('2d');
+      c.imageSmoothingEnabled = false;
+      c.scale(K, K);
+      /* the card */
+      ART.px(c, 0, 0, W, H, '#1a1610');
+      ART.px(c, 1, 1, W - 2, H - 2, '#efe6cc');
+      ART.px(c, 1, 1, W - 2, 2, '#fbf6e4');
+      ART.px(c, 1, H - 3, W - 2, 2, 'rgba(90,76,44,.26)');
+      ART.px(c, 4, 4, W - 8, H - 8, 'rgba(0,0,0,0)');
+      /* a ruled border inside it */
+      ART.px(c, 4, 4, W - 8, 1, 'rgba(140,60,40,.44)');
+      ART.px(c, 4, H - 5, W - 8, 1, 'rgba(140,60,40,.44)');
+      ART.px(c, 4, 4, 1, H - 8, 'rgba(140,60,40,.44)');
+      ART.px(c, W - 5, 4, 1, H - 8, 'rgba(140,60,40,.44)');
+      const cap = PIXFONT.render('FOUND IT', { scale: 1, color: '#8a2418' });
+      c.drawImage(cap, Math.round((W - cap.width) / 2), 7);
+      /* the thing, as big as the card will take */
+      if (art) {
+        const sc = Math.min(IW / art.width, IW / art.height);
+        const iw = Math.max(1, Math.round(art.width * sc));
+        const ih = Math.max(1, Math.round(art.height * sc));
+        const ix = Math.round((W - iw) / 2), iy = PAD + 10 + Math.round((IW - ih) / 2);
+        /* a soft plate under it so it is not floating on paper */
+        SPR.ellipse(c, Math.round(W / 2), iy + ih + 1,
+          Math.round(iw * 0.46), 3, 'rgba(90,76,44,.20)');
+        c.drawImage(art, ix, iy, iw, ih);
+      }
+      c.drawImage(nm, Math.round((W - nm.width) / 2), PAD + 10 + IW + 6);
+      if (ln) c.drawImage(ln, Math.round((W - ln.width) / 2), PAD + 10 + IW + 8 + nm.height);
+      root.appendChild(cv);
+      document.body.appendChild(root);
+      requestAnimationFrame(() => root.classList.add('in'));
+      SFX.tone(660, 0.06, 'square', 0.05);
+      setTimeout(() => SFX.tone(990, 0.10, 'triangle', 0.05), 80);
+      setTimeout(() => SFX.tone(1320, 0.12, 'triangle', 0.04), 170);
+      const done = () => {
+        root.classList.add('out');
+        setTimeout(() => { root.remove(); res(); }, 220);
+        window.removeEventListener('pointerdown', done);
+      };
+      setTimeout(() => window.addEventListener('pointerdown', done), 200);
+      setTimeout(done, ms || 1700);
+    });
+  },
+
   stampSmall(text, kind) {
     const z = document.getElementById('stamp-small');
     if (!z) return;
@@ -35896,7 +36310,11 @@ const CUT = (() => {
   let running = false;
   let onKey = null;
 
-  function skip() { skipping = true; }
+  function skip() {
+    skipping = true;
+    /* anything a cutscene pinned to the corner goes with it */
+    if (typeof UI !== 'undefined' && UI.showKit) UI.showKit(null, null);
+  }
   function gate() { if (skipping) throw SKIP; }
 
   /* ------------------------------------------------------------
@@ -36070,39 +36488,148 @@ const CUT = (() => {
          beige; this is ochre. */
       px(c, 0, 0, W, FY, '#6a5320');
       px(c, 0, 0, W, FY - 34, '#8f6d22');
-      /* THE PAPER. A sprig every twelve by ten, and only two pixels of
-         contrast in it: on a four-by-six grid at full contrast the same
-         motif read as television static. */
-      for (let y = 4; y < FY - 40; y += 10) {
-        for (let x = ((y / 10) % 2) ? 4 : 10; x < W; x += 12) {
-          px(c, x, y, 1, 3, '#a37d24');
-          px(c, x - 2, y + 1, 5, 1, '#a37d24');
-          px(c, x - 1, y + 4, 3, 1, '#a37d24');
+      /* ============================================================
+         THE PAPER, AT A REAL PITCH.
+
+         One sprig every twelve by ten in a single tint, on a field of
+         two flat ochres. Three colours in seventy rows of wall, which
+         at this camera is a beige field with a rash on it.
+
+         It is a trellis paper now, which is what a kitchen in this
+         house would actually have had: a diamond lattice ruled across
+         the whole wall in a tint off the ground, a four-petal sprig
+         where the lines cross, a bud between them on the half-drop,
+         and a vertical shade every second column so the paper has a
+         WEAVE rather than a texture. Six tints instead of two, at a
+         pitch of sixteen by twelve, and the whole thing then knocked
+         back a step where the light does not reach.
+         ============================================================ */
+      const PW = 16, PH = 12;
+      const PAP = { lit: '#a88526', mid: '#9a7724', sh: '#8a6a1e', dk: '#7a5c18' };
+      /* the weave: a soft vertical stripe, so it is paper and not paint */
+      for (let x = 0; x < W; x += 4) {
+        px(c, x, 0, 2, FY - 34, 'rgba(180,142,50,.10)');
+        px(c, x + 2, 0, 1, FY - 34, 'rgba(80,58,16,.08)');
+      }
+      /* the trellis, ruled diagonally both ways */
+      for (let y = 0; y < FY - 34; y++) {
+        for (let d = -2; d < Math.ceil(W / PW) + 2; d++) {
+          const xa = Math.round(d * PW + (y % (PH * 2)) * (PW / (PH * 2)));
+          const xb = Math.round(d * PW - (y % (PH * 2)) * (PW / (PH * 2)));
+          if (xa >= 0 && xa < W) px(c, xa, y, 1, 1, PAP.sh);
+          if (xb >= 0 && xb < W) px(c, xb, y, 1, 1, PAP.sh);
         }
       }
-      ART.dither(c, 0, 0, W, FY - 34, '#7d5e1a', 0.07, 5);
-      /* the picture rail and the honey dado under it */
-      px(c, 0, FY - 40, W, 3, '#b58a2c');
-      px(c, 0, FY - 40, W, 1, '#d4a63c');
-      px(c, 0, FY - 37, W, 2, 'rgba(70,48,24,.34)');
-      px(c, 0, FY - 34, W, 34, '#7a5518');
-      for (let x = 4; x < W; x += 26) {
-        px(c, x, FY - 30, 20, 26, '#8a611c');
-        px(c, x, FY - 30, 20, 1, '#a87c28');
-        px(c, x, FY - 5, 20, 1, 'rgba(60,40,20,.40)');
-        px(c, x + 19, FY - 30, 1, 26, 'rgba(60,40,20,.30)');
+      /* the sprig where the lines cross, and a bud on the half-drop */
+      for (let y = 0; y < FY - 40; y += PH) {
+        const off = ((y / PH) % 2) ? Math.round(PW / 2) : 0;
+        for (let x = off; x < W; x += PW) {
+          /* four petals and a heart */
+          px(c, x, y - 2, 1, 2, PAP.lit);
+          px(c, x, y + 1, 1, 2, PAP.lit);
+          px(c, x - 2, y, 2, 1, PAP.lit);
+          px(c, x + 1, y, 2, 1, PAP.lit);
+          px(c, x, y, 1, 1, '#cfa63c');
+          /* the bud, half a pitch along and down */
+          const bx = x + Math.round(PW / 2), by = y + Math.round(PH / 2);
+          if (bx < W && by < FY - 40) {
+            px(c, bx, by, 1, 2, PAP.dk);
+            px(c, bx - 1, by + 1, 3, 1, PAP.dk);
+          }
+        }
       }
-      px(c, 0, FY - 6, W, 6, '#5c3f10');
-      px(c, 0, FY - 6, W, 1, '#7e5a18');
-      /* the boards, and a rag rug over them in the middle of the room */
-      c.drawImage(ART.floor(W, SCENE.H - FY + 8, { tone: 'board', seed: 3 }), 0, FY - 2);
-      /* SCRUBBED, NOT SOOTED. ART.floor is a police-station board at
-         #2a2118; a kitchen floor with the sun on it is two shades up and
-         warm, so the whole thing gets a honey wash and a sheen. */
-      px(c, 0, FY - 2, W, SCENE.H - FY + 8, 'rgba(226,176,104,.20)');
+      ART.dither(c, 0, 0, W, FY - 34, '#7d5e1a', 0.06, 5);
+      /* and the wall goes down a step away from the window */
+      for (let x = 0; x < W; x++) {
+        const t = U.clamp((x - 120) / 520, 0, 1);
+        if (t <= 0) continue;
+        px(c, x, 0, 1, FY - 34, 'rgba(30,20,6,' + (t * 0.16).toFixed(3) + ')');
+      }
+
+      /* ============================================================
+         THE PICTURE RAIL AND THE DADO, WITH A SECTION ON THEM.
+
+         Three rows of flat colour and a shadow was a band, not a
+         moulding. The rail is a bead, a fillet and a cove now, the
+         dado is panelled with a chamfer and a scribe line round every
+         panel, and the skirting has a torus and a plinth.
+         ============================================================ */
+      const RY = FY - 42;
+      px(c, 0, RY, W, 1, '#8a6420');                    /* the shadow it casts */
+      px(c, 0, RY + 1, W, 2, '#d4a63c');                /* the bead, lit */
+      px(c, 0, RY + 1, W, 1, '#eec254');
+      px(c, 0, RY + 3, W, 1, '#a87c28');                /* the fillet */
+      px(c, 0, RY + 4, W, 2, '#7a5518');                /* the cove, in shade */
+      px(c, 0, RY + 6, W, 1, 'rgba(40,26,8,.40)');
+      /* the dado field */
+      px(c, 0, FY - 34, W, 34, '#7a5518');
+      ART.dither(c, 0, FY - 34, W, 34, '#6a4712', 0.08, 7);
+      /* panels along it, each with a chamfer and a scribe line */
+      for (let x = 4; x < W - 6; x += 26) {
+        const pwid = Math.min(20, W - 6 - x);
+        px(c, x, FY - 30, pwid, 26, '#6e4c14');
+        px(c, x + 1, FY - 29, pwid - 2, 24, '#8a611c');
+        px(c, x + 1, FY - 29, pwid - 2, 1, '#a87c28');
+        px(c, x + 1, FY - 29, 1, 24, '#a87c28');
+        px(c, x + 1, FY - 6, pwid - 2, 1, '#5c3f10');
+        px(c, x + pwid - 2, FY - 29, 1, 24, '#5c3f10');
+        px(c, x + 3, FY - 27, pwid - 6, 1, 'rgba(60,40,20,.34)');
+        px(c, x + 3, FY - 8, pwid - 6, 1, 'rgba(255,224,150,.10)');
+      }
+      /* the skirting: a torus, a fillet and a plinth */
+      px(c, 0, FY - 8, W, 1, '#8a611c');
+      px(c, 0, FY - 7, W, 2, '#6e4c14');
+      px(c, 0, FY - 7, W, 1, '#9a6c1e');
+      px(c, 0, FY - 5, W, 5, '#5c3f10');
+      px(c, 0, FY - 5, W, 1, '#7e5a18');
+      px(c, 0, FY - 1, W, 1, 'rgba(24,14,4,.50)');
+      /* ============================================================
+         REAL BOARDS.
+
+         A generic floor tile, a honey wash over the top and a line
+         every seven pixels: at this camera that is a brown field with
+         a comb dragged through it. A floor is BOARDS -- each one its
+         own width and its own tone, butted end to end at joints that
+         stagger, with two nails at every joint and the grain running
+         the length of the board.
+         ============================================================ */
+      const FH2 = SCENE.H - FY + 8, FYT = FY - 2;
+      px(c, 0, FYT, W, FH2, '#4a3312');
+      const BW = 9;
+      for (let bx = 0, i = 0; bx < W; bx += BW, i++) {
+        const wid = BW - ((i % 3) === 1 ? 1 : 0);
+        const t = (i * 37 % 5) / 4;
+        const g = Math.round(96 + t * 26);
+        px(c, bx, FYT, wid - 1, FH2,
+          'rgb(' + g + ',' + Math.round(g * 0.70) + ',' + Math.round(g * 0.36) + ')');
+        /* the grain, running the length of it */
+        for (let k = 0; k < 2; k++) {
+          const gx = bx + 2 + ((i * 5 + k * 3) % Math.max(1, wid - 3));
+          px(c, gx, FYT, 1, FH2, 'rgba(60,38,12,.22)');
+          px(c, gx + 1, FYT, 1, FH2, 'rgba(220,176,110,.10)');
+        }
+        /* the joint between it and the next board */
+        px(c, bx + wid - 1, FYT, 1, FH2, 'rgba(34,20,6,.60)');
+        px(c, bx + wid, FYT, 1, FH2, 'rgba(220,180,116,.10)');
+        /* A BUTT JOINT ON SOME OF THEM, staggered, with two nails in it.
+           One on every board, in thirty rows of floor, is not a boarded
+           floor -- it is parquet. Every fourth board gets one. */
+        if (i % 4 === 1) {
+          const jy = FYT + 8 + ((i * 13) % Math.max(4, FH2 - 16));
+          px(c, bx, jy, wid - 1, 1, 'rgba(34,20,6,.52)');
+          px(c, bx, jy + 1, wid - 1, 1, 'rgba(220,180,116,.10)');
+          px(c, bx + 2, jy - 2, 1, 1, 'rgba(30,18,6,.60)');
+          px(c, bx + wid - 4, jy - 2, 1, 1, 'rgba(30,18,6,.60)');
+        }
+        /* and two nails at the near end of every board, where it is fixed */
+        px(c, bx + 2, FYT + FH2 - 4, 1, 1, 'rgba(30,18,6,.50)');
+        px(c, bx + wid - 4, FYT + FH2 - 4, 1, 1, 'rgba(30,18,6,.50)');
+      }
+      /* SCRUBBED, NOT SOOTED: the sun off the window puts a sheen on them */
+      px(c, 0, FYT, W, FH2, 'rgba(226,176,104,.10)');
+      px(c, 0, FYT, W, 4, 'rgba(255,238,196,.08)');
+      ART.dither(c, 0, FYT, W, FH2, 'rgba(30,18,6,.30)', 0.05, 11);
       px(c, 0, FY - 3, W, 2, '#4a3a20');
-      px(c, 0, FY - 1, W, 5, 'rgba(255,238,196,.10)');
-      for (let x = 0; x < W; x += 7) px(c, x, FY, 1, SCENE.H - FY + 6, 'rgba(120,84,40,.14)');
       /* the ceiling: whitewash, warm, with a beam across it */
       px(c, 0, -46, W, 46, '#3a2e1c');
       px(c, 0, 0, W, 9, '#cfb266');
@@ -36333,25 +36860,21 @@ const CUT = (() => {
       px(c, SOFA + 8, FY - 24, 36, 2, '#74987e');
       if (!st.kit || !st.kit.pencils) {
         /* ============================================================
-           HIS PENCIL CASE, IN PLAIN SIGHT.
+           HIS PENCIL CASE, IN PLAIN SIGHT, AND THE SAME DRAWING THE
+           PICKUP CARD USES.
 
            This spot used to hide a school reader that only turned up
-           if you held the spyglass over the cushion first, and then
-           needed a second tap to pick up. Two gates and a tool on the
-           first search in the game. It is a stripy zip case with a
-           pencil out the end of it, sitting where anybody would see
-           it, and one tap has it.
+           if you held the spyglass over the cushion first. It is a
+           catalogue piece now -- FURN 'penbox' -- so the eighteen
+           pixels lying on the sofa and the seventy on the card that
+           comes up when you take it are one drawing at two sizes.
+
+           It sits on the FAR cushion: the spot's own x is where the
+           game stands you to use it, so anything within ten pixels of
+           it spends the whole search behind your own coat.
            ============================================================ */
-        /* ON THE FAR CUSHION, not the near one. The spot's own x is where
-           the game stands you to use it, so anything drawn within ten
-           pixels of it spends the whole search behind your own coat. */
-        for (let i = 0; i < 7; i++) {
-          px(c, SOFA + 12 + i * 2, FY - 28, 2, 5, i % 2 ? '#d8484c' : '#f0e8d4');
-        }
-        px(c, SOFA + 12, FY - 29, 14, 1, '#f8f2e0');            /* the zip */
-        px(c, SOFA + 12, FY - 24, 14, 1, 'rgba(40,20,20,.40)');
-        px(c, SOFA + 26, FY - 27, 5, 2, '#e0b048');             /* a pencil out of it */
-        px(c, SOFA + 31, FY - 27, 2, 2, '#2c2a34');
+        FURN.stand(c, 'penbox', SOFA + 10, FY - 30, 26, 12,
+          { mat: 'oxblood', a: 0.5 });
       }
       /* two scatter cushions, one of them embroidered */
       px(c, SOFA - 26, FY - 36, 14, 12, '#c8a44c');
@@ -36529,14 +37052,8 @@ const CUT = (() => {
       px(c, HEARTH + 23, FY - 60, 5, 2, '#c8b06a');
       /* HIS CRAYONS, left up here last night where he could not reach them */
       if (!st.kit || !st.kit.crayons) {
-        px(c, HEARTH + 4, FY - 66, 13, 6, '#6a4a2a');           /* the tin */
-        px(c, HEARTH + 4, FY - 66, 13, 1, '#8a6438');
-        px(c, HEARTH + 4, FY - 61, 13, 1, 'rgba(30,16,8,.44)');
-        const CR = ['#d8484c', '#48a0d8', '#e0b048', '#5aa050', '#c86a92'];
-        for (let i = 0; i < 5; i++) {
-          px(c, HEARTH + 5 + i * 2, FY - 70, 2, 4, CR[i]);
-          px(c, HEARTH + 5 + i * 2, FY - 71, 2, 1, '#f4eeda');
-        }
+        FURN.stand(c, 'crayons', HEARTH + 2, FY - 76, 20, 16,
+          { mat: 'copper', a: 0.5 });
       }
       /* the standing lamp beside it, on, because the hall is still dim */
       px(c, HEARTH + 40, FY - 8, 12, 6, '#8e6e44');
@@ -36575,25 +37092,8 @@ const CUT = (() => {
          dialogue telling you.
          ============================================================ */
       if (!st.kit || !st.kit.bag) {
-        const bx = HOOKS + 36, by = FY - 58;
-        px(c, bx + 4, by - 2, 3, 4, '#6e4420');                 /* the loop */
-        px(c, bx, by + 2, 18, 16, '#8e5a2c');                   /* the body */
-        px(c, bx, by + 2, 18, 2, '#a8703c');
-        px(c, bx + 15, by + 2, 3, 16, 'rgba(50,28,10,.36)');
-        px(c, bx, by + 2, 18, 7, '#a06638');                    /* the flap */
-        px(c, bx, by + 8, 18, 1, 'rgba(40,22,8,.50)');
-        px(c, bx + 7, by + 7, 4, 3, '#3a2c22');                 /* the buckle */
-        px(c, bx + 8, by + 8, 2, 1, '#c8b06a');
-        px(c, bx + 2, by + 11, 8, 6, '#7c4c24');                /* the side pocket */
-        px(c, bx + 2, by + 11, 8, 1, '#96602e');
-        for (let i = 0; i < 2; i++) {                           /* the straps */
-          px(c, bx + 3 + i * 9, by + 17, 3, 4, '#6e4420');
-        }
-        if (st.kit && st.kit.pencils && st.kit.crayons) {
-          px(c, bx + 4, by + 8, 2, 4, '#e0b048');               /* a pencil */
-          px(c, bx + 4, by + 8, 2, 1, '#2c2a34');
-          px(c, bx + 7, by + 9, 2, 3, '#d8484c');               /* and a crayon */
-        }
+        FURN.hang(c, 'satchel', HOOKS + 34, FY - 60, 22, 26,
+          { mat: 'oak', kind: (st.kit && st.kit.pencils && st.kit.crayons) ? 'full' : '' });
       }
       /* two pairs of shoes, and one pair is small */
       px(c, HOOKS - 8, FY - 8, 13, 6, '#3a2c22');
@@ -37930,6 +38430,45 @@ const CUT = (() => {
       kit: { pencils: false, crayons: false, bag: false } };
     const kitLeft = () => ['pencils', 'crayons', 'bag'].filter(k => !st.kit[k]).length;
     const kitDone = () => kitLeft() === 0;
+    /* ============================================================
+       WHAT IS ON THE LIST, IN ONE PLACE.
+
+       The three things, the catalogue piece each one is drawn from,
+       and where it is. The checklist, the pickup card and the spot
+       handlers all read this, so a name only exists once.
+       ============================================================ */
+    const KIT = [
+      { id: 'pencils', at: 'sofa', name: 'PENCIL CASE',
+        art: () => FURN.get('penbox', 34, 26, { mat: 'oxblood' }),
+        look: 'THE CUSHION IS SITTING PROUD, AND THERE IS A ZIP SHOWING.',
+        got: 'IT WAS DOWN THE SIDE OF THE CUSHION. IT IS ALWAYS DOWN THE '
+          + 'SIDE OF THE CUSHION.',
+        card: 'DOWN THE SIDE OF THE CUSHION', tone: 880 },
+      { id: 'crayons', at: 'hearth', name: 'CRAYONS',
+        art: () => FURN.get('crayons', 34, 26, { mat: 'copper' }),
+        look: 'A TIN OF CRAYONS ON THE MANTEL, WHERE HE CANNOT REACH THEM.',
+        got: 'HE WAS DRAWING UP HERE LAST NIGHT AND I PUT THEM WHERE HE '
+          + 'COULD NOT GET AT THEM.',
+        card: 'UP ON THE MANTEL. MY FAULT', tone: 990 },
+      { id: 'bag', at: 'hooks', name: 'BACKPACK',
+        art: () => FURN.get('satchel', 24, 28, { mat: 'oak', kind: 'full' }),
+        look: 'THREE COATS, TWO PAIRS OF SHOES, AND A BAG ON THE END HOOK.',
+        got: 'BAG. THAT IS THE LOT.',
+        card: 'ON THE END HOOK, WHERE IT LIVES', tone: 660 },
+    ];
+    /* the rummage, and a plate over it saying what he is doing */
+    const searchAt = async (S, sp) => {
+      if (typeof UI !== 'undefined' && UI.stampSmall) UI.stampSmall('SEARCHING...');
+      S.face('squint');
+      await SCENE.rummage(sp.x, 1350);
+      S.face(null);
+    };
+    const showKit = () => {
+      if (typeof UI === 'undefined' || !UI.showKit) return;
+      UI.showKit('FOR SCHOOL', KIT.map(k => ({
+        art: k.art(), name: k.name, done: !!st.kit[k.id],
+      })));
+    };
     let H = home(st);
     const M = H.marks;
 
@@ -37964,40 +38503,28 @@ const CUT = (() => {
                 : 'BROWN ROUND THE EDGE. HE PUTS KETCHUP ON IT ANYWAY.'), PIX.PAL.F);
           };
         }
-        /* ---- the three things, one tap each ---- */
-        const KIT = {
-          pencils: { at: 'sofa', name: 'HIS PENCIL CASE',
-            look: 'THE CUSHION IS SITTING PROUD, AND THERE IS A ZIP SHOWING.',
-            got: 'IT WAS DOWN THE SIDE OF THE CUSHION. IT IS ALWAYS DOWN THE '
-              + 'SIDE OF THE CUSHION.', tone: 880 },
-          crayons: { at: 'hearth', name: 'HIS CRAYONS',
-            look: 'A TIN OF CRAYONS ON THE MANTEL, WHERE HE CANNOT REACH THEM.',
-            got: 'HE WAS DRAWING UP HERE LAST NIGHT AND I PUT THEM WHERE HE '
-              + 'COULD NOT GET AT THEM.', tone: 990 },
-          bag: { at: 'hooks', name: 'HIS BACKPACK',
-            look: 'THREE COATS, TWO PAIRS OF SHOES, AND A BAG ON THE END HOOK.',
-            got: 'BAG. THAT IS THE LOT.', tone: 660 },
-        };
-        const LEFT = () => Object.keys(KIT).filter(k => !st.kit[k]).length;
-        Object.keys(KIT).forEach(k => {
-          const K = KIT[k];
+        /* ---- the three things: click to search, then it comes out ---- */
+        KIT.forEach(K => {
           if (sp.id !== K.at) return;
-          sp.label = st.kit[k] ? sp.label : K.name;
-          sp.hint = () => (st.kit[k] ? 'LOOK' : 'TAKE');
-          sp.look = () => (st.kit[k] ? K.look.replace(/^THE|^A /, 'NOTHING ON ') : K.look);
+          sp.label = st.kit[K.id] ? sp.label : K.name;
+          sp.hint = () => (st.kit[K.id] ? 'LOOK' : 'SEARCH');
+          sp.look = () => (st.kit[K.id] ? 'NOTHING LEFT IN THERE.' : K.look);
           sp.onUse = async () => {
-            if (st.kit[k]) {
+            if (st.kit[K.id]) {
               await S.say('YOU', 'GOT THAT ONE.', PIX.PAL.F);
               return;
             }
-            st.kit[k] = true;
-            SFX.tone(K.tone, 0.07, 'square', 0.055);
-            setTimeout(() => SFX.tone(K.tone * 1.5, 0.09, 'triangle', 0.05), 70);
+            /* THE RUMMAGE. The thing used to appear on the same frame as
+               the tap, which is a state change rather than a search. He
+               reaches in, it takes a second and a half, dust comes up, and
+               THEN it is in his hand. */
+            await searchAt(S, sp);
+            st.kit[K.id] = true;
             redress(S, SCENE.me ? SCENE.me.x : undefined);
-            const n = LEFT();
-            if (typeof UI !== 'undefined' && UI.stampSmall) {
-              UI.stampSmall(K.name + (n ? '  -  ' + n + ' TO GO' : '  -  THAT IS EVERYTHING'));
-            }
+            showKit();
+            SFX.tone(K.tone, 0.07, 'square', 0.055);
+            await UI.gotItem(K.art(), K.name, K.card, 1500);
+            const n = kitLeft();
             await S.say('YOU', K.got, PIX.PAL.F);
             if (!n) {
               const b2 = S.actor('boy');
@@ -38019,6 +38546,7 @@ const CUT = (() => {
                 PIX.PAL.F);
               return;
             }
+            if (typeof UI !== 'undefined' && UI.showKit) UI.showKit(null, null);
             st.done = true;
           };
         }
@@ -38237,9 +38765,10 @@ const CUT = (() => {
       await S.say('YOU', 'PENCIL CASE. CRAYONS. BAG. '
         + 'THE CUSHIONS, THE MANTEL AND THE HOOKS.', PIX.PAL.F);
       hudOn(true);
+      showKit();                       /* the list goes up on the wall */
       SCENE.busy(false);
       if (typeof UI !== 'undefined' && UI.stampSmall) {
-        UI.stampSmall('WALK UP TO A THING AND TAP IT TO TAKE IT');
+        UI.stampSmall('WALK UP TO A THING AND TAP IT TO SEARCH IT');
       }
       for (let i = 0; i < 1400 && !kitDone(); i++) { gate(); await U.sleep(120); }
       SCENE.busy(true);
@@ -41006,6 +41535,14 @@ const TUTOR = {
         rack.innerHTML = '';
         replies.forEach((r, i) => {
           const b = U.el('button', 'reply-btn' + (r.dim ? ' dim' : ''));
+          /* THE LABEL, IN TEXT, ON THE BUTTON. Every word in this rack is
+             rendered as a canvas of pixels, so the button carries no text
+             at all -- which is fine for a player and useless to a screen
+             reader or to a test that wants to answer a PARTICULAR
+             question rather than whichever one happens to be on top. */
+          const lbl = (typeof r === 'string' ? r : r.label) || '';
+          b.dataset.label = lbl;
+          b.setAttribute('aria-label', lbl + (r.note ? ' - ' + r.note : ''));
           /* THE NUMBER, NOT A CHEVRON. The number keys already worked and
              nothing said so; now the key is printed on the thing it
              presses, which is the only honest place for it. */
