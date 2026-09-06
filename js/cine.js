@@ -295,6 +295,185 @@ const CINE = {
      frame, his shape crosses the room, his name lands like a
      stamp, then the bars go and you are looking at him.
      ============================================================ */
+  /* ============================================================
+     SKIPPING, WITH SOMETHING ON SCREEN THAT SAYS SO.
+
+     Almost every cutscene in this game was already skippable and
+     not one of them said it. The opening -- four minutes of house,
+     school, tabac, airport and flight -- came out on one press of
+     Escape and nothing anywhere mentioned Escape. The lore reel,
+     the drive, the body on the trolley and eight card beats all
+     ended on any tap, silently. A player who does not know that is
+     a player watching a film he cannot stop.
+
+     So: one badge, drawn like the rest of the furniture, in the
+     bottom corner inside the letterbox frame, for the whole of any
+     cutscene. Click it or press Escape.
+
+       CINE.skipUI(fn)     arm it: fn runs when the player asks out
+       CINE.skipUI(null)   put it away
+       CINE.beat(ms, arm)  hold ms, or until the player asks out
+       CINE.hold(ms)       a timed step that a skip cuts short
+
+     It arms 600ms in, so the badge is never the first thing in a
+     shot, and the pointer/key listeners go on at the same moment --
+     otherwise the click that STARTED the cutscene skips it.
+     ============================================================ */
+  _skip: { fn: null, sticky: false, hit: false, timer: 0, off: null, live: [] },
+
+  /* ------------------------------------------------------------
+     WHO OWNS THE BADGE.
+
+     A cutscene can be a card that holds for four seconds, or it can
+     be the opening: four minutes of house, school, tabac, airport
+     and flight with card beats inside it. Both want a SKIP badge
+     and they want it to mean different things, so the outer one
+     claims it STICKY and a beat nested inside it does not take it
+     away. Pressing SKIP in the middle of the prologue means get me
+     out of the prologue, not out of this one card.
+     ------------------------------------------------------------ */
+  skipUI(fn, label, sticky) {
+    const S = CINE._skip;
+    if (!fn) {
+      /* only the owner may put its own badge away */
+      if (S.sticky && !sticky) return;
+      if (S.timer) { clearTimeout(S.timer); S.timer = 0; }
+      if (S.off) { S.off(); S.off = null; }
+      S.fn = null; S.sticky = false; S.hit = false;
+      const b = document.getElementById('skip-badge');
+      if (b) {
+        /* DROP THE ID FIRST. It fades for 200ms on the way out, and a
+           cutscene that arms the next badge inside that window used to
+           find this one still answering to the name, decide one was
+           already up, and then watch it delete itself -- leaving a
+           cutscene with no way out. Nameless, it cannot be mistaken
+           for the live one. */
+        b.removeAttribute('id');
+        b.classList.remove('in');
+        b.onclick = null;
+        setTimeout(() => b.remove(), 200);
+      }
+      return;
+    }
+    /* a beat inside the opening leaves the opening's badge alone */
+    if (S.sticky && !sticky) return;
+    if (S.timer) clearTimeout(S.timer);
+    /* ONLY THE OUTERMOST ARM CLEARS THE FLAG. A card that animates and
+       then holds arms twice -- once at the top, once for the hold -- and
+       clearing it on the way in un-asked a skip the player had already
+       asked for, so the hold ran its full two and a half seconds after
+       he pressed the button. The flag belongs to the cinematic, and only
+       putting the badge away ends it. */
+    if (!S.fn) S.hit = false;
+    S.fn = fn; S.sticky = !!sticky;
+    S.timer = setTimeout(() => {
+      S.timer = 0;
+      if (!S.fn || document.getElementById('skip-badge')) return;
+      const b = U.el('button', 'skip-badge');
+      b.id = 'skip-badge';
+      b.type = 'button';
+      b.setAttribute('aria-label', 'Skip the cutscene');
+      b.appendChild(UI.txt(label || 'SKIP', { scale: 2, color: PIX.PAL.W, shadow: PIX.PAL.K }));
+      b.appendChild(UI.txt('ESC', { scale: 1, color: PIX.PAL.q, shadow: null }));
+      /* the badge must never double as the tap that dismisses the beat:
+         it stops the event before the window listener ever sees it */
+      b.onclick = (e) => { e.stopPropagation(); CINE.askSkip(); };
+      b.onpointerdown = (e) => e.stopPropagation();
+      document.body.appendChild(b);
+      requestAnimationFrame(() => b.classList.add('in'));
+      const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); CINE.askSkip(); } };
+      window.addEventListener('keydown', key);
+      S.off = () => window.removeEventListener('keydown', key);
+    }, 600);
+  },
+
+  /* The player asked to get out: tell the owner, and cut short every
+     beat that is holding right now -- otherwise skipping the prologue
+     during a four-second card still costs you the four seconds. */
+  askSkip() {
+    const S = CINE._skip;
+    if (!S.fn || S.hit) return;
+    S.hit = true;
+    const fn = S.fn;
+    S.live.slice().forEach(end => end());
+    fn();
+  },
+
+  skipping() { return CINE._skip.hit; },
+
+  /* ------------------------------------------------------------
+     HOLD A BEAT. Eight card cinematics each carried their own copy
+     of "wait for a tap, a key, or the timeout, and arm the
+     listeners late so the click that opened the card does not
+     close it". One copy, and it lights the badge while it waits.
+     ------------------------------------------------------------ */
+  beat(ms, arm) {
+    const wait = arm === undefined ? 600 : arm;
+    const S = CINE._skip;
+    return new Promise(res => {
+      let done = false;
+      let on = null;
+      const end = () => {
+        if (done) return;
+        done = true;
+        const i = S.live.indexOf(end);
+        if (i >= 0) S.live.splice(i, 1);
+        if (on) { window.removeEventListener('pointerdown', on); window.removeEventListener('keydown', on); }
+        if (S.fn === end) CINE.skipUI(null);
+        res();
+      };
+      /* ALREADY ASKED OUT. A card that animates and then holds enters
+         this with the flag set, and a beat that only listens for a NEW
+         press would make him watch the hold he has already skipped. */
+      if (S.hit) { res(); return; }
+      S.live.push(end);
+      CINE.skipUI(end, 'SKIP');
+      setTimeout(() => {
+        if (done) return;
+        on = end;
+        window.addEventListener('pointerdown', on);
+        window.addEventListener('keydown', on);
+      }, wait);
+      setTimeout(end, Math.max(wait + 200, ms));
+    });
+  },
+
+  /* ------------------------------------------------------------
+     A TIMED STEP THAT HEARS THE DOOR.
+
+     This read the flag once, at the moment it was called, so a skip
+     pressed a second into a second-and-a-half hold still cost the
+     whole second and a half. In tenths, and it stops on the first
+     one after the player asks out -- a skip cuts a step to a frame
+     rather than to nothing, so a fade still reads as a fade.
+     ------------------------------------------------------------ */
+  async hold(ms) {
+    let left = ms;
+    while (left > 0 && !CINE._skip.hit) {
+      const slice = Math.min(100, left);
+      await U.sleep(slice);
+      left -= slice;
+    }
+  },
+
+  /* ------------------------------------------------------------
+     ARM THE BADGE FOR A WHOLE CINEMATIC, ANIMATION AND ALL.
+
+     CINE.beat lights the badge while it HOLDS, which is fine for a
+     card that goes straight to a hold and wrong for the three that
+     animate first: the contradiction sweeps a rule across a plate,
+     the dawn card walks the sky down, the chapter card sits for a
+     second and a half. Their badge only turned up once the moving
+     part was over, which is precisely the part a player who has
+     seen it four times wants out of.
+
+     So they arm it at the top. There is nothing to hand back --
+     asking out sets the flag, and CINE.hold and the draw loops both
+     read it -- so the handler is empty on purpose.
+     ------------------------------------------------------------ */
+  arm(label) { CINE.skipUI(() => {}, label || 'SKIP'); },
+  disarm() { CINE.skipUI(null); },
+
   letterbox(on) {
     let l = document.getElementById('cine-bars');
     if (!l) {
@@ -439,6 +618,7 @@ const CINE = {
     const bail = () => { skip = true; };
     window.addEventListener('pointerdown', bail);
     window.addEventListener('keydown', bail);
+    CINE.skipUI(bail, 'SKIP');
     const P = PIX.PAL;
     const rng = U.mulberry32(99);
     /* THE DRIVE HAPPENS IN WHATEVER LIGHT IT IS.
@@ -545,6 +725,7 @@ const CINE = {
     } finally {
       window.removeEventListener('pointerdown', bail);
       window.removeEventListener('keydown', bail);
+      CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
     }
@@ -572,6 +753,7 @@ const CINE = {
     const bail = () => { skip = true; };
     window.addEventListener('pointerdown', bail);
     window.addEventListener('keydown', bail);
+    CINE.skipUI(bail, 'SKIP');
     const P = PIX.PAL;
 
     const draw = (t) => {
@@ -646,6 +828,7 @@ const CINE = {
     } finally {
       window.removeEventListener('pointerdown', bail);
       window.removeEventListener('keydown', bail);
+      CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
     }
@@ -785,6 +968,7 @@ const CINE = {
     const bail = () => { CINE.loreSkip = true; };
     window.addEventListener('pointerdown', bail);
     window.addEventListener('keydown', bail);
+    CINE.skipUI(bail, 'SKIP');
 
     const hold = async (ms) => {
       const step = 40;
@@ -827,6 +1011,7 @@ const CINE = {
     } finally {
       window.removeEventListener('pointerdown', bail);
       window.removeEventListener('keydown', bail);
+      CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
       CINE.letterbox(false);
@@ -862,6 +1047,7 @@ const CINE = {
     const bail = () => { skip = true; if (opts.skipAll) skipAll = true; };
     window.addEventListener('pointerdown', bail);
     window.addEventListener('keydown', bail);
+    CINE.skipUI(bail, opts.skipAll ? 'SKIP' : 'NEXT');
     try {
       for (const shot of shots) {
         skip = false;
@@ -884,6 +1070,7 @@ const CINE = {
     } finally {
       window.removeEventListener('pointerdown', bail);
       window.removeEventListener('keydown', bail);
+      CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
       if (opts.bars) CINE.letterbox(false);
@@ -1399,6 +1586,8 @@ const CINE = {
 
   /* the card between chapters: what you closed, and what is left of him */
   async chapterCard() {
+    /* the badge from the first frame, not from the first hold */
+    CINE.arm();
     const ch = STORY.chapter();
     const pct = STORY.intelPct();
     const root = CINE.stage();
@@ -1412,12 +1601,9 @@ const CINE = {
     root.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('in'));
     SFX.bank();
-    await U.sleep(1500);
-    await new Promise(res => {
-      const done = () => { window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); res(); };
-      window.addEventListener('pointerdown', done); window.addEventListener('keydown', done);
-      setTimeout(done, 2600);
-    });
+    await CINE.hold(1500);
+    await CINE.beat(2600, 0);
+    CINE.disarm();
     root.innerHTML = ''; root.className = 'hidden';
   },
 
@@ -1528,18 +1714,7 @@ const CINE = {
     requestAnimationFrame(draw);
     SFX.bank();
 
-    await new Promise(res => {
-      const done = () => {
-        window.removeEventListener('pointerdown', done);
-        window.removeEventListener('keydown', done);
-        res();
-      };
-      setTimeout(() => {
-        window.addEventListener('pointerdown', done);
-        window.addEventListener('keydown', done);
-      }, 700);
-      setTimeout(done, 5200);
-    });
+    await CINE.beat(5200, 700);
     stop = true;
     root.innerHTML = ''; root.className = 'hidden';
     CINE.letterbox(false);
@@ -1613,17 +1788,11 @@ const CINE = {
     requestAnimationFrame(() => wrap.classList.add('in'));
     SFX.tick && SFX.tick();
 
-    await new Promise(res => {
-      const done = () => {
-        window.removeEventListener('pointerdown', done);
-        window.removeEventListener('keydown', done);
-        res();
-      };
-      setTimeout(() => {
-        window.addEventListener('pointerdown', done);
-        window.addEventListener('keydown', done);
-      }, 260);
-    });
+    /* THIS ONE HAD NO TIMEOUT AT ALL: it waited for a tap for ever and
+       never said so, which on a phone that missed the tap is a game that
+       has stopped. A minute is not a wait, it is a backstop. */
+    await CINE.beat(60000, 260);
+    CINE.disarm();
     root.innerHTML = ''; root.className = 'hidden';
   },
 
@@ -1641,6 +1810,8 @@ const CINE = {
      for a click would stop the conversation dead.
      ============================================================ */
   async contradiction(name) {
+    /* the badge from the first frame, not from the first hold */
+    CINE.arm();
     const root = CINE.stage();
     CINE.letterbox(true);
     root.className = 'anim-cut';
@@ -1696,10 +1867,12 @@ const CINE = {
           c.drawImage(w2, Math.round(W / 2 - w2.width / 2), 46);
           c.globalAlpha = 1;
         }
-        if (t < 1) requestAnimationFrame(draw); else setTimeout(res, 320);
+        if (t < 1 && !CINE.skipping()) requestAnimationFrame(draw);
+        else setTimeout(res, CINE.skipping() ? 0 : 320);
       };
       draw();
     });
+    CINE.disarm();
     root.innerHTML = ''; root.className = 'hidden';
     CINE.letterbox(false);
   },
@@ -1723,18 +1896,8 @@ const CINE = {
     root.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('in'));
     right ? SFX.jackpot() : (SFX.backfire && SFX.backfire());
-    await new Promise(res => {
-      const done = () => {
-        window.removeEventListener('pointerdown', done);
-        window.removeEventListener('keydown', done);
-        res();
-      };
-      setTimeout(() => {
-        window.addEventListener('pointerdown', done);
-        window.addEventListener('keydown', done);
-      }, 400);
-      setTimeout(done, 4000);
-    });
+    await CINE.beat(4000, 400);
+    CINE.disarm();
     root.innerHTML = ''; root.className = 'hidden';
     CINE.letterbox(false);
   },
@@ -1746,6 +1909,8 @@ const CINE = {
      behind the rooftops, the sky going from gold to violet, and the
      windows coming on one at a time as the city stops being yours. */
   async dawnCard() {
+    /* the badge from the first frame, not from the first hold */
+    CINE.arm();
     const root = CINE.stage();
     root.className = 'anim-cut';
     root.innerHTML = '';
@@ -1790,10 +1955,12 @@ const CINE = {
         const w2 = PIXFONT.render('THE SHIFT IS OVER', { scale: 2, color: '#d8b088', shadow: '#12101d' });
         c.drawImage(w1, Math.round(90 - w1.width / 2), 80);
         c.drawImage(w2, Math.round(90 - w2.width / 2), 94);
-        if (t < 1) requestAnimationFrame(draw); else setTimeout(res, 900);
+        if (t < 1 && !CINE.skipping()) requestAnimationFrame(draw);
+        else setTimeout(res, CINE.skipping() ? 0 : 900);
       };
       draw();
     });
+    CINE.disarm();
     root.innerHTML = ''; root.className = 'hidden';
   },
 
@@ -1808,11 +1975,8 @@ const CINE = {
     root.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('in'));
     SFX.bank();
-    await new Promise(res => {
-      const done = () => { window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); res(); };
-      setTimeout(() => { window.addEventListener('pointerdown', done); window.addEventListener('keydown', done); }, 400);
-      setTimeout(done, 4200);
-    });
+    await CINE.beat(4200, 400);
+    CINE.disarm();
     root.innerHTML = ''; root.className = 'hidden';
   },
 };

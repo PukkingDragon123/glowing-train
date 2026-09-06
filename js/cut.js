@@ -47,8 +47,31 @@ const CUT = (() => {
     skipping = true;
     /* anything a cutscene pinned to the corner goes with it */
     if (typeof UI !== 'undefined' && UI.showKit) UI.showKit(null, null);
+    /* AND WHATEVER IS STILL BEING SAID. A plate holds its own promise
+       until it is dismissed, so a skip pressed under a line of dialogue
+       used to stand there waiting for the line to be tapped through
+       before the gate below could throw. TUTOR.hide settles it. */
+    if (typeof TUTOR !== 'undefined' && TUTOR.hide) TUTOR.hide();
   }
   function gate() { if (skipping) throw SKIP; }
+
+  /* ------------------------------------------------------------
+     A SLEEP THAT HEARS THE DOOR.
+
+     gate() only throws at an await boundary, so one flat U.sleep of
+     two seconds meant a skip landing mid-beat still cost the whole
+     two seconds -- and with a hundred beats in the opening that is
+     the difference between SKIP feeling instant and SKIP feeling
+     broken. In tenths, so it lands within one.
+     ------------------------------------------------------------ */
+  async function nap(ms) {
+    let left = ms;
+    while (left > 0 && !skipping) {
+      const slice = Math.min(100, left);
+      await U.sleep(slice);
+      left -= slice;
+    }
+  }
 
   /* ------------------------------------------------------------
      THE BLACK. A cutscene needs to be able to go to black and
@@ -103,7 +126,7 @@ const CUT = (() => {
 
   /* the vocabulary a script gets */
   const API = {
-    async wait(ms) { gate(); await U.sleep(ms); gate(); },
+    async wait(ms) { gate(); await nap(ms); gate(); },
     cam(x) { SCENE.look(x); },
     async pan(a, b, ms) {
       gate();
@@ -142,7 +165,7 @@ const CUT = (() => {
     async card(name, sub, ms) {
       gate();
       const c = CINE.locationCard(name, sub);
-      await U.sleep(ms || 1900);
+      await nap(ms || 1900);
       await c.close();
       gate();
     },
@@ -2910,6 +2933,19 @@ const CUT = (() => {
     CINE.letterbox(true);
     onKey = (ev) => { if (ev.key === 'Escape') skip(); };
     window.addEventListener('keydown', onKey);
+    /* ============================================================
+       AND SOMETHING ON SCREEN THAT SAYS SO.
+
+       This has always come out on one press of Escape and nothing
+       anywhere told anybody that. Four minutes of house, school,
+       tabac, airport and flight, and the only way out was a key you
+       had to guess. The badge claims the corner STICKY, so the card
+       beats nested inside the opening do not take it off him: SKIP
+       here means skip the opening, not skip this one card.
+       ============================================================ */
+    if (typeof CINE !== 'undefined' && CINE.skipUI) {
+      CINE.skipUI(() => skip(), 'SKIP', true);
+    }
     const wasWeather = (typeof G !== 'undefined') ? G.weather : null;
     try {
       await prologue();
@@ -2922,6 +2958,7 @@ const CUT = (() => {
       didSkip = skipping;
       window.removeEventListener('keydown', onKey);
       onKey = null;
+      if (typeof CINE !== 'undefined' && CINE.skipUI) CINE.skipUI(null, null, true);
       CINE.letterbox(false);
       document.body.classList.remove('in-cut');
       document.body.classList.remove('cut-hud');

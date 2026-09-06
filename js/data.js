@@ -541,6 +541,7 @@ const BINDS = [
   ['A D  SPACE', 'at the table: aim, then pull'],
   ['6–9', 'at the table: a belt item'],
   ['R', 'going through his pockets: bribe the badges'],
+  ['ESC', 'skip the cutscene  (or the SKIP badge in the corner)'],
   ['M', 'mute'],
   ['H', 'how this works'],
 ];

@@ -1845,6 +1845,10 @@ const UI = {
           <p><b>HEAT</b> is somebody watching you do it. <b>GOODWILL</b> is the favours you did on
           the way past. Both change what people will tell you.</p>
 
+          <h4>NOTHING HERE IS COMPULSORY</h4>
+          <p>Every cutscene in this game can be walked out of. A <b>SKIP</b> badge appears in
+          the bottom corner a moment into any of them — click it, or press <b>ESC</b>. In the
+          opening that skips the whole thing, not just the shot you are in.</p>
           <h4>KEYS</h4>
           ${binds}
         </div>

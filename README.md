@@ -1226,6 +1226,85 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## Nothing here is compulsory
+
+Almost every cutscene in this game was already skippable and not one of them
+said so. The opening — four minutes of house, school, tabac, airport and
+flight — came out on one press of `Escape`, and nothing anywhere mentioned
+`Escape`. The lore reel, the drive, the body on the trolley and eight card
+beats all ended on any tap, silently. A player who does not know that is a
+player watching a film he cannot stop.
+
+![The badge, inside the frame](docs/screen-skip.png)
+
+So: one badge, drawn like the rest of the furniture, bottom right, **inside**
+the letterbox rather than under the black bar, for the whole of any cutscene.
+Click it or press `ESC`. It fades in 600ms after the shot starts, so it is
+never the first thing you see, and the pointer listeners arm at the same
+moment — otherwise the click that *started* the cutscene skips it.
+
+### One badge, two meanings
+
+A cutscene can be a card that holds for four seconds, or it can be the
+opening: minutes of rooms with card beats nested inside it. Both want a badge
+and they want it to mean different things, so the outer one claims it
+**sticky** and a beat inside does not take it away. Pressing SKIP in the
+middle of the prologue means *get me out of the prologue*, not *get me out of
+this one card*.
+
+### And it had to actually be fast
+
+`gate()` only throws at an `await` boundary, so the first version was correct
+and felt broken: a skip that landed mid-beat still cost the whole beat, and
+there are a hundred beats in the opening. Four things had to change before
+SKIP felt instant rather than ignored:
+
+- **The sleeps hear the door.** `CUT`'s `wait` and `CINE.hold` run in tenths
+  and stop on the first one after the player asks out, instead of reading the
+  flag once at the moment they were called.
+- **A line being spoken settles.** A dialogue plate holds its own promise
+  until it is dismissed, so a skip pressed under a line stood there waiting
+  for the line to be tapped through. `skip()` calls `TUTOR.hide()`, which
+  settles it.
+- **Beats in flight are cut.** `askSkip` resolves every hold that is running,
+  so skipping the prologue during a four-second card does not cost the four
+  seconds.
+- **A beat entered after the ask resolves at once.** A card that animates and
+  *then* holds would otherwise make you watch the hold you already skipped.
+
+Measured, not asserted. `.scratch/skipcut.js` plays the opening, waits for the
+badge, clicks it and times the unwind: **412ms** for four minutes of film, with
+the letterbox, the black pane, `in-cut` and the badge itself all cleaned up
+behind it. `.scratch/skipall.js` does the same for every other cutscene, and
+the help screen's claim that all of them can be walked out of is that probe's
+pass condition:
+
+```
+ok   lore reel      badge yes · out in 65ms of ~14000ms
+ok   the drive      badge yes · out in 31ms of ~9000ms
+ok   chapter card   badge yes · out in  5ms of ~4100ms
+ok   contradiction  badge yes · out in 15ms of ~4000ms
+ok   dawn card      badge yes · out in  9ms of ~6600ms
+ok   title beat     badge yes · out in  4ms of ~4600ms
+```
+
+Three of those read `badge NO` the first time the probe ran — they animate
+before they hold, so their badge only turned up once the moving part was over,
+which is exactly the part somebody who has seen it four times wants out of.
+They arm at the top now.
+
+### Two bugs the probe found on the way
+
+The badge fades out over 200ms, and a cutscene that armed the next one inside
+that window found the old one still answering to the name `skip-badge`,
+decided one was already up, and then watched it delete itself — leaving a
+cutscene with no way out at all. It drops its id on the way out now, so it
+cannot be mistaken for the live one.
+
+And `CINE.glass` waited for a tap **for ever**, with no timeout, and never said
+so: on a phone that missed the tap, that is a game that has stopped. A minute
+is not a wait, it is a backstop.
+
 ## Nobody walks under a desk, and the corner says what just happened
 
 ### The counter was painted over the whole cast

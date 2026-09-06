@@ -3576,6 +3576,44 @@ body.boxed .corner-ui {
   padding-bottom: calc(10px + var(--sa-b) + 14vh);
 }
 body.boxed #kit-list { top: calc(14px + 14vh); }
+
+/* ============================================================
+   THE SKIP BADGE.
+
+   Almost every cutscene in this game was already skippable and not
+   one of them said so. This is the thing that says so: bottom
+   right, inside the letterbox frame rather than under the bar,
+   above everything (the bars are z-index 148), and it fades in
+   600ms after the shot starts so it is never the first thing you
+   see. It is a button, so it takes a thumb; it also takes Escape.
+   ============================================================ */
+.skip-badge {
+  position: fixed; z-index: 152;
+  right: calc(16px + var(--sa-r)); bottom: calc(16px + var(--sa-b));
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px 7px; min-height: var(--hit);
+  background: rgba(8,12,16,.82);
+  border: var(--bd) solid rgba(244,239,224,.34);
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 2px 3px 0 rgba(0,0,0,.55);
+  cursor: pointer;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .22s ease, transform .22s ease, background .12s, border-color .12s;
+}
+.skip-badge.in { opacity: .82; transform: none; }
+.skip-badge:hover, .skip-badge:focus-visible { opacity: 1; background: rgba(18,24,30,.94); border-color: var(--gold); }
+.skip-badge:active { transform: translateY(2px); }
+/* the ESC keycap after the word */
+.skip-badge canvas:last-child {
+  padding: 2px 4px;
+  border: 2px solid rgba(141,134,114,.5);
+  box-sizing: content-box;
+}
+/* the bars come down to 14vh, so inside one the badge rides above it */
+body.boxed .skip-badge { bottom: calc(16px + var(--sa-b) + 14vh); }
+@media (max-height: 460px) {
+  .skip-badge { padding: 4px 9px 5px; min-height: 36px; }
+}
 body.boxed #stamp-small, body.boxed .toast-stack { bottom: calc(64px + 14vh); }
 .corner-ui, #kit-list, #stamp-small, .toast-stack {
   transition: padding .28s ease, top .28s ease, bottom .28s ease;
