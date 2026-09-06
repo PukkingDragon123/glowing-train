@@ -462,6 +462,11 @@ const CASE = {
   /* which suspects the clues you HAVE TURNED OVER still allow */
   standing() {
     const c = G.case;
+    /* THERE IS NOT ALWAYS A CASE. The title board, the prologue and the
+       whole of the house are played before one is dealt, and anything that
+       wants to show how many faces are left -- the chip by the clock, the
+       slips in the corner -- asks this on every frame of it. */
+    if (!c || !c.suspects) return [];
     return c.suspects.map((s, i) =>
       c.clues.every(cl => !cl.seen || cl.keeps[i]) &&
       (c.asks || []).every(a => !a.asked || a.keeps[i]));

@@ -1226,6 +1226,149 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## Nobody walks under a desk, and the corner says what just happened
+
+### The counter was painted over the whole cast
+
+Every room can declare a front layer — the bar in the bar, the glass case in
+the pawn shop, Maybelle's desk and the three bullpen typewriters in the
+precinct — and the runtime drew it as two unconditional blits *after* the cast
+sort:
+
+```js
+cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
+if (fore) c.drawImage(fore, 0, -PAD);
+if (def.onPaintFront) def.onPaintFront(c, T);
+```
+
+Which is exactly right for a barman standing behind his bar, and exactly wrong
+for you standing in front of it. Walk along the counter and you went under it
+from the waist down. In the pawn shop the case is 34 rows tall and you
+disappeared into it completely.
+
+The front layer sorts with everybody else now, on a floor line a quarter of a
+pixel behind the player's:
+
+| what | its key | where it lands |
+| --- | --- | --- |
+| actors on the floor | `y = FY` | before the furniture, **behind** it |
+| the front furniture | `y = FY + 0.25` | |
+| **you** | `y = FY + 0.5` | after the furniture, **in front** of it |
+
+![In front of his own bar](docs/screen-depth.png)
+
+A quarter of a pixel is enough because nothing else in that list is
+fractional, and it needs no new data in any of the seven rooms that declare a
+front layer. A room that really does want something over the entire cast can
+still say so with `foreY`.
+
+The near-floor dressing — the stools at the bar, the cat asleep on the boards,
+a crate, a rug — used to ride along on that front layer, where it was correct
+by accident. It moves to its own `onPaintNear`, painted after the cast, so you
+still walk behind the stools.
+
+`.scratch/depth.js` measures it instead of eyeballing it. It counts how many
+of the 26 rows between his boots and his chest change when he appears,
+throwing out any row that flickers between two grabs with him hidden — that is
+the lamp and the dust, not the layering. All five counters clear. With `OLD=1`
+forcing the old ordering back, all five go red:
+
+```
+BAD  bar       visible rows 7..25 of 1..26 (13 live, worst gap 6)
+BAD  laundry   visible rows 8..20 of 1..26 (2 live, worst gap 11)
+BAD  pawn      visible rows null..null of 1..26 (0 live)
+```
+
+A probe that cannot fail proves nothing, so the probe puts the bug back.
+
+### Every number that moves prints a slip
+
+This game was full of things that happened where nothing said they had.
+Eighteen minutes came off the shift for a search and the only sign of it was
+two digits changing in the corner. The street got hotter, the purse got
+lighter, a face came off the board, and all of it silent.
+
+Now a small dark slip tears off in the corner for every one: `-18 MIN` in
+amber, `+40 FRANCS` in gold, `HEAT +1` in red, `GOODWILL +2`, `EVIDENCE 3 OF
+5`, `2 FACES LEFT`.
+
+![Four slips, and the file on the chip](docs/screen-slips.png)
+
+It is a **sampler, not a set of hooks**. `UI.ledgerWatch` reads six numbers
+every 420ms and prints the differences, so anything that touches the clock or
+the purse — a search, a favour, a bribe, a taxi, a beat halfway through a
+cutscene — gets its slip without knowing the ledger exists, and no change can
+print twice because the snapshot moves with it. If there is no HUD to print on
+it *holds* the reading rather than advancing it, because the thirty-five
+minutes a taxi costs come off the clock while the room is still being built,
+and a snapshot that moved anyway would have eaten the one slip the player most
+wanted.
+
+### And the chip by the clock says how much of the file you have
+
+`EVIDENCE 2/5` and how many **faces** the story still fits. The objective card
+always said what to do next; it never said how far along you were, so a night
+of turning over drawers felt identical whether you had four of the five or
+none of them.
+
+### The room keeps its own marks
+
+A stop has half a dozen things in it worth turning over and eighteen minutes
+is the price of every one, so the last thing a player should have to carry in
+his head is which drawers he has already been through.
+
+| mark | means |
+| --- | --- |
+| a **gold pip** over a thing | the glass says what is in there is not dirt |
+| a **slate pip** | the glass cleared it — keep your eighteen minutes |
+| a **chalk cross** on the boards | you have been through it |
+
+![A gold pip, a slate pip, and the price of the click](docs/screen-marks.png)
+
+Both pips are eight pixels across on a dark disc, which at this camera is a
+real button and reads from the other end of the room. The chalk goes on the
+floor in front of the prop rather than over it, because the label plate and
+the objective chevron both live up there and a mark that argues with them is
+worse than no mark.
+
+The glass answer was the one genuinely wasted thing before this. Three minutes
+buys a yes or a no about a prop, and it lived in a plate that vanished the
+moment you stepped away — so the third time round a room you paid for the same
+answer again. It sticks now, and the plate says so both ways: **THE GLASS SAYS
+SOMETHING IS IN THERE** and **THE GLASS SAYS THERE IS NOTHING IN IT**.
+
+These are drawn *over* the pipes and grime that drift across the lens. They
+went in with the room at first, one layer under it, and the grime is opaque
+where it is drawn: a chalk cross came through and a gold mark eight rows
+higher did not, in the same room, on the same frame. What you have and have
+not done to a room is not set dressing and does not queue behind it.
+
+`.scratch/marks.js` checks all three by reading the exact pixels the arithmetic
+says they land on, with the state set and with it wiped. The gold pip comes
+back `255,215,94` — `PIX.PAL.G` exactly.
+
+### The plate prices the click
+
+The shift is 560 minutes long and the city has twenty-five things in it that
+take eighteen each, so the arithmetic *is* the game — and it was nowhere on
+screen. The clock jumped and the player was left to work out what had taken
+the time. Any prop that can be turned over now says the price of turning it
+over, and it says the right price for the tool in your hand: **18 MIN** with
+the hand out, **3 MIN** with the glass.
+
+### And the help screen was about a different game
+
+Press `H` and the game explained, in detail, a drum of live and blank shells,
+eight antes, boss frogs with house rules and protection money owed to Swamp
+PD. None of that is on the screen.
+
+It is a shift on the clock in Paris now — the card in the corner, the cost of
+every move, what the room remembers, whoever is behind the counter and when
+they go home, heat against goodwill. And the key list opened with `A — aim at
+yourself` rather than the fact that `A` walks.
+
+![How this works](docs/screen-help.png)
+
 ## Three things that were wrong, and a fitted kitchen
 
 ### You could not talk to your own son
@@ -1874,10 +2017,14 @@ Tapping is the whole control scheme, but: `A`/`D` walk, **`W`/`S` walk up and
 down the road**, the arrows do both, `E` or
 `SPACE` uses what you are standing next to, **`1` `2` `3` are the hand, the
 eyeglass and the iron** (`Q` cycles them), **`P` takes the phone out of your
-coat**, `ENTER` sits down or walks out, `6–8` are the belt, `R` bribes, `TAB`
-opens the case, `M` mutes, `H` is the house rules. A mouse gets a drawn cursor
-per tool, corner brackets on whatever it is over, and numbered replies in
-every conversation.
+coat**, `Z` is how close the camera stands, `ENTER` sits down or walks out,
+`6–9` are the belt, `R` bribes, `M` mutes, `H` is how this works. A mouse gets
+a drawn cursor per tool, corner brackets on whatever it is over, and numbered
+replies in every conversation.
+
+The list in `H` used to open with `A — aim at yourself`, which is a key from
+the game this one used to be. It opens with the street now, in the order a
+player meets it, and the table keys are at the bottom where a bad night ends.
 
 ## Project layout
 

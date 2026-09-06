@@ -171,6 +171,14 @@ const UI = {
     /* the right-hand stack: the phone, the money, and the two switches */
     const stack = U.el('div', 'corner-stack');
 
+    /* and above all of it, the slips: what just changed and by how much */
+    if (kind === 'scene') {
+      const led = U.el('div', 'ledger');
+      led.id = 'ledger';
+      stack.appendChild(led);
+      UI.ledgerWatch();
+    }
+
     if (kind === 'scene') {
       const ph = U.el('button', 'big-btn phone-btn');
       ph.id = 'btn-phone';
@@ -203,6 +211,24 @@ const UI = {
         color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.W }));
       clk.appendChild(cc);
       stack.appendChild(clk);
+
+      /* ============================================================
+         HOW MUCH OF THE FILE YOU HAVE.
+
+         The objective card says what to do next. It never said how
+         far along you were, so a night of turning over drawers felt
+         identical whether you had four of the five or none of them.
+         Two numbers and the faces still standing, always on screen.
+         ============================================================ */
+      const ev = U.el('div', 'corner-chip has-tip');
+      ev.id = 'corner-case';
+      ev.dataset.tipKey = 'evidence';
+      ev.appendChild(SPR.clone(ART.art('ic_case', K - 1), 1));
+      const en = U.el('span'); en.id = 'tb-case-num';
+      UI.put(en, UI.caseCount(K));
+      ev.appendChild(en);
+      ev.onclick = () => PHONE.open('case');
+      stack.appendChild(ev);
     }
 
     const sw = U.el('div', 'corner-row');
@@ -314,6 +340,19 @@ const UI = {
 
 
   /* the clock moved: repaint the corner without rebuilding the room */
+  /* EVIDENCE n/m, and the faces it has not cleared yet */
+  caseCount(K) {
+    const got = (typeof CITY !== 'undefined' && CITY.found) ? CITY.found().length : 0;
+    const left = (typeof CITY !== 'undefined' && CITY.totalLeft) ? CITY.totalLeft() : 0;
+    const faces = (typeof CASE !== 'undefined' && CASE.left) ? CASE.left() : 0;
+    const row = U.el('span', 'case-row');
+    row.appendChild(UI.txt(got + '/' + (got + left), { scale: K,
+      color: got ? PIX.PAL.G : PIX.PAL.w }));
+    if (faces) row.appendChild(UI.txt(faces + (faces === 1 ? ' FACE' : ' FACES'),
+      { scale: Math.max(1, K - 1), color: faces === 1 ? PIX.PAL.G : PIX.PAL.q }));
+    return row;
+  },
+
   syncStory() {
     const K = (window.innerWidth < 560 || window.innerHeight < 460) ? 2 : 3;
     const clk = document.getElementById('corner-clock');
@@ -325,6 +364,8 @@ const UI = {
         color: CITY.minutesLeft() < 120 ? PIX.PAL.R : PIX.PAL.W }));
       clk.appendChild(cc);
     }
+    const cse = document.getElementById('tb-case-num');
+    if (cse) UI.put(cse, UI.caseCount(K));
     UI.syncObjective();
   },
 
@@ -1260,6 +1301,85 @@ const UI = {
     });
   },
 
+  /* ============================================================
+     THE LEDGER.
+
+     This game was full of things that happened where nothing said
+     they had. Eighteen minutes came off the shift for a search and
+     the only sign of it was two digits changing in the corner; the
+     street got hotter, the purse got lighter, a face came off the
+     board, and every bit of it silent. Every change prints a slip
+     now: what moved, which way, and by how much.
+
+     It is a SAMPLER, not a set of hooks. Anything that touches the
+     clock or the purse -- a search, a favour, a bribe, a taxi, a
+     beat halfway through a cutscene -- gets its slip without
+     knowing the ledger exists, and no change can print twice
+     because the snapshot moves with it.
+     ============================================================ */
+  LEDGER: { seen: null, timer: 0 },
+
+  tick(text, kind) {
+    const z = document.getElementById('ledger');
+    if (!z) return;
+    const col = kind === 'bad' ? PIX.PAL.R : kind === 'good' ? PIX.PAL.G
+      : kind === 'time' ? '#e8b64c' : PIX.PAL.W;
+    const t = U.el('div', 'slip slip-' + (kind || 'plain'));
+    t.style.setProperty('--rule', col);
+    t.appendChild(UI.txt(text, { scale: 2, color: col, shadow: PIX.PAL.K }));
+    z.appendChild(t);
+    while (z.children.length > 4) z.firstChild.remove();
+    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 360); }, 2600);
+  },
+
+  /* what the numbers are right now */
+  ledgerShot() {
+    return {
+      day: G.day || 0,
+      clock: Math.round(G.clock || 0),
+      chips: G.chips || 0,
+      heat: G.heat || 0,
+      karma: Math.round(G.karmaScore || 0),
+      ev: (typeof CITY !== 'undefined' && CITY.found) ? CITY.found().length : 0,
+      faces: (typeof CASE !== 'undefined' && CASE.left) ? CASE.left() : 0,
+    };
+  },
+
+  /* forget the last reading: a new shift is not a hundred slips */
+  ledgerReset() { UI.LEDGER.seen = UI.ledgerShot(); },
+
+  ledgerWatch() {
+    if (UI.LEDGER.timer) return;
+    UI.ledgerReset();
+    UI.LEDGER.timer = setInterval(() => {
+      const now = UI.ledgerShot(), was = UI.LEDGER.seen;
+      /* NOTHING TO PRINT ON YET: HOLD THE READING, do not advance it. The
+         thirty-five minutes a taxi costs come off the clock while the room
+         is still being built, and a snapshot that moved anyway would have
+         eaten the one slip the player most wanted. A conversation counts as
+         nothing to print on -- the corners fade right out for one, and that
+         is where half the evidence in the game changes hands. The slips
+         land as he steps away from the counter instead. */
+      if (!document.getElementById('ledger')) return;
+      if (document.body.classList.contains('talking')) return;
+      UI.LEDGER.seen = now;
+      /* a whole new shift is not a hundred slips */
+      if (!was || now.day !== was.day) return;
+      const mins = now.clock - was.clock;
+      if (mins > 0) UI.tick('-' + mins + ' MIN', 'time');
+      const cash = now.chips - was.chips;
+      if (cash) UI.tick((cash > 0 ? '+' : '-') + Math.abs(cash) + ' FRANCS', cash > 0 ? 'good' : 'bad');
+      if (now.heat > was.heat) UI.tick('HEAT +' + (now.heat - was.heat), 'bad');
+      const k = now.karma - was.karma;
+      if (k) UI.tick('GOODWILL ' + (k > 0 ? '+' : '-') + Math.abs(k), k > 0 ? 'good' : 'bad');
+      if (now.ev > was.ev) {
+        const total = now.ev + ((typeof CITY !== 'undefined' && CITY.totalLeft) ? CITY.totalLeft() : 0);
+        UI.tick('EVIDENCE ' + now.ev + ' OF ' + total, 'good');
+      }
+      if (now.faces < was.faces) UI.tick(now.faces + (now.faces === 1 ? ' FACE LEFT' : ' FACES LEFT'), 'good');
+    }, 420);
+  },
+
   stampSmall(text, kind) {
     const z = document.getElementById('stamp-small');
     if (!z) return;
@@ -1573,6 +1693,10 @@ const UI = {
   },
 
   PANEL_TIPS: {
+    evidence: () => {
+      const got = CITY.found().length, tot = got + CITY.totalLeft(), f = CASE.left();
+      return `<b>THE FILE</b> — <b>${got} of ${tot}</b> pieces in hand, and <b>${f} face${f === 1 ? '' : 's'}</b> the story still fits. Every piece you turn up crosses somebody off it. When one face is left, take the name to the station.`;
+    },
     chips: () => `<b>CHIPS</b> — the only money down here. It comes out of corpses, and it goes to bribes and Swamp PD protection.`,
     ante: () => `<b>${STORY.chapter().title}</b> — ${STORY.chapter().obj.toLowerCase()}. Every chapter is three rooms; the last one is the frog who runs it, and he carries a piece of the board. After him, the department wants <b>${E.heatDue()}⛁</b> in protection.`,
     blind: () => `<b>THE LINE</b> — the crew drinks in this room and one of them is the frog you came for. Read the file on the bar, ask the barman, look each of them in the face, then name one. Name him right and the bounty pays 30% more; name him wrong and he sits down with an extra heart and the first pull.`,
@@ -1668,38 +1792,59 @@ const UI = {
 
   /* ================= help ================= */
 
+  /* ============================================================
+     HOW THIS WORKS.
+
+     This screen used to explain a different game. Every word of it
+     was about a drum of live and blank shells, eight antes, boss
+     frogs with house rules and protection money to Swamp PD -- and
+     the game it is now is a shift on the clock in Paris, walking
+     rooms and turning over drawers. A player who pressed H to find
+     out what he was doing was told, in detail, about something that
+     is not on the screen.
+     ============================================================ */
   showHelp() {
     const binds = BINDS.map(([k, v]) => `<p><b>${k}</b> — ${v}</p>`).join('');
+    const C = (typeof CITY !== 'undefined') ? CITY.COST : { travel: 35, search: 18, ask: 12, look: 3 };
     UI.modal(`
       <button class="pixbtn m-close" id="mm-close"></button>
       <div class="help-cols">
         <div>
-          <h4>THE DUEL</h4>
-          <p>A drum loads with <b>LIVE</b> 🔴 and <b>blank</b> ⚪ shells — you see the mix, not the order.
-          Take turns. Aim at <b>the mark</b> or at <b>yourself</b>, then pull.</p>
-          <h4>THE ONLY RULE THAT MATTERS</h4>
-          <p>A <b>blank into your own head keeps your turn</b>. A live one costs a heart.
-          Live into the mark hurts him; blank into him wastes the pull. Empty drum reloads.</p>
-          <h4>HEARTS ❤</h4>
-          <p>Zero hearts, and the duel — and whoever ran out — is over. Lose and the swamp
-          keeps your marker. Hearts refill each duel.</p>
-          <h4>THE NIGHT</h4>
-          <p>8 antes, 3 blinds each: SMALL, BIG, then a <b>BOSS</b> — one of the Bullfrog's
-          people, each with his own house rule. Win a duel: purse + 1 chip per heart kept.</p>
+          <h4>THE SHIFT</h4>
+          <p>A body, a file, and a day to work it. The buff card top-left is
+          <b>what to do next</b> — click it for the whole file. A <b>gold chevron</b> bobs over
+          the thing that card means.</p>
+          <h4>THE CLOCK IS THE GAME</h4>
+          <p>It starts at <b>09:00</b> and only goes one way. Crossing town <b>${C.travel} min</b> —
+          turning a prop over <b>${C.search}</b> — a question <b>${C.ask}</b> — the glass <b>${C.look}</b>.</p>
+          <p>Every minute it takes prints a <b>slip</b> in the corner — and so does every
+          franc, every piece of evidence, every bit of goodwill. If a number moved, the
+          corner says so.</p>
+          <h4>WHAT YOU HAVE</h4>
+          <p>The chip by the clock reads <b>EVIDENCE n/m</b> and how many <b>faces</b> the story
+          still fits. Every piece crosses somebody off. One face left — take the name to
+          the station and say it.</p>
+          <h4>THE THREE TOOLS</h4>
+          <p><b>THE HAND</b> turns a thing over. <b>THE EYEGLASS</b> costs ${C.look} minutes to say
+          whether a prop is worth the ${C.search}, and it is the only way to see what nobody
+          put there. <b>THE IRON</b> works on a witness. That is the problem with it.</p>
         </div>
         <div>
-          <h4>THE LOOT</h4>
-          <p>Kill the mark, go through his pockets. Every rifle brings <b>the badges</b>
-          closer — three and they're at the door. <b>Bribe</b> to keep digging or walk with
-          what you've got. Trinket cards (5 slots, keys 1–5) and guns come out of corpses —
-          boss holsters carry your next iron.</p>
-          <h4>TELLS</h4>
-          <p>What a frog wears is how he plays: a top hat means money, an eye patch means
-          he shoots first, the sweats mean he'd rather risk his own head. Loot a frog to
-          learn his tells for good — then <b>hover the mark's name</b> to read him.</p>
-          <h4>SWAMP PD</h4>
-          <p>After every boss, protection money comes due — it scales with the ante.
-          Can't pay? They take your marker. That's the debt now.</p>
+          <h4>WHAT THE ROOM REMEMBERS</h4>
+          <p>You will be back in this room four times tonight, so it keeps the marks and
+          you do not have to.</p>
+          <p><b>GOLD PIP</b> — the glass says what is in there is not dirt.
+          <b>SLATE PIP</b> — the glass cleared it. Keep your ${C.search} minutes.
+          <b>CHALK CROSS ON THE BOARDS</b> — you have been through it.</p>
+          <h4>WHOEVER IS BEHIND THE COUNTER</h4>
+          <p>Every stop keeps hours and the frog who knows something goes home. Ask him,
+          press him, catch the story that does not fit the one next door. A contradiction
+          takes a face off the board. Turn up after closing and you are talking to a
+          locked door — the phone rings you first.</p>
+          <h4>WHAT THE STREET THINKS</h4>
+          <p><b>HEAT</b> is somebody watching you do it. <b>GOODWILL</b> is the favours you did on
+          the way past. Both change what people will tell you.</p>
+
           <h4>KEYS</h4>
           ${binds}
         </div>

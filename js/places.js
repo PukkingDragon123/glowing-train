@@ -1326,9 +1326,17 @@ const PLACES = (() => {
         if (sp.egg || sp.noSearch) return sp;
         const base = sp.hint;
         return Object.assign({}, sp, {
-          hint: () => (CITY.searched(id, sp.id) ? 'NOTHING LEFT HERE'
-            : (STORY.lookedAt && STORY.lookedAt(id, sp.id) === 1 ? 'THE GLASS SAYS SOMETHING IS IN THERE'
-              : (typeof base === 'function' ? base() : base))),
+          hint: () => {
+            if (CITY.searched(id, sp.id)) return 'NOTHING LEFT HERE';
+            /* THE GLASS ALREADY ANSWERED THIS ONE, either way. Saying so
+               only when the answer was yes made a cleared prop look
+               exactly like one nobody had checked, which threw away the
+               three minutes the player had paid for. */
+            const g = STORY.lookedAt ? STORY.lookedAt(id, sp.id) : 0;
+            if (g === 1) return 'THE GLASS SAYS SOMETHING IS IN THERE';
+            if (g === -1) return 'THE GLASS SAYS THERE IS NOTHING IN IT';
+            return typeof base === 'function' ? base() : base;
+          },
           onUse: () => STORY.search(id, sp.id),
         });
       });

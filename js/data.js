@@ -526,16 +526,21 @@ const MOOK_SUITS = ['T', 't', 'k', 'u'];
    KEYBINDS — shown in help and the hint bar.
    ------------------------------------------------------------ */
 
+/* THE STREET FIRST. This list still opened with `A - aim at yourself`,
+   which is a key from the game this one used to be: you spend a shift
+   walking Paris and turning over drawers, and the table is where a bad
+   night ENDS. Ordered the way a player meets them. */
 const BINDS = [
-  ['A', 'aim at yourself'],
-  ['D', 'aim at the mark'],
-  ['SPACE', 'pull the trigger'],
-  ['6–8', 'use a belt item'],
-  ['Q', 'saw grip (SAWN-OFF)'],
-  ['E', 'double tap (TOMMY GUN)'],
-  ['R', 'bribe the badges (looting)'],
-  ['ENTER', 'walk out / next blind'],
-  ['P', 'the phone: map and case file'],
+  ['CLICK', 'walk there — or walk to a thing and use it'],
+  ['A D  ← →', 'walk along the road'],
+  ['W S  up dn', 'walk up and down it'],
+  ['E or SPACE', 'use what you are standing next to'],
+  ['1 2 3', 'the hand, the eyeglass, the iron  (Q cycles)'],
+  ['P', 'the phone: the map, the file, the jobs'],
+  ['Z', 'how close the camera stands'],
+  ['A D  SPACE', 'at the table: aim, then pull'],
+  ['6–9', 'at the table: a belt item'],
+  ['R', 'going through his pockets: bribe the badges'],
   ['M', 'mute'],
   ['H', 'how this works'],
 ];

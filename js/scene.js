@@ -1912,6 +1912,18 @@ const SCENE = (() => {
     }
 
     /* ============================================================
+       AND THE MARKS THE ROOM KEEPS, OVER THE LOT.
+
+       These went in with the room at first, one layer under the
+       pipes and grime that drift across the lens -- and the grime is
+       opaque where it is drawn, so a chalk cross came through and a
+       gold mark eight rows higher did not, in the same room, on the
+       same frame. What the player has and has not done to a room is
+       not set dressing and does not queue behind it.
+       ============================================================ */
+    drawState(c, T);
+
+    /* ============================================================
        THE HOUR ITSELF.
 
        Every room belongs to the same day: the light grades it, and
@@ -2492,6 +2504,78 @@ const SCENE = (() => {
   }
 
   /* ============================================================
+     WHAT YOU HAVE ALREADY DONE TO THIS ROOM.
+
+     A stop has half a dozen things in it worth turning over and
+     eighteen minutes is the price of every one, so the last thing
+     a player should have to carry in his head is which drawers he
+     has already been through. The room remembers for him:
+
+       a chalk cross on the boards  -> been through it, nothing left
+       a gold mark over it          -> the glass says it is worth
+                                       the eighteen minutes
+
+     Both are drawn from the same two facts the story uses to pick
+     its own answers, so the room can never say one thing and the
+     game do another.
+     ============================================================ */
+  /* a badge you can read from the other end of the room: a dark disc so
+     it lands on anything, then gold with a stroke through it for "there
+     is something in here", or slate with a bar through it for "there is
+     not". Eight pixels across, which at this camera is a real button. */
+  function pip(c, x, y, hot) {
+    PIX.disc(c, x, y + 1, 4, 'rgba(6,9,12,.5)');
+    PIX.disc(c, x, y, 4, '#0d1116');
+    if (hot) {
+      PIX.disc(c, x, y, 3, PIX.PAL.G);
+      PIX.disc(c, x - 1, y - 1, 1, '#fff2c0');
+      ART.px(c, x, y - 2, 1, 3, '#4a3408');
+      ART.px(c, x, y + 2, 1, 1, '#4a3408');
+    } else {
+      PIX.disc(c, x, y, 3, '#5d686f');
+      ART.px(c, x - 1, y, 3, 1, '#262d33');
+    }
+  }
+
+  function drawState(c, T) {
+    const place = def.place;
+    if (!place || typeof CITY === 'undefined' || !CITY.propsAt) return;
+    const props = CITY.propsAt(place);
+    if (!props.length) return;
+    for (const s of (def.spots || [])) {
+      if (s.egg || s.gone || s.noSearch) continue;
+      if (s.when && !s.when()) continue;
+      if (props.indexOf(s.id) < 0) continue;
+      const dy = floorAt(s.z) - def.floorY;
+      const x = Math.round(s.x);
+      if (CITY.searched(place, s.id)) {
+        /* CHALK, ON THE BOARDS IN FRONT OF IT. Not over the prop: the
+           label plate and the objective chevron both live up there, and
+           a mark that argues with them is worse than no mark. */
+        const y = Math.round((s.bot === undefined ? def.floorY + 3 : s.bot + dy) - 5);
+        for (let i = 0; i < 7; i++) {
+          ART.px(c, x - 3 + i, y - 3 + i, 1, 1, 'rgba(6,9,12,.35)');
+          ART.px(c, x + 3 - i, y - 3 + i, 1, 1, 'rgba(6,9,12,.35)');
+        }
+        for (let i = 0; i < 7; i++) {
+          ART.px(c, x - 3 + i, y - 4 + i, 1, 1, 'rgba(232,242,248,.72)');
+          ART.px(c, x + 3 - i, y - 4 + i, 1, 1, 'rgba(232,242,248,.72)');
+        }
+        continue;
+      }
+      /* WHAT THE GLASS SAID, KEPT. Three minutes buys an answer about a
+         prop and the answer used to live in a plate that went off screen
+         the moment you stepped away from it -- so the third time round a
+         room you were paying for the same answer again. */
+      const g = (typeof STORY !== 'undefined' && STORY.lookedAt)
+        ? STORY.lookedAt(place, s.id) : 0;
+      if (!g) continue;
+      const top = (s.top === undefined ? def.floorY - 46 : s.top + dy);
+      pip(c, x, Math.round(top - 5 - (g === 1 && Math.sin(T * 3.4) > 0 ? 1 : 0)), g === 1);
+    }
+  }
+
+  /* ============================================================
      THE PLATE — drawn, not CSS. Sits over the thing it names.
      ============================================================ */
   const plateEl = () => {
@@ -2503,12 +2587,31 @@ const SCENE = (() => {
     return p;
   };
 
+  /* what turning this over will take off the clock, if anything will */
+  function priceOf(o) {
+    if (!def || !def.place || o.egg || o.noSearch) return '';
+    if (typeof CITY === 'undefined' || !CITY.propsAt) return '';
+    if (CITY.propsAt(def.place).indexOf(o.id) < 0) return '';
+    if (CITY.searched(def.place, o.id)) return '';
+    return '   ' + (glassOut() ? (CITY.COST.look || 3) : (CITY.COST.search || 18)) + ' MIN';
+  }
+
   let lastPlate = '';
   function plate(o) {
     const label = typeof o.label === 'function' ? o.label() : o.label;
     if (!label) { const p = plateEl(); p.style.display = 'none'; return; }
     const hint = typeof o.hint === 'function' ? o.hint() : o.hint;
-    const key = label + '|' + (hint || '') + '|' + (Math.abs(o.x - me.x) < 26);
+    /* ============================================================
+       WHAT THE CLICK COSTS.
+
+       The shift is 560 minutes long and the city has twenty-five
+       things in it that take eighteen each, so the arithmetic IS the
+       game -- and it was nowhere on screen. The clock jumped and the
+       player was left to work out what had taken the time. A prop
+       that can be turned over says the price of turning it over.
+       ============================================================ */
+    const cost = priceOf(o);
+    const key = label + '|' + (hint || '') + '|' + cost + '|' + (Math.abs(o.x - me.x) < 26);
     const p = plateEl();
     if (key !== lastPlate) {
       lastPlate = key;
@@ -2516,7 +2619,7 @@ const SCENE = (() => {
       const inRange = Math.abs(o.x - me.x) < 26;
       p.appendChild(SPR.speech({
         lines: [label],
-        foot: inRange ? (hint || 'TAP') : null,
+        foot: inRange ? ((hint || 'TAP') + cost) : null,
         /* a plate that is half the width of a phone is a wall, not a label */
         maxW: Math.max(90, Math.min(190, window.innerWidth * 0.42)),
         /* a label over a prop is a small card: no stamp, no punched holes */

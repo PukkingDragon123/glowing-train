@@ -2988,6 +2988,36 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.05);
 }
 
+/* ============================================================
+   THE SLIPS.
+
+   Torn off a roll and dropped in the corner: a dark stub with a
+   coloured rule down the side saying which way the number went.
+   They print above the money and the clock, closest to the two
+   figures they are talking about, and they go quietly.
+   ============================================================ */
+.ledger { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.ledger:empty { display: none; }
+.slip {
+  display: inline-flex; align-items: center;
+  padding: 3px 8px 4px 7px;
+  background: rgba(8,12,16,.9);
+  border-right: 4px solid var(--rule, #e8d9a8);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 2px 3px 0 rgba(0,0,0,.5);
+  animation: slip-in .22s cubic-bezier(.2,1.6,.4,1);
+}
+.slip.out { animation: slip-out .34s ease forwards; }
+@keyframes slip-in {
+  from { transform: translateX(22px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes slip-out {
+  from { transform: none; opacity: 1; }
+  to { transform: translateX(10px); opacity: 0; }
+}
+/* EVIDENCE n/m, and how many faces it still fits */
+.case-row { display: inline-flex; align-items: baseline; gap: 6px; }
+
 /* at the table there is no phone and no objective: just the money */
 .corner-duel { justify-content: flex-end; align-items: flex-start; }
 
