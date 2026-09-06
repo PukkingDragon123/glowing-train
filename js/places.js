@@ -439,6 +439,10 @@ const PLACES = (() => {
       ART.box(c, 388, FY - 42, 24, 12, { fill: '#8d9298', top: '#b3b8bd', bot: '#4a5056', ink: p.K });
       px(c, 392, FY - 39, 16, 5, '#22282e');
       px(c, 378, FY - 34, 6, 4, '#8c2230');
+    };
+
+    /* the near floor, in front of everybody: you walk BEHIND these. */
+    const onPaintNear = (c) => {
       nearDress(c, W, FY, seed, [
         { p: 'crate', at: 0.06, w: 30, h: 22, o: { mat: 'pine' } },
         { p: 'rug', at: 0.52, w: 64, h: 12, dy: 4, o: { mat: 'petrol', trim: 'cream' } },
@@ -471,7 +475,7 @@ const PLACES = (() => {
         look: "A RUBBER DUCK, GOING ROUND WITH SOMEBODY'S SHIRTS. IT HAS SEEN THINGS." }),
     ];
 
-    return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+    return { id: 'laundry', w: W, floorY: FY, paint, onPaintFront, onPaintNear, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 300, name: 'THE LAUNDRY CAT' }],
       depth: [{ x: 232, y: 24, w: 84, h: 44 , sky: true }],
       enterX: 34, enterFace: 1,
@@ -804,6 +808,10 @@ const PLACES = (() => {
       px(c, 256, FY - 40, 26, 6, p.K);
       px(c, 257, FY - 39, 24, 4, '#ded2b4');
       px(c, 259, FY - 38, 20, 1, '#8d8672');
+    };
+
+    /* the near floor, in front of everybody: you walk BEHIND these. */
+    const onPaintNear = (c) => {
       nearDress(c, W, FY, seed, [
         { p: 'crate', at: 0.10, w: 32, h: 24, o: { mat: 'pine' } },
         { p: 'barrel', at: 0.36, w: 24, h: 28, o: { mat: 'oak' } },
@@ -823,7 +831,7 @@ const PLACES = (() => {
         look: 'RED, WHITE AND BLUE IN BANDS. SOMEBODY A LONG WAY FROM HOME PAWNED IT.' }),
     ];
 
-    return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+    return { id: 'pawn', w: W, floorY: FY, paint, onPaintFront, onPaintNear, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 120, name: 'THE SHOP CAT' }],
       stairs: { to: 'above', x: 336, label: 'THE STAIRS UP', hint: 'HE LIVES OVER THE SHOP' },
       depth: [{ x: 60, y: 34, w: 40, h: 66 , sky: true }],
@@ -951,6 +959,10 @@ const PLACES = (() => {
         px(c, sx - 5, FY - 11, 14, 4, '#8c2230');
         px(c, sx - 5, FY - 11, 14, 1, '#c94a4a');
       }
+    };
+
+    /* the near floor, in front of everybody: you walk BEHIND these. */
+    const onPaintNear = (c) => {
       nearDress(c, W, FY, seed, [
         { p: 'stool', at: 0.08, w: 18, h: 28, o: { mat: 'oxblood' } },
         { p: 'rug', at: 0.40, w: 60, h: 12, dy: 4, o: { mat: 'teal', trim: 'cream' } },
@@ -965,7 +977,7 @@ const PLACES = (() => {
         look: 'THE COOK IS FROM SOMEWHERE WARMER. THE CHILLI OIL IS HIS OWN.' }),
     ];
 
-    return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+    return { id: 'diner', w: W, floorY: FY, paint, onPaintFront, onPaintNear, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 400, name: 'THE DINER CAT' }],
       depth: [{ x: 10, y: 20, w: 92, h: 40 , sky: true }],
       enterX: 30, enterFace: 1,
@@ -1102,6 +1114,10 @@ const PLACES = (() => {
       px(c, 150, FY - 29, 6, 3, '#3a3f52');
       px(c, 152, FY - 31, 1, 2, '#c9c0a8');
       px(c, 186, FY - 32, 5, 7, 'rgba(220,240,255,.35)');
+    };
+
+    /* the near floor, in front of everybody: you walk BEHIND these. */
+    const onPaintNear = (c) => {
       nearDress(c, W, FY, seed, [
         { p: 'stool', at: 0.42, w: 20, h: 32, o: { mat: 'oxblood' } },
         { p: 'stool', at: 0.56, w: 20, h: 32, o: { mat: 'oxblood' } },
@@ -1137,7 +1153,7 @@ const PLACES = (() => {
         look: 'SOMEBODY WAS PLAYING A GAME OF CARDS WITH MONSTERS ON THEM. HE LOST.' }),
     ];
 
-    return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, actors, spots, eggs,
+    return { id: 'bar', w: W, floorY: FY, paint, onPaintFront, onPaintNear, actors, spots, eggs,
       pets: [{ kind: 'cat', x: 300, name: 'THE BAR CAT' }],
       depth: [{ x: 250, y: 26, w: 66, h: 32 , sky: true }],
       enterX: 34, enterFace: 1,

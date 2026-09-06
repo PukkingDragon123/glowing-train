@@ -1705,21 +1705,48 @@ const SCENE = (() => {
     }
     /* a cutscene can take him out of his own shot */
     if (!me.hidden) cast.push({ y: floorAt(me.z) + 0.5, draw: () => drawMe(c, T) });
+    /* ============================================================
+       THE COUNTER IS IN THE SORT, NOT OVER IT.
+
+       The front layer was one unconditional blit after the whole
+       cast: `if (fore) drawImage(fore)` and then onPaintFront on top
+       of that. Which is right for a barman standing BEHIND his bar
+       and wrong for you standing in front of it -- walk along the
+       counter in the bar, or past the desks in the precinct, and you
+       went under them from the waist down.
+
+       It sorts with everybody else now, on a floor line a quarter of
+       a pixel behind the player's:
+
+         actors on the floor      y = FY        -> before it, BEHIND
+         the front furniture      y = FY + 0.25
+         you                      y = FY + 0.5  -> after it, IN FRONT
+
+       A quarter of a pixel is enough because nothing else in this
+       list is fractional, and it needs no new data in any of the
+       seven rooms that declare a front layer: the barman keeps his
+       bar in front of him and you keep it behind you. A room that
+       really does want something painted over the whole cast can say
+       so with `foreY`, and .scratch/depth.js sets it to a million to
+       put the bug back and prove the probe can still see it.
+       ============================================================ */
+    const foreY = (def.foreY === undefined ? def.floorY + 0.25 : def.foreY);
+    if (fore || def.onPaintFront) {
+      cast.push({ y: foreY, draw: () => {
+        if (fore) c.drawImage(fore, 0, -PAD);
+        if (def.onPaintFront) def.onPaintFront(c, T);
+      } });
+    }
     drawMark(c, T);
     drawCritters(c, T);
     cast.sort((p, q) => p.y - q.y).forEach(o => o.draw());
+    /* ---- and the near floor, which really is in front of everything:
+            the stools at the bar, a cat asleep on the boards, a crate.
+            These used to ride along on the front layer, where they were
+            correct by accident. ---- */
+    if (def.onPaintNear) def.onPaintNear(c, T);
 
-    /* ------------------------------------------------------------
-       THE FOREGROUND.
-
-       Everything above is behind the cast, which is right for a
-       wall and wrong for a counter: a clerk standing BEHIND a bar
-       came out standing on top of it. A room can declare a fore()
-       painter for the things that are in front of everybody --
-       counters, rails, the near edge of a bench -- and it is
-       cached and drawn exactly like the room art, over the top.
-       ------------------------------------------------------------ */
-    if (fore) c.drawImage(fore, 0, -PAD);
+    /* the foreground went into the cast sort above -- see the note there */
 
     /* ============================================================
        WHERE THE JOB IS.
@@ -1834,8 +1861,7 @@ const SCENE = (() => {
       }
     }
 
-    /* furniture that people stand behind */
-    if (def.onPaintFront) def.onPaintFront(c, T);
+    /* onPaintFront went into the cast sort too */
 
     /* ============================================================
        THE GLINT.
@@ -2533,7 +2559,7 @@ const SCENE = (() => {
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
     /* what the frame is actually rendering at, for the resolution probe */
     debugRes() {
-      return { K, H, FOOT, down: lodFor(), oy, viewW: viewW(), viewH: viewH(),
+      return { K, H, FOOT, down: lodFor(), oy, cam, viewW: viewW(), viewH: viewH(),
         floorY: def ? def.floorY : null, roomW: def ? def.w : null };
     },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
