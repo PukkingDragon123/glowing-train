@@ -305,6 +305,22 @@ const CINE = {
       document.body.appendChild(l);
     }
     l.className = on ? 'on' : '';
+    /* ============================================================
+       AND THE UI RIDES INSIDE THE FRAME.
+
+       The bars are z-index 148 and thirteen per cent of the height
+       each; the corner UI is 70 and the errand checklist is 60. So
+       every letterboxed beat -- which is the whole prologue and
+       every cutscene in the game -- painted two black bands STRAIGHT
+       OVER the objective, the tool belt and the list of things you
+       are supposed to be finding.
+
+       Raising the UI above the bars would put the HUD on top of the
+       letterbox, which is the wrong answer: a letterbox is a frame,
+       and things inside a frame sit inside it. The body carries the
+       state instead and the corners inset themselves by a bar.
+       ============================================================ */
+    document.body.classList.toggle('boxed', !!on);
   },
 
   /* ============================================================

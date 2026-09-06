@@ -1375,6 +1375,283 @@ const FURN = (() => {
   });
 
   /* ============================================================
+     THE FITTED HOUSE.
+
+     The family kitchen was painted straight into the room: forty
+     rects for the range, thirty for the sink, twenty for the larder,
+     all at absolute coordinates in the middle of a six-hundred-line
+     paint function. Which means none of it could be reused, none of
+     it could be looked at on its own, and every one of them was
+     drawn at the level of detail you can be bothered with while you
+     are also drawing the wallpaper.
+
+     They are catalogue pieces now, like the furniture: authored in
+     fractions, cached by name and size, outlined with everything
+     else -- and drawn at the detail a thing gets when it is the only
+     thing on the canvas.
+     ============================================================ */
+
+  /* a kitchen range: enamel body, black hob, an oven with a glass door */
+  piece('range2', (c, w, h, o) => {
+    const en = M('enamel'), ir = M('ebony'), B = M('brass');
+    const bx = 1, bw = w - 2;
+    const hobH = Math.max(4, Math.round(h * 0.10));
+    const railY = Math.round(h * 0.08);
+    /* the rail across the top, on two brackets */
+    px(c, bx + 2, railY, bw - 4, 2, B.ink);
+    px(c, bx + 2, railY, bw - 4, 1, B.mid);
+    px(c, bx + 2, railY, bw - 4, 1, B.hi);
+    px(c, bx + 3, railY, 2, hobH + 4, B.dk);
+    px(c, bx + bw - 5, railY, 2, hobH + 4, B.dk);
+    /* a checked tea towel over the far end of it */
+    const tw = Math.round(bw * 0.26);
+    for (let i = 0; i < tw; i++) {
+      const th = Math.round(h * 0.16) - Math.abs(Math.round(tw / 2) - i) / 2;
+      px(c, bx + bw - 6 - tw + i, railY + 2, 1, Math.max(2, Math.round(th)),
+        (i >> 1) % 2 ? '#c8524c' : '#e8e0cc');
+    }
+    /* the body */
+    const by = railY + hobH + 4;
+    px(c, bx - 1, by - 1, bw + 2, h - by, ir.ink);
+    px(c, bx, by, bw, h - by - 2, en.mid);
+    px(c, bx, by, bw, 2, en.lit);
+    px(c, bx, by, 2, h - by - 2, en.lit);
+    px(c, bx + bw - 3, by, 3, h - by - 2, en.dk);
+    /* the hob: cast iron, three rings with trivets */
+    px(c, bx - 1, by - hobH - 1, bw + 2, hobH + 2, ir.ink);
+    px(c, bx, by - hobH, bw, hobH, ir.mid);
+    px(c, bx, by - hobH, bw, 1, ir.lit);
+    const rn = 3, rr = Math.max(2, Math.round(bw * 0.09));
+    for (let i = 0; i < rn; i++) {
+      const rx = bx + Math.round(bw * (0.20 + i * 0.30));
+      PIX.disc(c, rx, by - Math.round(hobH / 2), rr + 1, ir.ink);
+      PIX.disc(c, rx, by - Math.round(hobH / 2), rr, ir.sh);
+      PIX.disc(c, rx, by - Math.round(hobH / 2), Math.max(1, rr - 2), ir.dk);
+      /* the trivet arms */
+      for (let k = 0; k < 4; k++) {
+        const a = k * Math.PI / 2 + 0.4;
+        px(c, rx + Math.round(Math.cos(a) * rr), by - Math.round(hobH / 2)
+          + Math.round(Math.sin(a) * rr * 0.5), 1, 1, ir.lit);
+      }
+    }
+    /* the eye-level grill and its own little door */
+    const gh = Math.round((h - by) * 0.22);
+    px(c, bx + 2, by + 2, bw - 4, gh, en.dk);
+    px(c, bx + 2, by + 2, bw - 4, 1, en.sh);
+    for (let i = 0; i < 4; i++) {
+      px(c, bx + 4, by + 4 + i * 2, bw - 8, 1, 'rgba(40,50,50,.34)');
+    }
+    /* the knobs, in a row under it */
+    const ky = by + gh + 4;
+    for (let i = 0; i < 4; i++) {
+      const kx = bx + Math.round(bw * (0.16 + i * 0.23));
+      PIX.disc(c, kx, ky, 3, ir.ink);
+      PIX.disc(c, kx, ky, 2, B.mid);
+      px(c, kx, ky - 2, 1, 2, B.dk);
+    }
+    /* the oven door: a glass panel, a bar handle on two stand-offs */
+    const oy = ky + 5, oh = h - oy - 6;
+    px(c, bx + 3, oy, bw - 6, oh, en.dk);
+    px(c, bx + 4, oy + 1, bw - 8, oh - 2, en.sh);
+    px(c, bx + 6, oy + 3, bw - 12, oh - 8, ir.ink);
+    px(c, bx + 7, oy + 4, bw - 14, oh - 10, '#2a2420');
+    /* the fire in it, seen through the glass */
+    px(c, bx + 8, oy + oh - 9, Math.round(bw * 0.30), 4, 'rgba(255,170,60,.40)');
+    px(c, bx + 9, oy + oh - 8, Math.round(bw * 0.20), 2, 'rgba(255,222,128,.50)');
+    px(c, bx + 6, oy + 3, bw - 12, 1, 'rgba(255,255,255,.14)');
+    px(c, bx + 5, oy + oh - 4, bw - 10, 2, B.ink);
+    px(c, bx + 5, oy + oh - 4, bw - 10, 1, B.mid);
+    px(c, bx + 5, oy + oh - 4, 3, 1, B.hi);
+    /* the plinth it stands on */
+    px(c, bx, h - 4, bw, 4, ir.ink);
+    px(c, bx + 1, h - 4, bw - 2, 2, en.dk);
+  });
+
+  /* a butler sink in a run of cupboard, with a draining board */
+  piece('sinkunit', (c, w, h, o) => {
+    const wd = M(o.mat || 'oak'), en = M('enamel'), st = M('steel');
+    const topY = Math.round(h * 0.30);
+    /* the carcase */
+    px(c, 1, topY, w - 2, h - topY - 1, wd.mid);
+    px(c, 1, topY, w - 2, 2, wd.lit);
+    px(c, w - 4, topY, 3, h - topY - 1, wd.sh);
+    figure(c, 2, topY + 3, w - 4, h - topY - 6, wd, 9);
+    /* two doors with panels, hinges and knobs */
+    const dy = topY + Math.round(h * 0.16), dh = h - dy - 5;
+    for (let i = 0; i < 2; i++) {
+      const dw = Math.round((w - 8) / 2);
+      const dx = 3 + i * (dw + 2);
+      panel(c, dx, dy, dw, dh, wd, { seed: 4 + i, bevel: 2 });
+      PIX.disc(c, dx + dw - 4, dy + Math.round(dh / 2), 2, M('brass').ink);
+      PIX.disc(c, dx + dw - 4, dy + Math.round(dh / 2), 1, M('brass').mid);
+      for (const hy2 of [dy + 3, dy + dh - 4]) {
+        px(c, dx, hy2, 2, 3, M('brass').dk);
+        px(c, dx, hy2, 2, 1, M('brass').mid);
+      }
+    }
+    /* the plinth */
+    px(c, 1, h - 5, w - 2, 4, wd.dk);
+    px(c, 1, h - 5, w - 2, 1, wd.sh);
+    /* the worktop and its lip */
+    px(c, 0, topY - 4, w, 5, wd.dk);
+    px(c, 0, topY - 4, w, 2, wd.lit);
+    px(c, 0, topY - 5, w, 1, wd.hi);
+    /* ============================================================
+       A BUTLER SINK, WHOSE FACE IS PART OF THE UNIT.
+
+       Drawn above the worktop it is a washing-up bowl sitting on the
+       counter. A butler sink is deeper than the run it sits in: its
+       FRONT is the front of the cupboard, with the worktop stopping
+       either side of it, so the basin belongs to the carcase.
+       ============================================================ */
+    const bw2 = Math.round(w * 0.40), bx2 = Math.round(w * 0.06);
+    const bd = Math.round(h * 0.26);
+    px(c, bx2 - 1, topY - 6, bw2 + 2, bd + 7, en.ink);
+    px(c, bx2, topY - 5, bw2, bd + 5, en.mid);
+    px(c, bx2, topY - 5, bw2, 3, en.lit);          /* the rolled top edge */
+    px(c, bx2, topY - 2, bw2, 1, en.hi);
+    px(c, bx2 + bw2 - 3, topY - 5, 3, bd + 5, en.dk);
+    /* the fluting down its face, which is what says butler sink */
+    for (let i2 = 3; i2 < bw2 - 3; i2 += 4) {
+      px(c, bx2 + i2, topY + 2, 1, bd - 2, 'rgba(120,140,140,.30)');
+      px(c, bx2 + i2 + 1, topY + 2, 1, bd - 2, 'rgba(255,255,255,.20)');
+    }
+    /* and what is IN it, seen over the rim */
+    px(c, bx2 + 2, topY - 4, bw2 - 4, 3, 'rgba(60,86,96,.55)');
+    px(c, bx2 + 3, topY - 4, bw2 - 6, 1, 'rgba(150,190,206,.34)');
+    /* the draining board, ribbed toward the sink */
+    const dbx = bx2 + bw2 + 2;
+    for (let i2 = 0; dbx + i2 < w - 3; i2 += 3) {
+      px(c, dbx + i2, topY - 4, 1, 4, 'rgba(80,60,30,.34)');
+      px(c, dbx + i2 + 1, topY - 4, 1, 4, 'rgba(255,236,190,.16)');
+    }
+    /* the tap: a swan neck on a base, with two cross handles */
+    const tx = bx2 + Math.round(bw2 * 0.62), ty = topY - 6;
+    px(c, tx - 3, ty - 2, 8, 3, st.ink);
+    px(c, tx - 2, ty - 2, 6, 2, st.mid);
+    px(c, tx, ty - 12, 3, 11, st.ink);
+    px(c, tx, ty - 12, 2, 10, st.mid);
+    px(c, tx, ty - 12, 1, 10, st.lit);
+    px(c, tx, ty - 13, 7, 3, st.ink);
+    px(c, tx + 1, ty - 13, 5, 2, st.mid);
+    px(c, tx + 5, ty - 11, 2, 3, st.dk);
+    for (let i = 0; i < 2; i++) {
+      const hx = tx - 4 + i * 9;
+      px(c, hx - 2, ty - 6, 5, 2, st.ink);
+      px(c, hx - 1, ty - 6, 3, 1, st.lit);
+      px(c, hx, ty - 8, 1, 3, st.mid);
+    }
+  });
+
+  /* a tall kitchen press: cornice, glazed top, panelled bottom */
+  piece('larder', (c, w, h, o) => {
+    const wd = M(o.mat || 'pine'), B = M('brass');
+    px(c, 1, 4, w - 2, h - 5, wd.mid);
+    figure(c, 2, 5, w - 4, h - 7, wd, 7);
+    px(c, w - 4, 4, 3, h - 5, wd.sh);
+    /* the cornice */
+    px(c, 0, 0, w, 4, wd.ink);
+    px(c, 0, 1, w, 3, wd.lit);
+    px(c, 1, 3, w - 2, 1, wd.hi);
+    px(c, 0, 4, w, 1, wd.dk);
+    /* the glazed upper doors, with what is behind them */
+    const uy = 7, uh = Math.round(h * 0.36);
+    for (let i = 0; i < 2; i++) {
+      const dw = Math.round((w - 7) / 2), dx = 3 + i * (dw + 1);
+      px(c, dx - 1, uy - 1, dw + 2, uh + 2, wd.ink);
+      px(c, dx, uy, dw, uh, '#2c2418');
+      /* three shelves of crockery */
+      for (let k = 0; k < 3; k++) {
+        const sy = uy + 3 + k * Math.round((uh - 5) / 3);
+        px(c, dx + 1, sy + Math.round((uh - 5) / 3) - 2, dw - 2, 1, wd.lit);
+        for (let j = 0; j < 3; j++) {
+          const cxx = dx + 2 + j * Math.round((dw - 4) / 3);
+          px(c, cxx, sy, Math.max(2, Math.round((dw - 6) / 3)),
+            Math.max(2, Math.round((uh - 8) / 3) - 1),
+            ['#e8dfc4', '#cfe0e8', '#e8cfd8'][(k + j) % 3]);
+        }
+      }
+      /* the glazing bars and a sheen across the glass */
+      px(c, dx + Math.round(dw / 2), uy, 1, uh, wd.sh);
+      px(c, dx, uy + Math.round(uh / 2), dw, 1, wd.sh);
+      for (let k = 0; k < uh; k++) {
+        const gx = dx + Math.round(k * 0.7);
+        if (gx < dx + dw) px(c, gx, uy + k, 2, 1, 'rgba(226,240,246,.13)');
+      }
+      PIX.disc(c, dx + dw - 3, uy + Math.round(uh * 0.56), 2, B.ink);
+      PIX.disc(c, dx + dw - 3, uy + Math.round(uh * 0.56), 1, B.mid);
+    }
+    /* the worktop between them */
+    const my = uy + uh + 2;
+    px(c, 0, my, w, 4, wd.dk);
+    px(c, 0, my, w, 1, wd.lit);
+    px(c, 0, my + 4, w, 1, 'rgba(30,18,6,.44)');
+    /* the panelled lower doors, and a drawer over them */
+    const dy2 = my + 6, dh2 = h - dy2 - 5;
+    px(c, 3, dy2, w - 7, Math.round(dh2 * 0.22), wd.dk);
+    panel(c, 3, dy2, w - 7, Math.round(dh2 * 0.22), wd, { seed: 3, bevel: 1 });
+    pull(c, Math.round(w / 2) - 4, dy2 + Math.round(dh2 * 0.10), 9, wd);
+    const ly = dy2 + Math.round(dh2 * 0.22) + 2;
+    for (let i = 0; i < 2; i++) {
+      const dw = Math.round((w - 8) / 2), dx = 3 + i * (dw + 2);
+      panel(c, dx, ly, dw, h - ly - 6, wd, { seed: 6 + i, bevel: 2 });
+      PIX.disc(c, dx + dw - 4, ly + Math.round((h - ly - 6) * 0.44), 2, B.ink);
+      PIX.disc(c, dx + dw - 4, ly + Math.round((h - ly - 6) * 0.44), 1, B.mid);
+    }
+    keyhole(c, Math.round(w / 2) + 2, ly + Math.round((h - ly) * 0.30), wd);
+    /* the plinth */
+    px(c, 1, h - 5, w - 2, 4, wd.dk);
+    px(c, 1, h - 5, w - 2, 1, wd.sh);
+  });
+
+  /* a fire surround: mantel shelf, jambs, a cast insert and tiles */
+  piece('hearth', (c, w, h, o) => {
+    const st = M(o.mat || 'cream'), ir = M('ebony'), tl = M('teal');
+    const shH = Math.max(3, Math.round(h * 0.09));
+    /* the breast */
+    px(c, 3, shH + 2, w - 6, h - shH - 3, st.mid);
+    px(c, 3, shH + 2, w - 6, 2, st.lit);
+    px(c, w - 6, shH + 2, 3, h - shH - 3, st.sh);
+    ART.dither(c, 4, shH + 4, w - 8, h - shH - 7, 'rgba(60,50,40,.10)', 0.10, 9);
+    /* the mantel shelf, with a moulding under it */
+    px(c, 0, 0, w, shH, st.ink);
+    px(c, 0, 1, w, shH - 1, st.lit);
+    px(c, 1, 1, w - 2, 1, st.hi);
+    px(c, 1, shH, w - 2, 1, st.dk);
+    px(c, 3, shH + 1, w - 6, 1, st.sh);
+    /* the opening, with jambs either side */
+    const ow = Math.round(w * 0.56), ox = Math.round((w - ow) / 2);
+    const oy = shH + Math.round(h * 0.14), oh = h - oy - 4;
+    px(c, ox - 2, oy - 2, ow + 4, oh + 2, ir.ink);
+    /* tiled reveals */
+    for (let i = 0; i * 6 < oh; i++) {
+      for (const sx of [ox - 2, ox + ow - 1]) {
+        px(c, sx, oy + i * 6, 3, 5, i % 2 ? tl.mid : tl.dk);
+        px(c, sx, oy + i * 6, 3, 1, tl.lit);
+      }
+    }
+    px(c, ox + 1, oy, ow - 2, oh, '#181310');
+    /* the fire back and the grate */
+    px(c, ox + 3, oy + 2, ow - 6, oh - 4, '#241c18');
+    for (let i = 0; i < 5; i++) {
+      px(c, ox + 4 + i * Math.round((ow - 8) / 5), oy + oh - 10, 2, 8, ir.sh);
+    }
+    px(c, ox + 3, oy + oh - 4, ow - 6, 3, ir.dk);
+    px(c, ox + 3, oy + oh - 4, ow - 6, 1, ir.mid);
+    /* logs laid but not lit, because it is July and it is morning */
+    const WD = M('walnut');
+    for (let i = 0; i < 3; i++) {
+      const lx = ox + 4 + i * Math.round((ow - 10) / 3);
+      px(c, lx, oy + oh - 12, Math.round((ow - 8) / 3), 5, WD.ink);
+      px(c, lx + 1, oy + oh - 11, Math.round((ow - 10) / 3), 3, WD.dk);
+      px(c, lx + 1, oy + oh - 11, Math.round((ow - 10) / 3), 1, WD.mid);
+    }
+    /* the hearthstone in front of it */
+    px(c, 1, h - 4, w - 2, 4, st.dk);
+    px(c, 1, h - 4, w - 2, 1, st.sh);
+  });
+
+  /* ============================================================
      A SMALL BOY'S SCHOOL KIT.
 
      These three are drawn twice: once at sixteen pixels lying on a

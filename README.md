@@ -1226,6 +1226,60 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## Three things that were wrong, and a fitted kitchen
+
+### You could not talk to your own son
+
+Once the errand started, walking up to Tobias did nothing at all. The boy and
+his mother were wired **once**, in the kitchen beat, onto the actor objects
+that happened to be in the room at that moment — and every time you found
+something the set redresses, which rebuilds the room from `home(st)` and
+therefore builds a **fresh actors array**. The first thing you picked up threw
+his label, his hint and his entire conversation away.
+
+The spots were already re-wired on every redress; the cast now goes through
+the same door. Measured across a real playthrough — his label, hint and
+`onUse` after the egg and after each of the three finds:
+
+| | | | |
+|---|---|---|---|
+| after the egg | after the cushions | after the mantel | after the hooks |
+| `TOBIAS / TALK` | `TOBIAS / TALK` | `TOBIAS / TALK` | `TOBIAS / HE IS READY` |
+
+### The letterbox was painted over the UI
+
+`#cine-bars` is z-index **148** and each bar is **13% of the height**; the
+corner UI is 70 and the errand checklist is 60. So every letterboxed beat —
+which is the whole prologue and every cutscene in the game — painted two black
+bands straight over the objective, the tool belt and the list of things you
+were supposed to be finding.
+
+Raising the UI above the bars would put the HUD on top of the letterbox, which
+is the wrong answer: a letterbox is a frame, and things inside a frame sit
+inside it. `CINE.letterbox()` puts `.boxed` on the body and the corners inset
+themselves by a bar. Measured on a 1280×800 window: bars 104px, corner-UI
+padding **122px** top and bottom, nothing under a bar.
+
+### And the kitchen is fitted furniture now
+
+![The fitted house](docs/screen-fitted.png)
+
+The range, the sink run, the larder and the hearth were painted straight into
+the room — forty rects for the cooker, thirty for the sink, at absolute
+coordinates in the middle of a six-hundred-line paint function. Which means
+none of it could be reused, none of it could be looked at on its own, and all
+of it was drawn at the level of detail you can be bothered with while you are
+also drawing the wallpaper.
+
+They are catalogue pieces now, cached and outlined with everything else:
+
+| | |
+|---|---|
+| **range2** | a brass rail on two brackets with a checked towel over the end, a cast hob with three rings and trivets, an eye-level grill, four brass knobs, an oven door with a glass panel and the fire behind it, a bar handle on stand-offs, a plinth |
+| **sinkunit** | a **butler** sink whose fluted face is the front of the cupboard — drawn above the worktop it is a washing-up bowl standing on the counter — a swan-neck tap with two cross handles, a ribbed draining board running toward the basin, two panelled doors with hinges and knobs, a worktop with a lip, a plinth |
+| **larder** | a cornice, two glazed upper doors with three shelves of crockery and glazing bars across them, a worktop, a drawer with a bail pull, two panelled doors, an escutcheon, a plinth |
+| **hearth** | a mantel shelf with a moulding under it, tiled reveals down both sides of the opening, a fire back, a grate, three logs laid but not lit — it is July and it is morning — and a hearthstone |
+
 ## The errand has a checklist, and finding something is a moment
 
 ![The list, pinned up](docs/screen-kit-list.png)

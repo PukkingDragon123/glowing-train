@@ -405,23 +405,26 @@ const CUT = (() => {
       for (let i = 0; i < 6; i++) {
         px(c, wx + 5 + i * 2, wy + wh - 13 + (i % 3), 2, 6, '#4e7c42');
       }
-      ART.inked(c, wx - 12, FY - 48, ww + 26, 46, (c) => {
-      px(c, wx - 8, FY - 30, ww + 18, 6, '#c8ac74');    /* the draining board */
-      px(c, wx - 8, FY - 30, ww + 18, 1, '#e4c88c');
-      px(c, wx - 4, FY - 24, ww + 10, 20, '#8a7048');   /* the cupboard under it */
-      px(c, wx - 4, FY - 24, ww + 10, 1, '#a4884c');
-      px(c, wx + 4, FY - 20, 24, 14, 'rgba(70,48,24,.26)');
-      px(c, wx + 32, FY - 20, 24, 14, 'rgba(70,48,24,.26)');
-      px(c, wx + 26, FY - 15, 4, 2, '#e8d49a');
-      px(c, wx + 34, FY - 15, 4, 2, '#e8d49a');
-      px(c, wx + 18, FY - 36, 30, 7, '#b0bcc4');        /* the basin */
-      px(c, wx + 18, FY - 36, 30, 1, '#ccd8de');
-      px(c, wx + 30, FY - 44, 3, 9, '#c8cfd4');         /* the tap */
-      px(c, wx + 30, FY - 45, 8, 3, '#c8cfd4');
-      for (let i = 0; i < 3; i++) {                     /* two cups on the board */
-        px(c, wx - 6 + i * 9, FY - 36, 7, 6, ['#f0e8d4', '#e8dcd0', '#f0e8d4'][i]);
-        px(c, wx - 6 + i * 9, FY - 36, 7, 1, '#fbf7ec');
-      }
+      /* ============================================================
+         AND THE SINK RUN.
+
+         Two rects for a board, two for a cupboard and a grey dash for
+         a tap. FURN 'sinkunit' is a fitted run: a BUTLER sink whose
+         fluted face is the front of the cupboard rather than a bowl
+         standing on the counter, a swan-neck tap with two cross
+         handles behind it, a ribbed draining board running toward the
+         basin, two panelled doors with hinges and knobs, a worktop
+         with a lip on it and a plinth.
+         ============================================================ */
+      FURN.stand(c, 'sinkunit', wx - 12, FY - 46, ww + 26, 44,
+        { mat: 'oak', seed: 9 });
+      /* the washing-up drying on the end of the board */
+      ART.inked(c, wx - 10, FY - 40, 32, 12, (c) => {
+        for (let i = 0; i < 3; i++) {
+          px(c, wx - 6 + i * 9, FY - 36, 7, 6, ['#f0e8d4', '#e8dcd0', '#f0e8d4'][i]);
+          px(c, wx - 6 + i * 9, FY - 36, 7, 1, '#fbf7ec');
+          px(c, wx - 6 + i * 9, FY - 31, 7, 1, 'rgba(60,50,36,.34)');
+        }
       });
       /* and the shaft it throws across the floor, painted, warm */
       for (let i = 0; i < 12; i++) {
@@ -433,34 +436,19 @@ const CUT = (() => {
 
       /* ---- THE STOVE. Cream enamel with a black hob and a brass rail:
              a kitchen range, not the grey monolith this was. ---- */
-      ART.inked(c, STOVE - 9, FY - 58, 62, 57, (c) => {
-      px(c, STOVE - 4, FY - 36, 50, 34, '#4a3c2e');     /* the ink under it */
-      px(c, STOVE - 3, FY - 35, 48, 32, '#dcd0b4');
-      px(c, STOVE - 3, FY - 35, 48, 2, '#f0e6cc');
-      px(c, STOVE + 40, FY - 35, 5, 32, 'rgba(90,70,44,.24)');
-      px(c, STOVE - 4, FY - 39, 50, 4, '#2e2a2c');      /* the hob */
-      px(c, STOVE - 4, FY - 39, 50, 1, '#585458');
-      for (let i = 0; i < 3; i++) {
-        PIX.disc(c, STOVE + 6 + i * 14, FY - 37, 4, '#1e1c1e');
-        PIX.disc(c, STOVE + 6 + i * 14, FY - 37, 3, '#3a3638');
-      }
-      px(c, STOVE - 6, FY - 44, 54, 2, '#c8b06a');      /* the brass rail */
-      px(c, STOVE - 6, FY - 44, 54, 1, '#e8cc84');
-      px(c, STOVE - 6, FY - 44, 2, 6, '#c8b06a');
-      px(c, STOVE + 46, FY - 44, 2, 6, '#c8b06a');
-      /* a checked tea towel over the far end of the rail, because this is
-         somebody's house -- and off the pan, where it read as a flag */
-      for (let i = 0; i < 12; i++) {
-        px(c, STOVE + 34 + i, FY - 42, 1, 11 - Math.abs(6 - i), i % 3 ? '#c8524c' : '#e8e0cc');
-      }
-      px(c, STOVE + 2, FY - 28, 34, 18, '#c4b494');     /* the oven door */
-      px(c, STOVE + 2, FY - 28, 34, 1, '#e0d4b8');
-      px(c, STOVE + 6, FY - 24, 26, 11, '#3a3230');
-      px(c, STOVE + 8, FY - 22, 10, 7, 'rgba(255,170,60,.38)');   /* alight */
-      px(c, STOVE + 10, FY - 21, 6, 4, 'rgba(255,222,128,.46)');
-      px(c, STOVE + 6, FY - 9, 26, 3, '#c8b06a');       /* the handle */
-      px(c, STOVE + 6, FY - 9, 26, 1, '#e8cc84');
+      /* ============================================================
+         AND SO IS THE RANGE.
+
+         Forty rects, in place, for a cream box with three discs on
+         it. FURN 'range2' is a cooker: a brass rail on two brackets
+         with a checked towel over the end of it, a cast hob with
+         three rings and trivets, an eye-level grill, four brass
+         knobs, an oven door with a glass panel and the fire behind
+         it, a bar handle on stand-offs, and a plinth.
+         ============================================================ */
+      FURN.stand(c, 'range2', STOVE - 8, FY - 54, 58, 54, { mat: 'enamel' });
       /* the kettle, going, on the near ring */
+      ART.inked(c, STOVE - 5, FY - 56, 28, 20, (c) => {
       px(c, STOVE - 2, FY - 50, 17, 11, '#4a4448');
       px(c, STOVE - 1, FY - 49, 15, 9, '#8e989e');
       px(c, STOVE - 1, FY - 49, 15, 2, '#bcc4c8');
@@ -494,15 +482,21 @@ const CUT = (() => {
       /* ---- THE LARDER, and the two best things in the room on it ----
              inside ART.inked, so the whole press gets the same one-pixel
              black line the furniture and the cast have. See ART.inked. */
-      ART.inked(c, LARDER - 9, FY - 77, 56, 76, (c) => {
-      px(c, LARDER, FY - 74, 44, 72, '#8e6e44');
-      px(c, LARDER, FY - 74, 44, 3, '#ac8a58');
-      px(c, LARDER + 40, FY - 74, 4, 72, 'rgba(60,40,20,.34)');
-      px(c, LARDER + 3, FY - 70, 34, 30, 'rgba(60,40,20,.22)');
-      px(c, LARDER + 3, FY - 70, 34, 1, 'rgba(255,236,190,.14)');
-      px(c, LARDER + 3, FY - 36, 34, 30, 'rgba(60,40,20,.22)');
-      px(c, LARDER + 34, FY - 52, 3, 6, '#e8d49a');     /* the handles */
-      px(c, LARDER + 34, FY - 30, 3, 6, '#e8d49a');
+      /* ============================================================
+         THE PRESS IS A CATALOGUE PIECE NOW.
+
+         It was twenty rects painted at absolute coordinates in the
+         middle of this function: a slab, two shaded rectangles for
+         doors and two brass dashes for handles. FURN 'larder' is the
+         same press with a cornice, two GLAZED upper doors with three
+         shelves of crockery behind them and glazing bars across, a
+         worktop, a drawer with a bail pull, two panelled doors with a
+         chamfer and a scribe line each, an escutcheon and a plinth --
+         and it is cached, outlined and reusable like everything else
+         in the shop.
+         ============================================================ */
+      FURN.stand(c, 'larder', LARDER - 1, FY - 76, 46, 74, { mat: 'pine', seed: 7 });
+      ART.inked(c, LARDER - 9, FY - 70, 56, 30, (c) => {
       /* THE DRAWING. Four frogs in crayon, holding hands, under a yellow
          sun with a smile on it, held on with a red magnet. This is the
          whole prologue in twelve pixels. */
@@ -752,17 +746,18 @@ const CUT = (() => {
         px(c, x + 6, FY + 3, 6, 4, '#7c5040');
       }
 
-      /* ---- THE HEARTH ---- */
-      px(c, HEARTH - 24, FY - 56, 52, 54, '#8a7c70');
-      px(c, HEARTH - 24, FY - 56, 52, 3, '#a89a8c');
-      px(c, HEARTH - 18, FY - 46, 40, 44, '#2a2220');           /* the opening */
-      px(c, HEARTH - 16, FY - 44, 36, 40, '#1c1614');
-      /* a fire laid but not lit, because it is July and it is morning */
-      for (let i = 0; i < 5; i++) {
-        px(c, HEARTH - 12 + i * 7, FY - 12, 6, 4, '#4a3628');
-        px(c, HEARTH - 10 + i * 5, FY - 16, 5, 3, '#3e2c20');
-      }
-      px(c, HEARTH - 14, FY - 6, 32, 4, '#3a3230');
+      /* ============================================================
+         THE HEARTH, AS A PIECE.
+
+         A grey slab with a black hole in it and five brown dashes for
+         a fire. FURN 'hearth' is a fire surround: a mantel shelf with
+         a moulding under it, a breast with a stipple on it, tiled
+         reveals down both sides of the opening, a fire back, a grate,
+         three logs laid but not lit -- it is July and it is morning --
+         and a hearthstone in front of the lot.
+         ============================================================ */
+      FURN.stand(c, 'hearth', HEARTH - 32, FY - 62, 66, 60,
+        { mat: 'cream', seed: 5 });
       /* the mantel, the clock, the photograph, two candlesticks */
       px(c, HEARTH - 30, FY - 60, 64, 5, '#a98a52');
       px(c, HEARTH - 30, FY - 60, 64, 1, '#c8a468');
@@ -2215,12 +2210,185 @@ const CUT = (() => {
       wire(S);
     };
 
+    /* ============================================================
+       THE PEOPLE GET REWIRED TOO.
+
+       This was run ONCE, in the kitchen beat, on the actor objects
+       that happened to be in the room at the time. Every redress
+       rebuilds the set from home(st), which builds a FRESH actors
+       array -- so the first thing you found threw the boy's label,
+       his hint and his whole conversation away, and after that you
+       could walk up to your own son and nothing happened.
+
+       It lives in wire() with the spots now, so it is re-applied
+       every time the room is repainted.
+       ============================================================ */
+    function wireCast(S) {
+  /* ============================================================
+     THE TWO CONVERSATIONS THIS GAME IS ACTUALLY ABOUT.
+
+     Both of these used to be one line each, fired by the script,
+     with nothing you could say back. They are proper exchanges
+     now -- state-aware, with replies, with faces on them -- and
+     they can be had as many times as you like, because a boy who
+     has one thing to say is a sign, not a son.
+
+     Everything they say knows what you have done: whether the egg
+     is on the plate, whether the reader has turned up, whether
+     you have already told him off for not looking properly. And
+     both of them react -- his face goes happy when you feed him,
+     hers goes tired when you say you will be late, and yours
+     goes warm for about two seconds, which is the only place in
+     this entire game it is allowed to.
+     ============================================================ */
+  const boy = S.actor('boy');
+  if (boy) {
+    boy.label = 'TOBIAS';
+    boy.hint = () => (kitDone() ? 'HE IS READY' : 'TALK');
+    boy.onUse = async () => {
+      const b = S.actor('boy');
+      /* ---- after the book has turned up: he is just a happy kid ---- */
+      if (kitDone()) {
+        if (b) b.mood = 'happy';
+        const r0 = await S.ask('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.',
+          ['WE CAN GO THE WAY WITH THE BRIDGE.', 'WE ARE ALREADY LATE.',
+           'EAT YOUR EGG FIRST.']);
+        if (r0 === 0) {
+          S.face('happy');
+          await S.say('TOBIAS', 'YES! I WANT TO SEE IF THE BOAT IS THERE.',
+            PIX.PAL.O);
+          await S.say('YOU', 'THEN GET YOUR SHOES ON.', PIX.PAL.F);
+          S.face(null);
+        } else if (r0 === 1) {
+          await S.say('TOBIAS', 'WE ARE ALWAYS LATE. IT IS FINE.', PIX.PAL.O);
+          await S.say('CLEO', 'HE IS NOT WRONG.', PIX.PAL.P);
+        } else {
+          await S.say('TOBIAS', 'I HAVE EATEN MOST OF IT.', PIX.PAL.O);
+          await S.say('YOU', 'MOST IS NOT ALL.', PIX.PAL.F);
+        }
+        return;
+      }
+      /* ---- some of it in, some of it not: he counts ---- */
+      if (st.asked) {
+        const n = kitLeft();
+        const HAVE = [['pencils', 'MY PENCIL CASE'], ['crayons', 'MY CRAYONS'],
+          ['bag', 'MY BAG']].filter(k => !st.kit[k[0]]).map(k => k[1]);
+        await S.say('TOBIAS', n === 1
+          ? 'JUST ' + HAVE[0] + ' NOW.'
+          : 'STILL ' + HAVE.join(' AND ') + '.', PIX.PAL.O);
+        if (n === 1) await S.say('YOU', 'THEN WE ARE NEARLY OUT OF THE DOOR.', PIX.PAL.F);
+        return;
+      }
+      /* ---- the first proper conversation in the game ---- */
+      if (!st.asked) {
+        await S.say('TOBIAS', 'I CANNOT FIND MY THINGS FOR SCHOOL.', PIX.PAL.O);
+        await S.say('TOBIAS', 'MY PENCIL CASE AND MY CRAYONS AND MY BAG. '
+          + 'ALL OF THEM.', PIX.PAL.O);
+        const r1 = await S.ask('YOU', 'ALL THREE AT ONCE?',
+          ['THEN WE FIND ALL THREE. WHERE WERE YOU SITTING?',
+           'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.',
+           'TAKE MINE. IT IS A NOTEBOOK AND A PENCIL AND NO CRAYONS.']);
+        if (r1 === 0) {
+          if (b) b.mood = 'happy';
+          await S.say('TOBIAS', 'ON THE SOFA. AND THE FLOOR. AND THE SOFA AGAIN.',
+            PIX.PAL.O);
+          await S.say('YOU', 'THEN WE START AT THE SOFA.', PIX.PAL.F);
+        } else if (r1 === 2) {
+          if (b) b.mood = 'happy';
+          S.face('happy');
+          await S.say('TOBIAS', 'CAN I REALLY?', PIX.PAL.O);
+          await S.say('CLEO', 'HE CANNOT. FIND HIS OWN.', PIX.PAL.P);
+          S.face(null);
+        } else {
+          await S.say('TOBIAS', 'WHAT IS THE DIFFERENCE.', PIX.PAL.O);
+          await S.say('YOU', 'ABOUT THIRTY YEARS AND A BADGE.', PIX.PAL.F);
+        }
+        st.asked = true;
+        return;
+      }
+      /* ---- and afterwards he has more than one thing to say ---- */
+      const lines = st.pan
+        ? ['THE WHITE IS THE BEST BIT.', 'IS THERE MORE.',
+           'CAN I HAVE THE CRUSTS.']
+        : ['I AM HUNGRY.', 'MUM SAYS YOU BURN THEM.',
+           'ARE YOU MAKING EGGS OR NOT.'];
+      await S.say('TOBIAS', lines[(st._bt = (st._bt || 0) + 1) % lines.length],
+        PIX.PAL.O);
+    };
+  }
+
+  /* ---- AND CLEO, who had no interaction at all ---- */
+  const wife = S.actor('wife');
+  if (wife) {
+    wife.label = 'CLEO';
+    wife.hint = 'TALK';
+    wife.onUse = async () => {
+      const wf = S.actor('wife');
+      if (!st.pan) {
+        const r = await S.ask('CLEO', 'HE HAS TO BE OUT OF THAT DOOR IN TEN '
+          + 'MINUTES AND HE HAS NOT EATEN.',
+          ['I AM DOING THE EGGS NOW.', 'HE CAN HAVE BREAD.',
+           'HE COULD BE LATE ONCE.']);
+        if (r === 0) {
+          if (wf) wf.mood = 'pleased';
+          await S.say('CLEO', 'THANK YOU. TWO. THE PAN IS ALREADY ON.',
+            PIX.PAL.P);
+        } else if (r === 1) {
+          if (wf) wf.mood = 'hard';
+          await S.say('CLEO', 'HE HAD BREAD YESTERDAY.', PIX.PAL.P);
+          await S.say('YOU', 'ALL RIGHT. EGGS.', PIX.PAL.F);
+        } else {
+          if (wf) wf.mood = 'hard';
+          await S.say('CLEO', 'HE COULD. YOU COULD ALSO COOK HIM AN EGG.',
+            PIX.PAL.P);
+        }
+        return;
+      }
+      if (!kitDone()) {
+        const r = await S.ask('CLEO', 'HE HAS LOST HALF HIS SCHOOL BAG AGAIN.',
+          ['I WILL FIND IT.', 'HE SHOULD LOOK PROPERLY.',
+           'WHERE WAS HE SITTING LAST NIGHT.']);
+        if (r === 2) {
+          await S.say('CLEO', 'ON THE SOFA. WITH HIS FEET UP, AS USUAL. '
+            + 'AND HIS CRAYONS WENT ON THE MANTEL.', PIX.PAL.P);
+          await S.say('YOU', 'THAT IS TWO STATEMENTS AND TWO LOCATIONS.', PIX.PAL.F);
+        } else if (r === 0) {
+          if (wf) wf.mood = 'pleased';
+          await S.say('CLEO', 'YOU ALWAYS DO. IT IS VERY IRRITATING.',
+            PIX.PAL.P);
+        } else {
+          await S.say('CLEO', 'HE IS EIGHT.', PIX.PAL.P);
+        }
+        return;
+      }
+      const r = await S.ask('CLEO', 'GO ON, THEN. BEFORE THE BOTH OF YOU '
+        + 'TALK YOURSELVES INTO ANOTHER HOUR.',
+        ['I WILL BE BACK BY SIX.', 'IT MIGHT BE LATE.',
+         'COME WITH US.']);
+      if (r === 0) {
+        if (wf) wf.mood = 'happy';
+        S.face('happy');
+        await S.say('CLEO', 'SIX. I WILL HOLD YOU TO IT.', PIX.PAL.P);
+        S.face(null);
+      } else if (r === 1) {
+        if (wf) wf.mood = 'sad';
+        await S.say('CLEO', 'IT IS ALWAYS MIGHT.', PIX.PAL.P);
+        await S.say('YOU', 'IT IS ALWAYS THE JOB.', PIX.PAL.F);
+      } else {
+        await S.say('CLEO', 'AND WHO WOULD BE HERE WHEN YOU BOTH GET BACK.',
+          PIX.PAL.P);
+      }
+    };
+  }
+    }
+
     /* every spot in the house answers, and what it answers changes */
     let wired = null;
     function wire(S) {
       wired = S;
       const d = SCENE.def;
       if (!d) return;
+      wireCast(S);                    /* the boy and his mother, every time */
       d.spots.forEach(sp => {
         if (sp.id === 'stove') {
           sp.look = 'TWO RINGS, A KETTLE AND NO TIME.';
@@ -2326,162 +2494,8 @@ const CUT = (() => {
 
       /* --- TEACH: TALK. The boy is a thing with a bracket round him too. */
       await S.pan(SCENE.def ? M.STOVE : M.STOVE, M.TABLE - 10, 1800);
-      /* ============================================================
-         THE TWO CONVERSATIONS THIS GAME IS ACTUALLY ABOUT.
-
-         Both of these used to be one line each, fired by the script,
-         with nothing you could say back. They are proper exchanges
-         now -- state-aware, with replies, with faces on them -- and
-         they can be had as many times as you like, because a boy who
-         has one thing to say is a sign, not a son.
-
-         Everything they say knows what you have done: whether the egg
-         is on the plate, whether the reader has turned up, whether
-         you have already told him off for not looking properly. And
-         both of them react -- his face goes happy when you feed him,
-         hers goes tired when you say you will be late, and yours
-         goes warm for about two seconds, which is the only place in
-         this entire game it is allowed to.
-         ============================================================ */
-      const boy = S.actor('boy');
-      if (boy) {
-        boy.label = 'TOBIAS';
-        boy.hint = () => (kitDone() ? 'HE IS READY' : 'TALK');
-        boy.onUse = async () => {
-          const b = S.actor('boy');
-          /* ---- after the book has turned up: he is just a happy kid ---- */
-          if (kitDone()) {
-            if (b) b.mood = 'happy';
-            const r0 = await S.ask('TOBIAS', 'CAN WE GO THE WAY WITH THE BRIDGE.',
-              ['WE CAN GO THE WAY WITH THE BRIDGE.', 'WE ARE ALREADY LATE.',
-               'EAT YOUR EGG FIRST.']);
-            if (r0 === 0) {
-              S.face('happy');
-              await S.say('TOBIAS', 'YES! I WANT TO SEE IF THE BOAT IS THERE.',
-                PIX.PAL.O);
-              await S.say('YOU', 'THEN GET YOUR SHOES ON.', PIX.PAL.F);
-              S.face(null);
-            } else if (r0 === 1) {
-              await S.say('TOBIAS', 'WE ARE ALWAYS LATE. IT IS FINE.', PIX.PAL.O);
-              await S.say('CLEO', 'HE IS NOT WRONG.', PIX.PAL.P);
-            } else {
-              await S.say('TOBIAS', 'I HAVE EATEN MOST OF IT.', PIX.PAL.O);
-              await S.say('YOU', 'MOST IS NOT ALL.', PIX.PAL.F);
-            }
-            return;
-          }
-          /* ---- some of it in, some of it not: he counts ---- */
-          if (st.asked) {
-            const n = kitLeft();
-            const HAVE = [['pencils', 'MY PENCIL CASE'], ['crayons', 'MY CRAYONS'],
-              ['bag', 'MY BAG']].filter(k => !st.kit[k[0]]).map(k => k[1]);
-            await S.say('TOBIAS', n === 1
-              ? 'JUST ' + HAVE[0] + ' NOW.'
-              : 'STILL ' + HAVE.join(' AND ') + '.', PIX.PAL.O);
-            if (n === 1) await S.say('YOU', 'THEN WE ARE NEARLY OUT OF THE DOOR.', PIX.PAL.F);
-            return;
-          }
-          /* ---- the first proper conversation in the game ---- */
-          if (!st.asked) {
-            await S.say('TOBIAS', 'I CANNOT FIND MY THINGS FOR SCHOOL.', PIX.PAL.O);
-            await S.say('TOBIAS', 'MY PENCIL CASE AND MY CRAYONS AND MY BAG. '
-              + 'ALL OF THEM.', PIX.PAL.O);
-            const r1 = await S.ask('YOU', 'ALL THREE AT ONCE?',
-              ['THEN WE FIND ALL THREE. WHERE WERE YOU SITTING?',
-               'YOU HAVE LOOKED. YOU HAVE NOT SEARCHED.',
-               'TAKE MINE. IT IS A NOTEBOOK AND A PENCIL AND NO CRAYONS.']);
-            if (r1 === 0) {
-              if (b) b.mood = 'happy';
-              await S.say('TOBIAS', 'ON THE SOFA. AND THE FLOOR. AND THE SOFA AGAIN.',
-                PIX.PAL.O);
-              await S.say('YOU', 'THEN WE START AT THE SOFA.', PIX.PAL.F);
-            } else if (r1 === 2) {
-              if (b) b.mood = 'happy';
-              S.face('happy');
-              await S.say('TOBIAS', 'CAN I REALLY?', PIX.PAL.O);
-              await S.say('CLEO', 'HE CANNOT. FIND HIS OWN.', PIX.PAL.P);
-              S.face(null);
-            } else {
-              await S.say('TOBIAS', 'WHAT IS THE DIFFERENCE.', PIX.PAL.O);
-              await S.say('YOU', 'ABOUT THIRTY YEARS AND A BADGE.', PIX.PAL.F);
-            }
-            st.asked = true;
-            return;
-          }
-          /* ---- and afterwards he has more than one thing to say ---- */
-          const lines = st.pan
-            ? ['THE WHITE IS THE BEST BIT.', 'IS THERE MORE.',
-               'CAN I HAVE THE CRUSTS.']
-            : ['I AM HUNGRY.', 'MUM SAYS YOU BURN THEM.',
-               'ARE YOU MAKING EGGS OR NOT.'];
-          await S.say('TOBIAS', lines[(st._bt = (st._bt || 0) + 1) % lines.length],
-            PIX.PAL.O);
-        };
-      }
-
-      /* ---- AND CLEO, who had no interaction at all ---- */
-      const wife = S.actor('wife');
-      if (wife) {
-        wife.label = 'CLEO';
-        wife.hint = 'TALK';
-        wife.onUse = async () => {
-          const wf = S.actor('wife');
-          if (!st.pan) {
-            const r = await S.ask('CLEO', 'HE HAS TO BE OUT OF THAT DOOR IN TEN '
-              + 'MINUTES AND HE HAS NOT EATEN.',
-              ['I AM DOING THE EGGS NOW.', 'HE CAN HAVE BREAD.',
-               'HE COULD BE LATE ONCE.']);
-            if (r === 0) {
-              if (wf) wf.mood = 'pleased';
-              await S.say('CLEO', 'THANK YOU. TWO. THE PAN IS ALREADY ON.',
-                PIX.PAL.P);
-            } else if (r === 1) {
-              if (wf) wf.mood = 'hard';
-              await S.say('CLEO', 'HE HAD BREAD YESTERDAY.', PIX.PAL.P);
-              await S.say('YOU', 'ALL RIGHT. EGGS.', PIX.PAL.F);
-            } else {
-              if (wf) wf.mood = 'hard';
-              await S.say('CLEO', 'HE COULD. YOU COULD ALSO COOK HIM AN EGG.',
-                PIX.PAL.P);
-            }
-            return;
-          }
-          if (!kitDone()) {
-            const r = await S.ask('CLEO', 'HE HAS LOST HALF HIS SCHOOL BAG AGAIN.',
-              ['I WILL FIND IT.', 'HE SHOULD LOOK PROPERLY.',
-               'WHERE WAS HE SITTING LAST NIGHT.']);
-            if (r === 2) {
-              await S.say('CLEO', 'ON THE SOFA. WITH HIS FEET UP, AS USUAL. '
-                + 'AND HIS CRAYONS WENT ON THE MANTEL.', PIX.PAL.P);
-              await S.say('YOU', 'THAT IS TWO STATEMENTS AND TWO LOCATIONS.', PIX.PAL.F);
-            } else if (r === 0) {
-              if (wf) wf.mood = 'pleased';
-              await S.say('CLEO', 'YOU ALWAYS DO. IT IS VERY IRRITATING.',
-                PIX.PAL.P);
-            } else {
-              await S.say('CLEO', 'HE IS EIGHT.', PIX.PAL.P);
-            }
-            return;
-          }
-          const r = await S.ask('CLEO', 'GO ON, THEN. BEFORE THE BOTH OF YOU '
-            + 'TALK YOURSELVES INTO ANOTHER HOUR.',
-            ['I WILL BE BACK BY SIX.', 'IT MIGHT BE LATE.',
-             'COME WITH US.']);
-          if (r === 0) {
-            if (wf) wf.mood = 'happy';
-            S.face('happy');
-            await S.say('CLEO', 'SIX. I WILL HOLD YOU TO IT.', PIX.PAL.P);
-            S.face(null);
-          } else if (r === 1) {
-            if (wf) wf.mood = 'sad';
-            await S.say('CLEO', 'IT IS ALWAYS MIGHT.', PIX.PAL.P);
-            await S.say('YOU', 'IT IS ALWAYS THE JOB.', PIX.PAL.F);
-          } else {
-            await S.say('CLEO', 'AND WHO WOULD BE HERE WHEN YOU BOTH GET BACK.',
-              PIX.PAL.P);
-          }
-        };
-      }
+      /* the cast is already wired -- wire() does it, and does it again on
+         every redress, which is the whole point of moving it in there */
       SCENE.busy(false);
       if (typeof UI !== 'undefined' && UI.stampSmall) {
         UI.stampSmall('WALK UP TO SOMEBODY AND TAP THEM');

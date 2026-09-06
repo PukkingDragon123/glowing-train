@@ -3530,3 +3530,23 @@ body.talking #kit-list { opacity: 0; transform: translateX(10px); }
 }
 #got-item.in canvas { transform: none; }
 #got-item.out canvas { transform: scale(1.03); }
+
+/* ============================================================
+   INSIDE THE LETTERBOX.
+
+   #cine-bars is z-index 148 and each bar is 13% of the height;
+   the corner UI is 70 and the errand checklist is 60, so every
+   letterboxed beat painted black straight over both of them.
+   CINE.letterbox() puts .boxed on the body and the corners move
+   in by a bar and a pixel, which is where they belonged anyway --
+   a letterbox is a frame, and the furniture sits inside it.
+   ============================================================ */
+body.boxed .corner-ui {
+  padding-top: calc(10px + var(--sa-t) + 14vh);
+  padding-bottom: calc(10px + var(--sa-b) + 14vh);
+}
+body.boxed #kit-list { top: calc(14px + 14vh); }
+body.boxed #stamp-small, body.boxed .toast-stack { bottom: calc(64px + 14vh); }
+.corner-ui, #kit-list, #stamp-small, .toast-stack {
+  transition: padding .28s ease, top .28s ease, bottom .28s ease;
+}
