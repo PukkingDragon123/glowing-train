@@ -4609,8 +4609,15 @@ SPR.speech = function (o) {
   const W = gutter + tw + pad * 2 + 4;
   const H = Math.max(ph, th) + pad * 2 + 8;
 
-  /* the blow-up factor is chosen from the room the plate has, not guessed */
-  const K = U.clamp(Math.floor((o.maxW || 1200) / W), 2, 6);
+  /* THE BLOW-UP. Chosen from the room the plate has, unless the caller
+     pins it: the dialogue plate wants small type at a fixed size rather
+     than type that grows with the monitor, because a plate that fills a
+     desktop screen is a banner and not a page. */
+  /* A PINNED BLOW-UP STILL HAS TO FIT: on a narrow phone maxW wins, so
+     a pinned two drops to one rather than running off the edge. */
+  const K = o.k
+    ? Math.max(1, Math.min(o.k, Math.floor((o.maxW || 1e9) / W) || 1))
+    : U.clamp(Math.floor((o.maxW || 1200) / W), 2, 6);
 
   const cv = document.createElement('canvas');
   cv.width = W * K; cv.height = H * K;

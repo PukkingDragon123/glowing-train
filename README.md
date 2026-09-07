@@ -1226,6 +1226,72 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## The lens is gone, and the plate is a note in the corner
+
+### What was that circle
+
+Looking at anything stopped the game and handed you a brass magnifier: a
+96-pixel lens with the room clipped inside it, the title over it, the reading
+under it, and `TAP TO PUT IT AWAY` along the bottom.
+
+Three things wrong with that. It covered the room you were looking at, so you
+could not see the thing the reading was about. It was a full-screen modal for
+one sentence — on the commonest action in the game, twenty-five props a night,
+every one of them a card you had to dismiss. And it read as a menu rather than
+as somebody looking at something.
+
+What the glass actually produces is a **sentence**. It goes on the plate the
+rest of the game talks on. `CINE.glass` is gone, and so is `SCENE.magnify` —
+the crop that existed only to fill the lens — and the CSS that dressed it.
+Where the glass has several things to say it says them one after another,
+because that is how somebody talks.
+
+The lens always had *something* to show even when it had nothing to say: the
+room, five times nearer, with just a title over it. A plate with no line on it
+is nothing at all, so anything that is neither a prop nor a piece of wall gets
+a sentence of its own rather than the glass appearing to do nothing.
+
+### A note, not a banner
+
+The plate everybody talks on was drawn at one pixel per pixel and then blown
+up by whatever fitted the window — three on a desktop — and sized off the
+window as well. Measured on a 1280-wide screen:
+
+| | before | after |
+| --- | --- | --- |
+| a line you answer | 789 × 219 — **62% × 27%** | 454 × 170 — **35% × 21%** |
+| a line nobody waits on | 526 × 140 — 41% × 18% | 406 × 144 — **32% × 18%** |
+| where | centred | **bottom left, 14px in** |
+| blow-up | 3 | **2** |
+
+![Small, left, over the room it is spoken in](docs/screen-plate.png)
+
+Two on the blow-up, twenty-six characters to a line instead of thirty-four,
+and both **pinned** rather than scaled off the monitor — a plate that grows
+with the screen is a banner, and a page out of a case file is about the width
+of a page. `SPR.speech` takes a `k` now; `maxW` is demoted to what it should
+always have been, the overflow guard, so a pinned two drops to one on a phone
+too narrow for it rather than running off the edge.
+
+Getting that wrong once was instructive: setting `maxW` to a page's worth as
+well as pinning `k` made the two fight, the guard won, and the plate came out
+at a blow-up of one — 227 × 85, eighteen per cent of the screen, in type
+nobody could read. The numbers in the table are why the probe exists.
+
+### Left, not right
+
+The right-hand stack is the clock, the money, the file and the slips, and
+those are numbers you read *while* somebody talks. The left column is the
+objective card and the belt, and both of those step aside for a conversation
+anyway.
+
+Except that a line **nobody is waiting on** does not hush the HUD — that is
+the whole point of it — and the plate now lands exactly where the objective
+card and the belt live. So there are two levels of getting out of the way:
+`body.talking` fades the whole HUD for a line you have to answer, and
+`body.mumbling` fades only the left column for a line you do not. The clock
+and the money stay up either way.
+
 ## Nothing here is compulsory
 
 Almost every cutscene in this game was already skippable and not one of them

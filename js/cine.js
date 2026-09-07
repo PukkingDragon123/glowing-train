@@ -1729,72 +1729,24 @@ const CINE = {
      detail in the art is really there, and this is how you look
      at it.
      ============================================================ */
-  async glass(o) {
-    const root = CINE.pickRoot();
-    root.className = 'anim-cut';
-    root.innerHTML = '';
-    const P = PIX.PAL;
-    const src = o.cv;
-    const R = 96;                                  // the lens, in its own pixels
-    const W = R * 2 + 24, H = R * 2 + 24;
-    const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.8 / W,
-      window.innerHeight * 0.62 / H)), 1, 4);
-    const wrap = U.el('div', 'glass-card');
-    const cv = document.createElement('canvas');
-    cv.width = W * K; cv.height = H * K;
-    cv.className = 'pix glass-cv';
-    wrap.appendChild(cv);
-    const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.scale(K, K);
-    const cx = W / 2, cy = H / 2;
+  /* ============================================================
+     THE GLASS IS NOT A CIRCLE ANY MORE.
 
-    /* the brass, then the glass, then the room inside it */
-    PIX.disc(c, cx, cy, R + 10, P.K);
-    PIX.disc(c, cx, cy, R + 8, '#a5741f');
-    PIX.disc(c, cx, cy, R + 5, '#e0a63c');
-    PIX.disc(c, cx, cy, R + 2, '#6e4c12');
-    PIX.disc(c, cx, cy, R, P.K);
-    c.save();
-    c.beginPath();
-    c.arc(cx, cy, R - 1, 0, Math.PI * 2);
-    c.clip();
-    if (src) {
-      c.drawImage(src, 0, 0, src.width, src.height, cx - R, cy - R, R * 2, R * 2);
-    } else {
-      ART.px(c, cx - R, cy - R, R * 2, R * 2, '#141a1e');
-    }
-    /* the glass itself: a cold cast and a highlight across the top left */
-    ART.px(c, cx - R, cy - R, R * 2, R * 2, 'rgba(127,215,255,.07)');
-    for (let i = 0; i < 26; i++) {
-      ART.px(c, cx - R + i, cy - R + i, 40 - i, 2, 'rgba(255,255,255,.05)');
-    }
-    c.restore();
-    /* and a hair of dust on the lens, because it lives in a coat pocket */
-    for (let i = 0; i < 18; i++) {
-      const a = (i * 2.399), rr = R * 0.9 * Math.sqrt((i + 1) / 19);
-      ART.px(c, Math.round(cx + Math.cos(a) * rr), Math.round(cy + Math.sin(a) * rr),
-        1, 1, 'rgba(255,255,255,.08)');
-    }
+     Looking at something used to stop the game and hand you a
+     brass magnifier: a 96-pixel lens with the room clipped into
+     it, the title over it, the reading under it, and TAP TO PUT IT
+     AWAY along the bottom. Three problems with that. It covered
+     the room you were looking at, so you could not see the thing
+     the reading was about. It was a full-screen modal for one
+     sentence -- the most common action in the game, twenty-five
+     times a night, and every one of them a card you had to
+     dismiss. And it read as a menu rather than as somebody looking
+     at something.
 
-    const head = U.el('div', 'glass-head');
-    head.appendChild(UI.txt(o.title || 'A CLOSER LOOK', { scale: 3, color: PIX.PAL.G }));
-    (o.lines || []).forEach(l => {
-      head.appendChild(UI.wrap(l, 34, { scale: 2, color: PIX.PAL.W }));
-    });
-    head.appendChild(UI.txt('TAP TO PUT IT AWAY', { scale: 1, color: PIX.PAL.q }));
-    wrap.appendChild(head);
-    root.appendChild(wrap);
-    requestAnimationFrame(() => wrap.classList.add('in'));
-    SFX.tick && SFX.tick();
-
-    /* THIS ONE HAD NO TIMEOUT AT ALL: it waited for a tap for ever and
-       never said so, which on a phone that missed the tap is a game that
-       has stopped. A minute is not a wait, it is a backstop. */
-    await CINE.beat(60000, 260);
-    CINE.disarm();
-    root.innerHTML = ''; root.className = 'hidden';
-  },
+     What the glass actually produces is a SENTENCE. It goes on the
+     plate the rest of the game talks on, in the corner, over the
+     live room. See STORY.lookClose and CUT's S.glass.
+     ============================================================ */
 
   /* you said a name out loud */
   /* ============================================================

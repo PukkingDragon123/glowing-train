@@ -173,15 +173,17 @@ const CUT = (() => {
     /* the hour and the weather belong to the scene, not to the shift clock */
     hour(m) { if (typeof DAY !== 'undefined') DAY.pin(m); },
     weather(id) { if (typeof G !== 'undefined') G.weather = id; },
-    /* THE ZOOM RIGHT IN. Not a camera move -- the game's own eyeglass: the
-       room five times closer in a round window with the lines under it.
-       That is what a close-up is in this game, and it is the same
-       instrument the player will use on every clue for the next six
-       years, which is exactly why the story turns on it. */
+    /* THE CLOSE-UP. It used to be the room five times nearer inside a
+       brass lens; the lens is gone (see js/cine.js) and what is left is
+       the thing the lens was for -- somebody looking at something and
+       saying what he sees, on the same plate every other line in the
+       game arrives on. */
     async glass(x, y, title, lines) {
       gate();
-      const cv = SCENE.magnify(x, y, 20, 5);
-      await CINE.glass({ cv, title: title, lines: lines });
+      for (const l of (lines || [])) {
+        await TUTOR.say(l, { name: title, nameCol: PIX.PAL.L, rim: PIX.PAL.l });
+        gate();
+      }
       gate();
     },
     shake() { if (typeof UI !== 'undefined' && UI.shake) UI.shake(); },

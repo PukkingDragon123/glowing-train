@@ -247,18 +247,34 @@ const TUTOR = {
   },
 
   plate(o) {
-    const per = o.big ? 30 : (o.asking ? 30 : 34);
+    /* CHARACTERS TO A LINE is what actually sets the width -- the plate is
+       as wide as its widest line plus the mugshot. Thirty-four was a page
+       of a paperback across the middle of the screen. */
+    const per = o.big ? 30 : (o.asking ? 26 : (o.small ? 24 : 26));
+    /* ============================================================
+       A NOTE, NOT A BANNER.
+
+       The plate that everybody in this game talks on was drawn at
+       one pixel per pixel and then blown up by whatever fitted the
+       window -- three on a desktop -- and sized off the window as
+       well. On a 1280-wide screen that came to 789 by 219: sixty-two
+       per cent of the width and twenty-seven of the height, in the
+       middle of the frame, over the room and the person speaking.
+
+       Two on the blow-up and a page's worth of width instead, pinned
+       rather than scaled off the monitor, and it sits in the corner
+       (see #tutor-root in style.css). Small type, read close.
+       ============================================================ */
+    const K = o.big ? 3 : 2;
     return SPR.speech({
-      /* A line nobody is waiting on gets a smaller plate: at full size the
-         portrait alone covered the board it was talking about. A line you
-         have to answer gets a middling one, so the replies under it are
-         not a mile wide. */
-      /* A SHEET OF PAPER, NOT A BANNER. Eleven hundred and eighty pixels
-         of plate across the bottom of the screen read as a strip; a page
-         out of a case file is about the width of a page. */
-      maxW: o.small ? Math.min(window.innerWidth - 40, 520)
-        : o.asking ? Math.min(window.innerWidth - 40, 780)
-          : Math.min(window.innerWidth - 28, 860),
+      k: K,
+      /* WIDTH COMES FROM `per` NOW, not from here. With the blow-up pinned
+         this is only the overflow guard: whatever the frame can actually
+         hold, so a pinned two drops to one on a phone too narrow for it
+         rather than running off the edge. Setting it to a page's worth
+         instead clamped the desktop plate down to a blow-up of one and
+         gave eighteen per cent of the screen in unreadable type. */
+      maxW: window.innerWidth - 24,
       portrait: o.art,
       name: o.name,
       nameCol: o.nameCol,
@@ -280,6 +296,11 @@ const TUTOR = {
     if (document.body) document.body.classList.toggle('talking', !!on);
   },
 
+  /* the left column only: what he is saying sits on top of it */
+  mumble(on) {
+    if (document.body) document.body.classList.toggle('mumbling', !!on);
+  },
+
   /* one line, with his face on it. Resolves when it is dismissed. */
   say(line, opts) {
     opts = opts || {};
@@ -291,6 +312,17 @@ const TUTOR = {
          push the corners out of the way either */
       const hushed = !opts.hold;
       if (hushed) TUTOR.hush(true);
+      /* ============================================================
+         A MUTTERED LINE LANDS ON THE OBJECTIVE CARD.
+
+         The plate lives in the bottom-left corner now, which is where
+         the objective card and the tool belt already are. A line you
+         have to answer hushes the whole HUD out of the way. A line
+         nobody is waiting on must not -- the clock, the money and the
+         slips are half the point of it -- so it fades only the left
+         column and leaves the right stack alone.
+         ============================================================ */
+      else TUTOR.mumble(true);
       root.innerHTML = '';
       const holder = U.el('div', 'tut-plate');
       /* A LOCK HAS NO FACE. speakerArt returns null for the things that
@@ -352,7 +384,7 @@ const TUTOR = {
         setTimeout(() => {
           if (root.firstChild === holder) {
             root.innerHTML = ''; root.className = 'hidden';
-            if (hushed) TUTOR.hush(false);
+            if (hushed) TUTOR.hush(false); else TUTOR.mumble(false);
           }
           res();
         }, 180);
@@ -511,6 +543,7 @@ const TUTOR = {
     const r = document.getElementById('tutor-root');
     if (r) { r.innerHTML = ''; r.className = 'hidden'; }
     TUTOR.hush(false);
+    TUTOR.mumble(false);
     TUTOR.typing = false;
     TUTOR.cur = null;
   },

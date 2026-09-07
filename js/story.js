@@ -1489,7 +1489,6 @@ const STORY = {
     const wy = hit
       ? (hit.top === undefined ? SCENE.H - 40 : (hit.top + (hit.bot === undefined ? SCENE.H - 20 : hit.bot)) / 2)
       : y;
-    const cv = SCENE.magnify(wx, wy, 22, 5);
     const label = hit ? (typeof hit.label === 'function' ? hit.label() : hit.label) : null;
     const lines = [];
     const place = G.place;
@@ -1549,7 +1548,27 @@ const STORY = {
         'DUST, IN LAYERS. NOBODY HAS CLEANED IN HERE SINCE THE WAR.',
       ]));
     }
-    await CINE.glass({ cv, title: label || 'THROUGH THE GLASS', lines });
+    /* ============================================================
+       WHAT THE GLASS SAYS, SAID.
+
+       This used to be a brass lens over the middle of the screen
+       with the reading under it and a tap to put it away -- a modal
+       for one sentence, on the commonest action in the game, and it
+       covered the very thing it was telling you about. It is a line
+       of dialogue now, on the plate in the corner, over the room you
+       are still looking at. Several lines go one after another,
+       because that is how somebody talks.
+       ============================================================ */
+    const who = label || 'THROUGH THE GLASS';
+    /* THE LENS ALWAYS HAD SOMETHING TO SHOW even when it had nothing to
+       say -- the room, five times nearer, with just the title over it. A
+       plate with no line on it is nothing at all, so anything that is
+       neither a prop nor a piece of wall gets a sentence of its own
+       rather than the glass appearing to do nothing. */
+    if (!lines.length) lines.push('NOTHING THE NAKED EYE MISSED.');
+    for (const l of lines) {
+      await TUTOR.say(l, { name: who, nameCol: PIX.PAL.L, rim: PIX.PAL.l });
+    }
     if (UI.syncStory) UI.syncStory();
     if (CITY.nightOver()) await STORY.dawn();
   },

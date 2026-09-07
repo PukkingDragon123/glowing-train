@@ -2115,18 +2115,34 @@ body.heard #siren-wash { opacity: 1; }
    the three things that will keep you alive. Once each.
    ============================================================ */
 
+/* ============================================================
+   IN THE CORNER, NOT ACROSS THE MIDDLE.
+
+   The plate used to sit centred at the bottom of the frame, and
+   it was measured at 789 by 219 on a 1280-wide screen: sixty-two
+   per cent of the width, over the room and usually over the frog
+   doing the talking. It goes bottom LEFT now and it is drawn
+   small (see TUTOR.plate), so the room it is spoken in stays on
+   screen behind it.
+
+   Left, not right: the right-hand stack is the clock, the money,
+   the file and the slips, and those are numbers you read WHILE
+   somebody talks. The left column is the objective card and the
+   belt, and both of those step aside for a conversation anyway.
+   ============================================================ */
 #tutor-root {
   position: fixed; inset: 0; z-index: 158;
-  display: flex; align-items: flex-end; justify-content: center;
-  padding: 0 12px 78px;
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  padding: 0 12px 18px 14px;
   pointer-events: auto;
 }
 #tutor-root.hidden { display: none; }
-#tutor-root.big { align-items: center; padding-bottom: 0; }
+/* a full-frame beat is still a full-frame beat */
+#tutor-root.big { align-items: center; justify-content: center; padding-bottom: 0; }
 /* a conversation stacks: what he said, then what you can say back */
 #tutor-root.asking {
-  flex-direction: column; align-items: center; justify-content: flex-end;
-  padding: 0 12px 24px; gap: 0;
+  flex-direction: column; align-items: flex-start; justify-content: flex-end;
+  padding: 0 12px 18px 14px; gap: 0;
 }
 /* A line he is not waiting on must not eat your clicks — and it must not
    sit over the table either. It used to cover him, his hand and the iron
@@ -2134,8 +2150,20 @@ body.heard #siren-wash { opacity: 1; }
 #tutor-root.pass {
   pointer-events: none;
   align-items: flex-end;
-  padding: 0 12px 96px;
+  padding: 0 12px 18px 14px;
 }
+
+/* ============================================================
+   AND THE LEFT COLUMN STEPS ASIDE FOR A MUTTERED LINE.
+
+   body.talking fades the whole HUD for a conversation you have to
+   answer. A line nobody is waiting on is not a conversation and
+   must not take the clock and the money off screen with it — but
+   it now lands exactly where the objective card and the belt are,
+   so that column alone goes quiet. See TUTOR.mumble.
+   ============================================================ */
+body.mumbling .corner-left { opacity: 0; pointer-events: none; }
+.corner-left { transition: opacity .18s ease; }
 
 /* The plate itself is one drawn canvas — this only places it and slides it
    in. No box, no gradient, no radius: those were the last things in the
@@ -3102,27 +3130,29 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
 }
 
 /* ============================================================
-   36. THE PICK-UP AND THE EYEGLASS
-   Two full-frame beats: your hand coming out of a drain with
-   something in it, and the room blown up inside a brass rim.
+   36. THE PICK-UP
+   One full-frame beat: your hand coming out of a drain with
+   something in it. The eyeglass used to live here too -- the room
+   blown up inside a brass rim, with TAP TO PUT IT AWAY under it --
+   and it is a line of dialogue now, so the rim and everything that
+   dressed it are gone with it.
    ============================================================ */
-.pick-card, .glass-card {
+.pick-card {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   opacity: 0; transform: scale(.96) translateY(10px);
   transition: opacity .2s, transform .24s cubic-bezier(.2,1.5,.4,1);
 }
-.pick-card.in, .glass-card.in { opacity: 1; transform: none; }
-.pick-cv, .glass-cv {
+.pick-card.in { opacity: 1; transform: none; }
+.pick-cv {
   image-rendering: pixelated; display: block;
   border: var(--bd-thick) solid #0a0d11;
   box-shadow: 0 8px 0 rgba(0,0,0,.55);
 }
-.glass-cv { border: 0; box-shadow: none; }
-.pick-head, .glass-head {
+.pick-head {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
   text-align: center; max-width: min(92vw, 720px);
 }
-.pick-head canvas, .glass-head canvas { display: block; }
+.pick-head canvas { display: block; }
 
 /* ============================================================
    37. THE PHONE, AS A PHONE

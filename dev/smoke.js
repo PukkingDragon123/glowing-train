@@ -602,12 +602,30 @@ fs.mkdirSync(SHOTS, { recursive: true });
         return sp.id;
       });
       if (prop) {
-        await page.waitForSelector('.glass-card', { timeout: 8000 })
-          .catch(() => errors.push('[glass] the eyeglass never opened'));
-        await page.waitForTimeout(400);
-        await shot('12f-glass');
-        await page.mouse.click(640, 740);
+        /* THE GLASS IS NOT A CARD ANY MORE. It used to open a brass lens
+           over the middle of the screen with TAP TO PUT IT AWAY under it;
+           what it produces is a line of dialogue on the plate in the
+           corner, so that is what this waits for. */
+        await page.waitForSelector('.tut-plate', { timeout: 8000 })
+          .catch(() => errors.push('[glass] the reading never reached the plate'));
         await page.waitForTimeout(500);
+        await shot('12f-glass');
+        /* and the plate must be the small one in the corner, not a banner
+           across the middle: the whole point of moving it */
+        const where = await page.evaluate(() => {
+          const c = document.querySelector('.tut-plate canvas');
+          if (!c) return null;
+          const q = c.getBoundingClientRect();
+          return { left: Math.round(q.left), pctW: Math.round(q.width / window.innerWidth * 100) };
+        });
+        if (where && where.left > 60) errors.push('[glass] the plate is not in the left corner');
+        if (where && where.pctW > 45) errors.push('[glass] the plate is ' + where.pctW + '% of the screen');
+        /* tap it through -- there may be more than one line to say */
+        for (let i = 0; i < 4; i++) {
+          if (!await page.$('.tut-plate')) break;
+          await page.evaluate(() => TUTOR.hide());
+          await page.waitForTimeout(260);
+        }
         const after = await page.evaluate(() => CITY.minutesLeft());
         if (after >= before) errors.push('[glass] looking cost nothing');
       }
@@ -619,11 +637,14 @@ fs.mkdirSync(SHOTS, { recursive: true });
         return e.id;
       });
       if (egg) {
-        await page.waitForSelector('.glass-card', { timeout: 8000 }).catch(() => {});
-        await page.waitForTimeout(400);
-        await shot('12g-egg');
-        await page.mouse.click(640, 740);
+        await page.waitForSelector('.tut-plate', { timeout: 8000 }).catch(() => {});
         await page.waitForTimeout(500);
+        await shot('12g-egg');
+        for (let i = 0; i < 4; i++) {
+          if (!await page.$('.tut-plate')) break;
+          await page.evaluate(() => TUTOR.hide());
+          await page.waitForTimeout(260);
+        }
       } else errors.push('[eggs] nothing hidden in this room');
 
       /* the iron, on a rat */

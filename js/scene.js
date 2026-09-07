@@ -423,25 +423,10 @@ const SCENE = (() => {
     cv.style.cursor = TOOLS.css(TOOLS.cur(), !!(hover || hoverRat));
   }
 
-  /* ---------------------------------------------------------
-     THE GLASS.
-
-     The rooms are painted at full pixel detail and then drawn at
-     a third of it, so most of what is in the art is too small to
-     read. This crops the actual painted room around a point and
-     blows it up with hard edges — so anything hidden in a shelf
-     is really in there, and the glass is how you find it.
-     --------------------------------------------------------- */
-  function magnify(wx, wy, rad, k) {
-    if (!def || !back) return null;
-    rad = rad || 22; k = k || 5;
-    const x0 = Math.round(U.clamp(wx - rad, 0, Math.max(0, def.w - rad * 2)));
-    const y0 = Math.round(U.clamp(wy - rad, 0, Math.max(0, H - rad * 2)));
-    const o = ART.cv(rad * 2 * k, rad * 2 * k);
-    o.c.imageSmoothingEnabled = false;
-    o.c.drawImage(back, x0, y0, rad * 2, rad * 2, 0, 0, rad * 2 * k, rad * 2 * k);
-    return o.cv;
-  }
+  /* THE GLASS USED TO CROP THE PAINTED ROOM and blow it up five times
+     for the brass lens to hold. The lens is gone (js/cine.js) and this
+     was its only caller, so the crop went with it. What the glass is
+     for -- the sentence it produces -- is on the plate now. */
 
   /* which rat, if any, is under a point */
   function ratAt(x, y) {
@@ -2691,7 +2676,7 @@ const SCENE = (() => {
     },
     busy(v) { if (v !== undefined) busy = v; return busy; },
     /* the tools reach into the room through these */
-    magnify, ratAt, refreshCursor,
+    ratAt, refreshCursor,
     rats() { return rats; },
     pets() { return pets; },
     messes() { return messes; },
