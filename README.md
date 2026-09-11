@@ -1226,6 +1226,111 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## The title is a shot now
+
+### What was there
+
+A corkboard. A masthead card stabbed with a knife, five mugshots on pins,
+red string between them, a manila case tag, a record card and a painted
+office behind the lot of it. It named five frogs you had not met, and it did
+not move.
+
+![The first thirty seconds of the film](docs/screen-title.png)
+
+### What is there
+
+A wet street outside a tabac at two in the morning. He is under the awning
+with a cigarette, lit by a forty-watt bulb on a flex, and it is the only
+light on the block. The camera breathes. Something walks out of the alley
+and he does not talk to it.
+
+It runs in the **real scene runtime** — the same rig, the same room canvas,
+the same walk cycle the game uses — so the menu cannot drift away from what
+the game looks like. A title screen drawn by hand goes stale the week after
+somebody changes the frog.
+
+The reel loops: he smokes, the camera drifts, one or two of them come out of
+the dark, he turns, the arm goes up, and they are on the pavement. Then he
+goes back to his cigarette and the street washes them away.
+
+### Four things that had to be fixed to make it work
+
+- **The camera had nowhere to go.** At 272 columns the room was the same
+  size as the frame, so `SCENE.look` clamped and the drift did not happen at
+  all. The building is drawn from its own zero and set down at `X0` along a
+  street wider than the shot.
+- **`SCENE.pan` cannot be called off.** It is an async loop writing `look()`
+  every 24ms until it lands, so stopping the menu did not stop the camera —
+  press PLAY mid-drift and the pan wrote over the `look()` that was meant to
+  hold on his face. The menu drives its own dolly off the same ticker that
+  ages the bodies, and that stops when the ticker does.
+- **The bodies were invisible.** Drawn in `#0d1016` on a `#0b0e13`
+  pavement — a body you cannot see is a shot that did not land. They have a
+  silhouette now: a back, a shoulder, an arm out, a hat off in the water,
+  and a wet top edge from the same bulb lighting him.
+- **He was not holding anything.** `smoke` is an idle job an *actor* can be
+  given; the player is not an actor and has an arm pose with nothing in it.
+  The one thing the shot is named after is drawn off `SCENE.meHand()`.
+
+### PLAY and SETTINGS, on the left
+
+Two words over the street. Pressing PLAY does not cut: the reel stops where
+it is, he squares up to the frame, the camera walks in until he is the only
+thing in it, and **then** the wipe.
+
+![He looks at you](docs/screen-play.png)
+
+There was no settings screen before. Sound was a corner button that only
+existed inside a room, the camera distance was an undocumented `Z`, the case
+number was a tag pinned to the corkboard and the house rules were a third
+button on the title. All four are the same kind of thing — what you want set
+before you start — so they are one panel of rows.
+
+## And the morning is a memory
+
+The house was lit like every other room in the game: three lamps, a floor,
+hard edges and the same black vignette the laundry gets. But it is not a
+place he is standing in. It is the last ordinary morning he had, remembered
+six years later by a man in a foreign city, and a room recalled like that
+does not have crisp corners.
+
+![The last ordinary morning](docs/screen-dream.png)
+
+The first attempt was a warm veil and a vignette, and the measurement said
+what it was worth: **+3 on the mean pixel**, which is nothing. Worse, the
+shafts were all hung off the window, and the window is at x 60 in a room 740
+wide — stand anywhere but the sink and the entire layer was off screen.
+
+What actually reads as a memory is light **spilling**: the window bleeding
+into the wall beside it, the lamp eating its own edges. That is a blur of
+the picture added back over itself, and a blur is not something you can do
+per frame at this size. So it is done once, when the set is baked: paint the
+room into a scratch canvas, throw it down to a seventh of its size and back
+up again — which *is* a box blur, courtesy of the one place in this game
+where smoothing is wanted — and keep it. Each frame it goes on with
+`lighter` at a low alpha.
+
+| | mean pixel | warmth (R−B) |
+| --- | --- | --- |
+| the room | 105.3, 84.9, 56.0 | — |
+| veil and vignette only | +3.0 | +0.8 |
+| **with halation** | **+28.7** | **+16.9** |
+
+On top of that: every lamp in the room blooms, four shafts come through the
+window on a slant and breathe, ninety motes drift up through them, a band of
+soft light walks slowly up the frame, and the edges go **warm** rather than
+black — a memory going out at the sides, not a dark corner. None of it
+touches the script, the actors or the walk: it is a paint pass over a
+finished frame, so the prologue cannot break on it.
+
+### And the smoke test was waiting on a clock
+
+`dev/smoke.js` clicked PLAY and then waited a flat 1400ms for the lore reel.
+The turn-to-camera is longer than that, so it photographed the title, sent
+its Escape into the menu instead of into the reel, found no `in-cut` body and
+**skipped the entire prologue** — surfacing four steps later as "the captain
+never offered a reply". It waits for the state now, not for the clock.
+
 ## The lens is gone, and the plate is a note in the corner
 
 ### What was that circle

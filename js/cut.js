@@ -223,6 +223,152 @@ const CUT = (() => {
      st: { pan, plate, book, satchel } — what the script has
      changed about the set so far.
      ============================================================ */
+  /* ============================================================
+     THE MORNING IS A MEMORY, SO IT HAS TO LOOK LIKE ONE.
+
+     The house was lit like every other room in the game: three
+     lamps, a floor, hard edges and the same black vignette the
+     laundry gets. But this room is not a place he is standing in.
+     It is the last ordinary morning he had, remembered six years
+     later by a man in a foreign city, and a room recalled like that
+     does not have crisp corners.
+
+     So a layer over the top of it, and only over this room:
+
+       the window overexposes      the light coming in is too much
+                                   for the eye, the way remembered
+                                   light always is
+       shafts through the air      four of them, breathing
+       dust, warm and slow         big motes, lit, drifting up
+       a honey vignette            the edges go warm and soft rather
+                                   than black -- it is a memory
+                                   going out at the sides, not a
+                                   dark corner
+       and a swell                 the whole thing brightens and
+                                   falls on a nine-second count, so
+                                   it is never quite still
+
+     None of it touches the script, the actors or the walk: it is a
+     paint pass over a finished frame, so the prologue cannot break
+     on it.
+     ============================================================ */
+  /* ------------------------------------------------------------
+     HALATION, BUILT ONCE.
+
+     Veils and vignettes make a room BRIGHTER. They do not make it
+     dreamy, because the thing that reads as a memory is light
+     SPILLING -- the window bleeding into the wall next to it, the
+     lamp eating its own edges. That is a blur of the picture added
+     back on top of itself, and a blur is not something you can do
+     per frame at this size.
+
+     So it is done once, when the set is baked: paint the room into
+     a scratch canvas, throw it down to a sixth of its size and back
+     up again (which IS a box blur, courtesy of the one place in
+     this game where smoothing is wanted), and keep the result. Each
+     frame it goes on with `lighter` at a low alpha, and the whole
+     morning glows out of its own highlights.
+     ------------------------------------------------------------ */
+  const BLOOMS = {};
+  function bloomOf(key, paint, W) {
+    if (BLOOMS[key]) return BLOOMS[key];
+    const full = ART.cv(W, 132);
+    paint(full.c);
+    const sw = Math.max(2, Math.round(W / 7)), sh = 19;
+    const small = ART.cv(sw, sh);
+    small.c.imageSmoothingEnabled = true;
+    small.c.drawImage(full.cv, 0, 0, sw, sh);
+    const blur = ART.cv(W, 132);
+    blur.c.imageSmoothingEnabled = true;
+    blur.c.drawImage(small.cv, 0, 0, W, 132);
+    BLOOMS[key] = blur.cv;
+    return blur.cv;
+  }
+
+  function dreamLayer(W, FY, winX, lights, bloom) {
+    const rng = U.mulberry32(19690721);
+    const motes = Array.from({ length: 90 }, () => ({
+      x: rng(), y: rng(), s: 0.10 + rng() * 0.32, ph: rng() * 9,
+      r: rng() < 0.28 ? 2 : 1,
+    }));
+    return (c, T, cam, vw) => {
+      /* the swell: everything below rides on it */
+      const swell = 0.84 + 0.16 * Math.sin(T * 0.62);
+
+      /* ---- THE HALATION. The whole reason this reads as a memory. ---- */
+      if (bloom) {
+        const was = c.globalCompositeOperation;
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = 0.30 * swell;
+        c.drawImage(bloom, 0, 0);
+        c.globalAlpha = 1;
+        c.globalCompositeOperation = was;
+      }
+
+      /* ---- EVERY LAMP IN THE ROOM BLOOMS ----
+         The first pass hung all of this off the window, and the window is
+         at x 60 in a room 740 wide: stand anywhere but the sink and the
+         whole layer was off screen, which measured at plus three on the
+         mean pixel -- i.e. nothing. The room has its light sources
+         declared already; bloom every one of them and the morning is soft
+         wherever you are standing in it. */
+      (lights || []).forEach(L => {
+        for (let r = L.r + 26; r >= 10; r -= 5) {
+          PIX.disc(c, L.x, L.fy === undefined ? L.y + 20 : (L.y + L.fy) / 2, r,
+            'rgba(255,232,176,' + (0.016 * swell * (1 - r / (L.r + 34))).toFixed(4) + ')');
+        }
+      });
+      /* and the window hardest of all, because it is the sun */
+      for (let r = 74; r >= 10; r -= 5) {
+        PIX.disc(c, winX, 38, r,
+          'rgba(255,240,196,' + (0.020 * swell * (1 - r / 82)).toFixed(4) + ')');
+      }
+
+      /* ---- four shafts out of it, on the slant, breathing ---- */
+      for (let i = 0; i < 4; i++) {
+        const off = i * 26 - 12;
+        const sway = Math.sin(T * 0.33 + i * 1.7) * 3;
+        const a = (0.060 + i * 0.008) * swell;
+        for (let y = 14; y < FY + 8; y++) {
+          const t = (y - 14) / (FY - 8);
+          const x = winX + off + sway + t * 96;
+          const hw = 6 + t * 11;
+          ART.px(c, Math.round(x - hw), y, Math.round(hw * 2), 1,
+            'rgba(255,228,168,' + (a * (1 - t * 0.5)).toFixed(4) + ')');
+        }
+      }
+
+      /* ---- the dust, which is what makes air visible ---- */
+      for (const m of motes) {
+        const y = FY + 10 - ((m.y * (FY + 24) + T * m.s * 24) % (FY + 24));
+        const x = cam + ((m.x * vw + Math.sin(T * 0.4 + m.ph) * 8) % vw);
+        ART.px(c, Math.round(x), Math.round(y), m.r, m.r,
+          'rgba(255,244,212,' + (0.34 * swell).toFixed(3) + ')');
+      }
+
+      /* ---- A ROW OF SOFT LIGHT, WALKING UP THE FRAME ----
+         The one thing that says "this is being remembered" rather than
+         "this is warm": a band of haze drifting slowly upward, the way a
+         memory of a room is brighter in the part you are looking at. */
+      const band = FY + 30 - ((T * 9) % (FY + 70));
+      for (let i = -22; i < 22; i++) {
+        const a = 0.055 * (1 - Math.abs(i) / 22) * swell;
+        ART.px(c, cam, Math.round(band + i), vw, 1, 'rgba(255,236,186,' + a.toFixed(4) + ')');
+      }
+
+      /* ---- and the edges go warm and soft, not black ---- */
+      for (let i = 0; i < 34; i++) {
+        const a = 0.105 * Math.pow(1 - i / 34, 1.6) * swell;
+        ART.px(c, cam + i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(c, cam + vw - 1 - i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(c, cam, -40 + i, vw, 1, 'rgba(158,110,34,' + (a * 0.85).toFixed(4) + ')');
+        ART.px(c, cam, 132 - i, vw, 1, 'rgba(96,60,16,' + (a * 0.7).toFixed(4) + ')');
+      }
+      /* one veil over the lot, so nothing in it is quite sharp */
+      ART.px(c, cam, -40, vw, 210, 'rgba(255,226,170,' + (0.085 * swell).toFixed(4) + ')');
+    };
+  }
+
   function home(st) {
     st = st || {};
     const W = 740, FY = 112;
@@ -948,6 +1094,14 @@ const CUT = (() => {
         + (st.kit ? (st.kit.pencils ? 'P' : '') + (st.kit.crayons ? 'C' : '')
           + (st.kit.bag ? 'B' : '') : ''),
       w: W, floorY: FY, paint, fore, spots,
+      /* the morning is remembered, not visited -- see dreamLayer above */
+      onPaintFore: dreamLayer(W, FY, SINK + 30, [
+        { x: SINK + 30, y: 44, r: 70, fy: FY - 2 },
+        { x: HEARTH + 46, y: FY - 56, r: 40, fy: FY - 4 },
+        { x: DOOR - 4, y: 40, r: 54, fy: FY - 2 },
+      ], bloomOf('home:' + (st.pan ? 'p' : '') + (st.plate ? 'e' : '')
+        + (st.kit ? (st.kit.pencils ? 'P' : '') + (st.kit.crayons ? 'C' : '')
+          + (st.kit.bag ? 'B' : '') : ''), paint, W)),
       actors: [
         /* ============================================================
            THEY ARE PEOPLE IN A ROOM, NOT SCENERY THAT TALKS.

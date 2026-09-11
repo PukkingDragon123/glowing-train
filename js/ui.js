@@ -414,240 +414,100 @@ const UI = {
      across the cork, the edge of a desk along the bottom with a
      cold coffee and an ashtray on it, and dust in the light.
      ============================================================ */
-  titleRoom(host) {
-    const cv = document.createElement('canvas');
-    cv.className = 'pix title-room';
-    const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    host.appendChild(cv);
+  /* THE PAINTED OFFICE the corkboard hung in -- a wall, a desk, a lamp,
+     a window with rain behind it and dust in the air, a hundred and forty
+     lines of it -- was the backdrop for a title screen that no longer
+     exists. The title is a real room now, played in the scene runtime:
+     see js/menu.js. */
 
-    const rng = U.mulberry32(20260820);
-    const drops = Array.from({ length: 110 }, () => ({
-      x: rng() * 74, y: rng() * 60, s: 0.6 + rng() * 1.6, l: 2 + rng() * 4,
-    }));
-    const motes = Array.from({ length: 40 }, () => ({
-      fx: rng(), fy: rng(), s: 0.1 + rng() * 0.3, ph: rng() * 9,
-    }));
 
-    /* The wall is painted once per size. Nothing in it is centred: the
-       window hangs off the right edge, the desk sits on the bottom one,
-       the lamp hangs at the left. So the room fills any frame it is given
-       instead of floating in the middle of a black one. */
-    let W = 0, H = 0, DY = 0, WX = 0, back = null;
-    const bake = () => {
-      DY = H - 32;                                   // the desk surface
-      WX = W - 84;                                   // the window frame
-      back = ART.cv(W, H);
-      const b = back.c;
-      b.drawImage(ART.wall(W, H, { tone: 'grey', railY: DY - 14, seed: 77 }), 0, 0);
+  /* ============================================================
+     THE TITLE IS A SHOT.
 
-      /* the window, stage right, with the city out in the rain */
-      ART.px(b, WX, 12, 78, 64, '#0d1218');
-      ART.px(b, WX + 2, 14, 74, 60, '#141d28');
-      for (let bx = WX + 2; bx < WX + 74; bx += 13) {
-        const bh = 12 + ((bx * 7) % 26);
-        ART.px(b, bx, 74 - bh, 11, bh, '#0c141c');
-        for (let ly = 76 - bh; ly < 72; ly += 5) {
-          for (let lx = bx + 2; lx < bx + 9; lx += 4) {
-            if ((lx * ly) % 5 === 0) ART.px(b, lx, ly, 2, 2, (lx + ly) % 3 ? '#4a6478' : '#ffd75e');
-          }
-        }
-      }
-      ART.px(b, WX, 12, 78, 2, '#0a0d12');
-      ART.px(b, WX + 38, 12, 2, 64, '#0a0d12');
-      ART.px(b, WX, 42, 78, 2, '#0a0d12');
-      ART.px(b, WX - 2, 74, 82, 4, '#2a2f38');
-      ART.px(b, WX - 2, 74, 82, 1, '#3f4652');
+     It used to be a corkboard: a masthead stabbed with a knife,
+     five mugshots on pins, red string between them, and a painted
+     office behind it. It named five frogs you had not met and it
+     did not move.
 
-      /* the desk along the bottom of the frame */
-      ART.px(b, 0, DY, W, H - DY, '#241a12');
-      ART.px(b, 0, DY, W, 3, '#4d301a');
-      ART.px(b, 0, DY + 3, W, 1, '#6b4426');
-      ART.grain(b, 0, DY + 4, W, H - DY - 4, '#1d150e', '#33251a', 13);
-
-      /* near end: the case file open where you left it, a cold coffee with
-         the ring it left, and the phone off the hook */
-      ART.px(b, 8, DY + 2, 52, 16, '#12101d');
-      ART.px(b, 9, DY + 3, 50, 14, '#ded2b4');
-      ART.px(b, 11, DY + 6, 36, 1, '#8d8672');
-      ART.px(b, 11, DY + 9, 28, 1, '#8d8672');
-      ART.px(b, 11, DY + 12, 32, 1, '#8d8672');
-      ART.px(b, 9, DY + 3, 50, 2, '#b8232f');
-      ART.px(b, 44, DY, 18, 20, 'rgba(0,0,0,.25)');
-      b.drawImage(ART.art('mug', 2), 66, DY + 8);
-      ART.px(b, 64, DY + 22, 20, 2, 'rgba(110,74,48,.45)');
-      b.drawImage(ART.art('phone', 2), 90, DY + 8);
-
-      /* far end: an ashtray with one still going, the iron he never puts in
-         the drawer, and the typewriter with a sheet still in it */
-      b.drawImage(ART.art('ashtray', 2), W - 100, DY + 14);
-      ART.px(b, W - 96, DY + 12, 8, 1, '#e6dcc4');
-      ART.px(b, W - 88, DY + 12, 2, 1, '#ff8a4a');
-      b.drawImage(ART.art('gunprop', 2), W - 76, DY + 12);
-      b.drawImage(ART.art('typewriter', 2), W - 44, DY - 2);
-      ART.px(b, W - 38, DY - 8, 20, 8, '#ded2b4');
-      ART.px(b, W - 38, DY - 8, 20, 1, '#f2e9cf');
-      ART.px(b, W - 36, DY - 4, 14, 1, '#8d8672');
-
-      /* the desk falls away from the lamp: the far end sits in the dark */
-      for (let x = 0; x < W; x += 4) {
-        ART.px(b, x, DY - 12, 4, H - DY + 12, 'rgba(6,8,14,' + (0.04 + 0.42 * (x / W)).toFixed(3) + ')');
-      }
-      /* a tin lamp on a cord over the near end of the board */
-      b.drawImage(ART.hangLamp(20, 34, false), 20, 0);
-    };
-
-    let raf = null;
-    const t0 = performance.now();
-    const draw = () => {
-      raf = requestAnimationFrame(draw);
-      if (G.phase !== 'title') { cancelAnimationFrame(raf); raf = null; return; }
-      const T = (performance.now() - t0) / 1000;
-      const vw = window.innerWidth, vh = window.innerHeight;
-      /* an integer scale, then a world big enough to cover the frame at it */
-      const K = Math.max(2, Math.min(Math.floor(vw / 240), Math.floor(vh / 150), 8));
-      const nW = Math.max(240, Math.ceil(vw / K)), nH = Math.max(150, Math.ceil(vh / K));
-      if (!back || nW !== W || nH !== H) { W = nW; H = nH; bake(); }
-      if (cv.width !== W * K) {
-        cv.width = W * K; cv.height = H * K;
-        cv.style.width = cv.width + 'px'; cv.style.height = cv.height + 'px';
-      }
-      c.setTransform(K, 0, 0, K, 0, 0);
-      c.imageSmoothingEnabled = false;
-      c.clearRect(0, 0, W, H);
-      c.drawImage(back.cv, 0, 0);
-      /* rain running down the glass */
-      for (const d of drops) {
-        const y = (d.y + T * d.s * 26) % 62;
-        for (let i = 0; i < d.l; i++) {
-          ART.px(c, WX + 2 + Math.round(d.x), 14 + Math.round(y) + i, 1, 1, 'rgba(150,195,225,.16)');
-        }
-      }
-      /* the lamp, guttering, and the cone it puts down the wall */
-      const flick = Math.sin(T * 9) > 0.93 ? 0.4 : 1;
-      ART.px(c, 28, 16, 4, 3, 'rgba(255,251,232,' + (0.85 * flick) + ')');
-      const bands = Math.max(6, Math.ceil((DY + 6 - 19) / 8));
-      for (let i = 0; i < bands; i++) {
-        const y = 19 + i * 8, hw = 5 + i * 5;
-        ART.px(c, 30 - hw, y, hw * 2, 8, 'rgba(255,235,170,' + (0.032 * flick) + ')');
-      }
-      ART.px(c, 4, DY, 58, 2, 'rgba(255,235,170,' + (0.18 * flick) + ')');
-      ART.px(c, 12, DY + 2, 44, 3, 'rgba(255,235,170,' + (0.07 * flick) + ')');
-      /* the cigarette on the ashtray, still going */
-      for (let i = 0; i < 16; i++) {
-        const sx = W - 87 + Math.sin(T * 1.1 + i * 0.45) * (0.6 + i * 0.16);
-        ART.px(c, Math.round(sx), DY + 11 - i, 1, 1,
-          'rgba(210,205,195,' + (0.13 - i * 0.007) + ')');
-      }
-      /* dust turning over in the light */
-      for (const m of motes) {
-        const y = (m.fy * H + T * m.s * 5) % H;
-        const x = m.fx * W + Math.sin(T * 0.5 + m.ph) * 3;
-        ART.px(c, Math.round(x), Math.round(y), 1, 1, 'rgba(255,240,205,.14)');
-      }
-      /* the frame goes dark at the edges */
-      for (let i = 0; i < 18; i++) {
-        const a = 0.5 * (1 - i / 18);
-        ART.px(c, 0, i, W, 1, 'rgba(0,0,0,' + (a * 0.5) + ')');
-        ART.px(c, 0, H - 1 - i, W, 1, 'rgba(0,0,0,' + (a * 0.4) + ')');
-        ART.px(c, i, 0, 1, H, 'rgba(0,0,0,' + (a * 0.6) + ')');
-        ART.px(c, W - 1 - i, 0, 1, H, 'rgba(0,0,0,' + (a * 0.6) + ')');
-      }
-    };
-    draw();
-  },
-
+     It is the opening of the film now -- see js/menu.js -- and the
+     menu itself is two words on the left over it. Everything the
+     board carried that a player actually needs (the case number,
+     the record, how it works) is behind SETTINGS, where it does
+     not stand between you and the shot.
+     ============================================================ */
   buildTitle(app) {
     const s = META.stats();
-    const wrap = U.el('div', 'splash board-title');
-    UI.titleRoom(wrap);
+    const wrap = U.el('div', 'title-cine');
+    app.appendChild(wrap);
 
-    /* a phone held sideways gets one small row of mugshots, not two big ones */
-    const tight = window.innerHeight < 560;
-    const mugK = tight ? 1 : 2;
-    const tagK = tight ? 1 : 2;
+    /* the room the menu is played in: a real scene, not a picture */
+    const host = U.el('div');
+    host.id = 'scene-root';
+    host.className = 'scene-root';
+    wrap.appendChild(host);
+    MENU.start();
 
-    /* ---- the murder board: everything on it is pinned, taped or stabbed ---- */
-    const board = U.el('div', 'mboard' + (tight ? ' tight' : ''));
+    /* ---- the rail, down the left, over the street ---- */
+    const rail = U.el('div', 'title-rail');
 
-    /* red string first, under everything */
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'strings');
-    svg.id = 'title-strings';
-    board.appendChild(svg);
-
-    /* the case-file masthead, stabbed through with the knife */
-    const head = U.el('div', 'mb-pin mb-title');
-    head.appendChild(SPR.clone(SPR.titleCard({
+    const logo = U.el('div', 'tr-logo');
+    logo.appendChild(SPR.clone(SPR.titleCard({
       big: 'HOMICIDE DIVISION - AFTER HOURS',
       huge: 'SHELL & DEBT',
       sub: 'A DETECTIVE FROG STORY',
       col: PIX.PAL.R,
-    }), tight ? 2 : U.clamp(Math.floor(window.innerWidth / 340), 2, 4)));
-    const knife = PIX.el('prop_knife', 3);
-    knife.className = 'mb-knife';
-    head.appendChild(knife);
-    board.appendChild(head);
+    }), window.innerWidth < 720 ? 1 : 2));
+    rail.appendChild(logo);
 
-    /* the family, pinned up where you cannot stop looking at them */
-    const MUGS = [
-      ['vig', 'DON BUFO'], ['lily', 'SLICK LILY'], ['owner', 'THE BULLFROG'],
-      ['cage', 'WARDEN WART'], ['collector', 'TAXTOAD TONY'],
-    ];
-    MUGS.forEach(([id, nm], i) => {
-      const m = U.el('div', 'mb-pin mb-mug mb-mug' + i);
-      m.appendChild(U.el('i', 'poster-pin'));
-      m.appendChild(SPR.clone(SPR.mugshot(id, FROG_DEFS[id], 1), mugK));
-      const tag = U.el('div', 'mb-name');
-      tag.appendChild(UI.txt(nm, { scale: tagK, color: PIX.PAL.K, shadow: null }));
-      m.appendChild(tag);
-      if (i === 2) {   // the Bullfrog gets the red ring
-        const ring = U.el('i', 'mb-ring');
-        m.appendChild(ring);
-      }
-      board.appendChild(m);
-    });
-
-    /* what somebody thought of the investigation */
-    [[0, '18%', '30%'], [1, '74%', '22%'], [0, '64%', '72%']].forEach(([small, lx, ty], i) => {
-      const h = PIX.el(small ? 'prop_hole2' : 'prop_hole', 3);
-      h.className = 'mb-hole';
-      h.style.left = lx; h.style.top = ty;
-      board.appendChild(h);
-    });
-
-    /* the case number, on a manila tag you can type on */
-    const tagWrap = U.el('div', 'mb-pin mb-seed');
-    tagWrap.appendChild(U.el('i', 'poster-pin'));
-    tagWrap.appendChild(UI.txt('CASE NO.', { scale: tagK, color: PIX.PAL.K, shadow: null }));
+    /* the seed lives in settings now, but the run still reads it */
     const inp = U.el('input');
     inp.id = 'seed-input';
     inp.maxLength = 24;
     inp.placeholder = U.randSeedStr();
     inp.spellcheck = false;
-    tagWrap.appendChild(inp);
-    board.appendChild(tagWrap);
+    inp.className = 'hidden';
+    rail.appendChild(inp);
 
-    /* your record, on an index card */
+    const play = U.el('button', 'pixbtn gold tr-btn');
+    play.id = 'btn-deal';
+    play.appendChild(PIX.el('gun_snub', 2));
+    play.appendChild(UI.txt('PLAY', { scale: 4, shadow: null, color: PIX.PAL.K }));
+    play.onclick = () => UI.startRun(inp.value);
+    rail.appendChild(play);
+
+    const set = U.el('button', 'pixbtn tr-btn');
+    set.id = 'btn-settings';
+    set.appendChild(UI.txt('SETTINGS', { scale: 3, shadow: null }));
+    set.onclick = () => UI.showSettings();
+    rail.appendChild(set);
+
     if (s.runs > 0) {
-      const rec = U.el('div', 'mb-pin mb-record');
-      rec.appendChild(U.el('i', 'poster-pin'));
-      rec.appendChild(UI.txt('DET. VERDE - RECORD', { scale: 2, color: PIX.PAL.K, shadow: null }));
-      rec.appendChild(UI.txt('CLOSED ' + s.wins + ' / IN THE WARD ' + s.deaths + ' TIMES',
-        { scale: 2, color: PIX.PAL.d, shadow: null }));
-      board.appendChild(rec);
+      const rec = U.el('div', 'tr-record');
+      rec.appendChild(UI.txt('CLOSED ' + s.wins + '   IN THE WARD ' + s.deaths,
+        { scale: 2, color: PIX.PAL.q, shadow: PIX.PAL.K }));
+      rail.appendChild(rec);
     }
 
-    wrap.appendChild(board);
+    wrap.appendChild(rail);
+  },
 
-    /* ---- the buttons, on the rail under the board ---- */
-    const btns = U.el('div', 'end-btns title-btns');
-    const deal = U.el('button', 'pixbtn gold big-deal');
-    deal.id = 'btn-deal';
-    deal.appendChild(PIX.el('gun_snub', 2));
-    deal.appendChild(UI.txt('OPEN THE CASE', { scale: 4, shadow: null, color: PIX.PAL.K }));
-    deal.onclick = () => {
-      SFX.chak();
+  /* ============================================================
+     AND THEN HE LOOKS AT YOU.
+
+     Pressing PLAY does not cut. The reel stops where it is, he
+     turns square to the frame, the camera walks in until he is the
+     only thing in it, and THEN the wipe. The whole menu is built
+     toward that one second and throwing it away for a loading card
+     would be the only wrong thing to do with it.
+     ============================================================ */
+  startRun(seed) {
+    const btns = document.querySelectorAll('.title-rail button');
+    btns.forEach(b => { b.disabled = true; });
+    const rail = document.querySelector('.title-rail');
+    if (rail) rail.classList.add('gone');
+    SFX.chak();
+    return MENU.faceYou().then(() => {
+      MENU.stop();
       /* ============================================================
          HOW A RUN STARTS.
 
@@ -660,7 +520,7 @@ const UI = {
          an airport twice.
          ============================================================ */
       const seen = META.stats().loreSeen > 0;
-      UI.goto(() => E.newRun(inp.value)).then(() => {
+      return UI.goto(() => { MENU.unpush(); E.newRun(seed); }).then(() => {
         META.bump('loreSeen'); META.save();
         if (seen) return CINE.lore(true);
         return CINE.lore(false)
@@ -672,45 +532,91 @@ const UI = {
           return STORY.arrive('precinct');
         })
         .then(() => TUTOR.open());
+    });
+  },
+
+  /* ============================================================
+     SETTINGS.
+
+     There was no settings screen. Sound was a corner button that
+     only existed inside a room, the camera distance was an
+     undocumented Z, the case number was a tag on a corkboard and
+     the house rules were a button on the title. All four are the
+     same kind of thing -- what you want set before you start -- so
+     they are in one place.
+     ============================================================ */
+  showSettings() {
+    const m = META.load();
+    const box = UI.modal('<button class="pixbtn m-close" id="mm-close"></button>' +
+      '<div class="set-cols"></div>', false);
+    const cols = box.querySelector('.set-cols');
+
+    const row = (label, note, ctl) => {
+      const r = U.el('div', 'set-row');
+      const t = U.el('div', 'set-lab');
+      t.appendChild(UI.txt(label, { scale: 2, color: PIX.PAL.G, shadow: null }));
+      if (note) t.appendChild(UI.txt(note, { scale: 1, color: PIX.PAL.q, shadow: null }));
+      r.appendChild(t);
+      r.appendChild(ctl);
+      cols.appendChild(r);
+      return r;
     };
-    btns.appendChild(deal);
+    /* a two-state switch, drawn, that says which state it is in */
+    const toggle = (on, words, fn) => {
+      const b = U.el('button', 'pixbtn set-tog' + (on() ? ' on' : ''));
+      const paint = () => {
+        b.innerHTML = '';
+        b.className = 'pixbtn set-tog' + (on() ? ' on' : '');
+        b.appendChild(UI.txt(on() ? words[0] : words[1],
+          { scale: 2, shadow: null, color: on() ? PIX.PAL.K : PIX.PAL.w }));
+      };
+      b.onclick = () => { fn(); paint(); };
+      paint();
+      return b;
+    };
+
+    row('SOUND', 'THE SHOT, THE RAIN, THE TYPING',
+      toggle(() => !SFX.muted, ['ON', 'OFF'], () => SFX.toggleMute()));
+
+    row('CAMERA', 'HOW CLOSE IT STANDS',
+      toggle(() => !META.load().wideShot, ['CLOSE IN', 'THE WHOLE ROOM'], () => {
+        /* SCENE.toggleZoom flips the flag AND rescales the open room, which
+           at the title means you watch the street change distance under the
+           panel -- which is the point of a camera setting. */
+        if (typeof SCENE !== 'undefined' && SCENE.toggleZoom) SCENE.toggleZoom();
+        else { const d = META.load(); d.wideShot = !d.wideShot; META.save(); }
+      }));
+
+    /* the case number: same seed, same night, every time */
+    const seedWrap = U.el('div', 'set-seed');
+    const seed = U.el('input');
+    seed.maxLength = 24;
+    seed.spellcheck = false;
+    const live = document.getElementById('seed-input');
+    seed.placeholder = (live && live.placeholder) || U.randSeedStr();
+    seed.value = (live && live.value) || '';
+    seed.oninput = () => { if (live) live.value = seed.value.toUpperCase(); };
+    seedWrap.appendChild(seed);
+    row('CASE NUMBER', 'THE SAME NUMBER DEALS THE SAME NIGHT', seedWrap);
 
     const hlp = U.el('button', 'pixbtn');
-    hlp.appendChild(UI.txt('HOW THIS WORKS', { scale: 3, shadow: null }));
-    hlp.onclick = () => UI.showHelp();
-    btns.appendChild(hlp);
+    hlp.appendChild(UI.txt('READ IT', { scale: 2, shadow: null }));
+    hlp.onclick = () => { UI.closeModal(); UI.showHelp(); };
+    row('HOW THIS WORKS', 'THE SHIFT, THE TOOLS, THE KEYS', hlp);
 
-    if (META.load().tutor && META.load().tutor.opening) {
-      const again = U.el('button', 'pixbtn ghost has-tip');
-      again.id = 'btn-tutor';
-      again.dataset.tipText = 'Have the captain walk you through it again on your next case.';
-      again.appendChild(UI.txt('BRIEF ME AGAIN', { scale: 3, shadow: null }));
-      again.onclick = () => { TUTOR.replay(); SFX.bank(); UI.stampSmall('HE WILL BE WAITING'); };
-      btns.appendChild(again);
+    if (m.tutor && m.tutor.opening) {
+      const again = U.el('button', 'pixbtn');
+      again.appendChild(UI.txt('BRIEF ME AGAIN', { scale: 2, shadow: null }));
+      again.onclick = () => {
+        TUTOR.replay(); SFX.bank();
+        UI.closeModal(); UI.stampSmall('HE WILL BE WAITING');
+      };
+      row('THE CAPTAIN', 'HAVE HIM WALK YOU THROUGH IT', again);
     }
-    wrap.appendChild(btns);
-    app.appendChild(wrap);
 
-    /* string the board up once everything has a rect */
-    requestAnimationFrame(() => {
-      const R = board.getBoundingClientRect();
-      if (!R.width) return;
-      svg.setAttribute('viewBox', '0 0 ' + Math.round(R.width) + ' ' + Math.round(R.height));
-      const pins = board.querySelectorAll('.mb-mug .poster-pin, .mb-seed .poster-pin');
-      const pts = [];
-      pins.forEach(pin => {
-        const r = pin.getBoundingClientRect();
-        pts.push([r.left - R.left + r.width / 2, r.top - R.top + r.height / 2]);
-      });
-      for (let i = 0; i < pts.length - 1; i++) {
-        const a = pts[i], b = pts[i + 1];
-        const ln = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 + 16;
-        ln.setAttribute('d', 'M' + a[0] + ' ' + a[1] + ' Q' + mx + ' ' + my + ' ' + b[0] + ' ' + b[1]);
-        ln.setAttribute('class', 'str');
-        svg.appendChild(ln);
-      }
-    });
+    const c = box.querySelector('#mm-close');
+    c.appendChild(UI.txt('X', { scale: 3, color: PIX.PAL.W, shadow: null }));
+    c.onclick = () => UI.closeModal();
   },
 
   /* ================= the precinct ================= */

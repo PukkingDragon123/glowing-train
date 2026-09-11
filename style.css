@@ -2266,72 +2266,74 @@ body.mumbling .corner-left { opacity: 0; pointer-events: none; }
 .st-frog canvas { image-rendering: pixelated; }
 .st-hearts { display: flex; gap: 2px; }
 
-/* the murder-board title */
-.board-title { gap: 10px; }
-.mboard {
-  position: relative;
-  width: min(94vw, 900px); height: min(62vh, 520px);
-  border: var(--bd) solid #2a1a10;
-  background:
-    repeating-linear-gradient(37deg, rgba(0,0,0,.10) 0 2px, transparent 2px 5px),
-    repeating-linear-gradient(-51deg, rgba(255,255,255,.05) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #6b4426, #4d301a);
-  box-shadow: inset 0 0 0 4px rgba(0,0,0,.30), 0 10px 0 rgba(0,0,0,.45);
+/* ============================================================
+   THE TITLE RAIL.
+
+   The corkboard is gone -- masthead, mugshots, pins, red string,
+   the manila case tag and the record card, sixty-odd lines of it
+   -- and what replaced it is a shot (js/menu.js) with two words
+   down the left-hand side of it. The rail floats over the street
+   rather than sitting in a layout with it, so the composition
+   belongs to the scene and the menu is just something printed on
+   the film.
+   ============================================================ */
+.title-cine { position: fixed; inset: 0; overflow: hidden; }
+.title-cine .scene-root { position: absolute; inset: 0; }
+
+.title-rail {
+  position: absolute; z-index: 20;
+  left: calc(28px + var(--sa-l)); bottom: calc(34px + var(--sa-b));
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+  max-width: min(46vw, 430px);
+  transition: opacity .5s ease, transform .5s ease;
 }
-.mb-pin { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.mb-title { left: 50%; top: 7%; transform: translateX(-50%) rotate(-1deg); }
-.mb-title canvas { box-shadow: 0 6px 0 rgba(0,0,0,.4); }
-.mb-knife {
-  position: absolute; right: -30px; top: -34px;
-  filter: drop-shadow(3px 4px 0 rgba(0,0,0,.5));
-}
-.mb-mug { background: transparent; }
-.mb-mug canvas { box-shadow: 0 5px 0 rgba(0,0,0,.4); }
-.mb-mug0 { left: 6%; top: 16%; transform: rotate(-3deg); }
-.mb-mug1 { left: 22%; top: 52%; transform: rotate(2deg); }
-.mb-mug2 { left: 44%; top: 44%; transform: rotate(-1.4deg); }
-.mb-mug3 { right: 21%; top: 43%; transform: rotate(3deg); }
-.mb-mug4 { right: 5%; top: 18%; transform: rotate(-2deg); }
-.mb-name { background: #ded2b4; padding: 1px 5px; border: 2px solid #12101d; }
-.mb-ring {
-  position: absolute; inset: -8px -6px 14px -6px;
-  border: 4px solid rgba(209,59,69,.85);
-  transform: rotate(-2deg);
-  pointer-events: none;
-}
-.mb-hole { position: absolute; }
-.mb-seed { right: 7%; bottom: 8%; transform: rotate(1.6deg); background: #cfb681; border: 3px solid #12101d; padding: 8px 10px 10px; }
-.mb-seed input {
-  width: 150px; background: #e8dcbe; color: #12101d;
-  border: 2px solid #12101d; padding: 4px 6px;
-  font: 700 14px monospace; letter-spacing: 1px; text-transform: uppercase;
-}
-.mb-record { left: 6%; bottom: 8%; transform: rotate(-1.6deg); background: #ded2b4; border: 3px solid #12101d; padding: 8px 10px; gap: 3px; }
-.title-btns { position: relative; z-index: 3; }
+/* press PLAY and the menu gets out of the way of the thing it was for */
+.title-rail.gone { opacity: 0; transform: translateX(-14px); pointer-events: none; }
+.tr-logo { filter: drop-shadow(0 5px 0 rgba(0,0,0,.55)); margin-bottom: 6px; }
+.tr-logo canvas { display: block; image-rendering: pixelated; }
+.tr-btn { min-width: 210px; justify-content: flex-start; padding: 12px 20px; gap: 12px; }
+.tr-btn:disabled { opacity: .5; }
+.tr-record { opacity: .75; margin-top: 2px; }
+.tr-record canvas { display: block; image-rendering: pixelated; }
 
 @media (max-width: 720px) {
-  .mboard { height: min(56vh, 430px); }
-  .mb-mug1 { left: 12%; }
-  .mb-mug3 { right: 12%; }
-  .station-folk { gap: 30px; margin-top: -64px; }
+  .title-rail { left: calc(14px + var(--sa-l)); bottom: calc(18px + var(--sa-b)); gap: 8px; max-width: 70vw; }
+  .tr-btn { min-width: 150px; padding: 9px 14px; }
+}
+@media (max-height: 460px) {
+  .title-rail { gap: 6px; bottom: calc(10px + var(--sa-b)); }
+  .tr-logo { margin-bottom: 0; }
+  .tr-record { display: none; }
 }
 
-/* A short frame (phone held sideways) cannot take two rows of mugshots
-   under a masthead. The family lines up instead, small, along the bottom
-   of the cork, and the case tag goes with them. */
-.mboard.tight { height: min(70vh, 430px); }
-.mboard.tight .mb-title { top: 3%; }
-.mboard.tight .mb-mug { gap: 2px; }
-.mboard.tight .mb-mug0 { left: 2%;  top: 50%; }
-.mboard.tight .mb-mug1 { left: 18%; top: 55%; }
-.mboard.tight .mb-mug2 { left: 34%; top: 49%; }
-.mboard.tight .mb-mug3 { left: 50%; right: auto; top: 55%; }
-.mboard.tight .mb-mug4 { left: 66%; right: auto; top: 50%; }
-.mboard.tight .mb-knife { right: -18px; top: -18px; }
-.mboard.tight .mb-seed { right: 1%; bottom: 3%; padding: 4px 6px 6px; }
-.mboard.tight .mb-seed input { width: 104px; font-size: 11px; padding: 2px 4px; }
-.mboard.tight .mb-record { display: none; }
-.mboard.tight .mb-hole { display: none; }
+/* ============================================================
+   SETTINGS.
+
+   There was no settings screen: sound was a corner button that
+   only existed inside a room, the camera distance was an
+   undocumented Z, the case number was a tag pinned to the
+   corkboard and the house rules were a third button on the title.
+   All four are the same kind of thing -- what you want set before
+   you start -- so they are one panel of rows.
+   ============================================================ */
+.set-cols { display: flex; flex-direction: column; gap: 2px; min-width: min(88vw, 460px); }
+.set-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 9px 4px; min-height: 52px;
+  border-bottom: var(--bd) solid var(--line-soft);
+}
+.set-row:last-child { border-bottom: 0; }
+.set-lab { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.set-lab canvas { display: block; image-rendering: pixelated; }
+.set-tog { min-width: 150px; padding: 8px 12px; }
+.set-tog.on { --btn-top: var(--gold-hi); --btn-bot: var(--gold); --btn-deep: var(--gold-dk); --btn-edge: rgba(255,243,176,.6); }
+.set-seed input {
+  background: var(--glass); border: var(--bd) solid var(--line); border-radius: 0;
+  color: var(--bone); font-family: inherit; font-size: var(--fs-md);
+  letter-spacing: 3px; text-transform: uppercase; text-align: center;
+  padding: 9px 10px; width: 170px; min-height: 44px;
+}
+.set-seed input::placeholder { color: var(--dust); }
 
 /* ============================================================
    27. THE LINE-UP
@@ -2637,17 +2639,9 @@ body.in-scene #app { overflow: hidden; }
 .loc-sub { display: flex; opacity: 0; transition: opacity .2s steps(3); }
 .loc-sub.in { opacity: 1; }
 
-/* the room the murder board hangs in: a painted canvas behind the pins */
-.board-title { position: relative; }
-.title-room {
-  position: fixed; left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  image-rendering: pixelated;
-  z-index: 0; pointer-events: none;
-}
-/* the room is sized in whole pixels by hand: nothing may rescale it */
-.splash canvas.title-room { max-width: none; }
-.board-title > *:not(.title-room) { position: relative; z-index: 1; }
+/* THE PAINTED OFFICE BEHIND THE CORKBOARD went with the corkboard.
+   The title is a room in the real scene runtime now -- js/menu.js --
+   so there is nothing left here to hang a picture on. */
 
 /* ============================================================
    31. THE FROGGOPHONE

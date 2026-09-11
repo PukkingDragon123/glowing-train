@@ -302,11 +302,23 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.evaluate(() => { const i = document.getElementById('seed-input'); if (i) i.value = 'SMOKE'; });
     await click('#btn-deal');
 
-    /* the lore reel, then the drive across town */
-    await page.waitForTimeout(1400);
+    /* ---------- the lore reel, then the drive across town ----------
+       PRESSING PLAY NO LONGER CUTS. The title is a shot now (js/menu.js)
+       and PLAY stops the reel, turns him square to the frame and walks the
+       camera in on him before the wipe -- about a second and a half. A
+       flat 1400ms wait here photographed the title, sent the Escape into
+       the menu instead of the reel, and then found no `in-cut` body, so
+       the harness skipped the entire prologue and only noticed four steps
+       later when the captain had nothing to say. Wait for the state. */
+    await page.waitForFunction(() => {
+      const r = document.querySelector('.title-rail');
+      return !r || r.classList.contains('gone');
+    }, { timeout: 12000 }).catch(() => errors.push('[title] PLAY never took'));
+    await page.waitForTimeout(1600);
     await shot('02-lore');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1200);
+    await page.waitForFunction(() => document.body.classList.contains('in-cut'),
+      { timeout: 14000 }).catch(() => {});
 
     /* ---------- the opening, which a first run now plays ----------
        IT IS NOT CARDS ANY MORE. The opening is seven ROOMS played through

@@ -2286,72 +2286,74 @@ body.mumbling .corner-left { opacity: 0; pointer-events: none; }
 .st-frog canvas { image-rendering: pixelated; }
 .st-hearts { display: flex; gap: 2px; }
 
-/* the murder-board title */
-.board-title { gap: 10px; }
-.mboard {
-  position: relative;
-  width: min(94vw, 900px); height: min(62vh, 520px);
-  border: var(--bd) solid #2a1a10;
-  background:
-    repeating-linear-gradient(37deg, rgba(0,0,0,.10) 0 2px, transparent 2px 5px),
-    repeating-linear-gradient(-51deg, rgba(255,255,255,.05) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #6b4426, #4d301a);
-  box-shadow: inset 0 0 0 4px rgba(0,0,0,.30), 0 10px 0 rgba(0,0,0,.45);
+/* ============================================================
+   THE TITLE RAIL.
+
+   The corkboard is gone -- masthead, mugshots, pins, red string,
+   the manila case tag and the record card, sixty-odd lines of it
+   -- and what replaced it is a shot (js/menu.js) with two words
+   down the left-hand side of it. The rail floats over the street
+   rather than sitting in a layout with it, so the composition
+   belongs to the scene and the menu is just something printed on
+   the film.
+   ============================================================ */
+.title-cine { position: fixed; inset: 0; overflow: hidden; }
+.title-cine .scene-root { position: absolute; inset: 0; }
+
+.title-rail {
+  position: absolute; z-index: 20;
+  left: calc(28px + var(--sa-l)); bottom: calc(34px + var(--sa-b));
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+  max-width: min(46vw, 430px);
+  transition: opacity .5s ease, transform .5s ease;
 }
-.mb-pin { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.mb-title { left: 50%; top: 7%; transform: translateX(-50%) rotate(-1deg); }
-.mb-title canvas { box-shadow: 0 6px 0 rgba(0,0,0,.4); }
-.mb-knife {
-  position: absolute; right: -30px; top: -34px;
-  filter: drop-shadow(3px 4px 0 rgba(0,0,0,.5));
-}
-.mb-mug { background: transparent; }
-.mb-mug canvas { box-shadow: 0 5px 0 rgba(0,0,0,.4); }
-.mb-mug0 { left: 6%; top: 16%; transform: rotate(-3deg); }
-.mb-mug1 { left: 22%; top: 52%; transform: rotate(2deg); }
-.mb-mug2 { left: 44%; top: 44%; transform: rotate(-1.4deg); }
-.mb-mug3 { right: 21%; top: 43%; transform: rotate(3deg); }
-.mb-mug4 { right: 5%; top: 18%; transform: rotate(-2deg); }
-.mb-name { background: #ded2b4; padding: 1px 5px; border: 2px solid #12101d; }
-.mb-ring {
-  position: absolute; inset: -8px -6px 14px -6px;
-  border: 4px solid rgba(209,59,69,.85);
-  transform: rotate(-2deg);
-  pointer-events: none;
-}
-.mb-hole { position: absolute; }
-.mb-seed { right: 7%; bottom: 8%; transform: rotate(1.6deg); background: #cfb681; border: 3px solid #12101d; padding: 8px 10px 10px; }
-.mb-seed input {
-  width: 150px; background: #e8dcbe; color: #12101d;
-  border: 2px solid #12101d; padding: 4px 6px;
-  font: 700 14px monospace; letter-spacing: 1px; text-transform: uppercase;
-}
-.mb-record { left: 6%; bottom: 8%; transform: rotate(-1.6deg); background: #ded2b4; border: 3px solid #12101d; padding: 8px 10px; gap: 3px; }
-.title-btns { position: relative; z-index: 3; }
+/* press PLAY and the menu gets out of the way of the thing it was for */
+.title-rail.gone { opacity: 0; transform: translateX(-14px); pointer-events: none; }
+.tr-logo { filter: drop-shadow(0 5px 0 rgba(0,0,0,.55)); margin-bottom: 6px; }
+.tr-logo canvas { display: block; image-rendering: pixelated; }
+.tr-btn { min-width: 210px; justify-content: flex-start; padding: 12px 20px; gap: 12px; }
+.tr-btn:disabled { opacity: .5; }
+.tr-record { opacity: .75; margin-top: 2px; }
+.tr-record canvas { display: block; image-rendering: pixelated; }
 
 @media (max-width: 720px) {
-  .mboard { height: min(56vh, 430px); }
-  .mb-mug1 { left: 12%; }
-  .mb-mug3 { right: 12%; }
-  .station-folk { gap: 30px; margin-top: -64px; }
+  .title-rail { left: calc(14px + var(--sa-l)); bottom: calc(18px + var(--sa-b)); gap: 8px; max-width: 70vw; }
+  .tr-btn { min-width: 150px; padding: 9px 14px; }
+}
+@media (max-height: 460px) {
+  .title-rail { gap: 6px; bottom: calc(10px + var(--sa-b)); }
+  .tr-logo { margin-bottom: 0; }
+  .tr-record { display: none; }
 }
 
-/* A short frame (phone held sideways) cannot take two rows of mugshots
-   under a masthead. The family lines up instead, small, along the bottom
-   of the cork, and the case tag goes with them. */
-.mboard.tight { height: min(70vh, 430px); }
-.mboard.tight .mb-title { top: 3%; }
-.mboard.tight .mb-mug { gap: 2px; }
-.mboard.tight .mb-mug0 { left: 2%;  top: 50%; }
-.mboard.tight .mb-mug1 { left: 18%; top: 55%; }
-.mboard.tight .mb-mug2 { left: 34%; top: 49%; }
-.mboard.tight .mb-mug3 { left: 50%; right: auto; top: 55%; }
-.mboard.tight .mb-mug4 { left: 66%; right: auto; top: 50%; }
-.mboard.tight .mb-knife { right: -18px; top: -18px; }
-.mboard.tight .mb-seed { right: 1%; bottom: 3%; padding: 4px 6px 6px; }
-.mboard.tight .mb-seed input { width: 104px; font-size: 11px; padding: 2px 4px; }
-.mboard.tight .mb-record { display: none; }
-.mboard.tight .mb-hole { display: none; }
+/* ============================================================
+   SETTINGS.
+
+   There was no settings screen: sound was a corner button that
+   only existed inside a room, the camera distance was an
+   undocumented Z, the case number was a tag pinned to the
+   corkboard and the house rules were a third button on the title.
+   All four are the same kind of thing -- what you want set before
+   you start -- so they are one panel of rows.
+   ============================================================ */
+.set-cols { display: flex; flex-direction: column; gap: 2px; min-width: min(88vw, 460px); }
+.set-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 9px 4px; min-height: 52px;
+  border-bottom: var(--bd) solid var(--line-soft);
+}
+.set-row:last-child { border-bottom: 0; }
+.set-lab { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.set-lab canvas { display: block; image-rendering: pixelated; }
+.set-tog { min-width: 150px; padding: 8px 12px; }
+.set-tog.on { --btn-top: var(--gold-hi); --btn-bot: var(--gold); --btn-deep: var(--gold-dk); --btn-edge: rgba(255,243,176,.6); }
+.set-seed input {
+  background: var(--glass); border: var(--bd) solid var(--line); border-radius: 0;
+  color: var(--bone); font-family: inherit; font-size: var(--fs-md);
+  letter-spacing: 3px; text-transform: uppercase; text-align: center;
+  padding: 9px 10px; width: 170px; min-height: 44px;
+}
+.set-seed input::placeholder { color: var(--dust); }
 
 /* ============================================================
    27. THE LINE-UP
@@ -2657,17 +2659,9 @@ body.in-scene #app { overflow: hidden; }
 .loc-sub { display: flex; opacity: 0; transition: opacity .2s steps(3); }
 .loc-sub.in { opacity: 1; }
 
-/* the room the murder board hangs in: a painted canvas behind the pins */
-.board-title { position: relative; }
-.title-room {
-  position: fixed; left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  image-rendering: pixelated;
-  z-index: 0; pointer-events: none;
-}
-/* the room is sized in whole pixels by hand: nothing may rescale it */
-.splash canvas.title-room { max-width: none; }
-.board-title > *:not(.title-room) { position: relative; z-index: 1; }
+/* THE PAINTED OFFICE BEHIND THE CORKBOARD went with the corkboard.
+   The title is a room in the real scene runtime now -- js/menu.js --
+   so there is nothing left here to hang a picture on. */
 
 /* ============================================================
    31. THE FROGGOPHONE
@@ -30580,6 +30574,631 @@ const STORY = {
 };
 </script>
 <script>
+/* ==== js/menu.js ==== */
+'use strict';
+/* ============================================================
+   SHELL & DEBT — menu.js
+   THE TITLE IS A SHOT, NOT A NOTICEBOARD.
+
+   What was here before was a corkboard: a masthead card stabbed
+   with a knife, five mugshots on pins, red string between them,
+   and a painted office behind it. It told you who was in the game
+   before you had met any of them, and it did not move.
+
+   This is the first thirty seconds of the film instead. A wet
+   street outside a tabac at two in the morning. He is under the
+   awning with a cigarette, in the only light on the block. The
+   camera breathes. Something comes out of the alley, and he does
+   not talk to it.
+
+   It runs in the REAL scene runtime -- the same rig, the same
+   room canvas, the same walk cycle the game uses -- so the menu
+   cannot drift away from what the game looks like. A title screen
+   drawn by hand is a title screen that goes stale the week after
+   somebody changes the frog.
+   ============================================================ */
+
+const MENU = (() => {
+  const px = (c, x, y, w, h, col) => ART.px(c, x, y, w, h, col);
+  const P = () => PIX.PAL;
+
+  /* the set, in room pixels. Narrow: this is a composed shot and
+     the camera only ever walks a little way along it. */
+  /* ------------------------------------------------------------
+     BLOCKING.
+
+     The frame holds about 213 room columns and the menu owns the
+     left third of it, so the geometry is set by where the RAIL is
+     rather than by what looks tidy on its own: he stands just past
+     the middle, clear of the words, and the alley mouth sits at
+     the right-hand edge so they walk in from off screen.
+     ------------------------------------------------------------ */
+  /* The building is drawn in its OWN coordinates, from zero, and then
+     set down at X0 along a street that is wider than the frame -- because
+     a camera cannot move in a room the same size as the shot. At 272 wide
+     the pan clamped to nothing and the whole drift did not happen. */
+  const X0 = 104, FY = 104;
+  const AWN_X = 16, AWN_W = 132, AWN_Y = 42;     /* the awning over him */
+  const LAMP_X = 172, LAMP_Y = 20;               /* the lamp, down by the alley */
+  const BULB_X = 104, BULB_Y = 47;               /* the bulb under the awning */
+  const SHOP_W = 152;                            /* where the tabac ends */
+  const ALLEY_X = 186, ALLEY_W = 58;             /* where they come from */
+  const BLOCK = 272;                             /* the whole frontage */
+  const W = X0 + BLOCK + 40;
+
+  /* and the same landmarks in street coordinates, for everything that is
+     not the baked painting: the light, the reel, the camera */
+  const LAMP = X0 + LAMP_X;
+  const BULB = X0 + BULB_X;
+  const AWN = X0 + AWN_X;
+  const ALLEY = X0 + ALLEY_X;
+  const HIM = X0 + 104;                          /* where he stands */
+  const MARK = X0 + 156;                         /* where they stop */
+  const CAM = HIM - 4;                           /* him just past the middle */
+
+  /* ------------------------------------------------------------
+     THE RAIN.
+
+     Its own field, not the one in scene.js: that one is driven by
+     the hour and the weather and is switched off at the title
+     phase, and this street is raining because the film says so.
+     Three depths -- far, mid, near -- because rain that is all one
+     speed reads as a screen wipe rather than as weather.
+     ------------------------------------------------------------ */
+  const RAIN = (() => {
+    const rng = U.mulberry32(19771103);
+    return Array.from({ length: 260 }, () => {
+      const d = rng();
+      return {
+        x: rng(), y: rng(),
+        /* near drops are longer, faster and paler */
+        depth: d,
+        len: 3 + Math.round(d * 7),
+        sp: 130 + d * 260,
+        a: 0.10 + d * 0.26,
+      };
+    });
+  })();
+  /* and what it does when it lands */
+  const SPLASH = (() => {
+    const rng = U.mulberry32(19840517);
+    return Array.from({ length: 34 }, () => ({ x: rng(), ph: rng() * 9, sp: 1.6 + rng() * 2.4 }));
+  })();
+
+  /* ============================================================
+     THE SET, BAKED ONCE.
+     ============================================================ */
+  function paint(c) {
+    const p = P();
+
+    /* ---- the night behind everything ---- */
+    px(c, 0, 0, W, FY + 2, '#070a10');
+    /* a bruise of city light in the sky, off to the right */
+    for (let i = 0; i < 26; i++) {
+      px(c, 0, i, W, 1, 'rgba(40,58,92,' + (0.16 * (1 - i / 26)).toFixed(3) + ')');
+    }
+
+    /* everything from here to the restore is the BUILDING, drawn from its
+       own zero and set down along the street */
+    c.save();
+    c.translate(X0, 0);
+
+    /* ---- the building front: a tabac, shut, with one lit pane ---- */
+    px(c, 0, 8, SHOP_W, FY - 8, '#181017');
+    ART.grain(c, 0, 8, SHOP_W, FY - 8, '#120b11', '#22161f', 31);
+    /* the stone courses */
+    for (let y = 12; y < FY; y += 11) px(c, 0, y, SHOP_W, 1, 'rgba(0,0,0,.34)');
+    /* the shop window, dark but for the till lamp behind it */
+    px(c, 22, 52, 64, 40, '#0a0f14');
+    px(c, 24, 54, 60, 36, '#12202a');
+    ART.dither(c, 24, 54, 60, 36, 'rgba(255,214,140,.10)', 0.22, 7);
+    px(c, 52, 54, 2, 36, '#0a0f14');
+    px(c, 24, 70, 60, 2, '#0a0f14');
+    /* the till lamp: the warm smudge deep inside */
+    PIX.disc(c, 68, 78, 7, 'rgba(255,196,110,.10)');
+    PIX.disc(c, 68, 78, 4, 'rgba(255,212,140,.16)');
+    /* the door, shut, with the closed sign on it */
+    px(c, 100, 48, 30, FY - 48, '#0d0a10');
+    px(c, 102, 50, 26, FY - 52, '#1a1119');
+    px(c, 106, 62, 18, 12, '#0a0f14');
+    px(c, 108, 64, 14, 8, '#243444');
+    px(c, 112, 84, 4, 2, '#7d5210');
+
+    /* ---- THE NEON. The one saturated thing in the frame. ---- */
+    neon(c);
+
+    /* ---- the awning he is standing under ---- */
+    for (let i = 0; i < 8; i++) {
+      const band = Math.floor(i / 2) % 2;
+      px(c, AWN_X - i, AWN_Y + i, AWN_W + i * 2, 1, band ? '#5c1620' : '#2a1016');
+    }
+    px(c, AWN_X - 8, AWN_Y + 8, AWN_W + 16, 2, '#0a0508');
+    /* the scallops along its edge */
+    for (let sx = AWN_X - 8; sx < AWN_X + AWN_W + 8; sx += 9) {
+      px(c, sx + 2, AWN_Y + 10, 5, 3, '#3a121a');
+      px(c, sx + 3, AWN_Y + 13, 3, 1, '#0a0508');
+    }
+    /* THE BULB UNDER THE AWNING. He is lit from directly overhead by a
+       forty-watt bulb on a flex, which is the only reason you can see his
+       face at all -- and the reason the rain coming off the awning edge
+       is the brightest thing at his feet. */
+    /* A DISC AT RADIUS THREE IS A DIAMOND, and a gold diamond hanging
+       over his hat read as a sparkle rather than as a forty-watt bulb.
+       Drawn as the thing it is: flex, brass cap, glass. */
+    px(c, BULB_X, AWN_Y + 10, 1, BULB_Y - AWN_Y - 12, '#1a1a22');
+    px(c, BULB_X - 1, BULB_Y - 3, 3, 2, '#6e4c12');       /* the cap */
+    px(c, BULB_X - 1, BULB_Y - 3, 3, 1, '#a5741f');
+    px(c, BULB_X - 2, BULB_Y - 1, 5, 4, '#ffe6a8');       /* the glass */
+    px(c, BULB_X - 1, BULB_Y + 3, 3, 1, '#ffe6a8');
+    px(c, BULB_X - 1, BULB_Y, 2, 2, '#fff6d8');           /* the filament */
+    /* the halo, soft, so it does not come out as a second shape */
+    for (let r = 5; r >= 2; r--) {
+      PIX.disc(c, BULB_X, BULB_Y, r, 'rgba(255,224,150,' + (0.055 / (r - 1)).toFixed(3) + ')');
+    }
+
+    /* the poles holding it up */
+    px(c, AWN_X + 4, AWN_Y + 10, 2, FY - AWN_Y - 10, '#14161c');
+    px(c, AWN_X + AWN_W - 6, AWN_Y + 10, 2, FY - AWN_Y - 10, '#14161c');
+
+    /* ---- the wall between the shop and the alley ---- */
+    px(c, SHOP_W, 6, ALLEY_X - SHOP_W, FY - 6, '#141018');
+    ART.grain(c, SHOP_W, 6, ALLEY_X - SHOP_W, FY - 6, '#0e0a12', '#1e1722', 17);
+    /* a bill pasted up and coming away at the corner */
+    px(c, 156, 44, 22, 30, '#2a2620');
+    px(c, 158, 46, 18, 26, '#3c362c');
+    for (let y = 50; y < 70; y += 5) px(c, 160, y, 14, 1, 'rgba(0,0,0,.30)');
+    px(c, 172, 44, 6, 7, '#1a1118');                 /* the peeled corner */
+    /* the drainpipe, which is where most of the water is going */
+    px(c, 180, 6, 4, FY - 6, '#0f1216');
+    px(c, 180, 6, 1, FY - 6, '#252c34');
+    for (let y = 18; y < FY; y += 22) px(c, 179, y, 6, 3, '#0f1216');
+
+    /* ---- THE ALLEY. Nothing in it. That is the point. ---- */
+    px(c, ALLEY_X, 0, ALLEY_W, FY + 2, '#04060a');
+    px(c, ALLEY_X - 2, 0, 2, FY + 2, '#0a0d12');
+    px(c, ALLEY_X + ALLEY_W, 0, 2, FY + 2, '#0a0d12');
+    /* a far wall a long way down it, barely there */
+    px(c, ALLEY_X + 8, 30, ALLEY_W - 16, FY - 30, '#070a0f');
+    ART.dither(c, ALLEY_X + 8, 30, ALLEY_W - 16, FY - 34, 'rgba(60,80,110,.05)', 0.2, 23);
+
+    /* ---- and the block carrying on past it ---- */
+    px(c, ALLEY_X + ALLEY_W, 10, BLOCK - ALLEY_X - ALLEY_W, FY - 10, '#12101a');
+    ART.grain(c, ALLEY_X + ALLEY_W, 10, BLOCK - ALLEY_X - ALLEY_W, FY - 10, '#0d0b14', '#1b1824', 41);
+
+    c.restore();
+    /* ---- the pavement, and the road past the kerb ---- */
+    px(c, 0, FY, W, 132 - FY, '#0b0e13');
+    /* the flags, wet */
+    for (let x = 0; x < W; x += 17) px(c, x, FY, 1, 132 - FY, 'rgba(0,0,0,.34)');
+    px(c, 0, FY, W, 1, '#1d242c');
+    px(c, 0, FY + 1, W, 1, 'rgba(0,0,0,.45)');
+    /* the kerb and the gutter running with water */
+    px(c, 0, FY + 16, W, 2, '#0a0d11');
+    px(c, 0, FY + 18, W, 132 - FY - 18, '#080b0f');
+    px(c, 0, FY + 18, W, 1, 'rgba(120,160,200,.10)');
+
+    /* ---- the puddles, which are where the neon actually lives ---- */
+    puddle(c, X0 + 80, FY + 8, 58, 7, 0.30);
+    puddle(c, X0 + 150, FY + 12, 40, 6, 0.20);
+    puddle(c, X0 + 228, FY + 6, 34, 5, 0.16);
+
+    /* ---- the lamp column, and the pool it throws ----
+       PAINTED AFTER THE RESTORE, so it is in street coordinates like the
+       cone that comes off it. In building coordinates the post stood a
+       hundred pixels away from its own light. */
+    px(c, LAMP - 1, LAMP_Y + 8, 3, FY - LAMP_Y - 8, '#0e1116');
+    px(c, LAMP - 1, LAMP_Y + 8, 1, FY - LAMP_Y - 8, '#222932');
+    px(c, LAMP - 6, LAMP_Y + 2, 12, 3, '#0e1116');
+    px(c, LAMP - 4, LAMP_Y + 5, 8, 4, '#ffe6a8');
+    px(c, LAMP - 3, LAMP_Y + 5, 6, 2, '#fff6d8');
+
+    /* the dark in the corners, so the frame has edges */
+    for (let i = 0; i < 18; i++) {
+      const a = 0.40 * (1 - i / 18);
+      px(c, i, 0, 1, 132, 'rgba(0,0,0,' + a.toFixed(3) + ')');
+      px(c, W - 1 - i, 0, 1, 132, 'rgba(0,0,0,' + a.toFixed(3) + ')');
+      px(c, 0, i, W, 1, 'rgba(0,0,0,' + (a * 0.7).toFixed(3) + ')');
+    }
+  }
+
+  /* THE SIGN. Two words of neon over a shut shop, and the whole
+     colour budget of the frame goes on it. */
+  function neon(c) {
+    const R = '#ff2e4d', RD = '#8c1226', G = '#ffd75e';
+    /* the box it is bolted to */
+    px(c, 26, 18, 96, 22, '#0a0a10');
+    px(c, 26, 18, 96, 1, '#1c1c26');
+    /* TABAC, in tube */
+    const word = PIXFONT.render('TABAC', { scale: 2, color: R, shadow: null });
+    c.drawImage(word, 26 + Math.round((96 - word.width) / 2), 22);
+    /* the carrot that says tabac in France, hanging off the end */
+    PIX.disc(c, 112, 46, 5, RD);
+    PIX.disc(c, 112, 45, 4, R);
+    px(c, 111, 40, 2, 4, '#2a7a4e');
+    /* the tubes' own bloom, baked soft */
+    for (let i = 3; i >= 1; i--) {
+      px(c, 26 - i, 18 - i, 96 + i * 2, 22 + i * 2, 'rgba(255,46,77,' + (0.05 / i).toFixed(3) + ')');
+    }
+    px(c, 26, 41, 96, 1, 'rgba(255,46,77,.16)');
+    /* a gold underline, for the one warm note */
+    px(c, 34, 38, 80, 1, 'rgba(255,215,94,.30)');
+  }
+
+  /* standing water: a dark sheet with the sign bleeding into it */
+  function puddle(c, x, y, w, h, a) {
+    SPR.ellipse ? SPR.ellipse(c, x + w / 2, y + h / 2, w / 2, h / 2, '#060a10')
+      : px(c, x, y, w, h, '#060a10');
+    px(c, x + 2, y + 1, w - 4, 1, 'rgba(120,160,200,' + (a * 0.5).toFixed(3) + ')');
+    /* the neon, upside down and broken up */
+    for (let i = 0; i < w; i += 3) {
+      if ((i * 7) % 5 === 0) continue;
+      px(c, x + i, y + 2 + ((i * 3) % (h - 2)), 2, 1, 'rgba(255,46,77,' + (a * 0.55).toFixed(3) + ')');
+    }
+    px(c, x + Math.round(w * 0.62), y + 3, 3, 1, 'rgba(255,215,94,' + a.toFixed(3) + ')');
+  }
+
+  /* ============================================================
+     WHAT MOVES.
+     ============================================================ */
+  let live = false;              /* the reel is running */
+  /* ------------------------------------------------------------
+     THE CAMERA IS OURS.
+
+     SCENE.pan is an async loop that calls look() every 24ms until it
+     lands, and nothing outside it can call it off. So stopping the
+     menu did not stop the camera: press PLAY mid-drift and the pan
+     carried on writing over the look() that was supposed to hold on
+     his face. One from/to pair, moved by the same ticker that ages
+     the bodies, and it stops when the ticker does.
+     ------------------------------------------------------------ */
+  let camA = 0, camB = 0, camT = 0, camMs = 1;
+  let flashT = 0;                /* muzzle flash, in seconds remaining */
+  let bodies = [];               /* what is left on the pavement */
+  let smokeT = 0;                /* his cigarette, for the ember */
+
+  /* the light this street actually has: a cone off the lamp, the
+     neon wash, and the rain going through both */
+  function onPaintFront(c, T) {
+    /* both cones go over the set but UNDER the cast, so he stands in the
+       light rather than behind it */
+    cone(c, LAMP, LAMP_Y + 8, 40, 70, 0.055);
+    /* the bulb is close over his head, so its cone is short and hot, and
+       it flickers the way a cheap flex does */
+    const f = Math.sin(T * 21) > 0.93 ? 0.55 : 1;
+    cone(c, BULB, BULB_Y + 3, 22, FY - BULB_Y - 3, 0.085 * f);
+  }
+
+  function cone(c, x, y, spread, drop, a) {
+    for (let i = 0; i < drop; i++) {
+      const t = i / drop;
+      const hw = 4 + t * spread;
+      px(c, Math.round(x - hw), y + i, Math.round(hw * 2), 1,
+        'rgba(255,231,163,' + (a * (1 - t)).toFixed(4) + ')');
+    }
+  }
+
+  /* ------------------------------------------------------------
+     THE CIGARETTE.
+
+     `smoke` is an idle job an ACTOR can be given -- it puts a cig in
+     the hand and a curl of grey over it -- and the player is not an
+     actor: he has an arm pose and nothing in it. So the one thing
+     the whole shot is named after had to be drawn here, off the
+     posed hand, which SCENE.meHand hands back in room pixels.
+     ------------------------------------------------------------ */
+  function cigarette(c, T) {
+    if (smokeT <= 0) return;
+    const h = SCENE.meHand && SCENE.meHand();
+    if (!h) return;
+    const x = Math.round(h.x) + 2, y = Math.round(h.y) - 3;
+    /* he drags on it every four seconds and it glows while he does */
+    const drag = Math.max(0, Math.sin(T * 1.5) - 0.86) / 0.14;
+    /* the stick */
+    px(c, x, y, 5, 1, '#efe6cc');
+    px(c, x, y + 1, 5, 1, '#c9bfa4');
+    /* the ember, and what the ember does to the rain round it */
+    px(c, x + 5, y, 1, 1, drag > 0.2 ? '#ffb45e' : '#e0631e');
+    if (drag > 0.2) {
+      PIX.disc(c, x + 5, y, 3, 'rgba(255,140,40,' + (0.10 * drag).toFixed(3) + ')');
+      PIX.disc(c, x + 5, y, 2, 'rgba(255,180,80,' + (0.16 * drag).toFixed(3) + ')');
+    }
+    /* and the smoke, which is the only thing in this street going up */
+    for (let i = 0; i < 9; i++) {
+      const t = ((T * 0.5 + i * 0.11) % 1);
+      const sy = y - 2 - t * 22;
+      const sx = x + 5 + Math.sin(t * 5.2 + i) * (1 + t * 4);
+      px(c, Math.round(sx), Math.round(sy), 1, 1,
+        'rgba(206,202,190,' + (0.26 * (1 - t)).toFixed(3) + ')');
+    }
+  }
+
+  /* the near floor: bodies lie on it, and the gutter runs over it */
+  function onPaintNear(c, T) {
+    cigarette(c, T);
+    bodies.forEach(b => {
+      const a = Math.max(0, Math.min(1, b.t / 0.6));
+      c.globalAlpha = Math.min(1, b.life);
+      /* A HEAP HAS TO READ AGAINST THE PAVEMENT IT IS ON. The first
+         version was drawn in the same value as the wet flags -- #0d1016
+         on #0b0e13 -- and a body you cannot see is a shot that did not
+         land. It is lit by the same bulb he is, so it gets a top edge. */
+      /* A HEAP HAS TO READ AGAINST THE PAVEMENT IT IS ON, and it has to
+         have a silhouette: the first version was a 28x6 stripe in the same
+         value as the wet flags, and a body you cannot see is a shot that
+         did not land. A back, a shoulder, a hat off in the water. */
+      const bx = Math.round(b.x);
+      px(c, bx - 15, FY - 7, 26, 7, '#2b2030');            /* the coat */
+      px(c, bx - 17, FY - 5, 4, 5, '#2b2030');
+      px(c, bx + 9, FY - 9, 9, 9, '#2b2030');              /* the shoulder */
+      px(c, bx - 15, FY - 7, 26, 1, '#584862');            /* the wet top edge */
+      px(c, bx + 9, FY - 9, 9, 1, '#584862');
+      px(c, bx - 12, FY - 5, 20, 1, 'rgba(255,231,163,.12)');
+      px(c, bx - 21, FY - 2, 7, 3, '#2b2030');             /* the arm, out */
+      px(c, bx - 21, FY - 2, 7, 1, '#4a3c54');
+      px(c, bx - 23, FY - 1, 3, 2, '#3e5a3a');             /* and the hand */
+      px(c, bx + 20, FY - 5, 10, 5, '#181420');            /* the hat, come off */
+      px(c, bx + 20, FY - 5, 10, 1, '#3a3044');
+      px(c, bx + 22, FY - 7, 6, 2, '#181420');
+      /* and what is running out of him, thinning into the rain */
+      const run = Math.round(20 * a);
+      px(c, bx - 14, FY - 1, run, 2, 'rgba(140,22,34,.62)');
+      px(c, bx - 14, FY + 1, run, 1, 'rgba(90,14,22,.40)');
+      /* which the neon finds, because everything wet in this street does */
+      px(c, bx - 10, FY, Math.round(run * 0.6), 1, 'rgba(255,46,77,.20)');
+      c.globalAlpha = 1;
+    });
+  }
+
+  /* the rain, the splashes and the muzzle flash: all in front */
+  function onPaintFore(c, T, cam, vw) {
+    /* ---- the rain ---- */
+    const span = 150;
+    for (const d of RAIN) {
+      const y = ((d.y * span + T * d.sp) % span) - 18;
+      /* ON A SLANT, and the slant comes off the same fall the drop is
+         doing -- rain that goes straight down in a still frame reads as a
+         screen wipe, and rain whose angle is unrelated to its speed reads
+         as confetti. */
+      const x = cam - 10 + ((d.x * (vw + 40) + T * 14 * d.depth) % (vw + 40)) - y * 0.16;
+      for (let k = 0; k < d.len; k++) {
+        px(c, Math.round(x + k * 0.16), Math.round(y + k), 1, 1,
+          'rgba(170,205,235,' + d.a.toFixed(3) + ')');
+      }
+    }
+    /* ---- what it does when it lands ---- */
+    for (const s of SPLASH) {
+      const ph = (T * s.sp + s.ph) % 1;
+      if (ph > 0.34) continue;
+      const x = Math.round(cam + s.x * vw);
+      const r = Math.round(ph * 9);
+      const a = (0.22 * (1 - ph / 0.34)).toFixed(3);
+      px(c, x - r, FY + 6, 1, 1, 'rgba(180,210,235,' + a + ')');
+      px(c, x + r, FY + 6, 1, 1, 'rgba(180,210,235,' + a + ')');
+    }
+    /* ---- and the rain coming OFF the awning in a sheet ---- */
+    for (let i = 0; i < 26; i++) {
+      const x = AWN - 8 + i * ((AWN_W + 16) / 26);
+      const y = ((T * 190 + i * 37) % (FY - AWN_Y - 12)) + AWN_Y + 12;
+      px(c, Math.round(x), Math.round(y), 1, 4, 'rgba(170,205,235,.16)');
+    }
+
+    /* ---- THE FLASH. Three frames, and it lights the street. ---- */
+    if (flashT > 0) {
+      const a = Math.min(1, flashT / 0.12);
+      const hx = SCENE.me ? SCENE.me.x + 13 : HIM + 13;
+      const hy = FY - 26;
+      PIX.disc(c, hx + 3, hy, 5, 'rgba(255,244,208,' + (0.95 * a).toFixed(3) + ')');
+      PIX.disc(c, hx + 8, hy, 3, 'rgba(255,214,120,' + (0.8 * a).toFixed(3) + ')');
+      PIX.disc(c, hx + 12, hy, 2, 'rgba(255,170,60,' + (0.5 * a).toFixed(3) + ')');
+      /* the star: four spikes off the muzzle, which is what a flash IS */
+      px(c, hx - 4, hy, 22, 1, 'rgba(255,236,170,' + (0.65 * a).toFixed(3) + ')');
+      px(c, hx + 3, hy - 7, 1, 15, 'rgba(255,236,170,' + (0.40 * a).toFixed(3) + ')');
+      /* and the whole street takes it for one frame */
+      px(c, cam, -40, vw, 190, 'rgba(255,232,180,' + (0.10 * a).toFixed(3) + ')');
+    }
+  }
+
+  /* ============================================================
+     THE ROOM.
+     ============================================================ */
+  function street() {
+    return {
+      id: 'menu_street', w: W, floorY: FY,
+      paint, onPaintFront, onPaintNear, onPaintFore,
+      /* nobody walks here but the reel, and nothing is clickable */
+      actors: [], spots: [],
+      enterX: HIM, enterFace: 1,
+      lights: [{ x: LAMP, y: LAMP_Y + 6, r: 44, a: 0.13 },
+               { x: X0 + 74, y: 30, r: 30, a: 0.07, bare: true }],
+    };
+  }
+
+  /* ============================================================
+     THE REEL.
+
+     A loop of shots rather than one animation, so it can be cut
+     out of at any point: every wait goes through nap(), which
+     gives up the moment the menu is told to stop.
+     ============================================================ */
+  async function nap(ms) {
+    let left = ms;
+    while (left > 0 && live) {
+      const slice = Math.min(80, left);
+      await U.sleep(slice);
+      left -= slice;
+    }
+    return live;
+  }
+
+  /* somebody comes out of the alley. Not a character -- a coat. */
+  function walker(i) {
+    return {
+      id: 'menu_walk' + i, x: ALLEY + 26, y: FY,
+      key: 'mk' + i, def: FROG_DEFS[['vig', 'cage', 'collector'][i % 3]] || FROG_DEFS.player,
+      face: -1, mood: 'hard', still: false,
+    };
+  }
+
+  async function reel() {
+    let round = 0;
+    while (live) {
+      /* ---- 1. THE HOLD. He smokes. The camera breathes. ---- */
+      SCENE.meArm('up');
+      smokeT = 1;
+      if (!await nap(900)) return;
+      dolly(CAM, CAM + 13, 3400);
+      if (!await nap(2600)) return;
+
+      /* ---- 2. SOMETHING COMES OUT OF THE ALLEY ---- */
+      const n = 1 + (round % 2 ? 1 : 0);             /* every other time, two */
+      const cast = [];
+      for (let i = 0; i < n; i++) {
+        const a = walker(round * 2 + i);
+        a.x = ALLEY + 26 + i * 20;
+        SCENE.def.actors.push(a);
+        cast.push(a);
+      }
+      dolly(CAM + 13, CAM + 22, 2200);
+      cast.forEach((a, i) => SCENE.send(a, MARK + i * 18, 26));
+      if (!await nap(1500)) { cull(cast); return; }
+
+      /* ---- 3. HE HEARS IT. The cigarette stays in his mouth. ---- */
+      SCENE.meFace('angry');
+      SCENE.place(SCENE.me ? SCENE.me.x : HIM, 1);
+      if (!await nap(620)) { cull(cast); return; }
+
+      /* ---- 4. AND HE DOES NOT TALK TO IT ---- */
+      /* the cigarette goes down with the arm: it is the same hand */
+      smokeT = 0;
+      SCENE.meArm('point');
+      if (!await nap(260)) { cull(cast); return; }
+      for (const a of cast) {
+        if (!live) { cull(cast); return; }
+        fire();
+        a.gone = true;
+        bodies.push({ x: a.x, t: 0, life: 1 });
+        if (!await nap(300)) { cull(cast); return; }
+      }
+      cull(cast);
+
+      /* ---- 5. AND GOES BACK TO HIS CIGARETTE ---- */
+      if (!await nap(700)) return;
+      SCENE.meArm('up');
+      smokeT = 1;
+      SCENE.meFace(null);
+      dolly(CAM + 22, CAM, 3800);
+      if (!await nap(2400)) return;
+      round++;
+    }
+  }
+
+  function fire() {
+    flashT = 0.17;
+    if (typeof SFX !== 'undefined' && SFX.shot) SFX.shot();
+    if (typeof FX !== 'undefined' && FX.screen) {
+      FX.screen.shake(4);
+      FX.screen.flash(PIX.PAL.W, 0.10, 0.14);
+    }
+  }
+
+  /* take the walkers back off the stage */
+  function cull(cast) {
+    if (!SCENE.def || !SCENE.def.actors) return;
+    SCENE.def.actors = SCENE.def.actors.filter(a => cast.indexOf(a) < 0);
+  }
+
+  function dolly(from, to, ms) { camA = from; camB = to; camT = 0; camMs = Math.max(1, ms); }
+
+  /* the bodies wash away, because the street does not keep them */
+  let tick = 0;
+  function ticker() {
+    if (!live) return;
+    /* the drift, eased in and out so it reads as a camera and not a slide */
+    camT = Math.min(1, camT + 33 / camMs);
+    const k = camT < 0.5 ? 2 * camT * camT : 1 - Math.pow(-2 * camT + 2, 2) / 2;
+    SCENE.look(camA + (camB - camA) * k);
+    if (SCENE.busy() !== true) SCENE.busy(true);
+    flashT = Math.max(0, flashT - 0.033);
+    bodies.forEach(b => { b.t += 0.033; if (b.t > 6) b.life -= 0.015; });
+    bodies = bodies.filter(b => b.life > 0);
+    tick = setTimeout(ticker, 33);
+  }
+
+  /* ============================================================
+     ON AND OFF.
+     ============================================================ */
+  function start() {
+    if (live) return;
+    live = true;
+    bodies = []; flashT = 0;
+    SCENE.open(street());
+    SCENE.busy(true);                 /* nothing here is clickable */
+    SCENE.place(HIM, 1);
+    SCENE.meArm('up');
+    camA = camB = CAM; camT = 1;
+    SCENE.look(CAM);
+    ticker();
+    reel();
+  }
+
+  function stop() {
+    live = false;
+    clearTimeout(tick);
+    bodies = [];
+    SCENE.meArm('');
+    SCENE.meFace(null);
+  }
+
+  /* ============================================================
+     AND THEN HE LOOKS AT YOU.
+
+     Press PLAY and the reel stops mid-breath: the cigarette goes,
+     he turns out of the street and square to the frame, and the
+     camera walks in until he is the only thing in it. THEN the
+     wipe. A title screen that cuts straight to a loading card
+     throws away the one moment the whole menu was building to.
+     ============================================================ */
+  async function faceYou() {
+    live = false;
+    clearTimeout(tick);
+    /* he flicks it away and squares up */
+    SCENE.meArm('');
+    SCENE.meFace('angry');
+    if (typeof SFX !== 'undefined' && SFX.tick) SFX.tick();
+    await U.sleep(140);
+    SCENE.look(SCENE.me ? SCENE.me.x : HIM);
+    push(1.9, 1500);
+    await U.sleep(460);
+    /* AND THEN HE STOPS GLARING AND JUST LOOKS. His default face is
+       already the face of a man who lost his family -- see the mood set
+       in js/sprites.js -- so handing it back IS the expression. */
+    SCENE.meFace(null);
+    await U.sleep(900);
+    return true;
+  }
+
+  /* the camera walks in on the room canvas itself */
+  function push(to, ms) {
+    const host = document.getElementById('scene-root');
+    const cv = host && host.querySelector('canvas');
+    if (!cv) return;
+    cv.style.transformOrigin = '50% 62%';
+    cv.style.transition = 'transform ' + ms + 'ms cubic-bezier(.3,.0,.2,1)';
+    requestAnimationFrame(() => { cv.style.transform = 'scale(' + to + ')'; });
+  }
+  function unpush() {
+    const host = document.getElementById('scene-root');
+    const cv = host && host.querySelector('canvas');
+    if (!cv) return;
+    cv.style.transition = ''; cv.style.transform = ''; cv.style.transformOrigin = '';
+  }
+
+  return { start, stop, faceYou, street, unpush, running() { return live; },
+    /* the probe needs to put one on the pavement without waiting for a round */
+    debugBody(x) { bodies.push({ x, t: 3, life: 1 }); } };
+})();
+</script>
+<script>
 /* ==== js/ui.js ==== */
 'use strict';
 /* ============================================================
@@ -30997,240 +31616,100 @@ const UI = {
      across the cork, the edge of a desk along the bottom with a
      cold coffee and an ashtray on it, and dust in the light.
      ============================================================ */
-  titleRoom(host) {
-    const cv = document.createElement('canvas');
-    cv.className = 'pix title-room';
-    const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    host.appendChild(cv);
+  /* THE PAINTED OFFICE the corkboard hung in -- a wall, a desk, a lamp,
+     a window with rain behind it and dust in the air, a hundred and forty
+     lines of it -- was the backdrop for a title screen that no longer
+     exists. The title is a real room now, played in the scene runtime:
+     see js/menu.js. */
 
-    const rng = U.mulberry32(20260820);
-    const drops = Array.from({ length: 110 }, () => ({
-      x: rng() * 74, y: rng() * 60, s: 0.6 + rng() * 1.6, l: 2 + rng() * 4,
-    }));
-    const motes = Array.from({ length: 40 }, () => ({
-      fx: rng(), fy: rng(), s: 0.1 + rng() * 0.3, ph: rng() * 9,
-    }));
 
-    /* The wall is painted once per size. Nothing in it is centred: the
-       window hangs off the right edge, the desk sits on the bottom one,
-       the lamp hangs at the left. So the room fills any frame it is given
-       instead of floating in the middle of a black one. */
-    let W = 0, H = 0, DY = 0, WX = 0, back = null;
-    const bake = () => {
-      DY = H - 32;                                   // the desk surface
-      WX = W - 84;                                   // the window frame
-      back = ART.cv(W, H);
-      const b = back.c;
-      b.drawImage(ART.wall(W, H, { tone: 'grey', railY: DY - 14, seed: 77 }), 0, 0);
+  /* ============================================================
+     THE TITLE IS A SHOT.
 
-      /* the window, stage right, with the city out in the rain */
-      ART.px(b, WX, 12, 78, 64, '#0d1218');
-      ART.px(b, WX + 2, 14, 74, 60, '#141d28');
-      for (let bx = WX + 2; bx < WX + 74; bx += 13) {
-        const bh = 12 + ((bx * 7) % 26);
-        ART.px(b, bx, 74 - bh, 11, bh, '#0c141c');
-        for (let ly = 76 - bh; ly < 72; ly += 5) {
-          for (let lx = bx + 2; lx < bx + 9; lx += 4) {
-            if ((lx * ly) % 5 === 0) ART.px(b, lx, ly, 2, 2, (lx + ly) % 3 ? '#4a6478' : '#ffd75e');
-          }
-        }
-      }
-      ART.px(b, WX, 12, 78, 2, '#0a0d12');
-      ART.px(b, WX + 38, 12, 2, 64, '#0a0d12');
-      ART.px(b, WX, 42, 78, 2, '#0a0d12');
-      ART.px(b, WX - 2, 74, 82, 4, '#2a2f38');
-      ART.px(b, WX - 2, 74, 82, 1, '#3f4652');
+     It used to be a corkboard: a masthead stabbed with a knife,
+     five mugshots on pins, red string between them, and a painted
+     office behind it. It named five frogs you had not met and it
+     did not move.
 
-      /* the desk along the bottom of the frame */
-      ART.px(b, 0, DY, W, H - DY, '#241a12');
-      ART.px(b, 0, DY, W, 3, '#4d301a');
-      ART.px(b, 0, DY + 3, W, 1, '#6b4426');
-      ART.grain(b, 0, DY + 4, W, H - DY - 4, '#1d150e', '#33251a', 13);
-
-      /* near end: the case file open where you left it, a cold coffee with
-         the ring it left, and the phone off the hook */
-      ART.px(b, 8, DY + 2, 52, 16, '#12101d');
-      ART.px(b, 9, DY + 3, 50, 14, '#ded2b4');
-      ART.px(b, 11, DY + 6, 36, 1, '#8d8672');
-      ART.px(b, 11, DY + 9, 28, 1, '#8d8672');
-      ART.px(b, 11, DY + 12, 32, 1, '#8d8672');
-      ART.px(b, 9, DY + 3, 50, 2, '#b8232f');
-      ART.px(b, 44, DY, 18, 20, 'rgba(0,0,0,.25)');
-      b.drawImage(ART.art('mug', 2), 66, DY + 8);
-      ART.px(b, 64, DY + 22, 20, 2, 'rgba(110,74,48,.45)');
-      b.drawImage(ART.art('phone', 2), 90, DY + 8);
-
-      /* far end: an ashtray with one still going, the iron he never puts in
-         the drawer, and the typewriter with a sheet still in it */
-      b.drawImage(ART.art('ashtray', 2), W - 100, DY + 14);
-      ART.px(b, W - 96, DY + 12, 8, 1, '#e6dcc4');
-      ART.px(b, W - 88, DY + 12, 2, 1, '#ff8a4a');
-      b.drawImage(ART.art('gunprop', 2), W - 76, DY + 12);
-      b.drawImage(ART.art('typewriter', 2), W - 44, DY - 2);
-      ART.px(b, W - 38, DY - 8, 20, 8, '#ded2b4');
-      ART.px(b, W - 38, DY - 8, 20, 1, '#f2e9cf');
-      ART.px(b, W - 36, DY - 4, 14, 1, '#8d8672');
-
-      /* the desk falls away from the lamp: the far end sits in the dark */
-      for (let x = 0; x < W; x += 4) {
-        ART.px(b, x, DY - 12, 4, H - DY + 12, 'rgba(6,8,14,' + (0.04 + 0.42 * (x / W)).toFixed(3) + ')');
-      }
-      /* a tin lamp on a cord over the near end of the board */
-      b.drawImage(ART.hangLamp(20, 34, false), 20, 0);
-    };
-
-    let raf = null;
-    const t0 = performance.now();
-    const draw = () => {
-      raf = requestAnimationFrame(draw);
-      if (G.phase !== 'title') { cancelAnimationFrame(raf); raf = null; return; }
-      const T = (performance.now() - t0) / 1000;
-      const vw = window.innerWidth, vh = window.innerHeight;
-      /* an integer scale, then a world big enough to cover the frame at it */
-      const K = Math.max(2, Math.min(Math.floor(vw / 240), Math.floor(vh / 150), 8));
-      const nW = Math.max(240, Math.ceil(vw / K)), nH = Math.max(150, Math.ceil(vh / K));
-      if (!back || nW !== W || nH !== H) { W = nW; H = nH; bake(); }
-      if (cv.width !== W * K) {
-        cv.width = W * K; cv.height = H * K;
-        cv.style.width = cv.width + 'px'; cv.style.height = cv.height + 'px';
-      }
-      c.setTransform(K, 0, 0, K, 0, 0);
-      c.imageSmoothingEnabled = false;
-      c.clearRect(0, 0, W, H);
-      c.drawImage(back.cv, 0, 0);
-      /* rain running down the glass */
-      for (const d of drops) {
-        const y = (d.y + T * d.s * 26) % 62;
-        for (let i = 0; i < d.l; i++) {
-          ART.px(c, WX + 2 + Math.round(d.x), 14 + Math.round(y) + i, 1, 1, 'rgba(150,195,225,.16)');
-        }
-      }
-      /* the lamp, guttering, and the cone it puts down the wall */
-      const flick = Math.sin(T * 9) > 0.93 ? 0.4 : 1;
-      ART.px(c, 28, 16, 4, 3, 'rgba(255,251,232,' + (0.85 * flick) + ')');
-      const bands = Math.max(6, Math.ceil((DY + 6 - 19) / 8));
-      for (let i = 0; i < bands; i++) {
-        const y = 19 + i * 8, hw = 5 + i * 5;
-        ART.px(c, 30 - hw, y, hw * 2, 8, 'rgba(255,235,170,' + (0.032 * flick) + ')');
-      }
-      ART.px(c, 4, DY, 58, 2, 'rgba(255,235,170,' + (0.18 * flick) + ')');
-      ART.px(c, 12, DY + 2, 44, 3, 'rgba(255,235,170,' + (0.07 * flick) + ')');
-      /* the cigarette on the ashtray, still going */
-      for (let i = 0; i < 16; i++) {
-        const sx = W - 87 + Math.sin(T * 1.1 + i * 0.45) * (0.6 + i * 0.16);
-        ART.px(c, Math.round(sx), DY + 11 - i, 1, 1,
-          'rgba(210,205,195,' + (0.13 - i * 0.007) + ')');
-      }
-      /* dust turning over in the light */
-      for (const m of motes) {
-        const y = (m.fy * H + T * m.s * 5) % H;
-        const x = m.fx * W + Math.sin(T * 0.5 + m.ph) * 3;
-        ART.px(c, Math.round(x), Math.round(y), 1, 1, 'rgba(255,240,205,.14)');
-      }
-      /* the frame goes dark at the edges */
-      for (let i = 0; i < 18; i++) {
-        const a = 0.5 * (1 - i / 18);
-        ART.px(c, 0, i, W, 1, 'rgba(0,0,0,' + (a * 0.5) + ')');
-        ART.px(c, 0, H - 1 - i, W, 1, 'rgba(0,0,0,' + (a * 0.4) + ')');
-        ART.px(c, i, 0, 1, H, 'rgba(0,0,0,' + (a * 0.6) + ')');
-        ART.px(c, W - 1 - i, 0, 1, H, 'rgba(0,0,0,' + (a * 0.6) + ')');
-      }
-    };
-    draw();
-  },
-
+     It is the opening of the film now -- see js/menu.js -- and the
+     menu itself is two words on the left over it. Everything the
+     board carried that a player actually needs (the case number,
+     the record, how it works) is behind SETTINGS, where it does
+     not stand between you and the shot.
+     ============================================================ */
   buildTitle(app) {
     const s = META.stats();
-    const wrap = U.el('div', 'splash board-title');
-    UI.titleRoom(wrap);
+    const wrap = U.el('div', 'title-cine');
+    app.appendChild(wrap);
 
-    /* a phone held sideways gets one small row of mugshots, not two big ones */
-    const tight = window.innerHeight < 560;
-    const mugK = tight ? 1 : 2;
-    const tagK = tight ? 1 : 2;
+    /* the room the menu is played in: a real scene, not a picture */
+    const host = U.el('div');
+    host.id = 'scene-root';
+    host.className = 'scene-root';
+    wrap.appendChild(host);
+    MENU.start();
 
-    /* ---- the murder board: everything on it is pinned, taped or stabbed ---- */
-    const board = U.el('div', 'mboard' + (tight ? ' tight' : ''));
+    /* ---- the rail, down the left, over the street ---- */
+    const rail = U.el('div', 'title-rail');
 
-    /* red string first, under everything */
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'strings');
-    svg.id = 'title-strings';
-    board.appendChild(svg);
-
-    /* the case-file masthead, stabbed through with the knife */
-    const head = U.el('div', 'mb-pin mb-title');
-    head.appendChild(SPR.clone(SPR.titleCard({
+    const logo = U.el('div', 'tr-logo');
+    logo.appendChild(SPR.clone(SPR.titleCard({
       big: 'HOMICIDE DIVISION - AFTER HOURS',
       huge: 'SHELL & DEBT',
       sub: 'A DETECTIVE FROG STORY',
       col: PIX.PAL.R,
-    }), tight ? 2 : U.clamp(Math.floor(window.innerWidth / 340), 2, 4)));
-    const knife = PIX.el('prop_knife', 3);
-    knife.className = 'mb-knife';
-    head.appendChild(knife);
-    board.appendChild(head);
+    }), window.innerWidth < 720 ? 1 : 2));
+    rail.appendChild(logo);
 
-    /* the family, pinned up where you cannot stop looking at them */
-    const MUGS = [
-      ['vig', 'DON BUFO'], ['lily', 'SLICK LILY'], ['owner', 'THE BULLFROG'],
-      ['cage', 'WARDEN WART'], ['collector', 'TAXTOAD TONY'],
-    ];
-    MUGS.forEach(([id, nm], i) => {
-      const m = U.el('div', 'mb-pin mb-mug mb-mug' + i);
-      m.appendChild(U.el('i', 'poster-pin'));
-      m.appendChild(SPR.clone(SPR.mugshot(id, FROG_DEFS[id], 1), mugK));
-      const tag = U.el('div', 'mb-name');
-      tag.appendChild(UI.txt(nm, { scale: tagK, color: PIX.PAL.K, shadow: null }));
-      m.appendChild(tag);
-      if (i === 2) {   // the Bullfrog gets the red ring
-        const ring = U.el('i', 'mb-ring');
-        m.appendChild(ring);
-      }
-      board.appendChild(m);
-    });
-
-    /* what somebody thought of the investigation */
-    [[0, '18%', '30%'], [1, '74%', '22%'], [0, '64%', '72%']].forEach(([small, lx, ty], i) => {
-      const h = PIX.el(small ? 'prop_hole2' : 'prop_hole', 3);
-      h.className = 'mb-hole';
-      h.style.left = lx; h.style.top = ty;
-      board.appendChild(h);
-    });
-
-    /* the case number, on a manila tag you can type on */
-    const tagWrap = U.el('div', 'mb-pin mb-seed');
-    tagWrap.appendChild(U.el('i', 'poster-pin'));
-    tagWrap.appendChild(UI.txt('CASE NO.', { scale: tagK, color: PIX.PAL.K, shadow: null }));
+    /* the seed lives in settings now, but the run still reads it */
     const inp = U.el('input');
     inp.id = 'seed-input';
     inp.maxLength = 24;
     inp.placeholder = U.randSeedStr();
     inp.spellcheck = false;
-    tagWrap.appendChild(inp);
-    board.appendChild(tagWrap);
+    inp.className = 'hidden';
+    rail.appendChild(inp);
 
-    /* your record, on an index card */
+    const play = U.el('button', 'pixbtn gold tr-btn');
+    play.id = 'btn-deal';
+    play.appendChild(PIX.el('gun_snub', 2));
+    play.appendChild(UI.txt('PLAY', { scale: 4, shadow: null, color: PIX.PAL.K }));
+    play.onclick = () => UI.startRun(inp.value);
+    rail.appendChild(play);
+
+    const set = U.el('button', 'pixbtn tr-btn');
+    set.id = 'btn-settings';
+    set.appendChild(UI.txt('SETTINGS', { scale: 3, shadow: null }));
+    set.onclick = () => UI.showSettings();
+    rail.appendChild(set);
+
     if (s.runs > 0) {
-      const rec = U.el('div', 'mb-pin mb-record');
-      rec.appendChild(U.el('i', 'poster-pin'));
-      rec.appendChild(UI.txt('DET. VERDE - RECORD', { scale: 2, color: PIX.PAL.K, shadow: null }));
-      rec.appendChild(UI.txt('CLOSED ' + s.wins + ' / IN THE WARD ' + s.deaths + ' TIMES',
-        { scale: 2, color: PIX.PAL.d, shadow: null }));
-      board.appendChild(rec);
+      const rec = U.el('div', 'tr-record');
+      rec.appendChild(UI.txt('CLOSED ' + s.wins + '   IN THE WARD ' + s.deaths,
+        { scale: 2, color: PIX.PAL.q, shadow: PIX.PAL.K }));
+      rail.appendChild(rec);
     }
 
-    wrap.appendChild(board);
+    wrap.appendChild(rail);
+  },
 
-    /* ---- the buttons, on the rail under the board ---- */
-    const btns = U.el('div', 'end-btns title-btns');
-    const deal = U.el('button', 'pixbtn gold big-deal');
-    deal.id = 'btn-deal';
-    deal.appendChild(PIX.el('gun_snub', 2));
-    deal.appendChild(UI.txt('OPEN THE CASE', { scale: 4, shadow: null, color: PIX.PAL.K }));
-    deal.onclick = () => {
-      SFX.chak();
+  /* ============================================================
+     AND THEN HE LOOKS AT YOU.
+
+     Pressing PLAY does not cut. The reel stops where it is, he
+     turns square to the frame, the camera walks in until he is the
+     only thing in it, and THEN the wipe. The whole menu is built
+     toward that one second and throwing it away for a loading card
+     would be the only wrong thing to do with it.
+     ============================================================ */
+  startRun(seed) {
+    const btns = document.querySelectorAll('.title-rail button');
+    btns.forEach(b => { b.disabled = true; });
+    const rail = document.querySelector('.title-rail');
+    if (rail) rail.classList.add('gone');
+    SFX.chak();
+    return MENU.faceYou().then(() => {
+      MENU.stop();
       /* ============================================================
          HOW A RUN STARTS.
 
@@ -31243,7 +31722,7 @@ const UI = {
          an airport twice.
          ============================================================ */
       const seen = META.stats().loreSeen > 0;
-      UI.goto(() => E.newRun(inp.value)).then(() => {
+      return UI.goto(() => { MENU.unpush(); E.newRun(seed); }).then(() => {
         META.bump('loreSeen'); META.save();
         if (seen) return CINE.lore(true);
         return CINE.lore(false)
@@ -31255,45 +31734,91 @@ const UI = {
           return STORY.arrive('precinct');
         })
         .then(() => TUTOR.open());
+    });
+  },
+
+  /* ============================================================
+     SETTINGS.
+
+     There was no settings screen. Sound was a corner button that
+     only existed inside a room, the camera distance was an
+     undocumented Z, the case number was a tag on a corkboard and
+     the house rules were a button on the title. All four are the
+     same kind of thing -- what you want set before you start -- so
+     they are in one place.
+     ============================================================ */
+  showSettings() {
+    const m = META.load();
+    const box = UI.modal('<button class="pixbtn m-close" id="mm-close"></button>' +
+      '<div class="set-cols"></div>', false);
+    const cols = box.querySelector('.set-cols');
+
+    const row = (label, note, ctl) => {
+      const r = U.el('div', 'set-row');
+      const t = U.el('div', 'set-lab');
+      t.appendChild(UI.txt(label, { scale: 2, color: PIX.PAL.G, shadow: null }));
+      if (note) t.appendChild(UI.txt(note, { scale: 1, color: PIX.PAL.q, shadow: null }));
+      r.appendChild(t);
+      r.appendChild(ctl);
+      cols.appendChild(r);
+      return r;
     };
-    btns.appendChild(deal);
+    /* a two-state switch, drawn, that says which state it is in */
+    const toggle = (on, words, fn) => {
+      const b = U.el('button', 'pixbtn set-tog' + (on() ? ' on' : ''));
+      const paint = () => {
+        b.innerHTML = '';
+        b.className = 'pixbtn set-tog' + (on() ? ' on' : '');
+        b.appendChild(UI.txt(on() ? words[0] : words[1],
+          { scale: 2, shadow: null, color: on() ? PIX.PAL.K : PIX.PAL.w }));
+      };
+      b.onclick = () => { fn(); paint(); };
+      paint();
+      return b;
+    };
+
+    row('SOUND', 'THE SHOT, THE RAIN, THE TYPING',
+      toggle(() => !SFX.muted, ['ON', 'OFF'], () => SFX.toggleMute()));
+
+    row('CAMERA', 'HOW CLOSE IT STANDS',
+      toggle(() => !META.load().wideShot, ['CLOSE IN', 'THE WHOLE ROOM'], () => {
+        /* SCENE.toggleZoom flips the flag AND rescales the open room, which
+           at the title means you watch the street change distance under the
+           panel -- which is the point of a camera setting. */
+        if (typeof SCENE !== 'undefined' && SCENE.toggleZoom) SCENE.toggleZoom();
+        else { const d = META.load(); d.wideShot = !d.wideShot; META.save(); }
+      }));
+
+    /* the case number: same seed, same night, every time */
+    const seedWrap = U.el('div', 'set-seed');
+    const seed = U.el('input');
+    seed.maxLength = 24;
+    seed.spellcheck = false;
+    const live = document.getElementById('seed-input');
+    seed.placeholder = (live && live.placeholder) || U.randSeedStr();
+    seed.value = (live && live.value) || '';
+    seed.oninput = () => { if (live) live.value = seed.value.toUpperCase(); };
+    seedWrap.appendChild(seed);
+    row('CASE NUMBER', 'THE SAME NUMBER DEALS THE SAME NIGHT', seedWrap);
 
     const hlp = U.el('button', 'pixbtn');
-    hlp.appendChild(UI.txt('HOW THIS WORKS', { scale: 3, shadow: null }));
-    hlp.onclick = () => UI.showHelp();
-    btns.appendChild(hlp);
+    hlp.appendChild(UI.txt('READ IT', { scale: 2, shadow: null }));
+    hlp.onclick = () => { UI.closeModal(); UI.showHelp(); };
+    row('HOW THIS WORKS', 'THE SHIFT, THE TOOLS, THE KEYS', hlp);
 
-    if (META.load().tutor && META.load().tutor.opening) {
-      const again = U.el('button', 'pixbtn ghost has-tip');
-      again.id = 'btn-tutor';
-      again.dataset.tipText = 'Have the captain walk you through it again on your next case.';
-      again.appendChild(UI.txt('BRIEF ME AGAIN', { scale: 3, shadow: null }));
-      again.onclick = () => { TUTOR.replay(); SFX.bank(); UI.stampSmall('HE WILL BE WAITING'); };
-      btns.appendChild(again);
+    if (m.tutor && m.tutor.opening) {
+      const again = U.el('button', 'pixbtn');
+      again.appendChild(UI.txt('BRIEF ME AGAIN', { scale: 2, shadow: null }));
+      again.onclick = () => {
+        TUTOR.replay(); SFX.bank();
+        UI.closeModal(); UI.stampSmall('HE WILL BE WAITING');
+      };
+      row('THE CAPTAIN', 'HAVE HIM WALK YOU THROUGH IT', again);
     }
-    wrap.appendChild(btns);
-    app.appendChild(wrap);
 
-    /* string the board up once everything has a rect */
-    requestAnimationFrame(() => {
-      const R = board.getBoundingClientRect();
-      if (!R.width) return;
-      svg.setAttribute('viewBox', '0 0 ' + Math.round(R.width) + ' ' + Math.round(R.height));
-      const pins = board.querySelectorAll('.mb-mug .poster-pin, .mb-seed .poster-pin');
-      const pts = [];
-      pins.forEach(pin => {
-        const r = pin.getBoundingClientRect();
-        pts.push([r.left - R.left + r.width / 2, r.top - R.top + r.height / 2]);
-      });
-      for (let i = 0; i < pts.length - 1; i++) {
-        const a = pts[i], b = pts[i + 1];
-        const ln = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 + 16;
-        ln.setAttribute('d', 'M' + a[0] + ' ' + a[1] + ' Q' + mx + ' ' + my + ' ' + b[0] + ' ' + b[1]);
-        ln.setAttribute('class', 'str');
-        svg.appendChild(ln);
-      }
-    });
+    const c = box.querySelector('#mm-close');
+    c.appendChild(UI.txt('X', { scale: 3, color: PIX.PAL.W, shadow: null }));
+    c.onclick = () => UI.closeModal();
   },
 
   /* ================= the precinct ================= */
@@ -37341,6 +37866,152 @@ const CUT = (() => {
      st: { pan, plate, book, satchel } — what the script has
      changed about the set so far.
      ============================================================ */
+  /* ============================================================
+     THE MORNING IS A MEMORY, SO IT HAS TO LOOK LIKE ONE.
+
+     The house was lit like every other room in the game: three
+     lamps, a floor, hard edges and the same black vignette the
+     laundry gets. But this room is not a place he is standing in.
+     It is the last ordinary morning he had, remembered six years
+     later by a man in a foreign city, and a room recalled like that
+     does not have crisp corners.
+
+     So a layer over the top of it, and only over this room:
+
+       the window overexposes      the light coming in is too much
+                                   for the eye, the way remembered
+                                   light always is
+       shafts through the air      four of them, breathing
+       dust, warm and slow         big motes, lit, drifting up
+       a honey vignette            the edges go warm and soft rather
+                                   than black -- it is a memory
+                                   going out at the sides, not a
+                                   dark corner
+       and a swell                 the whole thing brightens and
+                                   falls on a nine-second count, so
+                                   it is never quite still
+
+     None of it touches the script, the actors or the walk: it is a
+     paint pass over a finished frame, so the prologue cannot break
+     on it.
+     ============================================================ */
+  /* ------------------------------------------------------------
+     HALATION, BUILT ONCE.
+
+     Veils and vignettes make a room BRIGHTER. They do not make it
+     dreamy, because the thing that reads as a memory is light
+     SPILLING -- the window bleeding into the wall next to it, the
+     lamp eating its own edges. That is a blur of the picture added
+     back on top of itself, and a blur is not something you can do
+     per frame at this size.
+
+     So it is done once, when the set is baked: paint the room into
+     a scratch canvas, throw it down to a sixth of its size and back
+     up again (which IS a box blur, courtesy of the one place in
+     this game where smoothing is wanted), and keep the result. Each
+     frame it goes on with `lighter` at a low alpha, and the whole
+     morning glows out of its own highlights.
+     ------------------------------------------------------------ */
+  const BLOOMS = {};
+  function bloomOf(key, paint, W) {
+    if (BLOOMS[key]) return BLOOMS[key];
+    const full = ART.cv(W, 132);
+    paint(full.c);
+    const sw = Math.max(2, Math.round(W / 7)), sh = 19;
+    const small = ART.cv(sw, sh);
+    small.c.imageSmoothingEnabled = true;
+    small.c.drawImage(full.cv, 0, 0, sw, sh);
+    const blur = ART.cv(W, 132);
+    blur.c.imageSmoothingEnabled = true;
+    blur.c.drawImage(small.cv, 0, 0, W, 132);
+    BLOOMS[key] = blur.cv;
+    return blur.cv;
+  }
+
+  function dreamLayer(W, FY, winX, lights, bloom) {
+    const rng = U.mulberry32(19690721);
+    const motes = Array.from({ length: 90 }, () => ({
+      x: rng(), y: rng(), s: 0.10 + rng() * 0.32, ph: rng() * 9,
+      r: rng() < 0.28 ? 2 : 1,
+    }));
+    return (c, T, cam, vw) => {
+      /* the swell: everything below rides on it */
+      const swell = 0.84 + 0.16 * Math.sin(T * 0.62);
+
+      /* ---- THE HALATION. The whole reason this reads as a memory. ---- */
+      if (bloom) {
+        const was = c.globalCompositeOperation;
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = 0.30 * swell;
+        c.drawImage(bloom, 0, 0);
+        c.globalAlpha = 1;
+        c.globalCompositeOperation = was;
+      }
+
+      /* ---- EVERY LAMP IN THE ROOM BLOOMS ----
+         The first pass hung all of this off the window, and the window is
+         at x 60 in a room 740 wide: stand anywhere but the sink and the
+         whole layer was off screen, which measured at plus three on the
+         mean pixel -- i.e. nothing. The room has its light sources
+         declared already; bloom every one of them and the morning is soft
+         wherever you are standing in it. */
+      (lights || []).forEach(L => {
+        for (let r = L.r + 26; r >= 10; r -= 5) {
+          PIX.disc(c, L.x, L.fy === undefined ? L.y + 20 : (L.y + L.fy) / 2, r,
+            'rgba(255,232,176,' + (0.016 * swell * (1 - r / (L.r + 34))).toFixed(4) + ')');
+        }
+      });
+      /* and the window hardest of all, because it is the sun */
+      for (let r = 74; r >= 10; r -= 5) {
+        PIX.disc(c, winX, 38, r,
+          'rgba(255,240,196,' + (0.020 * swell * (1 - r / 82)).toFixed(4) + ')');
+      }
+
+      /* ---- four shafts out of it, on the slant, breathing ---- */
+      for (let i = 0; i < 4; i++) {
+        const off = i * 26 - 12;
+        const sway = Math.sin(T * 0.33 + i * 1.7) * 3;
+        const a = (0.060 + i * 0.008) * swell;
+        for (let y = 14; y < FY + 8; y++) {
+          const t = (y - 14) / (FY - 8);
+          const x = winX + off + sway + t * 96;
+          const hw = 6 + t * 11;
+          ART.px(c, Math.round(x - hw), y, Math.round(hw * 2), 1,
+            'rgba(255,228,168,' + (a * (1 - t * 0.5)).toFixed(4) + ')');
+        }
+      }
+
+      /* ---- the dust, which is what makes air visible ---- */
+      for (const m of motes) {
+        const y = FY + 10 - ((m.y * (FY + 24) + T * m.s * 24) % (FY + 24));
+        const x = cam + ((m.x * vw + Math.sin(T * 0.4 + m.ph) * 8) % vw);
+        ART.px(c, Math.round(x), Math.round(y), m.r, m.r,
+          'rgba(255,244,212,' + (0.34 * swell).toFixed(3) + ')');
+      }
+
+      /* ---- A ROW OF SOFT LIGHT, WALKING UP THE FRAME ----
+         The one thing that says "this is being remembered" rather than
+         "this is warm": a band of haze drifting slowly upward, the way a
+         memory of a room is brighter in the part you are looking at. */
+      const band = FY + 30 - ((T * 9) % (FY + 70));
+      for (let i = -22; i < 22; i++) {
+        const a = 0.055 * (1 - Math.abs(i) / 22) * swell;
+        ART.px(c, cam, Math.round(band + i), vw, 1, 'rgba(255,236,186,' + a.toFixed(4) + ')');
+      }
+
+      /* ---- and the edges go warm and soft, not black ---- */
+      for (let i = 0; i < 34; i++) {
+        const a = 0.105 * Math.pow(1 - i / 34, 1.6) * swell;
+        ART.px(c, cam + i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(c, cam + vw - 1 - i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(c, cam, -40 + i, vw, 1, 'rgba(158,110,34,' + (a * 0.85).toFixed(4) + ')');
+        ART.px(c, cam, 132 - i, vw, 1, 'rgba(96,60,16,' + (a * 0.7).toFixed(4) + ')');
+      }
+      /* one veil over the lot, so nothing in it is quite sharp */
+      ART.px(c, cam, -40, vw, 210, 'rgba(255,226,170,' + (0.085 * swell).toFixed(4) + ')');
+    };
+  }
+
   function home(st) {
     st = st || {};
     const W = 740, FY = 112;
@@ -38066,6 +38737,14 @@ const CUT = (() => {
         + (st.kit ? (st.kit.pencils ? 'P' : '') + (st.kit.crayons ? 'C' : '')
           + (st.kit.bag ? 'B' : '') : ''),
       w: W, floorY: FY, paint, fore, spots,
+      /* the morning is remembered, not visited -- see dreamLayer above */
+      onPaintFore: dreamLayer(W, FY, SINK + 30, [
+        { x: SINK + 30, y: 44, r: 70, fy: FY - 2 },
+        { x: HEARTH + 46, y: FY - 56, r: 40, fy: FY - 4 },
+        { x: DOOR - 4, y: 40, r: 54, fy: FY - 2 },
+      ], bloomOf('home:' + (st.pan ? 'p' : '') + (st.plate ? 'e' : '')
+        + (st.kit ? (st.kit.pencils ? 'P' : '') + (st.kit.crayons ? 'C' : '')
+          + (st.kit.bag ? 'B' : '') : ''), paint, W)),
       actors: [
         /* ============================================================
            THEY ARE PEOPLE IN A ROOM, NOT SCENERY THAT TALKS.
