@@ -1226,6 +1226,68 @@ sole that plants while the hips rise over it, hands with a thumb and four
 fingers, a head that arrives a beat late, a turn that turns. **Chunky cartoon
 with real joints in it.**
 
+## Start is a dissolve, and it opens in the kitchen
+
+### What was between PLAY and the house
+
+A reel of cards about a frog you had not played yet — and, if you had
+played before, the whole prologue was skipped and you were put straight on
+the drive to the precinct. Both of those stood between pressing PLAY and
+the one room this story is actually about.
+
+Nothing stands there now. He looks at you in the rain, the frame blooms up
+into warm white, and he is at home on the last ordinary morning he had. The
+reel and the exam still happen — **after** the house, where they belong.
+
+![The kitchen coming up through the white](docs/screen-dissolve.png)
+
+### Why not the card rack
+
+The card-rack wipe is this game's screen change: a rack shuts across the
+frame and opens on the next thing. That is exactly right for going from the
+map to a room and exactly wrong for the one cut here that is not a cut at
+all. A man remembering does not have a rack of cards shut on him.
+
+So `CINE.dream`: the frame goes up into warm white, the swap happens
+*inside* the white where there is no seam, and the white takes its time
+going — **1100ms in, 1600ms out**, slower coming out than going in, because
+that is the shape of falling into a memory rather than cutting to one.
+
+Two things had to be got right for it to read as one move:
+
+- **The house comes up inside the white, not after it.** Starting the
+  prologue on the far side of the dissolve meant the whole fade played
+  against a dead screen and the kitchen arrived once it was already over.
+  It is kicked off in the swap, so the white goes out over a room that is
+  already live and typing `SIX YEARS AGO` at you.
+- **Two fades do not make a transition.** The prologue opened with its own
+  `S.black(true)` and a one-second rise, which put a black flash in the
+  middle of the white. Entered warm, the white *is* the reveal —
+  `CUT.play({ warm: true })` skips the black.
+
+Measured on the way through: white at 0 → 1 by 1.9s, the kitchen live
+behind 89% white at 3.4s, down to 3.6% at 4.4s, clean at 5.6s, and the
+black pane never once on.
+
+## And the eggs cook in the same dream
+
+The house got a halation pass; the one scene the house is actually *about*
+— his hands, the pan, two eggs setting — did not. So tapping the stove
+dropped you out of a warm room into a hard-edged widget and back again.
+
+![Two eggs, six years ago](docs/screen-eggs.png)
+
+It is the same trick, except this frame is moving, so it cannot be baked —
+and it does not have to be. The pov frame is 214×132: throwing it down to a
+seventh and back up again is **two `drawImage` calls**, which *is* a blur,
+with no `getImageData` anywhere near it. Then a warm grade, the window over
+the sink blooming like the sun it is, steam off the pan, and edges that go
+warm rather than black.
+
+One thing that only shows up in a screenshot: **BREAKFAST was printed
+twice**, once on the opening docket and once in the corner caption, at the
+same time. The corner now waits for the docket to go.
+
 ## The title is a shot now
 
 ### What was there

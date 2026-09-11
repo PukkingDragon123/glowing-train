@@ -42,6 +42,10 @@ const CUT = (() => {
   let didSkip = false;                /* did the player walk out of it */
   let running = false;
   let onKey = null;
+  /* entered through the white rather than from a black screen: see
+     CINE.dream and UI.startRun. The kitchen does not fade up from black
+     when the thing it is fading out of is already a warm white pane. */
+  let openWarm = false;
 
   function skip() {
     skipping = true;
@@ -2637,11 +2641,15 @@ const CUT = (() => {
     await shot(H, async (S, def) => {
       S.hour(7 * 60 + 20);
       S.weather('fine');
-      S.black(true);
+      /* TWO FADES DO NOT MAKE A TRANSITION. Coming in off the title the
+         frame is already a sheet of warm white, and opening the kitchen
+         with its own black-and-rise put a black flash in the middle of
+         it. Entered warm, the white IS the reveal. */
+      if (!openWarm) S.black(true);
       S.cam(M.SINK + 20);
       S.place(M.STOVE + 40, -1, 0.10);
       await S.wait(240);
-      await S.rise(1000);
+      if (!openWarm) await S.rise(1000);
       await S.card('SIX YEARS AGO', 'A TUESDAY, AND NOTHING HAPPENS', 2100);
       await S.say('CLEO', 'KETTLE IS ON. HE HAS NOT FOUND HIS SHOES YET.',
         PIX.PAL.P);
@@ -3078,10 +3086,11 @@ const CUT = (() => {
   /* ------------------------------------------------------------
      the whole opening, with one escape hatch over all of it
      ------------------------------------------------------------ */
-  async function play() {
+  async function play(o) {
     if (running) return;
     running = true;
     skipping = false;
+    openWarm = !!(o && o.warm);
     document.body.classList.add('in-cut');
     /* the screen belongs to the cutscene: no title board behind it, no HUD
        over it, and the scene canvas is the only thing in #app */
@@ -3127,6 +3136,7 @@ const CUT = (() => {
          black stays up unless the player walked out -- in which case
          clearing it is the only way they get their screen back. */
       if (skipping) black(false);
+      openWarm = false;
       running = false;
       skipping = false;
     }

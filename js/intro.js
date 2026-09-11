@@ -29,7 +29,7 @@ const INTRO = (() => {
 
   /* THE OPENING IS A SEQUENCE OF ROOMS NOW. This stays as the name
      the rest of the game calls it by. */
-  function play() { return CUT.play(); }
+  function play(o) { return CUT.play(o); }
   function skip() { CUT.skip(); skipped_ = true; }
   let skipped_ = false;
 

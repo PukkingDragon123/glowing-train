@@ -2267,6 +2267,25 @@ body.mumbling .corner-left { opacity: 0; pointer-events: none; }
 .st-hearts { display: flex; gap: 2px; }
 
 /* ============================================================
+   THE DREAM PANE.
+
+   Not the black one #cut-fade uses. Going from the rain outside
+   the tabac to a kitchen six years ago is not a cut to be faded
+   through -- it is a man remembering, so it goes up into warm
+   white and comes back down out of it slowly. Above everything
+   including the letterbox bars, because for those two seconds
+   there is nothing else on screen.
+   ============================================================ */
+#dream-pane {
+  position: fixed; inset: 0; z-index: 170; pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(120% 90% at 50% 46%, #fffaf0 0%, #ffeec4 46%, #f7ce86 100%);
+  transition: opacity 1100ms cubic-bezier(.4,0,.5,1);
+}
+#dream-pane.on { opacity: 1; }
+
+/* ============================================================
    THE TITLE RAIL.
 
    The corkboard is gone -- masthead, mugshots, pins, red string,

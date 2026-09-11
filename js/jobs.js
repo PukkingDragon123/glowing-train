@@ -189,10 +189,19 @@ const JOBS = (() => {
      second at the top of the job, says what the job is, and fades
      off. What stays is the title: one line, small, dim, in the
      corner, with no plate under it at all. */
-  function povSlate(c, o, t, armAt) {
+  /* how much of the opening docket is on screen, 1 to 0. Shared, because
+     the corner caption carries the SAME WORD and printing BREAKFAST twice
+     at once -- once on the docket, once in the corner -- is the sort of
+     thing you only see in a screenshot. */
+  function slateA(t, armAt) {
     const IN = 0.16, OUT = 0.40;
-    if (t > armAt + OUT) return;
-    const a = t < IN ? t / IN : (t < armAt ? 1 : 1 - (t - armAt) / OUT);
+    if (t > armAt + OUT) return 0;
+    return t < IN ? t / IN : (t < armAt ? 1 : 1 - (t - armAt) / OUT);
+  }
+
+  function povSlate(c, o, t, armAt) {
+    const a = slateA(t, armAt);
+    if (a <= 0) return;
     /* SCALE ONE, ON PAPER. A scale-two headline is twelve pixels a
        character: DUST IT FOR PRINTS came out two hundred and fifteen
        wide on a two-hundred-and-fourteen pixel frame. And a dark
@@ -250,10 +259,17 @@ const JOBS = (() => {
   }
 
   function povCaption(c, o, s, rounds) {
-    /* the title, in the corner, out of the way of the picture */
-    const t2 = cap(o.head, 1, '#d6ccae');
-    c.drawImage(scrim(t2.width + 22, 16), 0, 0);
-    c.drawImage(t2, 4, 4);
+    /* the title, in the corner, out of the way of the picture -- and it
+       waits for the docket to go, so the word is never on screen twice */
+    const corner = 1 - slateA(s.T || 0, s.armAt || 0);
+    if (corner > 0.01) {
+      const t2 = cap(o.head, 1, '#d6ccae');
+      c.save();
+      c.globalAlpha = corner;
+      c.drawImage(scrim(t2.width + 22, 16), 0, 0);
+      c.drawImage(t2, 4, 4);
+      c.restore();
+    }
     const key = cap(o.key || 'TAP TO STOP IT', 1, PIX.PAL.G);
     ART.px(c, Math.round((FW - key.width) / 2) - 3, FH - 13, key.width + 6, 11,
       'rgba(6,8,12,.62)');
@@ -274,6 +290,66 @@ const JOBS = (() => {
           : '#3a4149');
     }
     povSlate(c, o, s.T, s.armAt);
+  }
+
+  /* ============================================================
+     THE KITCHEN IS REMEMBERED TOO.
+
+     The house got a halation pass (js/cut.js) and the one scene the
+     house is actually ABOUT -- his hands, the pan, two eggs setting
+     -- did not, so tapping the stove dropped you out of a warm room
+     into a hard-edged widget and back again. It is the same trick,
+     except this frame is moving, so it cannot be baked.
+
+     It does not have to be. The pov frame is 214x132: throwing it
+     down to a thirtieth of that and back up again is two drawImage
+     calls, which IS a blur, and there is no getImageData anywhere
+     near it. Then a warm grade, steam off the pan and soft edges.
+     ============================================================ */
+  let DREAM_CV = null;
+  function povDream(c, src, s) {
+    if (!DREAM_CV) DREAM_CV = ART.cv(Math.ceil(FW / 7), Math.ceil(FH / 7));
+    const b = DREAM_CV;
+    /* ---- halation: the picture, blurred, added back over itself ---- */
+    b.c.imageSmoothingEnabled = true;
+    b.c.clearRect(0, 0, b.cv.width, b.cv.height);
+    b.c.drawImage(src, 0, 0, b.cv.width, b.cv.height);
+    const was = c.globalCompositeOperation;
+    c.imageSmoothingEnabled = true;
+    c.globalCompositeOperation = 'lighter';
+    c.globalAlpha = 0.26;
+    c.drawImage(b.cv, 0, 0, FW, FH);
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = was;
+    c.imageSmoothingEnabled = false;
+
+    const T = s.T || 0;
+    const swell = 0.86 + 0.14 * Math.sin(T * 0.7);
+
+    /* ---- the window over the sink is the sun, so it blooms hardest ---- */
+    for (let r = 46; r >= 8; r -= 4) {
+      PIX.disc(c, 49, 26, r, 'rgba(255,240,196,' + (0.016 * swell * (1 - r / 52)).toFixed(4) + ')');
+    }
+
+    /* ---- steam off the pan, which is the only thing going up ---- */
+    for (let i = 0; i < 14; i++) {
+      const t = ((T * 0.42 + i * 0.072) % 1);
+      const y = 84 - t * 52;
+      const x = 104 + Math.sin(t * 4.6 + i * 1.3) * (3 + t * 11);
+      ART.px(c, Math.round(x), Math.round(y), t > 0.5 ? 1 : 2, 1,
+        'rgba(255,246,222,' + (0.30 * (1 - t) * swell).toFixed(3) + ')');
+    }
+
+    /* ---- and the edges go warm and soft, the way the house does ---- */
+    for (let i = 0; i < 30; i++) {
+      const a = 0.085 * Math.pow(1 - i / 30, 1.7) * swell;
+      ART.px(c, i, 0, 1, FH, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+      ART.px(c, FW - 1 - i, 0, 1, FH, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+      ART.px(c, 0, i, FW, 1, 'rgba(158,110,34,' + (a * 0.8).toFixed(4) + ')');
+      ART.px(c, 0, FH - 1 - i, FW, 1, 'rgba(96,60,16,' + (a * 0.75).toFixed(4) + ')');
+    }
+    /* one veil, so nothing in it is quite sharp */
+    ART.px(c, 0, 0, FW, FH, 'rgba(255,226,170,' + (0.070 * swell).toFixed(4) + ')');
   }
 
   /* the whole surround in one call, since every trade wants it */
@@ -390,6 +466,8 @@ const JOBS = (() => {
         c.fillStyle = '#05060a';
         c.fillRect(0, 0, FW, FH);
         o.draw(c, FW, FH, s);
+        /* the kitchen jobs are a memory; the trades in the city are not */
+        if (o.kind === 'home') povDream(c, fcv, s);
         povFrame(c, o, s, rounds);
         present();
         if (!done) requestAnimationFrame(step);

@@ -474,6 +474,47 @@ const CINE = {
   arm(label) { CINE.skipUI(() => {}, label || 'SKIP'); },
   disarm() { CINE.skipUI(null); },
 
+  /* ============================================================
+     THE DREAM DISSOLVE.
+
+     The card-rack wipe is the game's screen change: a rack of
+     cards shuts across the frame and opens on the next thing. It
+     is exactly right for going from the map to a room, and exactly
+     wrong for the one cut in this game that is not a cut at all --
+     PLAY, where he is looking at you in the rain and the next
+     thing you see is a kitchen six years ago.
+
+     That is not a screen change. It is him remembering, and a man
+     remembering does not have a rack of cards shut on him. So:
+     the frame blooms up into warm white, the swap happens inside
+     the white where nobody can see a seam, and the white takes
+     its time going. Slower coming out than going in, because
+     that is the shape of falling into a memory rather than
+     cutting to one.
+     ============================================================ */
+  dream(fn, opts) {
+    opts = opts || {};
+    const inMs = opts.in === undefined ? 1100 : opts.in;
+    const outMs = opts.out === undefined ? 1600 : opts.out;
+    let l = document.getElementById('dream-pane');
+    if (!l) { l = U.el('div'); l.id = 'dream-pane'; document.body.appendChild(l); }
+    l.className = '';
+    l.style.transitionDuration = inMs + 'ms';
+    CINE.busy = true;
+    return new Promise(res => {
+      requestAnimationFrame(() => { l.className = 'on'; });
+      setTimeout(() => {
+        /* the swap happens inside the white, where there is no seam */
+        try { if (fn) fn(); } catch (e) { /* the caller owns its own mess */ }
+        setTimeout(() => {
+          l.style.transitionDuration = outMs + 'ms';
+          l.className = '';
+          setTimeout(() => { CINE.busy = false; res(); }, outMs);
+        }, 260);
+      }, inMs + 60);
+    });
+  },
+
   letterbox(on) {
     let l = document.getElementById('cine-bars');
     if (!l) {

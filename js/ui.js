@@ -507,26 +507,38 @@ const UI = {
     if (rail) rail.classList.add('gone');
     SFX.chak();
     return MENU.faceYou().then(() => {
-      MENU.stop();
       /* ============================================================
-         HOW A RUN STARTS.
+         AND IT OPENS IN THE KITCHEN.
 
-         First time through, you play how you got here: the house,
-         the room, the thing in the ashtray, the security line, the
-         flight, the descent — and then the application, because the
-         Brigade does not hand a case to a foreign cop with a
-         cigarette end. After that it is the last panel of the reel
-         and straight to work, because nobody wants to sit through
-         an airport twice.
+         It used to open on a reel of cards about a frog you had not
+         played yet, and a returning player was sent straight past the
+         whole prologue to the drive and the precinct. Both of those
+         put something between PLAY and the one room this story is
+         actually about.
+
+         Nothing between them now: he looks at you in the rain, the
+         frame goes white, and he is at home on the last ordinary
+         morning he had. The reel and the exam still happen -- after
+         the house, where they belong -- and the prologue is skippable
+         from the first second (see the SKIP badge in js/cine.js), so
+         a player on their fourth run is not held there.
          ============================================================ */
-      const seen = META.stats().loreSeen > 0;
-      return UI.goto(() => { MENU.unpush(); E.newRun(seed); }).then(() => {
+      /* THE HOUSE COMES UP INSIDE THE WHITE, not after it. Starting the
+         prologue on the far side of the dissolve meant the whole fade
+         played against a dead screen and the kitchen arrived when it was
+         already over; it is kicked off in the swap and the white then
+         takes its time going out over a room that is already live. */
+      let pro = null;
+      return CINE.dream(() => {
+        MENU.stop();
+        MENU.unpush();
+        E.newRun(seed);
         META.bump('loreSeen'); META.save();
-        if (seen) return CINE.lore(true);
-        return CINE.lore(false)
-          .then(() => INTRO.play())
-          .then(() => INTRO.application());
-      }).then(() => CINE.driveTo())
+        pro = INTRO.play({ warm: true });
+      }).then(() => pro)
+        .then(() => INTRO.application())
+        .then(() => CINE.lore(META.stats().loreSeen > 1))
+        .then(() => CINE.driveTo())
         .then(() => {
           UI.render();
           return STORY.arrive('precinct');

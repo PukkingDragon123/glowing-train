@@ -302,23 +302,35 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.evaluate(() => { const i = document.getElementById('seed-input'); if (i) i.value = 'SMOKE'; });
     await click('#btn-deal');
 
-    /* ---------- the lore reel, then the drive across town ----------
-       PRESSING PLAY NO LONGER CUTS. The title is a shot now (js/menu.js)
-       and PLAY stops the reel, turns him square to the frame and walks the
-       camera in on him before the wipe -- about a second and a half. A
-       flat 1400ms wait here photographed the title, sent the Escape into
-       the menu instead of the reel, and then found no `in-cut` body, so
-       the harness skipped the entire prologue and only noticed four steps
-       later when the captain had nothing to say. Wait for the state. */
+    /* ---------- PLAY GOES STRAIGHT TO THE HOUSE ----------
+       The title is a shot (js/menu.js): PLAY stops the reel, turns him
+       square to the frame, walks the camera in, and then the frame blooms
+       into warm white and comes back down in the kitchen six years ago.
+       No card rack and NO LORE REEL in front of it any more -- the reel
+       and the exam happen after the house now, which is the whole point
+       of the change, so there is nothing here to Escape past. Pressing
+       Escape at this point would land on the prologue's own SKIP badge
+       and throw away the very thing this step exists to photograph. */
     await page.waitForFunction(() => {
       const r = document.querySelector('.title-rail');
       return !r || r.classList.contains('gone');
     }, { timeout: 12000 }).catch(() => errors.push('[title] PLAY never took'));
-    await page.waitForTimeout(1600);
-    await shot('02-lore');
-    await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.body.classList.contains('in-cut'),
-      { timeout: 14000 }).catch(() => {});
+      { timeout: 16000 }).catch(() => errors.push('[title] PLAY never reached the house'));
+    /* the house coming up through the white */
+    await page.waitForTimeout(700);
+    await shot('02-lore');
+    /* and the room under it must be the kitchen, not anything else */
+    {
+      const first = await page.evaluate(() => (SCENE.def || {}).id || '');
+      if (first.indexOf('cut_home') !== 0) {
+        errors.push('[title] PLAY did not open in the house: ' + first);
+      }
+    }
+    await page.waitForFunction(() => {
+      const d = document.getElementById('dream-pane');
+      return !d || +getComputedStyle(d).opacity < 0.05;
+    }, { timeout: 9000 }).catch(() => errors.push('[title] the dissolve never cleared'));
 
     /* ---------- the opening, which a first run now plays ----------
        IT IS NOT CARDS ANY MORE. The opening is seven ROOMS played through

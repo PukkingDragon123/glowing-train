@@ -2287,6 +2287,25 @@ body.mumbling .corner-left { opacity: 0; pointer-events: none; }
 .st-hearts { display: flex; gap: 2px; }
 
 /* ============================================================
+   THE DREAM PANE.
+
+   Not the black one #cut-fade uses. Going from the rain outside
+   the tabac to a kitchen six years ago is not a cut to be faded
+   through -- it is a man remembering, so it goes up into warm
+   white and comes back down out of it slowly. Above everything
+   including the letterbox bars, because for those two seconds
+   there is nothing else on screen.
+   ============================================================ */
+#dream-pane {
+  position: fixed; inset: 0; z-index: 170; pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(120% 90% at 50% 46%, #fffaf0 0%, #ffeec4 46%, #f7ce86 100%);
+  transition: opacity 1100ms cubic-bezier(.4,0,.5,1);
+}
+#dream-pane.on { opacity: 1; }
+
+/* ============================================================
    THE TITLE RAIL.
 
    The corkboard is gone -- masthead, mugshots, pins, red string,
@@ -26153,10 +26172,19 @@ const JOBS = (() => {
      second at the top of the job, says what the job is, and fades
      off. What stays is the title: one line, small, dim, in the
      corner, with no plate under it at all. */
-  function povSlate(c, o, t, armAt) {
+  /* how much of the opening docket is on screen, 1 to 0. Shared, because
+     the corner caption carries the SAME WORD and printing BREAKFAST twice
+     at once -- once on the docket, once in the corner -- is the sort of
+     thing you only see in a screenshot. */
+  function slateA(t, armAt) {
     const IN = 0.16, OUT = 0.40;
-    if (t > armAt + OUT) return;
-    const a = t < IN ? t / IN : (t < armAt ? 1 : 1 - (t - armAt) / OUT);
+    if (t > armAt + OUT) return 0;
+    return t < IN ? t / IN : (t < armAt ? 1 : 1 - (t - armAt) / OUT);
+  }
+
+  function povSlate(c, o, t, armAt) {
+    const a = slateA(t, armAt);
+    if (a <= 0) return;
     /* SCALE ONE, ON PAPER. A scale-two headline is twelve pixels a
        character: DUST IT FOR PRINTS came out two hundred and fifteen
        wide on a two-hundred-and-fourteen pixel frame. And a dark
@@ -26214,10 +26242,17 @@ const JOBS = (() => {
   }
 
   function povCaption(c, o, s, rounds) {
-    /* the title, in the corner, out of the way of the picture */
-    const t2 = cap(o.head, 1, '#d6ccae');
-    c.drawImage(scrim(t2.width + 22, 16), 0, 0);
-    c.drawImage(t2, 4, 4);
+    /* the title, in the corner, out of the way of the picture -- and it
+       waits for the docket to go, so the word is never on screen twice */
+    const corner = 1 - slateA(s.T || 0, s.armAt || 0);
+    if (corner > 0.01) {
+      const t2 = cap(o.head, 1, '#d6ccae');
+      c.save();
+      c.globalAlpha = corner;
+      c.drawImage(scrim(t2.width + 22, 16), 0, 0);
+      c.drawImage(t2, 4, 4);
+      c.restore();
+    }
     const key = cap(o.key || 'TAP TO STOP IT', 1, PIX.PAL.G);
     ART.px(c, Math.round((FW - key.width) / 2) - 3, FH - 13, key.width + 6, 11,
       'rgba(6,8,12,.62)');
@@ -26238,6 +26273,66 @@ const JOBS = (() => {
           : '#3a4149');
     }
     povSlate(c, o, s.T, s.armAt);
+  }
+
+  /* ============================================================
+     THE KITCHEN IS REMEMBERED TOO.
+
+     The house got a halation pass (js/cut.js) and the one scene the
+     house is actually ABOUT -- his hands, the pan, two eggs setting
+     -- did not, so tapping the stove dropped you out of a warm room
+     into a hard-edged widget and back again. It is the same trick,
+     except this frame is moving, so it cannot be baked.
+
+     It does not have to be. The pov frame is 214x132: throwing it
+     down to a thirtieth of that and back up again is two drawImage
+     calls, which IS a blur, and there is no getImageData anywhere
+     near it. Then a warm grade, steam off the pan and soft edges.
+     ============================================================ */
+  let DREAM_CV = null;
+  function povDream(c, src, s) {
+    if (!DREAM_CV) DREAM_CV = ART.cv(Math.ceil(FW / 7), Math.ceil(FH / 7));
+    const b = DREAM_CV;
+    /* ---- halation: the picture, blurred, added back over itself ---- */
+    b.c.imageSmoothingEnabled = true;
+    b.c.clearRect(0, 0, b.cv.width, b.cv.height);
+    b.c.drawImage(src, 0, 0, b.cv.width, b.cv.height);
+    const was = c.globalCompositeOperation;
+    c.imageSmoothingEnabled = true;
+    c.globalCompositeOperation = 'lighter';
+    c.globalAlpha = 0.26;
+    c.drawImage(b.cv, 0, 0, FW, FH);
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = was;
+    c.imageSmoothingEnabled = false;
+
+    const T = s.T || 0;
+    const swell = 0.86 + 0.14 * Math.sin(T * 0.7);
+
+    /* ---- the window over the sink is the sun, so it blooms hardest ---- */
+    for (let r = 46; r >= 8; r -= 4) {
+      PIX.disc(c, 49, 26, r, 'rgba(255,240,196,' + (0.016 * swell * (1 - r / 52)).toFixed(4) + ')');
+    }
+
+    /* ---- steam off the pan, which is the only thing going up ---- */
+    for (let i = 0; i < 14; i++) {
+      const t = ((T * 0.42 + i * 0.072) % 1);
+      const y = 84 - t * 52;
+      const x = 104 + Math.sin(t * 4.6 + i * 1.3) * (3 + t * 11);
+      ART.px(c, Math.round(x), Math.round(y), t > 0.5 ? 1 : 2, 1,
+        'rgba(255,246,222,' + (0.30 * (1 - t) * swell).toFixed(3) + ')');
+    }
+
+    /* ---- and the edges go warm and soft, the way the house does ---- */
+    for (let i = 0; i < 30; i++) {
+      const a = 0.085 * Math.pow(1 - i / 30, 1.7) * swell;
+      ART.px(c, i, 0, 1, FH, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+      ART.px(c, FW - 1 - i, 0, 1, FH, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+      ART.px(c, 0, i, FW, 1, 'rgba(158,110,34,' + (a * 0.8).toFixed(4) + ')');
+      ART.px(c, 0, FH - 1 - i, FW, 1, 'rgba(96,60,16,' + (a * 0.75).toFixed(4) + ')');
+    }
+    /* one veil, so nothing in it is quite sharp */
+    ART.px(c, 0, 0, FW, FH, 'rgba(255,226,170,' + (0.070 * swell).toFixed(4) + ')');
   }
 
   /* the whole surround in one call, since every trade wants it */
@@ -26354,6 +26449,8 @@ const JOBS = (() => {
         c.fillStyle = '#05060a';
         c.fillRect(0, 0, FW, FH);
         o.draw(c, FW, FH, s);
+        /* the kitchen jobs are a memory; the trades in the city are not */
+        if (o.kind === 'home') povDream(c, fcv, s);
         povFrame(c, o, s, rounds);
         present();
         if (!done) requestAnimationFrame(step);
@@ -31709,26 +31806,38 @@ const UI = {
     if (rail) rail.classList.add('gone');
     SFX.chak();
     return MENU.faceYou().then(() => {
-      MENU.stop();
       /* ============================================================
-         HOW A RUN STARTS.
+         AND IT OPENS IN THE KITCHEN.
 
-         First time through, you play how you got here: the house,
-         the room, the thing in the ashtray, the security line, the
-         flight, the descent — and then the application, because the
-         Brigade does not hand a case to a foreign cop with a
-         cigarette end. After that it is the last panel of the reel
-         and straight to work, because nobody wants to sit through
-         an airport twice.
+         It used to open on a reel of cards about a frog you had not
+         played yet, and a returning player was sent straight past the
+         whole prologue to the drive and the precinct. Both of those
+         put something between PLAY and the one room this story is
+         actually about.
+
+         Nothing between them now: he looks at you in the rain, the
+         frame goes white, and he is at home on the last ordinary
+         morning he had. The reel and the exam still happen -- after
+         the house, where they belong -- and the prologue is skippable
+         from the first second (see the SKIP badge in js/cine.js), so
+         a player on their fourth run is not held there.
          ============================================================ */
-      const seen = META.stats().loreSeen > 0;
-      return UI.goto(() => { MENU.unpush(); E.newRun(seed); }).then(() => {
+      /* THE HOUSE COMES UP INSIDE THE WHITE, not after it. Starting the
+         prologue on the far side of the dissolve meant the whole fade
+         played against a dead screen and the kitchen arrived when it was
+         already over; it is kicked off in the swap and the white then
+         takes its time going out over a room that is already live. */
+      let pro = null;
+      return CINE.dream(() => {
+        MENU.stop();
+        MENU.unpush();
+        E.newRun(seed);
         META.bump('loreSeen'); META.save();
-        if (seen) return CINE.lore(true);
-        return CINE.lore(false)
-          .then(() => INTRO.play())
-          .then(() => INTRO.application());
-      }).then(() => CINE.driveTo())
+        pro = INTRO.play({ warm: true });
+      }).then(() => pro)
+        .then(() => INTRO.application())
+        .then(() => CINE.lore(META.stats().loreSeen > 1))
+        .then(() => CINE.driveTo())
         .then(() => {
           UI.render();
           return STORY.arrive('precinct');
@@ -36180,6 +36289,47 @@ const CINE = {
   arm(label) { CINE.skipUI(() => {}, label || 'SKIP'); },
   disarm() { CINE.skipUI(null); },
 
+  /* ============================================================
+     THE DREAM DISSOLVE.
+
+     The card-rack wipe is the game's screen change: a rack of
+     cards shuts across the frame and opens on the next thing. It
+     is exactly right for going from the map to a room, and exactly
+     wrong for the one cut in this game that is not a cut at all --
+     PLAY, where he is looking at you in the rain and the next
+     thing you see is a kitchen six years ago.
+
+     That is not a screen change. It is him remembering, and a man
+     remembering does not have a rack of cards shut on him. So:
+     the frame blooms up into warm white, the swap happens inside
+     the white where nobody can see a seam, and the white takes
+     its time going. Slower coming out than going in, because
+     that is the shape of falling into a memory rather than
+     cutting to one.
+     ============================================================ */
+  dream(fn, opts) {
+    opts = opts || {};
+    const inMs = opts.in === undefined ? 1100 : opts.in;
+    const outMs = opts.out === undefined ? 1600 : opts.out;
+    let l = document.getElementById('dream-pane');
+    if (!l) { l = U.el('div'); l.id = 'dream-pane'; document.body.appendChild(l); }
+    l.className = '';
+    l.style.transitionDuration = inMs + 'ms';
+    CINE.busy = true;
+    return new Promise(res => {
+      requestAnimationFrame(() => { l.className = 'on'; });
+      setTimeout(() => {
+        /* the swap happens inside the white, where there is no seam */
+        try { if (fn) fn(); } catch (e) { /* the caller owns its own mess */ }
+        setTimeout(() => {
+          l.style.transitionDuration = outMs + 'ms';
+          l.className = '';
+          setTimeout(() => { CINE.busy = false; res(); }, outMs);
+        }, 260);
+      }, inMs + 60);
+    });
+  },
+
   letterbox(on) {
     let l = document.getElementById('cine-bars');
     if (!l) {
@@ -37685,6 +37835,10 @@ const CUT = (() => {
   let didSkip = false;                /* did the player walk out of it */
   let running = false;
   let onKey = null;
+  /* entered through the white rather than from a black screen: see
+     CINE.dream and UI.startRun. The kitchen does not fade up from black
+     when the thing it is fading out of is already a warm white pane. */
+  let openWarm = false;
 
   function skip() {
     skipping = true;
@@ -40280,11 +40434,15 @@ const CUT = (() => {
     await shot(H, async (S, def) => {
       S.hour(7 * 60 + 20);
       S.weather('fine');
-      S.black(true);
+      /* TWO FADES DO NOT MAKE A TRANSITION. Coming in off the title the
+         frame is already a sheet of warm white, and opening the kitchen
+         with its own black-and-rise put a black flash in the middle of
+         it. Entered warm, the white IS the reveal. */
+      if (!openWarm) S.black(true);
       S.cam(M.SINK + 20);
       S.place(M.STOVE + 40, -1, 0.10);
       await S.wait(240);
-      await S.rise(1000);
+      if (!openWarm) await S.rise(1000);
       await S.card('SIX YEARS AGO', 'A TUESDAY, AND NOTHING HAPPENS', 2100);
       await S.say('CLEO', 'KETTLE IS ON. HE HAS NOT FOUND HIS SHOES YET.',
         PIX.PAL.P);
@@ -40721,10 +40879,11 @@ const CUT = (() => {
   /* ------------------------------------------------------------
      the whole opening, with one escape hatch over all of it
      ------------------------------------------------------------ */
-  async function play() {
+  async function play(o) {
     if (running) return;
     running = true;
     skipping = false;
+    openWarm = !!(o && o.warm);
     document.body.classList.add('in-cut');
     /* the screen belongs to the cutscene: no title board behind it, no HUD
        over it, and the scene canvas is the only thing in #app */
@@ -40770,6 +40929,7 @@ const CUT = (() => {
          black stays up unless the player walked out -- in which case
          clearing it is the only way they get their screen back. */
       if (skipping) black(false);
+      openWarm = false;
       running = false;
       skipping = false;
     }
@@ -40847,7 +41007,7 @@ const INTRO = (() => {
 
   /* THE OPENING IS A SEQUENCE OF ROOMS NOW. This stays as the name
      the rest of the game calls it by. */
-  function play() { return CUT.play(); }
+  function play(o) { return CUT.play(o); }
   function skip() { CUT.skip(); skipped_ = true; }
   let skipped_ = false;
 
