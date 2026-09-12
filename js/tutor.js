@@ -225,64 +225,97 @@ const TUTOR = {
   },
 
   /* ============================================================
-     ONE PLATE, DRAWN.
-     Frame, rivets, portrait well and every letter go onto a single
-     canvas — no CSS box, no gradient, no border-radius. Used by
-     the handler and by whoever is holding the gun.
-     ============================================================ */
-  /* THE LINES, WRAPPED ONCE.
-     Typing a line on has to leave the plate exactly the size it will end
-     up, or the box grows under the reader's eye. So the wrap is computed
-     from the whole line and the unsaid half is blanked out — same line
-     count, same width, one letter arriving at a time. */
-  reveal(lines, n) {
-    if (n === null || n === undefined) return lines;
-    let left = n;
-    return lines.map(l => {
-      if (left >= l.length) { left -= l.length; return l; }
-      const cut = Math.max(0, left);
-      left = 0;
-      return l.slice(0, cut) + ' '.repeat(l.length - cut);
-    });
-  },
+     ONE BALLOON, DRAWN.
 
+     It used to be a case file: a sheet of manila with the
+     speaker's photograph clipped into the margin and his words
+     typed underneath. Good object, wrong one -- a case file is
+     something you READ, and this is somebody TALKING.
+
+     So it is a balloon now (see TOON.bubble): heavy ink, bone
+     fill, a cel shadow under it, his name on a tab tacked to the
+     top edge, and a tail coming down out of it onto his own head,
+     cut out and stood in the corner. It picks its own shape off
+     the line's punctuation, so a question comes up spoken, a
+     line that trails off comes up as a thought with its little
+     chain of dots, and the two lines in this game that end in a
+     bang come up with the spikes on.
+     ============================================================ */
   plate(o) {
-    /* CHARACTERS TO A LINE is what actually sets the width -- the plate is
-       as wide as its widest line plus the mugshot. Thirty-four was a page
-       of a paperback across the middle of the screen. */
-    const per = o.big ? 30 : (o.asking ? 26 : (o.small ? 24 : 26));
+    /* CHARACTERS TO A LINE is what actually sets the width -- the balloon
+       is as wide as its widest line. Twenty-six is about a column of
+       newsprint. It comes DOWN on a narrow screen rather than letting the
+       blow-up drop, because a five-pixel capital is not a letter. */
+    const narrow = window.innerWidth < 620;
+    const per = o.big ? (narrow ? 22 : 30) : (narrow ? 19 : 26);
     /* ============================================================
        A NOTE, NOT A BANNER.
 
-       The plate that everybody in this game talks on was drawn at
-       one pixel per pixel and then blown up by whatever fitted the
-       window -- three on a desktop -- and sized off the window as
-       well. On a 1280-wide screen that came to 789 by 219: sixty-two
-       per cent of the width and twenty-seven of the height, in the
-       middle of the frame, over the room and the person speaking.
-
-       Two on the blow-up and a page's worth of width instead, pinned
-       rather than scaled off the monitor, and it sits in the corner
-       (see #tutor-root in style.css). Small type, read close.
+       Everything in here is drawn at one pixel per pixel and blown
+       up by an integer at the end, and the blow-up is PINNED rather
+       than taken off the window: sized off the monitor it came to
+       789 by 219 on a desktop, which is sixty-two per cent of the
+       width, in the middle of the frame, over the person speaking.
+       Two, in the corner, small type, read close.
        ============================================================ */
     const K = o.big ? 3 : 2;
-    return SPR.speech({
+    return TOON.bubble({
       k: K,
-      /* WIDTH COMES FROM `per` NOW, not from here. With the blow-up pinned
-         this is only the overflow guard: whatever the frame can actually
+      /* the overflow guard, not the size: whatever the frame can actually
          hold, so a pinned two drops to one on a phone too narrow for it
-         rather than running off the edge. Setting it to a page's worth
-         instead clamped the desktop plate down to a blow-up of one and
-         gave eighteen per cent of the screen in unreadable type. */
+         rather than running off the edge */
       maxW: window.innerWidth - 24,
       portrait: o.art,
       name: o.name,
       nameCol: o.nameCol,
-      lines: TUTOR.reveal(SPR.fitLines(o.line, per), o.reveal),
+      rim: o.rim,
+      kind: o.kind,
+      /* THE LINE IS MEASURED WHOLE AND PAINTED IN PART. The balloon comes
+         up the size it will END at and fills in, so the box never grows
+         under the reader -- and the last letters to land sit a pixel high,
+         which is the difference between text appearing and a frog saying
+         something. */
+      lines: SPR.fitLines(o.line, per),
+      reveal: o.reveal,
+      hop: o.hop,
       foot: o.reveal !== undefined && o.reveal !== null &&
         o.reveal < o.line.length ? null : o.foot,
-      rim: o.rim,
     });
+  },
+
+  /* ============================================================
+     AND WHAT POPS WHEN THE LINE LANDS.
+
+     A cartoon says what somebody is feeling with a shape over
+     their head, and it has been doing it since Winsor McCay: a
+     bang for surprise, a query for a question, a little chain of
+     dots for a thought. It goes over the SPEAKER, wherever he is
+     actually standing in the room -- the balloon is in the corner
+     and he is not -- and falls back to the corner of the balloon
+     for a line said by somebody who is not on stage.
+     ============================================================ */
+  punch(line, opts, holder) {
+    if (typeof TOON === 'undefined') return;
+    opts = opts || {};
+    /* ------------------------------------------------------------
+       A SHOUT MOVES THE CAMERA. A TAUNT DOES NOT.
+
+       The mark asks for the spiky balloon on every line he says with
+       the iron in his hand, and he says two or three a duel across
+       twenty-odd duels a run -- shaking the frame for all of them is
+       a tic, not an effect. The frame moves for a line that is
+       actually SHOUTED, which in this whole script is two of them.
+       ------------------------------------------------------------ */
+    if (/!/.test(String(line)) && typeof UI !== 'undefined' && UI.shake) UI.shake();
+    const m = TOON.markOf(line);
+    if (!m) return;
+    const w = (typeof SCENE !== 'undefined' && SCENE.headOf) ? SCENE.headOf(opts.name) : null;
+    if (w) { TOON.markWorld(w.x + 9, w.y - 3, m, { k: 2 }); return; }
+    const cv = holder && holder.querySelector('canvas');
+    if (!cv) return;
+    const r = cv.getBoundingClientRect();
+    const at = cv.markAt || { x: r.width - 20, y: 8 };
+    TOON.mark(r.left + at.x, r.top + at.y, m, { k: 2 });
   },
 
   /* ------------------------------------------------------------
@@ -324,7 +357,11 @@ const TUTOR = {
          ============================================================ */
       else TUTOR.mumble(true);
       root.innerHTML = '';
-      const holder = U.el('div', 'tut-plate');
+      /* WHAT SHAPE THIS LINE IS. Off its own punctuation, once, before
+         anything is drawn -- the class is what CSS reads to decide whether
+         the balloon arrives or arrives and then rattles. */
+      const kind = TOON.kindOf(line, opts);
+      const holder = U.el('div', 'tut-plate ' + kind);
       /* A LOCK HAS NO FACE. speakerArt returns null for the things that
          are not people, and falling through to the handler put the
          captain's photograph on the print kit and the case log. */
@@ -334,14 +371,20 @@ const TUTOR = {
         holder.innerHTML = '';
         /* HIS MOUTH MOVES WHILE HE IS TALKING. Three characters a flap,
            which at this type speed is about eighty milliseconds — a frog
-           saying something rather than a photograph with words beside it. */
+           saying something rather than a photograph with words beside it.
+           And he takes a pixel of hop on the same beat, because a head
+           that flaps its mouth and never moves is a puppet. */
+        const flap = reveal !== null && reveal !== undefined &&
+          Math.floor(reveal / 6) % 2 === 0;
         const art = reveal === null || reveal === undefined ? base
-          : SPR.portraitTalk(base, Math.floor(reveal / 6) % 2 === 0);
+          : SPR.portraitTalk(base, flap);
         holder.appendChild(TUTOR.plate({
           art,
           name: opts.name || 'THE CAPTAIN',
           nameCol: opts.nameCol,
           rim: opts.rim,
+          kind,
+          hop: flap,
           line,
           reveal,
           foot: opts.hold ? null : (opts.last ? 'GET TO WORK' : 'GO ON'),
@@ -362,6 +405,7 @@ const TUTOR = {
         TUTOR.typing = false;
         typed = line.length;
         build(null);
+        TUTOR.punch(line, opts, holder);
       };
       TUTOR.finishTyping = finishTyping;
       typing = setInterval(() => {
@@ -419,7 +463,8 @@ const TUTOR = {
       root.className = 'plate-on asking' + (opts.big ? ' big' : '');
       TUTOR.hush(true);
       root.innerHTML = '';
-      const holder = U.el('div', 'tut-plate');
+      const kind = TOON.kindOf(line, opts);
+      const holder = U.el('div', 'tut-plate ' + kind);
       const rack = U.el('div', 'reply-rack');
 
       /* A LOCK HAS NO FACE. speakerArt returns null for the things that
@@ -429,13 +474,17 @@ const TUTOR = {
         || (opts.name ? null : SPR.frogCustom('handler', HANDLER_DEF));
       const build = (reveal) => {
         holder.innerHTML = '';
+        const flap = reveal !== null && reveal !== undefined &&
+          Math.floor(reveal / 6) % 2 === 0;
         const art = reveal === null || reveal === undefined ? base
-          : SPR.portraitTalk(base, Math.floor(reveal / 6) % 2 === 0);
+          : SPR.portraitTalk(base, flap);
         holder.appendChild(TUTOR.plate({
           art,
           name: opts.name || 'THE CAPTAIN',
           nameCol: opts.nameCol,
           rim: opts.rim,
+          kind,
+          hop: flap,
           line,
           reveal,
           foot: null,
@@ -491,6 +540,7 @@ const TUTOR = {
         TUTOR.typing = false;
         typed = line.length;
         build(null);
+        TUTOR.punch(line, opts, holder);
         showReplies();
       };
       TUTOR.typing = true;
@@ -656,12 +706,29 @@ const TALK = {
     TALK.busy = true;
     try {
       const opp = G.duel.opp;
+      /* FOUR LINES ON A FOREHEAD. He is not making conversation across
+         that table, and the oldest drawing for that goes over his head
+         while he says it -- but only when he has a reason. A vein on
+         every taunt of every duel is wallpaper; a vein from a lieutenant,
+         or from anybody at all once you are down to your last two, is
+         somebody enjoying himself. */
+      const needled = opp.boss || (G.hearts || 6) <= 2;
+      if (needled && typeof TOON !== 'undefined' && typeof DUEL !== 'undefined' && DUEL.screenXY) {
+        const sp = DUEL.screenXY(180, 40);
+        if (sp) TOON.mark(sp.x, sp.y, 'vein',
+          { k: Math.max(2, Math.round(sp.k * 1.1)), life: 820, vy: -0.12 });
+      }
       await TUTOR.say(line, {
         art: SPR.frogCustom(DUEL.oppKey + ':talk', opp.def, 'smug'),
         name: opp.name,
         nameCol: opp.boss ? PIX.PAL.R : PIX.PAL.O,
         rim: opp.boss ? PIX.PAL.d : PIX.PAL.t,
         snd: 'cluck',
+        /* HE IS NOT MAKING CONVERSATION. The mark talks with the iron in
+           his hand, across a table, in a cellar -- every line of it is
+           shouted, and none of it ends in a bang, so the shape has to be
+           asked for rather than read off the punctuation. */
+        kind: 'shout',
         hold: hold || 1100,
       });
     } finally {

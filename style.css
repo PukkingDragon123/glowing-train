@@ -2165,18 +2165,100 @@ body.heard #siren-wash { opacity: 1; }
 body.mumbling .corner-left { opacity: 0; pointer-events: none; }
 .corner-left { transition: opacity .18s ease; }
 
-/* The plate itself is one drawn canvas — this only places it and slides it
-   in. No box, no gradient, no radius: those were the last things in the
-   game that were not pixels. */
+/* ============================================================
+   AND IT SPRINGS OUT OF HIM.
+
+   The balloon itself is one drawn canvas (see TOON.bubble) — this
+   only places it and gives it its timing. A cartoon does not ease:
+   it holds a pose, then holds the next one, so every keyframe here
+   runs on steps(2) and the whole entrance is six held drawings in
+   a quarter of a second. Squashed and wide on the way up, tall and
+   thin on the overshoot, then it settles and breathes.
+
+   transform-origin sits on the SPEAKER'S HEAD in the bottom-left
+   corner of the canvas, because a balloon grows out of the mouth
+   that said it and not out of the middle of the screen.
+   ============================================================ */
 .tut-plate {
   display: block; max-width: 96vw;
-  transform: translateY(14px); opacity: 0;
-  transition: transform .14s steps(3), opacity .14s steps(3);
+  /* NO TRANSFORM AT REST. The entrance is a keyframe and the exit is a
+     transition, and calling the animation off on the way out snaps straight
+     back to whatever is declared here first -- so a resting offset lands as
+     a jump on every close. The pop's own 0% is where it starts from. */
+  opacity: 0; transform: none;
+  transform-origin: 12% 88%;
   cursor: pointer;
 }
-.tut-plate.in { transform: translateY(0); opacity: 1; }
-.tut-plate.out { transform: translateY(8px); opacity: 0; }
+.tut-plate.in {
+  opacity: 1;
+  animation: toon-pop .24s steps(2, end) both,
+             toon-bob 2.4s steps(2, end) .30s infinite;
+}
+/* a shout arrives and then rattles */
+.tut-plate.shout.in {
+  animation: toon-pop .20s steps(2, end) both,
+             toon-shake .26s steps(1, end) .20s 2,
+             toon-bob 2.4s steps(2, end) .74s infinite;
+}
+/* and a thought does not arrive at all, it drifts */
+.tut-plate.think.in {
+  animation: toon-pop .34s steps(2, end) both,
+             toon-drift 3.4s steps(2, end) .36s infinite;
+}
+/* on the way out the animation has to be called off, or it keeps
+   writing transform over the top of the exit */
+.tut-plate.out {
+  animation: none !important;
+  opacity: 0; transform: translateY(7px) scale(.9, .94);
+  transition: opacity .14s steps(2), transform .14s steps(2);
+}
 .tut-plate canvas { display: block; image-rendering: pixelated; }
+
+@keyframes toon-pop {
+  0%   { transform: translateY(7px) scale(.28, .54); }
+  30%  { transform: translateY(0)   scale(1.16, .86); }
+  55%  { transform: translateY(0)   scale(.93, 1.09); }
+  78%  { transform: translateY(0)   scale(1.05, .97); }
+  100% { transform: translateY(0)   scale(1, 1); }
+}
+@keyframes toon-bob {
+  0%, 100% { transform: translateY(0); }
+  25%      { transform: translateY(-2px); }
+  50%      { transform: translateY(0); }
+  75%      { transform: translateY(1px); }
+}
+@keyframes toon-shake {
+  0%   { transform: translate(0, 0); }
+  15%  { transform: translate(-4px, 2px); }
+  30%  { transform: translate(4px, -3px); }
+  45%  { transform: translate(-3px, -1px); }
+  60%  { transform: translate(3px, 2px); }
+  75%  { transform: translate(-2px, -2px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes toon-drift {
+  0%, 100% { transform: translate(0, 0); }
+  33%      { transform: translate(-1px, -3px); }
+  66%      { transform: translate(1px, -1px); }
+}
+
+/* ============================================================
+   THE CARTOON LAYER.
+
+   The bangs, the marks, the dust and the stars. Over the room and
+   over the balloon, under the wipe, and it never eats a click.
+   ============================================================ */
+#toon-lay {
+  position: fixed; inset: 0; z-index: 159;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tut-plate.in, .tut-plate.shout.in, .tut-plate.think.in {
+    animation: none; transform: none;
+  }
+}
 
 /* the marker changing hands: one drawn card, held */
 #cine-stage.death-cut {
@@ -3089,10 +3171,37 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
   display: flex; flex-direction: column; gap: 6px;
   align-items: stretch; margin-top: 8px;
   max-width: min(96vw, 900px);
-  opacity: 0; transform: translateY(8px);
-  transition: opacity .16s, transform .16s cubic-bezier(.2,1.6,.4,1);
+  opacity: 0;
+  transition: opacity .12s steps(2);
 }
-.reply-rack.in { opacity: 1; transform: none; }
+.reply-rack.in { opacity: 1; }
+
+/* ============================================================
+   AND THEY ARE DEALT, NOT FADED.
+
+   The rack used to arrive as one block on a springy curve. They
+   are CARDS -- so they come in one at a time, off the left, each
+   overshooting a hair past square before it settles, which is what
+   a hand of cards landing on a table looks like.
+
+   `backwards` and not `both`: a forwards fill would keep writing
+   `transform: none` over the top of :active for as long as the
+   card is on screen, and the press would stop moving.
+   ============================================================ */
+.reply-rack.in .reply-btn { animation: toon-deal .22s steps(2, end) backwards; }
+.reply-rack.in .reply-btn:nth-child(1) { animation-delay: .02s; }
+.reply-rack.in .reply-btn:nth-child(2) { animation-delay: .08s; }
+.reply-rack.in .reply-btn:nth-child(3) { animation-delay: .14s; }
+.reply-rack.in .reply-btn:nth-child(4) { animation-delay: .20s; }
+.reply-rack.in .reply-btn:nth-child(n+5) { animation-delay: .26s; }
+@keyframes toon-deal {
+  0%   { opacity: 0; transform: translate(-20px, 7px) rotate(-2.5deg); }
+  55%  { opacity: 1; transform: translate(3px, -2px) rotate(.7deg); }
+  100% { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reply-rack.in .reply-btn { animation: none; }
+}
 /* ============================================================
    WHAT YOU SAY BACK IS AN INDEX CARD.
 

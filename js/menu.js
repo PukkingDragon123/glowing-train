@@ -497,7 +497,7 @@ const MENU = (() => {
       if (!await nap(260)) { cull(cast); return; }
       for (const a of cast) {
         if (!live) { cull(cast); return; }
-        fire();
+        fire(a.x);
         a.gone = true;
         bodies.push({ x: a.x, t: 0, life: 1 });
         if (!await nap(300)) { cull(cast); return; }
@@ -515,14 +515,39 @@ const MENU = (() => {
     }
   }
 
-  function fire() {
+  function fire(at) {
     flashT = 0.17;
     if (typeof SFX !== 'undefined' && SFX.shot) SFX.shot();
     if (typeof FX !== 'undefined' && FX.screen) {
       FX.screen.shake(4);
       FX.screen.flash(PIX.PAL.W, 0.10, 0.14);
     }
+    /* ============================================================
+       AND THE CARTOON OF IT.
+
+       The flash and the shake are the physics of a gun going off.
+       The BANG is the drawing -- a torn star with the word in it,
+       over the frog he has just put down, which is how a shot has
+       been drawn on paper since long before anybody filmed one.
+       ============================================================ */
+    if (typeof TOON === 'undefined' || at === undefined) return;
+    const s = SCENE.screenAt && SCENE.screenAt(at, FY - 30);
+    if (!s) return;
+    /* AND THE SIZE OF IT COMES OFF THE ROOM. Pinned at one and a half it
+       came out as a hundred-and-fifty-pixel sticker next to a muzzle flash
+       four times its size; a bang has to be as big as the gun. */
+    const kk = Math.max(1.6, s.k * 0.42);
+    TOON.pow(s.x, s.y, WORDS[shots % WORDS.length], PIX.PAL.O, { k: kk });
+    TOON.stars(s.x, s.y - 8, 3, { k: Math.max(2, Math.round(s.k * 0.5)) });
+    /* and the dust he goes down in, pinned to the pavement rather than to
+       the screen, so it stays under him while the camera is still drifting */
+    TOON.puffWorld(at, FY, 3, { k: Math.max(1, s.k * 0.28) });
+    shots++;
   }
+  /* a different word each time, because three identical BANGs in a row is
+     a repeated asset and not a comic */
+  const WORDS = ['BANG', 'POW', 'CRACK', 'BLAM'];
+  let shots = 0;
 
   /* take the walkers back off the stage */
   function cull(cast) {
@@ -554,6 +579,7 @@ const MENU = (() => {
     if (live) return;
     live = true;
     bodies = []; flashT = 0;
+    if (typeof TOON !== 'undefined') TOON.clear();
     SCENE.open(street());
     SCENE.busy(true);                 /* nothing here is clickable */
     SCENE.place(HIM, 1);
@@ -588,6 +614,15 @@ const MENU = (() => {
     SCENE.meArm('');
     SCENE.meFace('angry');
     if (typeof SFX !== 'undefined' && SFX.tick) SFX.tick();
+    /* HE DOES NOT TURN ROUND SLOWLY. Speed lines off both shoulders, which
+       is the only way a drawing has ever said that something moved fast. */
+    if (typeof TOON !== 'undefined' && SCENE.screenAt) {
+      const s = SCENE.screenAt(HIM, FY - 26);
+      if (s) {
+        TOON.zip(s.x - 84, s.y, -1, { k: Math.max(2, Math.round(s.k * 0.6)), life: 420 });
+        TOON.zip(s.x + 84, s.y, 1, { k: Math.max(2, Math.round(s.k * 0.6)), life: 420 });
+      }
+    }
     await U.sleep(140);
     SCENE.look(SCENE.me ? SCENE.me.x : HIM);
     push(1.9, 1500);

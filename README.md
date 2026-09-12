@@ -978,15 +978,17 @@ straight through.
 Everything you read in this game is on paper, because the man reading it
 carries a case file everywhere he goes.
 
-The plate people talk on was a dark green slab behind a chunky bezel with
-rivets in the corners and scanlines over the fill — a pocket calculator, in
-1937. It is a sheet out of the file now: manila stock with a tooth to it, a
-red rule across the head, the speaker's name typed on it in ink, and the
-words under that in the same ink. The portrait is a **photograph clipped to
-the sheet** with a steel clip. What you say back is a **buff index card**
-with a red rule down its left edge and the key that presses it typed in the
-corner. The one line telling you what you are supposed to be doing is the
-card clipped to the front of the folder.
+Everything you READ is on paper. The label over a prop is a card out of the
+file — manila stock with a tooth to it, a red rule across the head, the words
+typed on it in ink. What you SAY BACK is a **buff index card** with a red
+rule down its left edge and the key that presses it typed in the corner. The
+one line telling you what you are supposed to be doing is the card clipped to
+the front of the folder.
+
+What somebody SAYS is not paper, and used to be: for a long time a line of
+dialogue came up on that same manila sheet with a photograph clipped into its
+margin, which is a thing you read and not a thing anybody said out loud. It is
+a balloon now — see *Nobody talks on a sheet of paper*, further down.
 
 ![A witness, on paper](docs/screen-paper-plate.png)
 
@@ -1431,19 +1433,158 @@ window as well. Measured on a 1280-wide screen:
 | where | centred | **bottom left, 14px in** |
 | blow-up | 3 | **2** |
 
-![Small, left, over the room it is spoken in](docs/screen-plate.png)
+![Small, left, over the room it is spoken in](docs/screen-balloon.png)
 
 Two on the blow-up, twenty-six characters to a line instead of thirty-four,
-and both **pinned** rather than scaled off the monitor — a plate that grows
+and both **pinned** rather than scaled off the monitor — something that grows
 with the screen is a banner, and a page out of a case file is about the width
-of a page. `SPR.speech` takes a `k` now; `maxW` is demoted to what it should
-always have been, the overflow guard, so a pinned two drops to one on a phone
-too narrow for it rather than running off the edge.
+of a page. `maxW` is demoted to what it should always have been, the overflow
+guard, so a pinned two drops to one on a phone too narrow for it rather than
+running off the edge. On a phone the CHARACTER count drops instead — nineteen
+to a line — because a five-pixel capital is not a letter.
+
+Those "after" numbers are the last of the paper plate; the balloon that
+replaced it is measured in the next section but keeps every rule in this one.
+`SPR.speech` still draws the sheet — it is what a prop label is.
 
 Getting that wrong once was instructive: setting `maxW` to a page's worth as
 well as pinning `k` made the two fight, the guard won, and the plate came out
 at a blow-up of one — 227 × 85, eighteen per cent of the screen, in type
 nobody could read. The numbers in the table are why the probe exists.
+
+### Nobody talks on a sheet of paper
+
+![Four shapes, six marks and two bangs](docs/screen-shapes.png)
+
+A case file is a good object and it was the wrong one. A sheet of manila with
+a photograph clipped to it is something you **read**; a frog with a cigarette
+in his mouth needs something he **says**, and the drawing for that was settled
+in newspapers a hundred years ago. Heavy ink, bone fill, a hard cel shadow
+under it, and a tail pointing at whoever is to blame.
+
+So `TOON.bubble` draws the balloon, and the **head at the end of the tail** is
+a die-cut sticker: the same portrait the sheet used to clip in, stamped eight
+ways in ink and sixteen ways in bone so it lifts off whatever is behind it.
+Half this cast wears a dark coat and a dark hat, the game is set at night, and
+an ink line round a dark frog on a dark floor is a hole in the screen.
+
+There are four of them plus the thing with no tail at all, and **the line
+picks its own**:
+
+| shape | when | what it looks like |
+| --- | --- | --- |
+| **say** | anything else | rounded, bone, a wedge for a tail |
+| **shout** | the line has a bang in it, or the mark has the iron | spikes all round, a jag for a tail, two rounds of rattle |
+| **think** | the line trails off, or he is reading a room rather than talking | lobed like a cloud, colder stock, a chain of three dots |
+| **whisper** | a held line with no name on it — the handler in your ear | the same balloon drawn with a dry pen |
+| *(no tail)* | a lock, a print kit, the case log | a caption box, because none of them is talking |
+
+Getting the last two right took a correction. The first cut read `hold` — a
+line nobody has to click — as *muttered*, and `hold` is how nearly all of
+`story.js` talks: every witness answer, every line you say back, the print
+kit. Three quarters of the game came up drawn with a dry pen. A line with **no
+name on it** and nobody waiting is the only thing in here that whispers.
+
+Measured on a 1280 × 800 screen:
+
+| | before, on paper | after, in a balloon |
+| --- | --- | --- |
+| a line you answer | 454 × 170 — 35% × 21% | 392 × 214 — **31% × 27%** |
+| a line nobody waits on | 406 × 144 — 32% × 18% | 368 × 196 — **29% × 25%** |
+| a shout | *did not exist* | 416 × 226 — 33% × 28% |
+| what he notices | — | 372 × 106 — **29% × 13%** |
+| a full-frame beat | — | 678 × 351 — 53% × 44% |
+
+It is twenty pixels taller than the sheet was, and that is the tail: the first
+attempt put his head four rows **above** the balloon's bottom edge, so the
+head — drawn last, on top — covered the tail completely and the whole thing
+came out as a floating box with a frog under it. The tail is the entire
+grammar of a balloon. Without it nothing on screen says who is talking.
+
+### And it springs, rattles and breathes
+
+A cartoon does not ease. It holds a pose, then holds the next one, so every
+keyframe on the balloon runs on `steps(2)` and the entrance is **six held
+drawings in a quarter of a second**. Sampled off `getComputedStyle` every
+forty milliseconds, that is exactly what comes back:
+
+```
+ 40ms  scale(0.28, 0.54)   small, and already wider than it is tall
+ 80ms  scale(0.72, 0.70)
+120ms  scale(1.05, 0.98)   through the mark and wide
+160ms  scale(0.93, 1.09)   the counter-squash: tall and thin
+200ms  scale(1.05, 0.97)
+280ms  scale(1.00, 1.00)   settled, and it starts to bob
+```
+
+`transform-origin` sits on the speaker's head in the bottom-left corner, so
+it grows out of the mouth that said it. The exit is a transition rather than a
+keyframe, which took one correction of its own: calling the animation off
+snaps straight back to whatever `transform` is declared at rest, so a resting
+offset landed as a **jump on every close**. There is no transform at rest now
+— the pop's own 0% is where it starts from.
+
+A shout gets the rattle on top; a line that really is shouted shakes the whole
+frame as well, which in this script is two of them. The mark asks for the
+spiky balloon on every line he says with the iron in his hand and gets no
+frame shake at all: he says two or three a duel across twenty-odd duels a run,
+and shaking the camera for all of them is a tic, not an effect.
+
+A thought never arrives at all. It drifts.
+
+**And the replies are dealt, not faded.** The rack used to arrive as one
+block on a springy curve; they are *cards*, so they come in one at a time off
+the left, sixty milliseconds apart, each overshooting a hair past square
+before it settles. `animation-fill-mode` is `backwards` and not `both` there
+for a reason worth writing down: a forwards fill keeps writing
+`transform: none` over the top of `:active` for as long as the card is on
+screen, and the press stops moving. Measured at rest it is `none`, and held
+down it is `translate(1px, 2px)` — which is the press still working.
+
+The letters land the same way: the line is measured **whole** and painted in
+**part**, so the box comes up the size it will end at and fills in rather than
+growing under the reader, and the last two characters to arrive sit a pixel
+high of the ones that have settled. His mouth flaps every three characters and
+he takes a pixel of hop on the same beat — a head that flaps its mouth and
+never moves is a puppet.
+
+### And what pops out of it
+
+![A bang on the title card](docs/screen-bang.png)
+
+`toon.js` also carries the layer everything else in a cartoon lives on: one
+canvas over the window with its own ticker, and **the ticker stops dead the
+moment the list is empty**, because a cartoon layer running a
+`requestAnimationFrame` all night to draw nothing is a battery bug with a
+smile on it. Marks can be pinned to the screen or to the **room**, in which
+case they are resolved through `SCENE.screenAt` every frame and ride the
+camera — and take their blow-up off the room's own scale, so a query mark
+beside a frog is the size of the frog.
+
+- **A query mark** over the speaker's actual head, wherever he is standing,
+  every time a line ends in a question. Thirty-three of them in the game.
+- **A bang, a POW, a BLAM and a CRACK** — a torn star with the word in it,
+  built to fit whatever word it is given, over the muzzle of every shot
+  fired at the table and over every frog the title card puts down.
+- **Four-point stars** off a head that has just taken a round. The first cut
+  of the star had four arms of even width, which is a plus sign; a twinkle is
+  concave between its points, so the arms flare where they meet.
+- **A bead of sweat** the moment you put the muzzle against your own head,
+  which is the one move this game is about and had nothing that said how it
+  feels. Once, on the way up — holding it there does not sweat harder.
+- **Four lines on a forehead** while the mark taunts you — but only from a
+  lieutenant, or from anybody once you are down to your last two hearts. A
+  vein on every taunt of every duel is wallpaper; a vein when he has a reason
+  is somebody enjoying himself.
+- **A dust curl** where a body lands on the title card's pavement, pinned to
+  the pavement rather than to the screen so it stays put while the camera is
+  still drifting.
+- **Speed lines** off both shoulders when the frog on the title card whips
+  round to face you.
+- **Dust**, which was already there and was two single pixels at thirty per
+  cent alpha. At any camera distance that is not dust, it is a rendering
+  artefact. It is a curl with an ink line round it now, and it opens as it
+  rises.
 
 ### Left, not right
 

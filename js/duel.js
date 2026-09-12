@@ -2219,6 +2219,20 @@ const DUEL = {
   setAim(a) {
     if (DUEL.busy || G.phase !== 'duel') return;
     if (DUEL.aim !== a) SFX.chak();
+    /* ============================================================
+       A BEAD OF SWEAT, AND IT IS EARNED.
+
+       Putting the muzzle against your own head to keep the turn is
+       the one move this game is about. It got a camera change and a
+       pose and nothing that said how it FEELS -- so it gets the
+       oldest mark in cartooning, over the iron, the moment it comes
+       up. Once, on the way up: holding it there does not sweat
+       harder, and a drop every frame is a leak.
+       ============================================================ */
+    if (a === 'self' && DUEL.aim !== 'self' && typeof TOON !== 'undefined') {
+      const sp = DUEL.screenXY(196, 48);
+      if (sp) TOON.mark(sp.x, sp.y, 'sweat', { k: Math.max(3, Math.round(sp.k * 1.4)), life: 760 });
+    }
     DUEL.aim = a;
     DUEL.view = a === 'self' ? 'self' : 'table';
     DUEL.setPose(a === 'foe' ? 'youFoe' : 'youSelf');
@@ -2331,6 +2345,20 @@ const DUEL = {
       /* BULLET TIME. Long enough to watch the round leave and land, and
          longest of all when what it lands in is you. */
       FX.screen.slowmo(ev.victim === 'you' ? 900 : 700, 0.42);
+      /* ============================================================
+         AND THE CARTOON OF IT.
+
+         Everything above is the physics of a round leaving a barrel.
+         This is the drawing: a torn star with the word in it, over
+         the muzzle, which is where a comic has put it for a century.
+         A fizzle gets none -- it already stamps FIZZLE, and a BANG
+         over a gun that did not go off is a lie.
+         ============================================================ */
+      if (typeof TOON !== 'undefined' && !ev.fizzled) {
+        const sp = DUEL.screenXY(tip.x, tip.y - 8);
+        if (sp) TOON.pow(sp.x, sp.y, ev.dmg >= 2 ? 'BLAM' : 'BANG',
+          ev.dmg >= 2 ? PIX.PAL.R : PIX.PAL.O, { k: Math.max(1.4, sp.k * 0.46) });
+      }
       if (!ev.fizzled) DUEL.fireSlug(tip, ang, 100);
       /* the cut-in: whoever just committed, crossing the frame */
       if (!ev.fizzled && ev.victim) {
@@ -2365,6 +2393,12 @@ const DUEL = {
         DUEL.setExpr('pain', 55);
         FX.screen.shake(ev.dmg >= 2 ? 18 : 12);
         FX.screen.flash(PIX.PAL.R, 0.3, 0.1);
+        /* four-point stars off the head that just took it */
+        if (typeof TOON !== 'undefined') {
+          const sh = DUEL.screenXY(180, 58);
+          if (sh) TOON.stars(sh.x, sh.y, ev.dmg >= 2 ? 5 : 3,
+            { k: Math.max(2, Math.round(sh.k * 0.9)) });
+        }
         if (ev.dmg >= 2) {
           FX.crit(180, 62, 'CRUNCH');
           FX.screen.slowmo(650);
@@ -2598,6 +2632,21 @@ const DUEL = {
     if (ev.type === 'saw') { SFX.jamSfx(); UI.stampSmall('SAWED — NEXT SHOT ×2'); }
     else { SFX.chak(); UI.stampSmall('DOUBLE TAP READY'); }
     UI.syncDuel();
+  },
+
+  /* and the same mapping the other way, so the cartoon layer can put a
+     BANG on the muzzle -- it draws on a canvas over the whole window and
+     has no idea where this table is sitting on it */
+  screenXY(x, y) {
+    if (!DUEL.cv) return null;
+    const r = DUEL.cv.getBoundingClientRect();
+    if (!r.width) return null;
+    const pan = DUEL.room === 'back' ? Math.round(DUEL.panX) : 0;
+    return {
+      x: r.left + (x + DUEL.OX - pan) / DUEL.W * r.width,
+      y: r.top + (y + DUEL.OY) / DUEL.H * r.height,
+      k: r.width / DUEL.W,
+    };
   },
 
   /* tap the mark to aim at him, tap again to FIRE; same for yourself.

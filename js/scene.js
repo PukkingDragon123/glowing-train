@@ -50,13 +50,24 @@ const SCENE = (() => {
     kickDust(force);
     if (force > 0.6) SFX.tone(70, 0.05, 'square', 0.05);
   }
+  /* ============================================================
+     DUST OFF HIS HEELS, AND IT IS A DRAWING NOW.
+
+     This used to be two single pixels at thirty per cent alpha,
+     which at any camera distance is not dust, it is a rendering
+     artefact. A cartoon puff is a SHAPE: a curl with an ink line
+     round it that opens as it rises and thins out as it goes. Same
+     spawn, same physics, three times the size, and it is still
+     drawn under his shoes so he stands in it.
+     ============================================================ */
   function kickDust(force) {
-    const n = force > 0.6 ? 5 : 2;
+    const n = force > 0.6 ? 4 : 2;
     for (let i = 0; i < n; i++) {
       puffs.push({
         x: me.x - me.face * (2 + Math.random() * 4), y: 0,
         vx: -me.face * (4 + Math.random() * 12), vy: -(6 + Math.random() * 14),
-        t: 0, life: 0.3 + Math.random() * 0.4,
+        r: 1.4 + Math.random() * 1.6, lob: Math.random() < 0.5 ? -1 : 1,
+        t: 0, life: 0.34 + Math.random() * 0.4,
       });
     }
   }
@@ -318,6 +329,8 @@ const SCENE = (() => {
 
   function close() {
     if (raf) { cancelAnimationFrame(raf); raf = null; }
+    /* the marks are pinned to people in THIS room, so they leave with it */
+    if (typeof TOON !== 'undefined') TOON.clear();
     const host = document.getElementById('scene-root');
     if (host) { host.innerHTML = ''; host.className = 'hidden'; }
     unbind();
@@ -2377,8 +2390,14 @@ const SCENE = (() => {
     const fy = floorAt(me.z);
     /* the dust goes down first, so his shoes stand in it */
     for (const p2 of puffs) {
-      const a = 0.3 * (1 - p2.t / p2.life);
-      ART.px(c, Math.round(p2.x), Math.round(fy - 1 + p2.y), 1, 1, 'rgba(214,206,186,' + a.toFixed(3) + ')');
+      const u = Math.min(1, p2.t / p2.life);
+      const a = 1 - u;
+      const rr = Math.max(1, Math.round((p2.r || 1.6) * (0.55 + u * 1.5)));
+      const px = Math.round(p2.x), py = Math.round(fy - 1 + p2.y);
+      PIX.disc(c, px, py, rr + 1, 'rgba(18,16,29,' + (a * 0.46).toFixed(3) + ')');
+      PIX.disc(c, px, py, rr, 'rgba(201,192,168,' + (a * 0.74).toFixed(3) + ')');
+      PIX.disc(c, px - (p2.lob || 1), py - 1, Math.max(1, rr - 1),
+        'rgba(244,239,224,' + (a * 0.68).toFixed(3) + ')');
     }
     /* squash on landing, and a whisker of stretch at speed: both pinned to
        the floor so his feet never leave it */
@@ -2770,6 +2789,41 @@ const SCENE = (() => {
         };
         beat2();
       });
+    },
+    /* ============================================================
+       WHERE A ROOM PIXEL LANDS ON THE SCREEN.
+
+       The cartoon layer (see toon.js) is one canvas over the whole
+       window, and the things it draws are pinned to people standing
+       in a room -- a query mark over a witness, dust off a heel. So
+       it needs the camera, and it needs it every frame, because the
+       camera moves and a mark that does not move with it is a
+       sticker on the monitor.
+       ============================================================ */
+    screenAt(x, y) {
+      if (!def || !cv) return null;
+      const r = cv.getBoundingClientRect();
+      if (!r.width) return null;
+      return { x: r.left + (x - cam) * K, y: r.top + (y + oy) * K, k: K };
+    },
+    /* the top of somebody's head, in room pixels, found by the name the
+       line is spoken under -- the same string the portrait is resolved
+       from. Nobody on stage by that name gets a null rather than a guess:
+       the mark then pops off the corner of the balloon instead. */
+    headOf(name) {
+      if (!def) return null;
+      const n = String(name || '').toUpperCase();
+      if (!n) return null;
+      if (n === 'YOU' || n.indexOf('YOU') === 0) {
+        return { x: me.x, y: floorAt(me.z) - rigH(SCENE.meDef()) * scaleAt(me.z) };
+      }
+      for (const a of (def.actors || [])) {
+        if (!a || a.gone || !a.def) continue;
+        if (![a.label, a.tag, a.name, a.id].some(v => v && String(v).toUpperCase() === n)) continue;
+        const h = rigH(a.def) * scaleAt(a.z) * (a.scale || 1);
+        return { x: a.x, y: (a.y === undefined ? floorAt(a.z) : a.y) - h };
+      }
+      return null;
     },
     /* pin his face and his near arm for a beat, or hand them back */
     meFace(k) { me.expr = k || null; },

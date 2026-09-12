@@ -185,7 +185,11 @@ const CUT = (() => {
     async glass(x, y, title, lines) {
       gate();
       for (const l of (lines || [])) {
-        await TUTOR.say(l, { name: title, nameCol: PIX.PAL.L, rim: PIX.PAL.l });
+        /* NOT SPOKEN. Nobody is being told about the pavement -- he is
+           looking at it and working something out, so it comes up in the
+           lobed one with the chain of dots rather than in a balloon. */
+        await TUTOR.say(l, { name: title, nameCol: PIX.PAL.L, rim: PIX.PAL.l,
+          kind: 'think' });
         gate();
       }
       gate();
