@@ -3,3 +3,4 @@ dev/shots/
 .scratch/
 node_modules/
 dist/artifact.html
+dist/itch/

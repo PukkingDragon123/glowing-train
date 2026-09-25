@@ -25,6 +25,14 @@ const CINE = {
     return r;
   },
 
+  /* A KEY SPENT ON A FILM IS SPENT. Whatever takes Enter or Space as "go
+     on" hears it on the way down (capture) and cancels it here, and the
+     room underneath skips a cancelled key -- otherwise the Enter that
+     skipped a shot was also a hand on whatever door you were stood at. */
+  spend(e) {
+    if (e && e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ')) e.preventDefault();
+  },
+
   /* The cutscene layer is deliberately NOT the wipe layer: a wipe that
      finished while a cut-in was still playing used to erase it. */
   stage() {
@@ -656,9 +664,9 @@ const CINE = {
     c.scale(K, K);
 
     let skip = false;
-    const bail = () => { skip = true; };
+    const bail = (e) => { CINE.spend(e); skip = true; };
     window.addEventListener('pointerdown', bail);
-    window.addEventListener('keydown', bail);
+    window.addEventListener('keydown', bail, true);
     CINE.skipUI(bail, 'SKIP');
     const P = PIX.PAL;
     const rng = U.mulberry32(99);
@@ -765,7 +773,7 @@ const CINE = {
       }
     } finally {
       window.removeEventListener('pointerdown', bail);
-      window.removeEventListener('keydown', bail);
+      window.removeEventListener('keydown', bail, true);
       CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
@@ -791,9 +799,9 @@ const CINE = {
     c.scale(K, K);
 
     let skip = false;
-    const bail = () => { skip = true; };
+    const bail = (e) => { CINE.spend(e); skip = true; };
     window.addEventListener('pointerdown', bail);
-    window.addEventListener('keydown', bail);
+    window.addEventListener('keydown', bail, true);
     CINE.skipUI(bail, 'SKIP');
     const P = PIX.PAL;
 
@@ -822,11 +830,20 @@ const CINE = {
       PIX.rect(c, 25, 62, 2, 4, '#8d8672');               // knob
       const x0 = 150 - t * 34;                 // the sad little convoy
       const step = Math.floor(t * 6) % 2;
-      /* him: flat on his back, arms trailing, fully intact */
+      /* him: flat on his back, arms trailing, and the one that finished
+         it still in his head -- he goes out back the way he fell */
       PIX.rect(c, x0 + 12, 74, 30, 9, P.K);
       PIX.rect(c, x0 + 13, 75, 28, 7, '#272c3d');
+      PIX.rect(c, x0 + 27, 75, 8, 5, '#4a1420');  // the shirt, soaked through
+      PIX.rect(c, x0 + 25, 76, 2, 3, '#4a1420');
+      PIX.rect(c, x0 + 29, 80, 5, 1, '#4a1420');
       PIX.disc(c, x0 + 44, 77, 6, P.K);
       PIX.disc(c, x0 + 44, 77, 5, '#2e7d5b');   // his head, lolling
+      PIX.rect(c, x0 + 45, 75, 3, 3, '#6a1420');  // where it went in: a blot, not a mark
+      PIX.rect(c, x0 + 44, 76, 1, 2, '#6a1420');
+      PIX.rect(c, x0 + 48, 76, 1, 1, '#6a1420');
+      PIX.rect(c, x0 + 46, 76, 1, 1, '#2a0508');
+      PIX.rect(c, x0 + 47, 78, 1, 4, '#7a1622');  // running down onto the boards
       PIX.rect(c, x0 + 40, 70, 9, 3, P.K);      // hat, sliding off
       PIX.rect(c, x0 + 16, 82, 4, 4, P.K);      // trailing hand
       PIX.rect(c, x0 + 24, 83, 4, 3, P.K);
@@ -844,8 +861,9 @@ const CINE = {
       PIX.rect(c, x0 - 1 - step * 2, 80, 5, 4, P.K);
       /* effort, in little pips */
       if (step) { PIX.rect(c, x0 - 13, 54, 2, 2, '#bfe3ff'); PIX.rect(c, x0 - 15, 58, 1, 1, '#bfe3ff'); }
-      /* the smear he leaves */
+      /* the smear he leaves, heavier where his head bumped a board */
       PIX.rect(c, Math.round(x0 + 46), 82, Math.round(170 - x0 - 40), 2, 'rgba(87,18,32,.5)');
+      for (let sx = Math.round(x0 + 52); sx < 172; sx += 9) PIX.rect(c, sx, 81, 2, 1, 'rgba(120,20,34,.55)');
       /* dust off the boards */
       if (step) PIX.rect(c, x0 + 8, 78, 2, 2, 'rgba(141,134,114,.4)');
       const lab = PIXFONT.render('CLEANING UP', { scale: 1, color: P.q, shadow: null });
@@ -868,7 +886,7 @@ const CINE = {
       }
     } finally {
       window.removeEventListener('pointerdown', bail);
-      window.removeEventListener('keydown', bail);
+      window.removeEventListener('keydown', bail, true);
       CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
@@ -1006,9 +1024,9 @@ const CINE = {
     root.innerHTML = '';
     CINE.loreSkip = false;
     CINE.letterbox(true);
-    const bail = () => { CINE.loreSkip = true; };
+    const bail = (e) => { CINE.spend(e); CINE.loreSkip = true; };
     window.addEventListener('pointerdown', bail);
-    window.addEventListener('keydown', bail);
+    window.addEventListener('keydown', bail, true);
     CINE.skipUI(bail, 'SKIP');
 
     const hold = async (ms) => {
@@ -1051,7 +1069,7 @@ const CINE = {
       await hold(1500);
     } finally {
       window.removeEventListener('pointerdown', bail);
-      window.removeEventListener('keydown', bail);
+      window.removeEventListener('keydown', bail, true);
       CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
@@ -1085,9 +1103,9 @@ const CINE = {
     if (opts.bars) CINE.letterbox(true);
 
     let skip = false, skipAll = false;
-    const bail = () => { skip = true; if (opts.skipAll) skipAll = true; };
+    const bail = (e) => { CINE.spend(e); skip = true; if (opts.skipAll) skipAll = true; };
     window.addEventListener('pointerdown', bail);
-    window.addEventListener('keydown', bail);
+    window.addEventListener('keydown', bail, true);
     CINE.skipUI(bail, opts.skipAll ? 'SKIP' : 'NEXT');
     try {
       for (const shot of shots) {
@@ -1110,7 +1128,7 @@ const CINE = {
       }
     } finally {
       window.removeEventListener('pointerdown', bail);
-      window.removeEventListener('keydown', bail);
+      window.removeEventListener('keydown', bail, true);
       CINE.skipUI(null);
       root.innerHTML = '';
       root.className = 'hidden';
@@ -1587,7 +1605,14 @@ const CINE = {
         c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 56, seed: 71 }), 0, 0);
         c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 3 }), 0, 76);
         c.drawImage(ART.hangLamp(16, 24, true), 84, 0);
-        /* him on the floor, intact, and you standing over it */
+        /* what the flash did, spreading out from under his head: drawn
+           first, so he is lying in it rather than on top of it */
+        if (t > 0.62) {
+          const pr = Math.min(1, (t - 0.62) * 3.2);
+          SPR.ellipse(c, 52, 91, 4 + Math.round(pr * 12), 2 + Math.round(pr * 3), 'rgba(87,18,32,.82)');
+          SPR.ellipse(c, 50, 91, 2 + Math.round(pr * 7), 1 + Math.round(pr * 2), 'rgba(120,20,34,.7)');
+        }
+        /* him on the floor, and you standing over it */
         PIX.rect(c, 60, 84, 40, 8, P.K);
         PIX.rect(c, 61, 85, 38, 6, '#3a3f52');
         PIX.disc(c, 58, 88, 6, P.K); PIX.disc(c, 58, 88, 5, '#2e7d5b');
@@ -1727,10 +1752,15 @@ const CINE = {
         const sx = 55 + (i % 12) * 6, sy = 52 + Math.floor(i / 12) * 17 - Math.round(rise * 26);
         PIX.rect(c, sx, sy, 5, 15, 'rgba(210,232,240,.55)');
         PIX.rect(c, sx, sy, 1, 15, 'rgba(255,255,255,.55)');
-        PIX.disc(c, sx + 2, sy + 9, 1, last ? P.R : P.d);
+        PIX.rect(c, sx + 1, sy + 8, 3, 3, last ? P.R : P.d);    /* the drop */
+        PIX.rect(c, sx + 2, sy + 7, 1, 1, last ? P.R : P.d);
+        PIX.rect(c, sx + 1, sy + 8, 1, 1, 'rgba(255,200,190,.6)');
       }
-      /* your hand, putting the last one in */
-      PIX.rect(c, 120, 12 + Math.round(Math.min(1, t / 1.2) * 22), 26, 12, '#2e7d5b');
+      /* your hand, the last one pinched between finger and thumb */
+      const me = (typeof DUEL !== 'undefined' && DUEL.myDef) ? DUEL.myDef() : null;
+      const hy = 50 + Math.round(Math.min(1, t / 1.2) * 4) - Math.round(Math.max(0, 1 - t / 1.2) * 26);
+      SPR.povSleeve(c, 190, 120, 128, hy + 18, 22, 16, '#26303e', '#1a2230', '#3a465a');
+      if (me) SPR.povHand(c, 124, hy + 6, me, -1, 1, true);
     };
     const water = (c, t, W, H) => {
       for (let y = 0; y < 60; y++) {
@@ -1749,10 +1779,13 @@ const CINE = {
       for (let i = 0; i < 40; i++) {
         PIX.rect(c, (i * 23 + Math.round(t * 8)) % W, 62 + (i * 7) % 40, 4 + i % 5, 1, 'rgba(120,160,200,.14)');
       }
-      /* the boat, no lights, and the bundle going over */
-      PIX.rect(c, 50, 78, 60, 8, P.K);
-      PIX.rect(c, 52, 80, 56, 5, '#2a2018');
-      c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, 1), 68, 44);
+      /* the boat, no lights, him standing in it, and the bundle going over */
+      c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, 1), 68, 40);
+      PIX.rect(c, 46, 76, 70, 12, P.K);
+      PIX.rect(c, 48, 77, 66, 9, '#2a2018');
+      PIX.rect(c, 48, 77, 66, 2, '#4a3a28');
+      PIX.rect(c, 44, 74, 4, 6, P.K); PIX.rect(c, 114, 74, 4, 6, P.K);
+      PIX.rect(c, 50, 86, 62, 2, 'rgba(120,160,200,.20)');
       const sink = Math.min(1, Math.max(0, (t - 0.6) / 1.6));
       if (sink < 1) {
         const bx = 110 + Math.round(sink * 10), by = 80 + Math.round(sink * 18);
@@ -1817,6 +1850,85 @@ const CINE = {
       { len: 2.8, draw: paper, cap: 'NOBODY ASKED.' },
     ], { bars: true });
     await CINE.titleBeat('CASE CLOSED', 'BY HIM.', P.R);
+  },
+
+  /* ============================================================
+     A PICTURE TO TALK OVER.
+
+     A cutscene film owns the stage and sits over the speech
+     balloons, so nobody can talk during one. Some scenes are a
+     conversation that happens IN a place -- a dying man on his own
+     floor -- and that needs the place under the words. This is a
+     drawn, looping frame in its own layer, under the balloons and
+     over the game, that runs until the caller stops it.
+     ============================================================ */
+  backdrop(draw, opts) {
+    opts = opts || {};
+    let el = document.getElementById('cine-back');
+    if (!el) {
+      el = U.el('div');
+      el.id = 'cine-back';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '';
+    el.className = 'on';
+    const W = opts.w || 180, H = opts.h || 108;
+    const K = U.clamp(Math.floor(Math.min(window.innerWidth / (W + 10), window.innerHeight / (H + 22))), 2, 8);
+    const cv = document.createElement('canvas');
+    cv.width = W * K; cv.height = H * K;
+    cv.className = 'pix anim-frame';
+    el.appendChild(cv);
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.scale(K, K);
+    let live = true;
+    const t0 = performance.now();
+    (async () => {
+      while (live) {
+        c.clearRect(0, 0, W, H);
+        draw(c, (performance.now() - t0) / 1000, W, H);
+        await U.sleep(33);
+      }
+    })();
+    return () => { live = false; el.innerHTML = ''; el.className = ''; };
+  },
+
+  /* THE BULLFROG, on the floor of his flat, still breathing -- just. The
+     parlour behind him, the lamp knocked over and throwing its light along
+     the boards, and the pool under him that has not stopped. */
+  bullfrogFloor(c, t, W, H) {
+    const P = PIX.PAL;
+    PIX.rect(c, 0, 0, W, H, '#0a080c');
+    c.drawImage(ART.wall(W, 72, { tone: 'brick', railY: 50, seed: 88 }), 0, 0);
+    c.drawImage(ART.floor(W, H - 68, { tone: 'board', seed: 12 }), 0, 68);
+    /* the lamp on its side, lighting the floor along the boards */
+    c.save(); c.globalAlpha = 0.16; c.fillStyle = '#ffd75e';
+    c.beginPath(); c.moveTo(150, 84); c.lineTo(20, 70); c.lineTo(20, 104); c.closePath(); c.fill(); c.restore();
+    PIX.rect(c, 146, 80, 16, 8, P.K); PIX.rect(c, 147, 81, 14, 6, '#c9a24a');
+    PIX.rect(c, 160, 86, 14, 2, '#6b4426');
+    /* the pool, spreading from his head */
+    const pool = Math.min(1, 0.45 + t * 0.03);
+    SPR.ellipse(c, 64, 92, Math.round(40 * pool), Math.round(8 * pool), P.D);
+    SPR.ellipse(c, 60, 91, Math.round(28 * pool), Math.round(5 * pool), P.d);
+    /* him: a fat body in a dark suit, the white of the bow tie, breathing */
+    const breath = Math.round(Math.sin(t * 1.6) * 1);
+    SPR.rrect(c, 60, 80 - breath, 52, 14 + breath, 6, P.K);
+    SPR.rrect(c, 61, 81 - breath, 50, 12 + breath, 5, '#1c1a2c');
+    PIX.rect(c, 72, 82 - breath, 6, 3, P.W);
+    PIX.disc(c, 84, 86, 2, P.D);                         /* where it went in */
+    PIX.rect(c, 84, 88, 1, 5, P.d);
+    const head = SPR.frogCustom('bullFloor', FROG_DEFS.owner, 'pain');
+    c.drawImage(head, 0, 0, head.width, head.height, 34, 70, 30, 27);
+    /* his hand, reaching for nothing */
+    PIX.rect(c, 108, 88, 10, 4, P.K); PIX.rect(c, 109, 89, 8, 2, '#7350c9');
+    /* and you, standing over him with it */
+    c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, -1), 118, 34);
+    /* the rain on the window behind, because it is always raining */
+    for (let i = 0; i < 14; i++) {
+      PIX.rect(c, 8 + ((i * 13 + Math.round(t * 30)) % 40), 10 + ((i * 17 + Math.round(t * 60)) % 30), 1, 3, 'rgba(160,200,235,.25)');
+    }
+    PIX.rect(c, 6, 8, 44, 34, 'rgba(20,30,50,.30)');
+    PIX.rect(c, 0, 0, W, H, 'rgba(0,0,0,' + (0.10 + 0.06 * Math.sin(t * 0.8)).toFixed(3) + ')');
   },
 
   /* ============================================================
@@ -1920,7 +2032,11 @@ const CINE = {
     const W = 168, H = 116;
     const K = U.clamp(Math.floor(Math.min(window.innerWidth * 0.92 / W,
       window.innerHeight * 0.66 / H)), 2, 7);
-    const wrap = U.el('div', 'pick-card');
+    /* its OWN class. This used to be 'pick-card', the same name as the
+       cards in a decision -- and its opacity:0-until-.in rule applied to
+       those too, which never get .in, so every choice card in the game was
+       invisible and clickable. */
+    const wrap = U.el('div', 'pickup-card');
     const cv = document.createElement('canvas');
     cv.width = W * K; cv.height = H * K;
     cv.className = 'pix pick-cv';

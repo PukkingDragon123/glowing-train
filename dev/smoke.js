@@ -590,10 +590,11 @@ fs.mkdirSync(SHOTS, { recursive: true });
       }
       if (buried) {
         /* the pick-up plays as an animation, so wait for it rather than
-           sampling one frame and hoping */
-        await page.waitForSelector('.pick-card', { timeout: 6000 }).catch(() => {});
+           sampling one frame and hoping. It is .pickup-card, not
+           .pick-card: that one is a card in a decision. */
+        await page.waitForSelector('.pickup-card', { timeout: 6000 }).catch(() => {});
         await page.waitForTimeout(900);
-        if (await page.locator('.pick-card').count()) {
+        if (await page.locator('.pickup-card').count()) {
           if (!pickShot) { pickShot = 1; await shot('13-clue'); }
         } else {
           const why = await page.evaluate((pr) => ({
@@ -1017,7 +1018,31 @@ fs.mkdirSync(SHOTS, { recursive: true });
     });
     await settle();
     await page.evaluate(() => { STORY.endgame(); });
+    /* THE REVEAL comes first: he talks from the floor, the second cup, and
+       you. Tap through it the way a player reads it, and prove it has the
+       place under it and his own face on it rather than a black screen. */
+    let revealShot = false, revealLines = 0;
+    for (let i = 0; i < 200; i++) {
+      if (await page.locator('.pick-card').count()) break;
+      if (await page.$('.tut-plate')) {
+        await finishType();
+        if (!revealShot) {
+          await shot('31a-reveal');
+          revealShot = true;
+          const back = await page.evaluate(() => {
+            const b2 = document.getElementById('cine-back');
+            return !!(b2 && b2.classList.contains('on') && b2.querySelector('canvas'));
+          });
+          if (!back) errors.push('[finale] the Bullfrog confesses over a black screen');
+        }
+        revealLines++;
+        await page.keyboard.press('Enter');
+      }
+      await page.waitForTimeout(200);
+    }
+    if (revealLines < 8) errors.push('[finale] the reveal was only ' + revealLines + ' lines');
     await page.waitForSelector('.pick-card', { timeout: 10000 });
+    if ((await page.locator('.pick-card').count()) !== 3) errors.push('[finale] expected three ways out of the room');
     await page.waitForTimeout(500);
     await shot('31-choice');
     await pickCard(0);                              // the badge
@@ -1042,6 +1067,24 @@ fs.mkdirSync(SHOTS, { recursive: true });
     await page.waitForTimeout(2600);
     await page.mouse.click(720, 500);
     await page.waitForTimeout(600);
+    await page.waitForFunction(() => !CINE.busy, null, { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(3200);
+
+    /* ================= 11. the Code: his table, his plastic ================= */
+    await page.evaluate(() => { G2().ending = null; G2().wonRun = false; STORY.rookDuel(); });
+    await page.waitForFunction(() => G2().phase === 'duel' && G2().duel && G2().duel.opp.rook,
+      null, { timeout: 40000 }).catch(() => errors.push('[finale] the captain never sat down'));
+    await page.waitForFunction(() => !DUEL.busy || G2().duel.over, null, { timeout: 30000 }).catch(() => {});
+    await clearPlates(4);
+    await shot('37-rook');
+    await winDuel();
+    await doLoot('38-rook-room');
+    await page.waitForFunction(() => G2().phase === 'ending', null, { timeout: 60000 })
+      .catch(() => errors.push('[finale] the Code never ended'));
+    const code = await page.evaluate(() => G2().ending);
+    if (code !== 'code') errors.push('[finale] the captain\'s table did not end in the Code, got ' + code);
+    await page.waitForTimeout(600);
+    await shot('39-code');
 
     const fin = await state();
     console.log('final state:', JSON.stringify(fin));

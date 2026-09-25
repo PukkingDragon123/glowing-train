@@ -2224,6 +2224,13 @@ const STORY = {
      them is back down the stairs to him.
      ============================================================ */
   async endgame(kind) {
+    /* nothing of the city is still in your hand when this starts, and
+       nothing of it is still listening: a room left open under the finale
+       takes the Enter that reads his confession as a hand on whatever door
+       you are stood at -- the street door gets the car, and the car is the
+       phone, and the map comes up over the man on the floor */
+    if (typeof PHONE !== 'undefined' && PHONE.isOpen && PHONE.isOpen()) PHONE.close();
+    if (typeof SCENE !== 'undefined') SCENE.close();
     if (kind === 'code') {
       G.ending = 'code';
       META.bump('wins');
@@ -2235,8 +2242,10 @@ const STORY = {
       UI.render();
       return;
     }
-    const BULL = { name: 'THE BULLFROG', nameCol: PIX.PAL.R, rim: PIX.PAL.d };
+    const BULL = { name: 'THE BULLFROG', nameCol: PIX.PAL.R, rim: PIX.PAL.d,
+      art: SPR.frogCustom('bullTalk', FROG_DEFS.owner, 'pain') };
     const ME = { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t };
+    const unstage = CINE.backdrop(CINE.bullfrogFloor);
     CINE.letterbox(true);
     await TUTOR.say('I DID NOT TAKE YOUR FAMILY, DETECTIVE.', BULL);
     await TUTOR.say('I KNEW YOU WERE COMING. I DID NOT KNOW WHY UNTIL YOU KILLED MY DRIVER.', BULL);
@@ -2268,11 +2277,12 @@ const STORY = {
             art: ART.art('badge', 3), dim: !clean },
           { label: 'THE BULLET', sub: 'FINISH WHAT ROOK STARTED',
             art: ART.art('gunprop', 3) },
-          { label: 'THE CODE', sub: 'HE WROTE IT. HE CAN DIE BY IT',
-            art: ART.art('gunprop', 3) },
+          { label: 'THE CODE', sub: 'HE WROTE IT. HE DIES BY IT',
+            art: STORY.slideArt() },
         ],
       });
     }
+    unstage();
     if (idx === 2) { await STORY.rookDuel(); return; }
     if (idx === 0 && clean) {
       G.ending = 'good';
@@ -2300,6 +2310,7 @@ const STORY = {
      Bullfrog and goes home.
      ============================================================ */
   async rookDuel() {
+    if (typeof PHONE !== 'undefined' && PHONE.isOpen && PHONE.isOpen()) PHONE.close();
     SCENE.close();
     await CINE.driveTo('THE PRECINCT. AFTER HOURS.');
     G.blind = 2;
@@ -2317,6 +2328,23 @@ const STORY = {
     UI.render();
     await U.sleep(900);
     if (typeof TALK !== 'undefined') await TALK.line('YOU TOOK YOUR TIME, SON. SIT DOWN.', 2600);
+  },
+
+  /* a blood slide: the one thing the Code leaves you to keep */
+  slideArt() {
+    const cv = document.createElement('canvas');
+    cv.width = 24; cv.height = 14;
+    const c = cv.getContext('2d');
+    PIX.rect(c, 0, 1, 24, 12, '#0e1018');
+    PIX.rect(c, 1, 2, 22, 10, '#c8dce6');
+    PIX.rect(c, 1, 2, 22, 1, '#eef6fa');
+    PIX.rect(c, 1, 2, 1, 10, '#eef6fa');
+    PIX.rect(c, 2, 3, 5, 8, '#e8ecee');             /* the frosted end, for a name */
+    PIX.rect(c, 3, 5, 3, 1, '#8a8e94'); PIX.rect(c, 3, 7, 2, 1, '#8a8e94');
+    PIX.disc(c, 15, 7, 3, '#8c1420');                /* the drop */
+    PIX.disc(c, 15, 7, 2, '#c8243a');
+    PIX.rect(c, 14, 5, 1, 1, '#ff9a9a');
+    return cv;
   },
 
   /* he wins, and he cleans up after himself */

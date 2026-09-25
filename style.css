@@ -1663,6 +1663,14 @@ button { font-family: inherit; font-size: var(--fs-md); cursor: pointer; border:
    even when somebody is still mid-sentence. */
 #cine-stage { z-index: 160; }
 #cine-root.hidden, #cine-stage.hidden { display: none; }
+/* a place to talk over: under the balloons (158), over the game */
+#cine-back {
+  position: fixed; inset: 0; z-index: 150; display: none;
+  align-items: center; justify-content: center;
+  background: #05060a; pointer-events: none;
+}
+#cine-back.on { display: flex; }
+#cine-back canvas { image-rendering: pixelated; display: block; }
 
 /* ---- the rack of card backs ---- */
 .wcol {
@@ -3259,12 +3267,14 @@ body.talking .corner-ui { opacity: 0; transform: translateY(10px); pointer-event
    and it is a line of dialogue now, so the rim and everything that
    dressed it are gone with it.
    ============================================================ */
-.pick-card {
+/* NOT .pick-card: that name belongs to the cards in a decision, and this
+   rule's opacity:0 was hiding every one of them */
+.pickup-card {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   opacity: 0; transform: scale(.96) translateY(10px);
   transition: opacity .2s, transform .24s cubic-bezier(.2,1.5,.4,1);
 }
-.pick-card.in { opacity: 1; transform: none; }
+.pickup-card.in { opacity: 1; transform: none; }
 .pick-cv {
   image-rendering: pixelated; display: block;
   border: var(--bd-thick) solid #0a0d11;

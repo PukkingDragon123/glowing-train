@@ -434,7 +434,7 @@ const TUTOR = {
         TUTOR._close = null;
         holder.classList.add('out');
         root.removeEventListener('pointerdown', done);
-        window.removeEventListener('keydown', key);
+        window.removeEventListener('keydown', key, true);
         setTimeout(() => {
           if (root.firstChild === holder) {
             root.innerHTML = ''; root.className = 'hidden';
@@ -443,7 +443,15 @@ const TUTOR = {
           res();
         }, 180);
       };
-      const key = (e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') done(); };
+      /* THE KEY THAT TURNS THE LINE IS SPENT ON THE LINE. It is heard on
+         the way down (capture) and cancelled, and the room underneath
+         skips a cancelled key. The room used to hear it first: read a line
+         with Enter while stood at the street door and you took the car as
+         well -- the car is the phone, and the map came up behind whoever
+         was talking. */
+      const key = (e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); done(); }
+      };
       /* SOMETHING ELSE MAY TAKE THE SCREEN — a scene change, a death, a
          cinematic. If the plate is torn down from outside, the promise still
          has to settle or every await behind it waits for a tap forever. */
@@ -452,7 +460,7 @@ const TUTOR = {
         setTimeout(() => { finishTyping(); done(); }, opts.hold);
       } else {
         root.addEventListener('pointerdown', done);
-        window.addEventListener('keydown', key);
+        window.addEventListener('keydown', key, true);
       }
     });
   },
@@ -575,7 +583,7 @@ const TUTOR = {
         holder.classList.add('out');
         rack.classList.remove('in');
         root.removeEventListener('pointerdown', skip);
-        window.removeEventListener('keydown', key);
+        window.removeEventListener('keydown', key, true);
         setTimeout(() => {
           if (root.firstChild === holder) { root.innerHTML = ''; root.className = 'hidden'; TUTOR.hush(false); }
           res(i);
@@ -587,12 +595,17 @@ const TUTOR = {
         if (typing) finishTyping();
       };
       const key = (e) => {
+        /* a reply you have tabbed to still answers to Enter; nothing
+           behind the balloon does */
+        const mine = e.target && e.target.closest && e.target.closest('.reply-btn');
+        if ((e.key === ' ' || e.key === 'Enter') && !mine) e.preventDefault();
         if (typing && (e.key === ' ' || e.key === 'Enter')) { finishTyping(); return; }
         const n = parseInt(e.key, 10);
-        if (n >= 1 && n <= replies.length) finish(n - 1);
+        /* and a number that picks a reply is not also a tool off the belt */
+        if (n >= 1 && n <= replies.length) { e.preventDefault(); finish(n - 1); }
       };
       root.addEventListener('pointerdown', skip);
-      window.addEventListener('keydown', key);
+      window.addEventListener('keydown', key, true);
     });
   },
 

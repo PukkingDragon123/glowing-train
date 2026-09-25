@@ -20,7 +20,10 @@ wall says he was and break the one story that is a lie, name him in the
 line-up downstairs, and then sit down across a table from him with one
 revolver between you.
 
-That is the whole game, and it is the two endings.
+That is the whole game — or it is until the last floor, where it turns over.
+There are four endings, and one of them is a basement hung in plastic.
+
+![Cover](promo/cover-630x500.png)
 
 ## It opens on a Tuesday, and nothing happens
 
@@ -95,6 +98,27 @@ Two eggs, a band nearly half the sweep wide, two thirds of the speed, and it
 breakfast, and the pips go amber rather than red, because a red pip in a
 kitchen says you have failed your family before eight in the morning.
 
+### And it looks like breakfast
+
+![The fry-up](docs/screen-fryup.png)
+
+The pan was a smooth white oval with a flat yellow star in the middle of it —
+the drawing of an egg you would do on a whiteboard — next to a plain grey slice
+and a plate with two more of the same on it. It is a fry-up now.
+
+- **The white** is lumpy rather than round: overlapping blobs with a browned
+  lace edge where the fat caught it, and blisters on top.
+- **The yolk** is domed, with a highlight of its own, and it wobbles when the
+  pan does.
+- **Two rashers** lie alongside. They are drawn after the egg, so they sit in
+  the pan rather than under it.
+- **The fat spits.**
+- **The slice** is slotted, with a wooden handle.
+- **The plate** at the side has toast on it, and the eggs you have already
+  done.
+- **The wall** behind the range is the kitchen's own wallpaper, sprigs and
+  grain, not a flat panel.
+
 ### And the family are people you can talk to
 
 ![The house, end to end](docs/screen-house-wide.png)
@@ -117,7 +141,7 @@ you say you might be late. He goes happy when you offer him your own pencil. You
 in this game that is allowed.
 
 They also *do* something while you are not talking to them: she wipes the
-table down, he reads until there is an egg and then eats.
+table down, and he eats his breakfast, which has its own section below.
 
 And the house itself got the saturation pass and the catalogue. Butter paper at
 forty-eight per cent chroma next to a cast at sixty-two is beige, not warm, so
@@ -128,6 +152,27 @@ range, a pendulum clock, two pictures, a mirror, a sconce, a dresser full of
 plates, a pot plant and a standing lamp. The layout comment at the top of
 `home()` already had the span of every piece of furniture in there, so they went
 in the gaps between them.
+
+### And Tobias eats it
+
+![Tobias at breakfast](docs/screen-tobias.png)
+
+He used to sit behind an empty table with a newspaper, then "eat" once the pan
+was done, with a generic bite and nothing on the cloth in front of him. Now he
+has a place setting and two jobs:
+
+- **Before the eggs**, a bowl of cereal. The spoon goes up with milk and a
+  flake on it and comes down empty.
+- **After the eggs**, an egg and toast soldiers. A soldier goes up with its
+  end dipped in yolk and comes down with a bite out of it.
+
+Once the spoon has been to his mouth his jaw works — open, shut, open, shut,
+at the quick count a small child chews at — until the hand goes back down for
+more, and a crumb or a drop of milk falls from the bite to the cloth. His
+place setting (the bowl, then the egg and soldiers, and a juice) is painted
+in the room's foreground pass, in front of him. In the background pass it had
+been drawn and then covered by the boy it belonged to. There is a toast rack
+in the middle of the table and a cup at Cleo's place.
 
 ### And then the post comes up from the desk
 
@@ -394,6 +439,76 @@ blooms in rings; the Eiffel Tower is a profile curve and an X-brace lattice;
 the plan of Paris is printed on paper that creases where it folds. Works on
 phones. Sounds are synthesized with WebAudio. Cases are seeded. What the
 department remembers about you persists in localStorage.
+
+### On itch.io
+
+`node dev/itch.js` builds **`dist/shell-and-debt-itch.zip`**: the whole game as
+one `index.html` at the top of the zip, which is the only thing itch.io asks of
+an HTML5 upload. Kind of project **HTML**, tick *This file will be played in the
+browser*, viewport **1280 × 720** with the fullscreen button on. It plays on a
+phone too.
+
+It was checked the way itch actually runs it — served from one origin, inside
+an iframe on another — both with storage allowed and with `localStorage`
+throwing on every touch, the way a strict browser treats a third-party frame.
+Both boot, both walk into the kitchen, neither makes a single outside request.
+
+`node dev/promo.js` photographs the store art out of the game itself — the title
+card, at the frame the frog puts somebody down in the rain, at six screen pixels
+to the room pixel — and writes it to `promo/`:
+
+| file | for |
+| --- | --- |
+| `promo/cover-630x500.png` | the cover image / thumbnail |
+| `promo/banner-1920x480.png` | the page banner |
+| `promo/banner-960x240.png` | the same, at the page's own width |
+
+![Banner](promo/banner-960x240.png)
+
+## It runs at sixty on a slow machine
+
+It did not. Measured under Chrome's 4× CPU slowdown — a cheap laptop, roughly
+— with a profiler on every scene:
+
+| scene | before | after |
+| --- | --- | --- |
+| the title card | 34 fps | **59** |
+| the kitchen | 17 fps | **59** |
+| the breakfast | 14 fps | **57** |
+| the precinct | 48 fps | **60** |
+| the laundry | 43 fps | **58** |
+| a street | 41 fps | **55** |
+| the table | 60 fps | **60** |
+
+**The buffer was the screen.** Every room drew each room pixel as a six-by-six
+block of a canvas the size of the window, every frame, and nearly all the time
+went on the browser filling blocks it was about to throw away. The finest thing
+ever drawn in a room is the rig, at three rig pixels to the room pixel — so the
+buffer is three per room pixel now and the compositor does the rest with
+nearest-neighbour. Diffed against the old buffer, the two frames differ by
+*less* than two frames of the same buffer forty milliseconds apart: the
+room's own idle motion is bigger than the change.
+
+**The dream was drawn from scratch sixty times a second.** Five thousand
+translucent fills a frame — every lamp bloomed as six stacked discs, four
+light shafts a row at a time, warm edges thirty-four strips a side. None of it
+changes shape; only its alpha breathes. It is painted once and composed at room
+resolution, then put down in one blit.
+
+**The room under the breakfast kept painting.** The first-person shot is an
+opaque card over the whole window, and the kitchen under it went on drawing
+itself — dream and all — behind a picture that hid every pixel. It pauses now,
+and the shot's own canvas is the size of the shot rather than the size of the
+monitor.
+
+**The walkers on the title card were a leak.** Each one was keyed off how many
+had come before — `mk0`, `mk1`, `mk2` — so every walk-in rebuilt its frog from
+scratch (a hitch you could see) and a title screen left open grew the sprite
+cache forever. There are three coats; they are keyed as three coats, and built
+while he is still smoking.
+
+**The rain was seventeen hundred fills.** Two hundred and sixty drops, a pixel
+at a time, each printing its own colour string. It is one path per shade now.
 
 ## The rooms you walk around in
 
@@ -1070,19 +1185,54 @@ skewed banner. It runs black most days. **When the round is going to end
 somebody, it runs red.** Down to one heart, the lens closes in and you can
 hear your own pulse.
 
+### And it does not stay on the table
+
+![The wall behind him](docs/screen-wall.png)
+
+A round through a head at a card table does not stay at the card table, and
+this one is not a cartoon about that.
+
+- **The wall behind him.** Every hit throws a fan of drops up the plaster
+  along the line of the shot — more for a crit — and the heavy ones run down
+  it in long thin drips. It stays there for the rest of the night, round after
+  round, because nobody in that room is going to wash a wall.
+- **The lens.** You are the camera, so a crit puts his blood on the glass, and
+  when it is you that gets hit, it is yours — splats that run and drip for
+  three or four seconds before they fade.
+- **His face** keeps every wound you put in it, and it runs.
+
+![What the table does to him](docs/screen-wound.png)
+
+- **The last one** goes through his head. The lens takes most of it; the wall
+  takes a spray three times the size of a hit; there are pieces.
+
+This is about the frogs across the table — gangsters, a lieutenant, the man
+who ran them — and nobody else. The family's night is never shown, and the
+game says less about it than any other scene in it.
+
 ## Out back
 
 ![Out back](docs/screen-loot.png)
 
-You never watch him fall. The shot goes off, the lens goes red, and when it
-wipes you are already out back with the door shut — and between the two
-rooms there is a small sad loading scene of you dragging him by the boots
-under a swinging bulb.
+You never watch him fall. The shot goes off, his blood hits the glass, and
+when it wipes you are already out back with the door shut — and between the
+two rooms there is a small sad loading scene of you dragging him by the boots
+under a swinging bulb, the hole in his head leaving a smear down the boards.
 
-The body is **fully intact**, because this was never about what the round
-did. It is about what is in his coat. Almost no interface: a strip of meters,
-your tools in the corner, and the room. **Search him with your own hands** —
-hat, coat, vest, hand, boot, mouth.
+He goes out back **the way he fell**: every hole your lead put in him, the one
+that finished it in his head, his shirt soaked through, and a pool under him
+that keeps creeping outward with a halo of spatter round it. What matters is
+still what is in his coat. Almost no interface: a strip of meters, your tools
+in the corner, and the room. **Search him with your own hands** — hat, coat,
+vest, hand, boot, mouth.
+
+**The room is a kill room now**, the way a careful man does it. Builder's
+sheeting is stapled over the block wall from a batten under the ceiling, and
+another sheet lies across the floor under where he is going to be, so that at
+the end of the night the whole room rolls up and goes into the canal with him.
+The sheets are cloudy, they sag between the staples, they fold where they meet
+the floor and they are taped at the seams. And they have been used before:
+the brown on them is old, and somebody's four fingers went down one of them.
 
 - **TIME** — real seconds, shorter every chapter.
 - **NOISE** — every pocket makes some; a boot or a gold tooth makes a lot.
@@ -1125,12 +1275,13 @@ out of your coat. **Three trips and the department takes the badge.**
 Then you discharge yourself and go back to work, because nobody else is going
 to.
 
-## The two endings
-
-![The choice](docs/screen-choice.png)
+## The endings
 
 Fill the board, walk into fourteen Marsh Row, and put him on the floor. He is
-still breathing. You get one decision:
+still breathing, and for the first time in six years he has something to say
+to you.
+
+There are four endings. Two of them are the ones this game always had:
 
 - **THE BADGE** — cuff him and let the file do it. Available only if the
   board is full **and** the badge is still yours. He goes down in a
@@ -1143,6 +1294,128 @@ still breathing. You get one decision:
 ![The courtroom](docs/screen-court.png)
 
 ![His chair](docs/screen-bad.png)
+
+The other two are behind what he says from the floor.
+
+<details>
+<summary><b>The twist — spoilers for the whole story. Play it first.</b></summary>
+
+### He did not take your family
+
+![From the floor](docs/screen-reveal.png)
+
+He tells you from the floor, with the lamp knocked over and throwing its light
+along the boards:
+
+> I DID NOT TAKE YOUR FAMILY, DETECTIVE. I KNEW YOU WERE COMING. I DID NOT
+> KNOW WHY UNTIL YOU KILLED MY DRIVER. SIX YEARS AGO YOU SHOT A BOY IN A
+> DOORWAY. HE RAN MY ENVELOPES. HIS NAME WAS ROOK.
+
+Rook is the captain, the man who hands you a lead at nine every morning.
+*Who sent you to Paris?* the Bullfrog asks. *Who left you the cigarette?* The
+Bullfrog hired the captain's son, and you shot the son in a doorway. A son for
+a son — and after that the captain needed somebody who would kill the rest of
+the Bullfrog's people for him, and a man with nothing left at home is the
+easiest thing in the world to point.
+
+Then you remember the second cup. The night the door came in there were two
+cups on the table and one of them was not yours, and the flashback takes it in
+three shots: *two cups, one not ours — a Brigade mug — six years before Paris.*
+
+### It is built out of Dexter
+
+The game already had most of Dexter Morgan's life lying about in it — a cop, a
+room out back, a body to clean up after — so the twist is made of them:
+
+| Dexter | here |
+|---|---|
+| Harry's Code | **the captain's Code**, which he gives you on day one as the rules of the job: *one, be sure; two, only the ones who have it coming; three, clean up after yourself; four, never get caught.* Every one of them is a leash. |
+| blood slides in a box in the air conditioner | **one drop, one slide**, off the mark at the end of every chapter, into a box in the air vent of a flat nobody visits. The count comes up on a stamp when you walk back into the bullpen. |
+| the Dark Passenger | **the voice that counts them**, in a thought balloon under the stamp |
+| the kill room in plastic | every back room, hung in builder's sheeting |
+| the bodies in the Gulf Stream | the canal |
+
+The voice is where the clues are. The third one *laughed at the end* and *said
+I was working for the wrong frog*. The sixth one the captain said was at your
+door, and *he swore on his knees he never saw it*. By the seventh: *the captain
+says they all lie at the end. The captain would know...*
+
+### Three ways out of his flat
+
+![Three ways out](docs/screen-choice.png)
+
+- **THE BADGE** — cuff him. Rook walks, and pins a medal on you.
+- **THE BULLET** — finish what Rook started. Rook sends flowers.
+- **THE CODE** — he wrote it; he dies by it. You drive to the precinct after
+  hours.
+
+### The captain's table
+
+![Captain Rook](docs/screen-rook.png)
+
+Ten hearts, three more than the Bullfrog had, and he talks the whole way
+through it. His lines tell you exactly what he did and never once describe it:
+
+> THE BOY ASKED WHEN YOU WERE COMING. I SAID YOU WERE BUSY.
+>
+> EVERY FROG YOU KILLED, YOU KILLED FOR ME. SAY THANK YOU.
+>
+> THE CODE WAS FOR YOU, SON. IT WAS NEVER FOR ME.
+
+Win, and he goes out back like every other frog: into the plastic. Then he is
+wrapped on a table under the bulb, a drop of him goes on a slide at the end of
+the row in the box, and the boat goes out on the canal. **THE CODE — you kept
+it. He did not.**
+
+![He wrote every rule](docs/screen-code.png)
+
+![One drop, one slide](docs/screen-slides.png)
+
+Lose, and the last thing you see is him cleaning up after you, and a newspaper
+that says nobody asked. **CASE CLOSED — by him.**
+
+</details>
+
+### Every decision in the game was invisible
+
+Every choice made on cards — asking the barman, the spent file, the case file,
+naming nobody, walking out on a room, the line-up, the ending — was drawn at
+zero opacity for a month. The cards were there and they took clicks. You just
+could not see them.
+
+The pick-up beat, where the thing in the drain comes up in your hand, had been
+given the class `.pick-card`, which is also the name of a card in a decision.
+Its rule sits later in the stylesheet and starts at `opacity: 0`, so it won,
+and it only ever turned to `opacity: 1` for a card that got `.in`, which only
+the pick-up does. It is `.pickup-card` now.
+
+The smoke test did not catch it because it clicked the cards, and Playwright
+counts an `opacity: 0` element as visible. The screenshot of this screen that
+was in this file showed a title, a dark room, and nothing to choose between.
+
+### And the Enter that read a line pressed a door as well
+
+The room listens for Enter, Space and E as "use what you are stood next to",
+and a line of dialogue listens for Enter as "go on". Both were listening on
+the window, and the room had been listening longer, so it heard the key first.
+Read a line with Enter while you were stood at the street door and you took
+the car as well — the car is the phone, and the map came up behind whoever
+was talking. Answer a question with **2** and your belt went to the glass.
+
+Lines, replies and films now hear the key on the way down, in the capture
+phase, and cancel what they use; the room skips a key that has already been
+spent. A bare Enter at the door still takes the car.
+
+### And the title reel outlived its street
+
+The reel on the title card runs in a room of its own, and it kept running if
+anything closed that room under it: the next coat came out of the alley into a
+room that was not there any more, and the page threw. Nothing a player does
+gets there. The smoke test does, jumping from the title straight to the
+captain's table, and it passed or failed depending on where in the reel the
+jump landed — three times out of four, closing the room under a live reel
+threw. The reel checks the street is still its own before every breath now,
+and stops if it is not.
 
 ## There is no side view
 
@@ -2560,8 +2833,19 @@ dev/bundle.js     inlines every script into dist/shell-and-debt.html
   `tabac()` / `house()` / `orly()` / `cabin()` / `office()`
 - The hour and the weather a story beat runs in — `DAY.pin()` and the
   script's own `S.hour()` / `S.weather()`
-- Breakfast — `JOBS.breakfast()`, on the same meter as every other trade
+- Breakfast — `JOBS.breakfast()`, on the same meter as every other trade;
+  the pan is `drawPan` in `js/jobs.js`, and what Tobias eats with is the
+  `spoon` / `dip` jobs in `DOING`
 - What an arm can be doing — `SPR.ARM_POSE` in `js/sprites.js`
+- The blood — `DUEL.spray()` / `drawWallBlood()` (the wall), `TOON.lens()`
+  (the glass), `DUEL.killSequence()` and `drawCorpse()`; the plastic is in
+  `drawBackRoom()`
+- The twist (spoilers) — the Code is `TUTOR.OPENING` in `js/tutor.js`; the voice
+  that counts is `PASSENGER` in `js/story.js`; the confession, the three
+  cards and the captain's table are `STORY.endgame()` and `STORY.rookDuel()`;
+  what he says across it is `MARK_LINES.rook` in `js/data.js`; the films are
+  `CINE.recall()` and `CINE.ending('code' | 'rook')`
+- The itch.io build and the store art — `dev/itch.js` and `dev/promo.js`
 
 ### Dev checks
 

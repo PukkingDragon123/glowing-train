@@ -622,6 +622,10 @@ const SCENE = (() => {
     };
     onKey = (ev) => {
       if (!def) return;
+      /* a line, a reply or a film on top of the room has already spent
+         this key (they listen on the way down): it is not also a hand on
+         the door you happen to be stood at */
+      if (ev.defaultPrevented) return;
       const k = ev.key.toLowerCase();
       keys[k] = true;
       /* the belt: 1 hand, 2 glass, 3 iron, Q to cycle */

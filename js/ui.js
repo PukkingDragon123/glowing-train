@@ -1382,11 +1382,12 @@ const UI = {
       UI.shake();
       SFX.lose();
       let done = false;
-      const go = () => {
+      const go = (e) => {
+        if (typeof CINE !== 'undefined') CINE.spend(e);
         if (done) return;
         done = true;
         window.removeEventListener('pointerdown', go);
-        window.removeEventListener('keydown', go);
+        window.removeEventListener('keydown', go, true);
         clearTimeout(timer);
         o.className = 'hidden'; o.innerHTML = '';
         res();
@@ -1394,7 +1395,7 @@ const UI = {
       const timer = setTimeout(go, 5200);
       setTimeout(() => {
         window.addEventListener('pointerdown', go);
-        window.addEventListener('keydown', go);
+        window.addEventListener('keydown', go, true);
       }, 350);
     });
   },

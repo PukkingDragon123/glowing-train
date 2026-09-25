@@ -269,6 +269,7 @@ const MENU = (() => {
      WHAT MOVES.
      ============================================================ */
   let live = false;              /* the reel is running */
+  let home = null;               /* the street it is running in */
   /* ------------------------------------------------------------
      THE CAMERA IS OURS.
 
@@ -458,11 +459,20 @@ const MENU = (() => {
      ============================================================ */
   async function nap(ms) {
     let left = ms;
-    while (left > 0 && live) {
+    while (left > 0 && ours()) {
       const slice = Math.min(80, left);
       await U.sleep(slice);
       left -= slice;
     }
+    return ours();
+  }
+
+  /* THE STREET IS NOT HIS ANY MORE. Anything that closes or swaps the room
+     under a running reel stops the reel on its next breath -- rather than
+     leaving it pushing coats into a room that has gone, or steering the
+     camera and the busy flag of whatever room came after it. */
+  function ours() {
+    if (live && SCENE.def !== home) { live = false; clearTimeout(tick); bodies = []; }
     return live;
   }
 
@@ -604,7 +614,7 @@ const MENU = (() => {
   /* the bodies wash away, because the street does not keep them */
   let tick = 0;
   function ticker() {
-    if (!live) return;
+    if (!ours()) return;
     /* the drift, eased in and out so it reads as a camera and not a slide */
     camT = Math.min(1, camT + 33 / camMs);
     const k = camT < 0.5 ? 2 * camT * camT : 1 - Math.pow(-2 * camT + 2, 2) / 2;
@@ -625,6 +635,7 @@ const MENU = (() => {
     bodies = []; flashT = 0;
     if (typeof TOON !== 'undefined') TOON.clear();
     SCENE.open(street());
+    home = SCENE.def;
     SCENE.busy(true);                 /* nothing here is clickable */
     prewarm();
     SCENE.place(HIM, 1);
