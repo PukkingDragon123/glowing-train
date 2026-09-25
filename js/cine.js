@@ -1378,7 +1378,43 @@ const CINE = {
      THE TWO ENDINGS.
      ============================================================ */
   async ending(kind) {
+    if (kind === 'code') return CINE.endingCode();
+    if (kind === 'rook') return CINE.endingRook();
     const P = PIX.PAL;
+    const ROOK = { key: 'rookEnd', def: HANDLER_DEF };
+    /* THE LAST SHOT OF THE TWO ENDINGS THAT LET HIM WALK: his office, his
+       window, his cigar going, and whatever he did for you on the desk */
+    const office = (what) => (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#0c0b10');
+      c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 58, seed: 17 }), 0, 0);
+      c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 5 }), 0, 76);
+      /* the window behind him, and the city in it */
+      PIX.rect(c, 110, 10, 52, 40, P.K);
+      PIX.rect(c, 112, 12, 48, 36, '#1a2230');
+      for (let i = 0; i < 9; i++) PIX.rect(c, 114 + i * 5, 30 + (i * 7) % 12, 3, 18, '#10151e');
+      for (let i = 0; i < 12; i++) PIX.rect(c, 115 + (i * 11) % 44, 32 + (i * 5) % 12, 1, 1, P.G);
+      c.drawImage(ART.desk(84, 30, 4), 24, 66);
+      c.drawImage(SCENE.rigPic(ROOK, 0, 1), 110, 34);
+      /* the cigar, going */
+      const glow = 0.6 + 0.4 * Math.sin(t * 5);
+      PIX.rect(c, 142, 52, 2, 2, 'rgba(255,120,40,' + glow.toFixed(2) + ')');
+      for (let i = 0; i < 6; i++) {
+        PIX.rect(c, 144 + Math.round(Math.sin(t * 2 + i) * 2), 48 - i * 4 - Math.round(t * 3) % 4, 2, 2,
+          'rgba(200,200,210,' + (0.22 - i * 0.03).toFixed(2) + ')');
+      }
+      if (what === 'medal') {                   /* a medal in its box, open */
+        PIX.rect(c, 40, 62, 18, 8, P.K);
+        PIX.rect(c, 41, 63, 16, 6, '#3a1418');
+        PIX.disc(c, 49, 66, 3, P.G);
+        PIX.rect(c, 47, 59, 5, 4, P.r);
+      } else {                                  /* two bunches of flowers */
+        [36, 58].forEach(fx => {
+          PIX.rect(c, fx, 58, 2, 10, '#2e5a2a');
+          PIX.disc(c, fx + 1, 56, 3, '#f4efe0');
+          PIX.disc(c, fx - 1, 54, 2, '#e8a0b8');
+        });
+      }
+    };
 
     /* --- shared: rain that can stop --- */
     const rain = (c, t, W, H, amt) => {
@@ -1541,6 +1577,7 @@ const CINE = {
       await CINE.film([
         { len: 2.4, draw: court, cap: 'THE STATE VERSUS THE BULLFROG' },
         { len: 2.6, draw: graves, cap: 'IT STOPPED RAINING' },
+        { len: 2.4, draw: office('medal'), cap: 'ROOK PINNED THE MEDAL.' },
       ], { bars: true });
       await CINE.titleBeat('CASE CLOSED', 'YOU STAYED A COP.', P.G);
     } else {
@@ -1620,9 +1657,218 @@ const CINE = {
       await CINE.film([
         { len: 2.3, draw: room, cap: 'NOBODY WROTE IT DOWN' },
         { len: 2.6, draw: chair, cap: 'SOMEBODY HAS TO RUN IT' },
+        { len: 2.4, draw: office('flowers'), cap: 'ROOK SENT FLOWERS.' },
       ], { bars: true });
       await CINE.titleBeat('CASE BURIED', 'YOU BECAME THE ADDRESS.', P.R);
     }
+  },
+
+  /* ============================================================
+     THE CODE: the room, the slide, the water.
+
+     Three shots and no words but the captions. The kill room in
+     his own basement with him on the table under the bulb, wrapped
+     tight in the sheeting he taught you to buy -- then the box out
+     of the air vent, and the last slide going into it -- then the
+     canal at four in the morning, a boat with no lights, and a
+     long bundle going over the side into water that, for once,
+     does not bring anything back at the bend.
+     ============================================================ */
+  async endingCode() {
+    const P = PIX.PAL;
+    const ROOK = { key: 'rookWrapped', def: HANDLER_DEF };
+    const room = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#0a0a0e');
+      c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 60, seed: 29 }), 0, 0);
+      c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 13 }), 0, 76);
+      /* the sheeting, floor to ceiling */
+      for (let x = 0; x < W; x += 30) {
+        PIX.rect(c, x, 0, 28, 82, 'rgba(210,222,230,.08)');
+        for (let f = 0; f < 3; f++) PIX.rect(c, x + 6 + f * 8, 2, 1, 80, 'rgba(235,245,250,.12)');
+        PIX.rect(c, x + 28, 0, 2, 82, 'rgba(150,154,158,.30)');
+      }
+      /* the bulb, and the cone of it */
+      PIX.rect(c, 90, 0, 1, 14, P.T);
+      PIX.disc(c, 90, 16, 3, P.Y);
+      c.save(); c.globalAlpha = 0.12; c.fillStyle = '#ffd75e';
+      c.beginPath(); c.moveTo(90, 16); c.lineTo(40, 96); c.lineTo(140, 96); c.closePath(); c.fill(); c.restore();
+      /* the table, and him on it, head end toward us, wrapped */
+      PIX.rect(c, 44, 66, 92, 6, P.K);
+      PIX.rect(c, 45, 67, 90, 4, '#4a4648');
+      PIX.rect(c, 50, 72, 4, 20, P.K); PIX.rect(c, 126, 72, 4, 20, P.K);
+      const head = SPR.frogCustom('rookDead', HANDLER_DEF, 'dead');
+      c.drawImage(head, 0, 0, head.width, head.height, 40, 44, 26, 24);
+      SPR.rrect(c, 60, 52, 72, 16, 6, '#26303e');           /* his coat, under it */
+      /* the plastic over the lot, cloudy, taped in three places */
+      SPR.rrect(c, 38, 44, 96, 26, 8, 'rgba(215,228,236,.30)');
+      for (let i = 0; i < 3; i++) PIX.rect(c, 70 + i * 22, 44, 4, 26, 'rgba(160,164,168,.55)');
+      for (let i = 0; i < 5; i++) PIX.rect(c, 44 + i * 18, 48 + (i % 2) * 6, 10, 1, 'rgba(255,255,255,.35)');
+      /* and red on the inside of it */
+      [[52, 58, 4], [60, 64, 3], [88, 60, 5], [48, 66, 3]].forEach(([bx, by, r]) =>
+        PIX.disc(c, bx, by, r, 'rgba(140,20,30,.55)'));
+      PIX.rect(c, 60, 70, 3, 10 + Math.round(t * 4), P.D);
+      /* you, at the foot of it */
+      c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, -1), 136, 40);
+    };
+    const box = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#0c0a0c');
+      /* the vent grille, off, and the box that was behind it */
+      PIX.rect(c, 20, 10, 44, 30, P.K);
+      for (let i = 0; i < 6; i++) PIX.rect(c, 22, 13 + i * 4, 40, 2, '#3a3a40');
+      PIX.rect(c, 46, 42, 90, 50, P.K);
+      PIX.rect(c, 48, 44, 86, 46, '#5a2a18');
+      PIX.rect(c, 48, 44, 86, 2, '#7a3a20');
+      PIX.rect(c, 52, 50, 78, 36, '#2a1208');
+      /* the slides, standing in their slots, a drop on every one */
+      const n = Math.min(24, (G.slides || 7) + 1);
+      for (let i = 0; i < n; i++) {
+        const last = i === n - 1;
+        const rise = last ? Math.max(0, 1 - t / 1.2) : 0;
+        const sx = 55 + (i % 12) * 6, sy = 52 + Math.floor(i / 12) * 17 - Math.round(rise * 26);
+        PIX.rect(c, sx, sy, 5, 15, 'rgba(210,232,240,.55)');
+        PIX.rect(c, sx, sy, 1, 15, 'rgba(255,255,255,.55)');
+        PIX.disc(c, sx + 2, sy + 9, 1, last ? P.R : P.d);
+      }
+      /* your hand, putting the last one in */
+      PIX.rect(c, 120, 12 + Math.round(Math.min(1, t / 1.2) * 22), 26, 12, '#2e7d5b');
+    };
+    const water = (c, t, W, H) => {
+      for (let y = 0; y < 60; y++) {
+        const k = y / 60;
+        PIX.rect(c, 0, y, W, 1, 'rgb(' + Math.round(10 + k * 16) + ',' + Math.round(12 + k * 18) + ',' + Math.round(20 + k * 24) + ')');
+      }
+      /* Paris, far off, with its lamps still on */
+      for (let bx = 0; bx < W; bx += 13) {
+        const bh = 8 + ((bx * 7) % 17);
+        PIX.rect(c, bx, 58 - bh, 12, bh, '#0c1018');
+        if ((bx / 13) % 3 === 1) PIX.rect(c, bx + 4, 58 - bh + 4, 2, 2, P.G);
+      }
+      PIX.rect(c, 124, 18, 3, 40, '#0c1018');                  /* the tower */
+      PIX.rect(c, 120, 40, 11, 18, '#0c1018');
+      PIX.rect(c, 0, 58, W, H - 58, '#0a1420');
+      for (let i = 0; i < 40; i++) {
+        PIX.rect(c, (i * 23 + Math.round(t * 8)) % W, 62 + (i * 7) % 40, 4 + i % 5, 1, 'rgba(120,160,200,.14)');
+      }
+      /* the boat, no lights, and the bundle going over */
+      PIX.rect(c, 50, 78, 60, 8, P.K);
+      PIX.rect(c, 52, 80, 56, 5, '#2a2018');
+      c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, 1), 68, 44);
+      const sink = Math.min(1, Math.max(0, (t - 0.6) / 1.6));
+      if (sink < 1) {
+        const bx = 110 + Math.round(sink * 10), by = 80 + Math.round(sink * 18);
+        SPR.rrect(c, bx, by, 26, 8, 3, 'rgba(200,214,222,.7)');
+        PIX.rect(c, bx + 8, by, 3, 8, 'rgba(150,154,158,.8)');
+      }
+      /* and the rings where it went */
+      if (t > 1.2) {
+        const r = Math.round((t - 1.2) * 10);
+        SPR.ellipse(c, 124, 98, 8 + r, 2 + (r >> 2), 'rgba(180,210,230,.18)');
+      }
+    };
+    await CINE.film([
+      { len: 2.8, draw: room, cap: 'HE WROTE EVERY RULE.' },
+      { len: 2.6, draw: box, cap: 'ONE DROP. ONE SLIDE.' },
+      { len: 3.2, draw: water, cap: 'NOTHING COMES BACK.' },
+    ], { bars: true });
+    await CINE.titleBeat('THE CODE', 'YOU KEPT IT. HE DID NOT.', P.N);
+  },
+
+  /* ============================================================
+     AND IF HE WINS. He files you under the Bullfrog, and the
+     paper runs it on the front page.
+     ============================================================ */
+  async endingRook() {
+    const P = PIX.PAL;
+    const ROOK = { key: 'rookStand', def: HANDLER_DEF };
+    const floor = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#08080c');
+      c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 60, seed: 41 }), 0, 0);
+      c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 2 }), 0, 76);
+      /* you, face down, and what is spreading out from under you */
+      SPR.ellipse(c, 60, 92, 30 + Math.round(t * 6), 5 + Math.round(t), P.D);
+      PIX.rect(c, 40, 86, 40, 8, P.K);
+      PIX.rect(c, 41, 87, 38, 6, '#2a2f3e');
+      PIX.disc(c, 38, 89, 5, P.K); PIX.disc(c, 38, 89, 4, '#2e7d5b');
+      /* him, over you, the cigar the only light */
+      c.drawImage(SCENE.rigPic(ROOK, 0, -1), 96, 36);
+      const glow = 0.6 + 0.4 * Math.sin(t * 6);
+      PIX.rect(c, 108, 54, 2, 2, 'rgba(255,120,40,' + glow.toFixed(2) + ')');
+      PIX.rect(c, 0, 0, W, H, 'rgba(0,0,0,' + Math.min(0.5, t * 0.15).toFixed(2) + ')');
+    };
+    const paper = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#1a1612');
+      PIX.rect(c, 26, 8, 128, 92, '#d8cdb4');
+      PIX.rect(c, 26, 8, 128, 2, '#efe6cc');
+      const head = PIXFONT.render('DETECTIVE SLAIN', { scale: 1, color: '#1a1612', shadow: null });
+      const head2 = PIXFONT.render('BY BULLFROG GANG', { scale: 1, color: '#1a1612', shadow: null });
+      c.drawImage(head, 90 - head.width / 2, 14);
+      c.drawImage(head2, 90 - head2.width / 2, 24);
+      PIX.rect(c, 32, 34, 116, 1, '#1a1612');
+      /* his photograph, shaking hands with the prefect */
+      PIX.rect(c, 32, 38, 50, 40, '#2a2620');
+      c.drawImage(SCENE.rigPic(ROOK, 0, 1), 36, 36);
+      const sub = PIXFONT.render('CAPTAIN VOWS', { scale: 1, color: '#3a342c', shadow: null });
+      const sub2 = PIXFONT.render('JUSTICE', { scale: 1, color: '#3a342c', shadow: null });
+      c.drawImage(sub, 86, 44); c.drawImage(sub2, 86, 54);
+      for (let i = 0; i < 6; i++) PIX.rect(c, 86, 66 + i * 4, 60 - (i % 3) * 8, 1, 'rgba(26,22,18,.5)');
+    };
+    await CINE.film([
+      { len: 2.8, draw: floor, cap: 'HE CLEANED UP.' },
+      { len: 2.8, draw: paper, cap: 'NOBODY ASKED.' },
+    ], { bars: true });
+    await CINE.titleBeat('CASE CLOSED', 'BY HIM.', P.R);
+  },
+
+  /* ============================================================
+     THE SECOND CUP.
+
+     The kitchen that night, from the back of the room, dark: two
+     cups on the table and an ashtray with a cigarette in it -- the
+     same three things the opening made you look at, in the same
+     place. Then close on the one that was not yours, and the crest
+     on the side of it.
+     ============================================================ */
+  async recall() {
+    const P = PIX.PAL;
+    const mug = (c, x, y, k) => {
+      PIX.rect(c, x, y, 12 * k, 13 * k, P.K);
+      PIX.rect(c, x + k, y + k, 10 * k, 11 * k, '#e8e4dc');
+      PIX.rect(c, x + k, y + k, 10 * k, k, '#ffffff');
+      PIX.rect(c, x + 11 * k, y + 3 * k, 3 * k, 6 * k, P.K);
+      PIX.rect(c, x + 11 * k, y + 4 * k, 2 * k, 4 * k, '#e8e4dc');
+      /* the crest: a blue shield with a red band, and BRIGADE under it */
+      PIX.rect(c, x + 3 * k, y + 3 * k, 6 * k, 5 * k, '#2a4a8a');
+      PIX.rect(c, x + 3 * k, y + 5 * k, 6 * k, k, P.r);
+      PIX.rect(c, x + 4 * k, y + 8 * k, 4 * k, k, '#2a4a8a');
+      PIX.rect(c, x + 2 * k, y + 10 * k, 8 * k, Math.max(1, k >> 1), '#2a4a8a');
+    };
+    const table = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#07080c');
+      PIX.rect(c, 0, 0, W, 70, '#141824');
+      PIX.rect(c, 0, 70, W, H - 70, '#0e0c10');
+      PIX.rect(c, 20, 62, 140, 6, '#3a2c1e');
+      PIX.rect(c, 20, 62, 140, 1, '#5c4630');
+      PIX.rect(c, 30, 68, 4, 30, '#1e1810'); PIX.rect(c, 146, 68, 4, 30, '#1e1810');
+      mug(c, 56, 48, 1);
+      /* ours, on its side */
+      PIX.rect(c, 80, 55, 12, 7, P.K); PIX.rect(c, 81, 56, 10, 5, '#c0b7a2');
+      PIX.rect(c, 92, 58, 10, 3, 'rgba(86,66,38,.6)');
+      c.drawImage(ART.art('ashtray', 1), 110, 54);
+      PIX.rect(c, 116, 55, 5, 2, '#e8dcc0'); PIX.rect(c, 121, 55, 2, 2, '#8a2418');
+      PIX.rect(c, 0, 0, W, H, 'rgba(40,60,120,.14)');
+    };
+    const close = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#07080c');
+      PIX.rect(c, 0, 76, W, H - 76, '#3a2c1e');
+      const k = 4;
+      mug(c, 62, 76 - 13 * k + Math.round(Math.max(0, 1 - t) * 6), k);
+      PIX.rect(c, 0, 0, W, H, 'rgba(40,60,120,.10)');
+    };
+    await CINE.film([
+      { len: 2.4, draw: table, cap: 'TWO CUPS. ONE NOT OURS.' },
+      { len: 2.4, draw: close, cap: 'A BRIGADE MUG.' },
+      { len: 2.0, draw: close, cap: 'SIX YEARS BEFORE PARIS.' },
+    ], { bars: true });
   },
 
   /* the card between chapters: what you closed, and what is left of him */

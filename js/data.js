@@ -274,6 +274,23 @@ const MESS_TUNING = {
    yours. Short, and never twice in a row.
    ------------------------------------------------------------ */
 const MARK_LINES = {
+  /* ============================================================
+     THE CAPTAIN, WITH THE IRON IN HIS HAND.
+
+     Everybody else at this table talks about the gun. He talks
+     about you -- because he made you, and because he was in your
+     kitchen, and he wants you to know both of those things before
+     one of you stops.
+     ============================================================ */
+  rook: [
+    'I TAUGHT YOU EVERYTHING YOU ARE ABOUT TO TRY.',
+    'SHE POURED ME COFFEE. SHE WAS KIND ABOUT IT.',
+    'THE BOY ASKED WHEN YOU WERE COMING. I SAID YOU WERE BUSY.',
+    'YOU PUT MINE IN A DOORWAY. I WAS QUIETER ABOUT YOURS.',
+    'EVERY FROG YOU KILLED, YOU KILLED FOR ME. SAY THANK YOU.',
+    'THE CODE WAS FOR YOU, SON. IT WAS NEVER FOR ME.',
+    'BE SURE. YOU WERE ALWAYS SO SURE.',
+  ],
   takes: [
     'MY TURN WITH IT.',
     'YOU SWEAT A LOT FOR A FROG.',

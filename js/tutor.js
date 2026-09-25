@@ -157,12 +157,22 @@ const TUTOR = {
 
   /* ---------------- the opening, before the first board ---------------- */
 
+  /* ============================================================
+     THE CODE.
+
+     He hands you a file and four rules, and you will keep every
+     one of them for the rest of the game -- and every one of them
+     reads differently the second time, once you know who wrote
+     them and why. "Six years I put into that family" is the line
+     the whole twist turns on: he is not talking about theirs.
+     ============================================================ */
   OPENING: [
     'SIX YEARS I PUT INTO THAT FAMILY, DETECTIVE. THE COURTS HANDED THEM BACK EVERY TIME.',
     'AFTER WHAT THEY DID TO YOUR HOUSE, NOBODY HERE IS GOING TO ASK HOW YOU CLOSE A CASE.',
-    'WORK THE FILE. PICK HIM OUT OF THE LINE. BE SURE.',
-    'BE SURE. THE WRONG NAME AND THE RIGHT FROG HEARS YOU COMING.',
-    'AND CLEAN UP AFTER YOURSELF. IF I HAVE TO SEE IT, I HAVE TO REPORT IT.',
+    'SO YOU WORK TO A CODE. MINE. ONE. BE SURE. PICK HIM OUT OF THE LINE BEFORE YOU PULL.',
+    'TWO. ONLY THE ONES WHO HAVE IT COMING. THE WRONG NAME AND THE RIGHT FROG HEARS YOU.',
+    'THREE. CLEAN UP AFTER YOURSELF. IF I HAVE TO SEE IT, I HAVE TO REPORT IT.',
+    'FOUR. NEVER GET CAUGHT. THAT ONE IS FOR BOTH OF US.',
   ],
 
   /* ---------------- the three things that keep you alive ---------------- */
@@ -687,7 +697,8 @@ const TALK = {
     if (TALK.busy || !G.duel || G.duel.over) return;
     const opp = G.duel.opp;
     const hurt = opp.hp <= Math.ceil(opp.maxHP / 3);
-    const pool = opp.boss ? MARK_LINES.boss
+    const pool = opp.rook ? MARK_LINES.rook
+      : opp.boss ? MARK_LINES.boss
       : hurt ? MARK_LINES.hurt
         : G.hearts <= 2 ? MARK_LINES.winning : MARK_LINES.takes;
     await TALK.line(TALK.pick(pool), 1250);
@@ -696,7 +707,7 @@ const TALK = {
   /* and after it goes off, one way or the other */
   async after(kind) {
     if (TALK.busy || !G.duel || G.duel.over) return;
-    const pool = MARK_LINES[kind];
+    const pool = G.duel.opp.rook ? MARK_LINES.rook : MARK_LINES[kind];
     if (!pool) return;
     await TALK.line(TALK.pick(pool), 1050);
   },
@@ -712,7 +723,7 @@ const TALK = {
          every taunt of every duel is wallpaper; a vein from a lieutenant,
          or from anybody at all once you are down to your last two, is
          somebody enjoying himself. */
-      const needled = opp.boss || (G.hearts || 6) <= 2;
+      const needled = opp.boss || opp.rook || (G.hearts || 6) <= 2;
       if (needled && typeof TOON !== 'undefined' && typeof DUEL !== 'undefined' && DUEL.screenXY) {
         const sp = DUEL.screenXY(180, 40);
         if (sp) TOON.mark(sp.x, sp.y, 'vein',

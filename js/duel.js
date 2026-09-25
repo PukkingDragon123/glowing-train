@@ -218,7 +218,7 @@ const DUEL = {
     DUEL.shake = 0; DUEL.redPulse = 0; DUEL.whitePulse = 0;
     DUEL.opp = { recoil: 0, flash: 0, fall: -1, gone: false };
     DUEL.youFall = false;
-    DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
+    DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0; DUEL.wallBlood = [];
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
     DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = []; DUEL.dying = 0; DUEL.slug = null; DUEL.panX = 0; DUEL.panT = 0;
@@ -341,7 +341,7 @@ const DUEL = {
     if (DUEL.opp.flash > 0) DUEL.opp.flash -= 0.07;
     if (DUEL.opp.fall >= 0 && DUEL.opp.fall < 1) DUEL.opp.fall = Math.min(1, DUEL.opp.fall + 0.035);
     if (DUEL.exprTimer > 0 && --DUEL.exprTimer === 0) DUEL.exprName = DUEL.exprBase();
-    if (DUEL.corpse && DUEL.pool < 26) DUEL.pool += 0.12;
+    if (DUEL.corpse && DUEL.pool < 44) DUEL.pool += DUEL.pool < 26 ? 0.12 : 0.05;
     if (DUEL.muzzle && ++DUEL.muzzle.t > 7) DUEL.muzzle = null;
     if (DUEL.cylT > 0) { DUEL.cylT = Math.max(0, DUEL.cylT - 0.14); DUEL.cyl += 0.14; }
     if (DUEL.kick > 0.002) DUEL.kick *= 0.79; else DUEL.kick = 0;
@@ -487,7 +487,7 @@ const DUEL = {
     x.closePath(); x.fill();
     x.restore();
 
-    if (DUEL.room !== 'back') DUEL.drawHouse(x);
+    if (DUEL.room !== 'back') { DUEL.drawHouse(x); DUEL.drawWallBlood(x); }
 
     /* --- table shadow, grounding it on the boards --- */
     x.globalAlpha = 0.35;
@@ -801,6 +801,54 @@ const DUEL = {
       if (y % 7 === 0) PIX.rect(x, -60, y, 480, 1, 'rgba(0,0,0,.20)');
     }
     PIX.rect(x, -60, HZ - 1, 480, 2, P.K);
+
+    /* ============================================================
+       THE PLASTIC.
+
+       The back room was a cellar with a drain in it. It is a kill
+       room now, the way a careful man does it: builder's sheeting
+       stapled up over the block wall from a batten under the
+       ceiling and laid across the floor under where he is going to
+       be, so that at the end of the night the whole room rolls up
+       and goes into the canal with him. The sheets are cloudy, they
+       sag between the staples, they fold where they hit the floor,
+       and they have been used before -- the brown on them is old.
+       ============================================================ */
+    PIX.rect(x, -60, -DUEL.OY, 480, 4, '#3a3226');                 /* the batten */
+    for (let sx = -60; sx < 420; sx += 58) {
+      /* one sheet: a cloudy panel, lighter down the folds */
+      PIX.rect(x, sx, -DUEL.OY + 3, 56, HZ + DUEL.OY - 1, 'rgba(210,222,230,.07)');
+      for (let f = 0; f < 4; f++) {
+        const fx = sx + 7 + f * 13 + ((sx / 58 | 0) % 2) * 3;
+        PIX.rect(x, fx, -DUEL.OY + 4, 1, HZ + DUEL.OY - 4, 'rgba(235,245,250,.10)');
+        PIX.rect(x, fx + 1, -DUEL.OY + 4, 1, HZ + DUEL.OY - 4, 'rgba(0,0,0,.10)');
+      }
+      /* the sag between the staples */
+      for (let i = 0; i < 56; i++) {
+        const sag = Math.round(Math.sin(i / 56 * Math.PI) * 3);
+        PIX.rect(x, sx + i, -DUEL.OY + 4 + sag, 1, 1, 'rgba(235,245,250,.16)');
+      }
+      PIX.rect(x, sx, -DUEL.OY + 2, 2, 3, P.M);                   /* staples */
+      PIX.rect(x, sx + 54, -DUEL.OY + 2, 2, 3, P.M);
+      /* the seam: grey tape down it */
+      PIX.rect(x, sx + 55, -DUEL.OY, 4, HZ + DUEL.OY, 'rgba(150,154,158,.34)');
+    }
+    /* the floor sheet, under him and out to the drain, creased */
+    SPR.ellipse(x, 176, FY - 16, 150, 24, 'rgba(210,222,230,.07)');
+    for (let i = 0; i < 6; i++) {
+      PIX.rect(x, 40 + i * 44, FY - 30 + (i % 3) * 5, 30, 1, 'rgba(235,245,250,.12)');
+    }
+    /* and what is left on it from the last time: old brown, not red */
+    const OLD = [[12, -30, 9], [70, -52, 5], [118, -20, 7], [214, -44, 11], [262, -12, 6], [330, -38, 8], [150, -64, 4]];
+    OLD.forEach(([ox, oy, r]) => {
+      PIX.disc(x, ox, HZ + oy, Math.max(1, r >> 1), 'rgba(90,30,20,.42)');
+      for (let k = 0; k < r; k++) {
+        PIX.rect(x, ox + ((k * 5) % (r + 3)) - 2, HZ + oy + 2 + k * 2, 1, 2 + (k % 4), 'rgba(90,30,20,.34)');
+      }
+    });
+    /* a hand dragged down the sheet, four fingers of it */
+    for (let k = 0; k < 4; k++) PIX.rect(x, 232 + k * 3, HZ - 58, 1, 30 + (k % 2) * 6, 'rgba(110,20,24,.40)');
+
     /* the drain he is lying next to */
     SPR.ellipse(x, 268, FY - 30, 13, 5, P.K);
     SPR.ellipse(x, 268, FY - 31, 11, 4, '#15141a');
@@ -868,9 +916,19 @@ const DUEL = {
       x.globalAlpha = 1;
     }
 
-    /* the pool, first and underneath: it keeps creeping outward */
+    /* the pool, first and underneath: it keeps creeping outward, from
+       his HEAD, because that is where it is coming from */
     SPR.ellipse(x, at.x - 4, at.y + 12, DUEL.pool * 2.4, DUEL.pool * 0.5, P.D);
     SPR.ellipse(x, at.x - 8, at.y + 11, DUEL.pool * 1.8, DUEL.pool * 0.34, P.d);
+    SPR.ellipse(x, at.x - 44, at.y + 4, DUEL.pool * 1.3, DUEL.pool * 0.46, P.D);
+    SPR.ellipse(x, at.x - 46, at.y + 3, DUEL.pool * 0.9, DUEL.pool * 0.3, P.d);
+    PIX.rect(x, at.x - 50, at.y + 1, Math.round(DUEL.pool * 0.5), 1, 'rgba(255,160,150,.18)');
+    /* and the spatter round it: the halo a head leaves on a floor */
+    for (let i = 0; i < 22; i++) {
+      const a = i * 2.39996, dd = 20 + ((i * 37) % 23);
+      PIX.disc(x, Math.round(at.x - 44 + Math.cos(a) * dd * 1.6), Math.round(at.y + 2 + Math.sin(a) * dd * 0.5),
+        i % 4 === 0 ? 1 : 0, i % 3 ? P.D : P.d);
+    }
 
     x.save();
     x.translate(at.x, at.y + jig);
@@ -948,7 +1006,19 @@ const DUEL = {
     const hk = 1.1;
     x.drawImage(head, -Math.round(head.width * hk / 2), -Math.round(head.height * hk / 2),
       Math.round(head.width * hk), Math.round(head.height * hk));
+    /* WHERE IT WENT IN. A black hole with a red rim over one eye, what
+       ran out of it down the side of his face, and a flap of it on the
+       floor where the back of his head was. */
+    PIX.disc(x, -6, -6, 4, P.D);
+    PIX.disc(x, -6, -6, 3, P.K);
+    PIX.disc(x, -7, -7, 1, '#2a0408');
+    PIX.rect(x, -8, -3, 2, 12, P.d);
+    PIX.rect(x, -4, -2, 1, 9, P.D);
+    PIX.rect(x, -10, 8, 6, 2, P.d);
     x.restore();
+    /* his shirt, soaked from the collar down */
+    SPR.rrect(x, -14, -16, 11, 18, 3, 'rgba(120,14,24,.62)');
+    PIX.rect(x, -13, 0, 9, 6, 'rgba(120,14,24,.36)');
     /* his collar, closing the gap between head and chest */
     PIX.rect(x, -30, -11, 10, 21, INK);
     PIX.rect(x, -29, -10, 8, 19, suit);
@@ -1887,6 +1957,42 @@ const DUEL = {
      room with one lamp. It lands where the lead landed, it runs
      downhill from there, and it does not wipe off between pulls.
      ============================================================ */
+  /* ============================================================
+     THE WALL BEHIND HIM.
+
+     A round through a head at a card table does not stay at the
+     card table. It goes up the wall behind him in an arc -- a fan
+     of drops thrown out along the line of the shot, the heavy ones
+     running down the plaster in long thin drips -- and it stays
+     there for the rest of the night, round after round, because
+     nobody in this room is going to wash a wall.
+     ============================================================ */
+  wallBlood: [],
+  spray(n, big) {
+    const hx = 180, hy = 50;
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * (big ? 2.4 : 1.6);
+      const d = 8 + Math.random() * (big ? 70 : 38);
+      DUEL.wallBlood.push({
+        x: hx + Math.cos(a) * d * 1.5, y: hy + Math.sin(a) * d * 0.55 - 6,
+        r: Math.random() < 0.18 ? 2 : (Math.random() < 0.5 ? 1 : 0),
+        run: Math.random() < 0.35 ? 6 + Math.random() * (big ? 30 : 16) : 0,
+        grow: 0,
+      });
+    }
+    if (DUEL.wallBlood.length > 220) DUEL.wallBlood.splice(0, DUEL.wallBlood.length - 220);
+  },
+  drawWallBlood(x) {
+    if (!DUEL.wallBlood.length) return;
+    const P = PIX.PAL;
+    DUEL.wallBlood.forEach(b => {
+      b.grow = Math.min(b.run, b.grow + 0.12);
+      if (b.run) PIX.rect(x, Math.round(b.x), Math.round(b.y), 1, Math.round(b.grow), P.D);
+      if (b.run && b.grow >= b.run) PIX.rect(x, Math.round(b.x), Math.round(b.y + b.grow), 2, 1, P.d);
+      PIX.disc(x, Math.round(b.x), Math.round(b.y), b.r, b.r ? P.d : P.D);
+    });
+  },
+
   gore(n) {
     const w = DUEL.wounds[DUEL.wounds.length - 1] || { x: 0, y: -60 };
     for (let i = 0; i < n * 3; i++) {
@@ -2393,6 +2499,9 @@ const DUEL = {
         DUEL.setExpr('pain', 55);
         FX.screen.shake(ev.dmg >= 2 ? 18 : 12);
         FX.screen.flash(PIX.PAL.R, 0.3, 0.1);
+        /* up the wall behind him, and some of it on the lens */
+        DUEL.spray(ev.dmg >= 2 ? 46 : 18, ev.dmg >= 2);
+        if (ev.dmg >= 2 && typeof TOON !== 'undefined') TOON.lens(3, { r: 4, k: 4 });
         /* four-point stars off the head that just took it */
         if (typeof TOON !== 'undefined') {
           const sh = DUEL.screenXY(180, 58);
@@ -2429,6 +2538,12 @@ const DUEL = {
         if (ev.by === 'opp') DUEL.setExpr('grin', 80);
         FX.bloodBurst(60, 160, 1.6, -Math.PI / 2.4);
         FX.bloodDrip(58, 168, 190);
+        /* YOUR OWN, ON THE GLASS. You are the camera; when it is you the
+           lens takes it, and it runs. */
+        if (typeof TOON !== 'undefined') {
+          TOON.lens(3 + ev.dmg * 3, { r: 6 + ev.dmg * 2, k: 5,
+            x: window.innerWidth * 0.3, y: window.innerHeight * 0.7 });
+        }
         UI.flash('go-back');
         UI.stampBig('-' + ev.dmg, PIX.PAL.R);
         SFX.hurt();
@@ -2545,17 +2660,22 @@ const DUEL = {
   async killSequence() {
     DUEL.setPose('rest');
     SFX.lose();
+    if (typeof TOON !== 'undefined') TOON.lens(7, { r: 6, k: 5 });
+    DUEL.spray(60, true);
+    FX.gib(180, 58, 8);
+    FX.bloodBurst(180, 58, 3);
     await CINE.bloodWipe(() => {
       DUEL.opp.gone = true;
       DUEL.corpse = true;
       DUEL.ghost = null;
-      /* the body goes to the back room INTACT. What you did shows in the
-         pool under him, not in pieces of him. */
-      DUEL.wounds = [];
+      /* THE BODY GOES TO THE BACK ROOM THE WAY YOU LEFT IT. Every hole
+         your lead put in him goes with him, and the one that finished it
+         is in his head. */
+      if (!DUEL.wounds.some(w => w.big)) DUEL.wounds.push({ x: 0, y: -40, big: true });
       DUEL.blood = [];
       G.loot.dragged = true;
       DUEL.room = 'back';
-      DUEL.pool = 14;
+      DUEL.pool = 18;
       COPS.GROUND = DUEL.FY - 8;
       E.makeMess();
     }, 120);

@@ -1433,13 +1433,20 @@ const UI = {
 
   /* the last card of the story: which ending you got, and the log */
   buildEnding(app) {
-    const good = G.ending === 'good';
+    const END = {
+      good: ['CASE CLOSED', PIX.PAL.G,
+        'HE IS IN A CELL AND YOU ARE STILL A COP. THE MAN WHO TOOK THEM PINNED A MEDAL ON YOU.'],
+      bad: ['CASE BURIED', PIX.PAL.R,
+        'HE IS IN THE GROUND AND SO IS THE FILE. THE MAN WHO TOOK THEM SENT FLOWERS.'],
+      code: ['THE CODE', PIX.PAL.N,
+        'ONE. BE SURE. TWO. ONLY THE ONES WHO HAVE IT COMING. HE HAD IT COMING.'],
+      rook: ['CASE CLOSED', PIX.PAL.R,
+        'BY HIM. HE CLEANED UP AFTER HIMSELF, AND NOBODY ASKED HOW.'],
+    }[G.ending] || ['CASE BURIED', PIX.PAL.R, 'NOBODY WROTE IT DOWN.'];
     const wrap = U.el('div', 'end-wrap');
-    wrap.appendChild(UI.wrap(good ? 'CASE CLOSED' : 'CASE BURIED', 16,
-      { scale: 7, color: good ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K }));
-    wrap.appendChild(UI.wrap(good
-      ? 'HE IS IN A CELL AND YOU ARE STILL A COP. THE FILE HELD.'
-      : 'HE IS IN THE GROUND AND SO IS THE FILE. NOBODY WROTE IT DOWN.', 40,
+    wrap.appendChild(UI.wrap(END[0], 16,
+      { scale: 7, color: END[1], outline: PIX.PAL.K }));
+    wrap.appendChild(UI.wrap(END[2], 40,
       { scale: 3, color: PIX.PAL.w }));
     const log = U.el('div', 'end-log');
     (G.log || []).slice(-8).forEach(line => {

@@ -63,7 +63,7 @@ const JOBS = (() => {
         + Math.round(hi[2] + (lo[2] - hi[2]) * t) + ')';
       c.fillRect(0, y, FW, 1);
     }
-    ART.dither(c, 0, 0, FW, SURF + 2, 'rgba(0,0,0,.30)', 0.12, o.seed || 7);
+    ART.dither(c, 0, 0, FW, SURF + 2, 'rgba(0,0,0,.30)', o.grain === undefined ? 0.12 : o.grain, o.seed || 7);
     if (o.railY !== undefined) {
       ART.px(c, 0, o.railY, FW, 3, o.rail || 'rgba(255,255,255,.07)');
       ART.px(c, 0, o.railY + 3, FW, 2, 'rgba(0,0,0,.32)');
@@ -399,8 +399,16 @@ const JOBS = (() => {
       const padT = Math.floor((CH - FH) / 2), padB = CH - FH - padT;
 
       const wrap = U.el('div', 'job-card');
+      /* THE BUFFER IS THE SHOT, NOT THE SCREEN. This canvas was the size
+         of the window and every frame blitted the shot into it blown up by
+         K -- five full-screen drawImage calls a frame, which was the
+         breakfast at fourteen frames a second on a slower machine. It is
+         CW by CH now, one pixel per art pixel, and CSS does the blow-up
+         with nearest-neighbour on the compositor. Same picture. */
       const cv = document.createElement('canvas');
-      cv.width = CW * K; cv.height = CH * K;
+      cv.width = CW; cv.height = CH;
+      cv.style.width = (CW * K) + 'px';
+      cv.style.height = (CH * K) + 'px';
       cv.className = 'pix job-cv';
       wrap.appendChild(cv);
       root.appendChild(wrap);
@@ -414,18 +422,26 @@ const JOBS = (() => {
       /* one blit of the shot, plus four one-pixel slices stretched out to
          the edges of the screen */
       const present = () => {
-        const x0 = padL * K, y0 = padT * K, w0 = FW * K, h0 = FH * K;
-        dst.drawImage(fcv, 0, 0, FW, FH, x0, y0, w0, h0);
-        if (padL > 0) dst.drawImage(fcv, 0, 0, 1, FH, 0, y0, padL * K, h0);
-        if (padR > 0) dst.drawImage(fcv, FW - 1, 0, 1, FH, x0 + w0, y0, padR * K, h0);
+        const x0 = padL, y0 = padT, w0 = FW, h0 = FH;
+        dst.drawImage(fcv, x0, y0);
+        if (padL > 0) dst.drawImage(fcv, 0, 0, 1, FH, 0, y0, padL, h0);
+        if (padR > 0) dst.drawImage(fcv, FW - 1, 0, 1, FH, x0 + w0, y0, padR, h0);
         /* the top and bottom take the whole width that is now painted, so
            the corners are filled too */
-        if (padT > 0) dst.drawImage(cv, 0, y0, cv.width, 1, 0, 0, cv.width, padT * K);
+        if (padT > 0) dst.drawImage(cv, 0, y0, cv.width, 1, 0, 0, cv.width, padT);
         if (padB > 0) {
-          dst.drawImage(cv, 0, y0 + h0 - 1, cv.width, 1, 0, y0 + h0, cv.width, padB * K);
+          dst.drawImage(cv, 0, y0 + h0 - 1, cv.width, 1, 0, y0 + h0, cv.width, padB);
         }
       };
       requestAnimationFrame(() => wrap.classList.add('in'));
+      /* the room under this card is hidden by it, so it stops painting --
+         released exactly once, however this shot ends */
+      let uncovered = false;
+      const uncover = () => {
+        if (uncovered) return; uncovered = true;
+        if (typeof SCENE !== 'undefined' && SCENE.cover) SCENE.cover(false);
+      };
+      if (typeof SCENE !== 'undefined' && SCENE.cover) SCENE.cover(true);
 
       let round = 0, hits = 0, perfect = 0;
       let x = 0, dir = 1, live = true, flash = 0, done = false;
@@ -449,6 +465,10 @@ const JOBS = (() => {
 
       let last = performance.now(), T = 0;
       const step = (now) => {
+        /* TORN DOWN FROM OUTSIDE -- a skip, a scene change -- and nothing
+           called finish: this loop would go on painting a canvas nobody
+           can see for the rest of the session. It checks, and stops. */
+        if (!cv.isConnected) { done = true; uncover(); return; }
         const dt = Math.min(0.05, (now - last) / 1000);
         last = now; T += dt;
         const armed = live && T >= armAt;
@@ -488,6 +508,7 @@ const JOBS = (() => {
 
       const finish = () => {
         done = true;
+        uncover();
         JOBS._meter = null;
         window.removeEventListener('pointerdown', hit);
         window.removeEventListener('keydown', key);
@@ -535,7 +556,16 @@ const JOBS = (() => {
      the whole first-person pass was for.
      --------------------------------------------------------- */
   function drawPan(c, W, H, s) {
-    povWall(c, { hi: [150, 132, 88], lo: [96, 80, 50], railY: 52, seed: 9 });
+    /* THE SAME WALLPAPER AS THE ROOM. The kitchen you walk around in is
+       papered in butter yellow with little gold sprigs on it; the close-up
+       of the same wall was sandpaper. Less grain, and the sprigs. */
+    povWall(c, { hi: [168, 146, 92], lo: [118, 96, 56], railY: 52, seed: 9, grain: 0.035 });
+    for (let y = 6; y < 50; y += 12) {
+      for (let x = ((y / 12) & 1) ? 10 : 4; x < W; x += 13) {
+        ART.px(c, x, y - 1, 1, 3, 'rgba(232,196,96,.55)');
+        ART.px(c, x - 1, y, 3, 1, 'rgba(232,196,96,.55)');
+      }
+    }
     /* the window over the sink, with the garden in it */
     ART.px(c, 18, 8, 62, 40, '#4a3a20');
     ART.px(c, 21, 11, 56, 34, '#b8d8ea');
@@ -624,22 +654,80 @@ const JOBS = (() => {
     SPR.ellipse(c, pcx, pcy - 1, 36, 12, '#464146');
     SPR.ellipse(c, pcx, pcy, 33, 10, '#231f23');
     ART.px(c, pcx - 30, pcy - 12, 60, 3, 'rgba(255,255,255,.10)');
-    /* the butter, sliding with the needle */
+    /* the butter, sliding with the needle, and the fat it has made */
     const bx2 = pcx - 22 + Math.round(s.x * 44);
+    SPR.ellipse(c, pcx, pcy, 30, 8, 'rgba(255,214,120,.10)');
     ART.px(c, bx2, pcy + 2, 9, 4, 'rgba(255,222,140,.44)');
-    /* THE EGG, setting as the needle travels */
+
+    /* ============================================================
+       THE EGG, a real one. The first one was an oval with a disc
+       on it. A fried egg is a lumpy puddle of white that goes from
+       glassy to opaque, a lace of crisp brown round its edge once it
+       has been in long enough, blisters that rise in the white and
+       burst, and a yolk that is a dome -- it catches the window.
+       ============================================================ */
     const cook = Math.min(1, 0.22 + s.x * 0.92);
-    const ew = Math.round(9 + cook * 13), eh = Math.round(4 + cook * 6);
-    SPR.ellipse(c, pcx - 2, pcy - 1, ew + 2, eh + 1, '#0f0d0e');
-    SPR.ellipse(c, pcx - 2, pcy - 1, ew, eh, cook > 0.88 ? '#e8d894' : '#f6efc8');
-    SPR.ellipse(c, pcx - 2, pcy - 2, Math.round(ew * 0.7), Math.round(eh * 0.6),
-      'rgba(255,255,255,.16)');
-    PIX.disc(c, pcx, pcy - 1, Math.round(3 + cook * 3), cook > 0.88 ? '#dc8420' : '#f0a83c');
-    PIX.disc(c, pcx, pcy - 2, Math.max(1, Math.round(1 + cook * 2)), '#f8cc70');
-    if (cook > 0.94) {
-      for (let i = 0; i < 6; i++) {
-        ART.px(c, pcx - 20 + i * 7, pcy - 6 - (i % 3), 3, 2, 'rgba(80,60,42,.5)');
+    const ex = pcx - 8, ey = pcy - 1;
+    const ew = Math.round(12 + cook * 10), eh = Math.round(5 + cook * 5);
+    const lumps = [[0, 0, 1], [-0.55, 0.15, 0.62], [0.5, -0.2, 0.66], [0.2, 0.45, 0.55], [-0.3, -0.45, 0.5]];
+    /* the lace first, under the white, so it shows at the rim */
+    if (cook > 0.55) {
+      const lc = cook > 0.85 ? '#8a5a2a' : '#b8844a';
+      lumps.forEach(([ox, oy2, k]) => SPR.ellipse(c, ex + Math.round(ox * ew), ey + Math.round(oy2 * eh),
+        Math.round(ew * k) + 2, Math.round(eh * k) + 1, lc));
+      for (let i = 0; i < 14; i++) {
+        const a = i / 14 * Math.PI * 2;
+        ART.px(c, Math.round(ex + Math.cos(a) * (ew + 2)), Math.round(ey + Math.sin(a) * (eh + 1)), 2, 1, lc);
       }
+    }
+    const white = cook < 0.45 ? 'rgba(246,240,214,.62)' : cook < 0.7 ? '#f2ecd2' : '#fbf7ea';
+    lumps.forEach(([ox, oy2, k]) => SPR.ellipse(c, ex + Math.round(ox * ew), ey + Math.round(oy2 * eh),
+      Math.round(ew * k), Math.round(eh * k), white));
+    SPR.ellipse(c, ex - 3, ey - 2, Math.round(ew * 0.5), Math.round(eh * 0.4), 'rgba(255,255,255,.22)');
+    /* the blisters: they rise and burst in their own time */
+    for (let i = 0; i < 5; i++) {
+      const bp = (s.T * (0.9 + i * 0.23) + i * 0.37) % 1;
+      if (bp > 0.7 || cook < 0.3) continue;
+      const bxx = ex - ew + 4 + ((i * 37) % (ew * 2 - 6)), byy = ey - 2 + ((i * 13) % 5);
+      const br = bp < 0.5 ? 1 : 0;
+      ART.px(c, bxx, byy, 2 + br, 2, 'rgba(255,255,255,.75)');
+      ART.px(c, bxx, byy + 1 + br, 2 + br, 1, 'rgba(170,150,110,.5)');
+    }
+    /* the yolk: a dome, with the window in it, and it jiggles */
+    const jig = Math.round(Math.sin(s.T * 5) * 0.6);
+    const yr = Math.round(3 + cook * 2);
+    PIX.disc(c, ex + 2, ey - 1 + jig, yr + 1, 'rgba(120,60,10,.35)');
+    PIX.disc(c, ex + 2, ey - 2 + jig, yr, cook > 0.9 ? '#e08a24' : '#f4a830');
+    PIX.disc(c, ex + 2, ey - 3 + jig, Math.max(1, yr - 1), cook > 0.9 ? '#eca040' : '#fbbc48');
+    ART.px(c, ex, ey - 4 - yr + 2 + jig, 2, 1, '#fff4c8');
+    ART.px(c, ex, ey - 3 - yr + 2 + jig, 1, 1, '#fff4c8');
+    /* ============================================================
+       THE RASHERS, beside it. Breakfast is not one egg in a pan,
+       it is the smell of the whole morning: two streaky rashers
+       along the back of the pan, fat stripe and lean, going from
+       pink to brown and curling at the ends as the needle runs.
+       ============================================================ */
+    for (let r2 = 0; r2 < 2; r2++) {
+      const rx = pcx + 13 + r2 * 2, ry = pcy - 5 + r2 * 5;
+      const lean = cook < 0.5 ? '#d4606a' : cook < 0.85 ? '#b04a3a' : '#8a3a24';
+      const fat = cook < 0.5 ? '#f2d4c8' : cook < 0.85 ? '#e8c090' : '#d8a060';
+      for (let i = 0; i < 17; i++) {
+        const wob = Math.round(Math.sin(i * 0.7 + r2) * 1 + (i > 13 ? (i - 13) * cook * 0.8 : 0));
+        ART.px(c, rx + i, ry - wob - 1, 1, 5, '#2a1612');
+        ART.px(c, rx + i, ry - wob, 1, 3, lean);
+        ART.px(c, rx + i, ry - wob + 1, 1, 1, fat);
+        if (i % 5 === 2) ART.px(c, rx + i, ry - wob, 1, 1, fat);
+      }
+    }
+
+    /* and the fat spits */
+    for (let i = 0; i < 7; i++) {
+      const sp2 = (s.T * 1.7 + i * 0.41) % 1;
+      if (sp2 > 0.5) continue;
+      const k2 = sp2 / 0.5;
+      const sxx = pcx - 26 + ((i * 53) % 52) + Math.round(Math.cos(i) * k2 * 6);
+      const syy = pcy - 4 - Math.round(Math.sin(k2 * Math.PI) * (8 + i % 3 * 4));
+      ART.px(c, sxx, syy, 1, 1, 'rgba(255,248,220,' + (0.85 - k2).toFixed(2) + ')');
     }
     /* the handle, off to the right, and the steam over all of it */
     ART.px(c, pcx + 36, pcy - 4, 34, 7, '#1c1a1c');
@@ -654,9 +742,20 @@ const JOBS = (() => {
     SPR.ellipse(c, 196, SURF + 7, 20, 8, '#f0e8d4');
     SPR.ellipse(c, 196, SURF + 6, 17, 6, '#fbf7ec');
     SPR.ellipse(c, 196, SURF + 6, 12, 4, '#efe7d2');
+    /* two triangles of toast already on it, buttered */
+    for (let i = 0; i < 2; i++) {
+      const tx = 184 + i * 9;
+      for (let r3 = 0; r3 < 6; r3++) {
+        ART.px(c, tx + r3, SURF + 2 + r3, 8 - r3, 1, r3 === 0 ? '#e0b060' : '#c89448');
+      }
+      ART.px(c, tx + 1, SURF + 3, 3, 1, 'rgba(255,236,160,.8)');
+    }
     for (let i = 0; i < s.hits; i++) {
-      SPR.ellipse(c, 190 + i * 7, SURF + 6, 7, 3, '#e8d894');
-      PIX.disc(c, 190 + i * 7, SURF + 6, 2, '#f0a83c');
+      const px2 = 198 + i * 7;
+      SPR.ellipse(c, px2, SURF + 8, 8, 3, '#b8844a');
+      SPR.ellipse(c, px2, SURF + 7, 7, 3, '#fbf7ea');
+      PIX.disc(c, px2 + 1, SURF + 6, 2, '#f4a830');
+      ART.px(c, px2, SURF + 5, 1, 1, '#fff4c8');
     }
 
     /* ---- AND YOUR OWN TWO ARMS ---- */
@@ -671,12 +770,17 @@ const JOBS = (() => {
       k: 0.48, fist: true, hy: 4 });
     /* and his left, holding the slice, coming in low and left of the egg so
        the egg is never behind it */
-    ART.px(c, 38, 92, 46, 5, '#1c1a1c');
-    ART.px(c, 38, 92, 46, 2, '#4a4448');
-    ART.px(c, 74, 86, 24, 12, '#0f0d0e');
-    ART.px(c, 75, 87, 22, 10, '#7c848a');
-    ART.px(c, 75, 87, 22, 3, '#a2aab0');
-    for (let i = 0; i < 4; i++) ART.px(c, 78 + i * 5, 90, 2, 6, '#4a5058');
+    ART.px(c, 38, 92, 30, 5, '#1c1410');                    /* the wooden handle */
+    ART.px(c, 39, 93, 28, 3, '#8a5a32');
+    ART.px(c, 39, 93, 28, 1, '#b07a48');
+    ART.px(c, 66, 92, 10, 3, '#1c1a1c');                    /* the neck */
+    ART.px(c, 66, 93, 10, 1, '#9aa2a8');
+    ART.px(c, 74, 86, 24, 12, '#0f0d0e');                   /* the slotted head */
+    ART.px(c, 75, 87, 22, 10, '#8c949a');
+    ART.px(c, 75, 87, 22, 2, '#c4ccd2');
+    ART.px(c, 75, 95, 22, 2, '#5e666c');
+    for (let i = 0; i < 4; i++) ART.px(c, 78 + i * 5, 89, 2, 6, '#2a2e34');
+    ART.px(c, 76, 88, 1, 8, 'rgba(255,255,255,.35)');
     povArm(c, { x0: 2, y0: 148, x1: 46, y1: 88, w0: 24, w1: 13, sgn: -1,
       k: 0.46, fist: true, hy: 4 });
   }

@@ -299,81 +299,154 @@ const CUT = (() => {
       x: rng(), y: rng(), s: 0.10 + rng() * 0.32, ph: rng() * 9,
       r: rng() < 0.28 ? 2 : 1,
     }));
+    /* ============================================================
+       PAINTED ONCE, BREATHED EVERY FRAME.
+
+       This layer used to draw itself from scratch sixty times a
+       second: every lamp bloomed as six stacked discs, the window
+       as thirteen more, four shafts a row at a time, and the warm
+       edges thirty-four strips a side -- about five thousand
+       translucent fills a frame, each with its own freshly printed
+       rgba string. Under a slower CPU that was the kitchen at
+       seventeen frames a second.
+
+       None of it changes shape. The glow, the shafts and the edges
+       are the same pictures every frame; all that moves is the
+       swell, which is an alpha, and the sway, which is a shift. So
+       each is painted once into its own canvas and put down with
+       globalAlpha -- a handful of blits instead of five thousand
+       fills, and the same picture to within a rounding step.
+       ============================================================ */
+    const GY = -70, GH = FY + 150;
+    let glow = null;
+    const buildGlow = () => {
+      const o = ART.cv(W, GH);
+      o.c.translate(0, -GY);
+      (lights || []).forEach(L => {
+        for (let r = L.r + 26; r >= 10; r -= 5) {
+          PIX.disc(o.c, L.x, L.fy === undefined ? L.y + 20 : (L.y + L.fy) / 2, r,
+            'rgba(255,232,176,' + (0.016 * (1 - r / (L.r + 34))).toFixed(4) + ')');
+        }
+      });
+      for (let r = 74; r >= 10; r -= 5) {
+        PIX.disc(o.c, winX, 38, r,
+          'rgba(255,240,196,' + (0.020 * (1 - r / 82)).toFixed(4) + ')');
+      }
+      return o.cv;
+    };
+    /* a shaft, drawn at rest; the sway is where it is put down */
+    const SX0 = winX - 40, SW = 200;
+    let shafts = null;
+    const buildShafts = () => [0, 1, 2, 3].map(i => {
+      const o = ART.cv(SW, FY + 10);
+      const off = i * 26 - 12;
+      const a = 0.060 + i * 0.008;
+      for (let y = 14; y < FY + 8; y++) {
+        const t = (y - 14) / (FY - 8);
+        const x = winX + off + t * 96;
+        const hw = 6 + t * 11;
+        ART.px(o.c, Math.round(x - hw) - SX0, y, Math.round(hw * 2), 1,
+          'rgba(255,228,168,' + (a * (1 - t * 0.5)).toFixed(4) + ')');
+      }
+      return o.cv;
+    });
+    /* the warm edges and the veil hang off the FRAME, so they are built
+       for the width of it and rebuilt only if that changes */
+    let frameCv = null, frameVw = -1;
+    const buildFrame = (vw) => {
+      const o = ART.cv(vw, 210);
+      for (let i = 0; i < 34; i++) {
+        const a = 0.105 * Math.pow(1 - i / 34, 1.6);
+        ART.px(o.c, i, 0, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(o.c, vw - 1 - i, 0, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(o.c, 0, i, vw, 1, 'rgba(158,110,34,' + (a * 0.85).toFixed(4) + ')');
+        ART.px(o.c, 0, 172 - i, vw, 1, 'rgba(96,60,16,' + (a * 0.7).toFixed(4) + ')');
+      }
+      ART.px(o.c, 0, 0, vw, 210, 'rgba(255,226,170,0.0850)');
+      return o.cv;
+    };
+    /* and the haze band: one column of it, stretched across */
+    const bandCv = ART.cv(1, 44);
+    for (let i = -22; i < 22; i++) {
+      ART.px(bandCv.c, 0, i + 22, 1, 1,
+        'rgba(255,236,186,' + (0.055 * (1 - Math.abs(i) / 22)).toFixed(4) + ')');
+    }
+
+    /* ============================================================
+       AND COMPOSED AT THE SIZE OF THE ROOM, NOT THE SCREEN.
+
+       Painting the pieces once was half of it. The other half is
+       where they are put down: straight onto the scene buffer, each
+       one a big translucent blit at three buffer pixels to the room
+       pixel -- nine times the blending of the room grid, four times
+       over for the shafts. Every piece of this layer is drawn on the
+       room grid anyway, so the frame's worth of it is composed into
+       one small room-resolution canvas and that goes down in a
+       single blit. Nine times less blending for the same picture.
+       ============================================================ */
+    let view = null;
     return (c, T, cam, vw) => {
       /* the swell: everything below rides on it */
       const swell = 0.84 + 0.16 * Math.sin(T * 0.62);
+      if (!glow) glow = buildGlow();
+      if (!shafts) shafts = buildShafts();
+      if (vw !== frameVw) { frameCv = buildFrame(vw); frameVw = vw; }
 
-      /* ---- THE HALATION. The whole reason this reads as a memory. ---- */
+      /* ---- THE HALATION. The whole reason this reads as a memory. ----
+         Additive, so it has to land on the room itself and cannot be
+         composed ahead of time into a transparent layer. */
+      const camr = Math.round(cam);
       if (bloom) {
         const was = c.globalCompositeOperation;
         c.globalCompositeOperation = 'lighter';
         c.globalAlpha = 0.30 * swell;
-        c.drawImage(bloom, 0, 0);
+        /* only the part you can see: the bloom is the whole room */
+        const bx = Math.max(0, camr), bw = Math.min(bloom.width - bx, Math.ceil(vw) + 1);
+        if (bw > 0) c.drawImage(bloom, bx, 0, bw, bloom.height, bx, 0, bw, bloom.height);
         c.globalAlpha = 1;
         c.globalCompositeOperation = was;
       }
 
-      /* ---- EVERY LAMP IN THE ROOM BLOOMS ----
+      const VW = Math.ceil(vw) + 1, VH = 210, VY = -40;
+      if (!view || view.cv.width !== VW) view = ART.cv(VW, VH);
+      const v = view.c;
+      v.setTransform(1, 0, 0, 1, 0, 0);
+      v.clearRect(0, 0, VW, VH);
+      v.translate(-camr, -VY);
+
+      /* ---- EVERY LAMP IN THE ROOM BLOOMS, and the window hardest ----
          The first pass hung all of this off the window, and the window is
          at x 60 in a room 740 wide: stand anywhere but the sink and the
-         whole layer was off screen, which measured at plus three on the
-         mean pixel -- i.e. nothing. The room has its light sources
-         declared already; bloom every one of them and the morning is soft
-         wherever you are standing in it. */
-      (lights || []).forEach(L => {
-        for (let r = L.r + 26; r >= 10; r -= 5) {
-          PIX.disc(c, L.x, L.fy === undefined ? L.y + 20 : (L.y + L.fy) / 2, r,
-            'rgba(255,232,176,' + (0.016 * swell * (1 - r / (L.r + 34))).toFixed(4) + ')');
-        }
-      });
-      /* and the window hardest of all, because it is the sun */
-      for (let r = 74; r >= 10; r -= 5) {
-        PIX.disc(c, winX, 38, r,
-          'rgba(255,240,196,' + (0.020 * swell * (1 - r / 82)).toFixed(4) + ')');
-      }
+         whole layer was off screen. The room has its light sources
+         declared already; every one of them blooms. */
+      v.globalAlpha = swell;
+      const gx = Math.max(0, camr), gw = Math.min(glow.width - gx, VW);
+      if (gw > 0) v.drawImage(glow, gx, 0, gw, glow.height, gx, GY, gw, glow.height);
 
       /* ---- four shafts out of it, on the slant, breathing ---- */
       for (let i = 0; i < 4; i++) {
-        const off = i * 26 - 12;
-        const sway = Math.sin(T * 0.33 + i * 1.7) * 3;
-        const a = (0.060 + i * 0.008) * swell;
-        for (let y = 14; y < FY + 8; y++) {
-          const t = (y - 14) / (FY - 8);
-          const x = winX + off + sway + t * 96;
-          const hw = 6 + t * 11;
-          ART.px(c, Math.round(x - hw), y, Math.round(hw * 2), 1,
-            'rgba(255,228,168,' + (a * (1 - t * 0.5)).toFixed(4) + ')');
-        }
-      }
-
-      /* ---- the dust, which is what makes air visible ---- */
-      for (const m of motes) {
-        const y = FY + 10 - ((m.y * (FY + 24) + T * m.s * 24) % (FY + 24));
-        const x = cam + ((m.x * vw + Math.sin(T * 0.4 + m.ph) * 8) % vw);
-        ART.px(c, Math.round(x), Math.round(y), m.r, m.r,
-          'rgba(255,244,212,' + (0.34 * swell).toFixed(3) + ')');
+        v.drawImage(shafts[i], SX0 + Math.round(Math.sin(T * 0.33 + i * 1.7) * 3), 0);
       }
 
       /* ---- A ROW OF SOFT LIGHT, WALKING UP THE FRAME ----
          The one thing that says "this is being remembered" rather than
-         "this is warm": a band of haze drifting slowly upward, the way a
-         memory of a room is brighter in the part you are looking at. */
+         "this is warm": a band of haze drifting slowly upward. */
       const band = FY + 30 - ((T * 9) % (FY + 70));
-      for (let i = -22; i < 22; i++) {
-        const a = 0.055 * (1 - Math.abs(i) / 22) * swell;
-        ART.px(c, cam, Math.round(band + i), vw, 1, 'rgba(255,236,186,' + a.toFixed(4) + ')');
+      v.drawImage(bandCv.cv, 0, 0, 1, 44, camr, Math.round(band) - 22, VW, 44);
+
+      /* ---- and the edges go warm and soft, not black, under one veil ---- */
+      v.drawImage(frameCv, camr, VY);
+      v.globalAlpha = 1;
+
+      /* ---- the dust, which is what makes air visible ---- */
+      const dust = 'rgba(255,244,212,' + (0.34 * swell).toFixed(3) + ')';
+      for (const m of motes) {
+        const y = FY + 10 - ((m.y * (FY + 24) + T * m.s * 24) % (FY + 24));
+        const x = cam + ((m.x * vw + Math.sin(T * 0.4 + m.ph) * 8) % vw);
+        ART.px(v, Math.round(x), Math.round(y), m.r, m.r, dust);
       }
 
-      /* ---- and the edges go warm and soft, not black ---- */
-      for (let i = 0; i < 34; i++) {
-        const a = 0.105 * Math.pow(1 - i / 34, 1.6) * swell;
-        ART.px(c, cam + i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
-        ART.px(c, cam + vw - 1 - i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
-        ART.px(c, cam, -40 + i, vw, 1, 'rgba(158,110,34,' + (a * 0.85).toFixed(4) + ')');
-        ART.px(c, cam, 132 - i, vw, 1, 'rgba(96,60,16,' + (a * 0.7).toFixed(4) + ')');
-      }
-      /* one veil over the lot, so nothing in it is quite sharp */
-      ART.px(c, cam, -40, vw, 210, 'rgba(255,226,170,' + (0.085 * swell).toFixed(4) + ')');
+      c.drawImage(view.cv, camr, VY);
     };
   }
 
@@ -712,10 +785,15 @@ const CUT = (() => {
       px(c, TABLE - 28, FY - 35, 14, 1, '#fbf7ec');
       px(c, TABLE + 2, FY - 35, 14, 3, '#f0e8d4');
       px(c, TABLE + 2, FY - 35, 14, 1, '#fbf7ec');
-      if (st.plate) {                                   /* the boy's egg on it */
-        px(c, TABLE + 5, FY - 37, 8, 3, '#f6e8a8');
-        px(c, TABLE + 7, FY - 36, 3, 2, '#f0a83c');
+      /* the toast rack at the end, and Cleo's cup by her place */
+      px(c, TABLE - 32, FY - 36, 8, 3, '#b8b0a0');
+      for (let i = 0; i < 3; i++) {
+        px(c, TABLE - 31 + i * 3, FY - 40, 2, 5, '#c89448');
+        px(c, TABLE - 31 + i * 3, FY - 40, 2, 1, '#e0b060');
       }
+      px(c, TABLE - 23, FY - 38, 5, 4, '#f0e8d4');
+      px(c, TABLE - 23, FY - 38, 5, 1, '#8a5a3a');
+      px(c, TABLE - 18, FY - 37, 1, 2, '#f0e8d4');
       px(c, TABLE - 10, FY - 42, 9, 7, '#dce4e8');      /* the milk jug */
       px(c, TABLE - 10, FY - 42, 9, 1, '#f0f4f6');
       px(c, TABLE - 1, FY - 40, 3, 3, '#dce4e8');
@@ -1051,6 +1129,43 @@ const CUT = (() => {
 
     /* ---- and what is in FRONT of everybody ---- */
     const fore = (c) => {
+      /* ============================================================
+         HIS PLACE, and what is on it -- IN FRONT OF HIM.
+
+         It was painted on the table top behind the cast, which is
+         where a place setting goes, and he is sitting at it: so his
+         own body covered every pixel of his breakfast and he was a
+         boy eating out of thin air. What is on the table in front of
+         a person is in front of that person. It goes in this layer.
+
+         Before the eggs, a bowl: cereal and milk, and the spoon is in
+         his hand, not the bowl. After, his egg on a plate, the yolk
+         already broken where he got to it, and soldiers of toast --
+         three on the plate and the one he is eating. And juice,
+         because he is six.
+         ============================================================ */
+      const BX = TABLE - 14;
+      if (st.plate) {
+        SPR.ellipse(c, BX + 6, FY - 33, 9, 2, '#d8d0bc');              /* the plate */
+        SPR.ellipse(c, BX + 6, FY - 34, 8, 2, '#fbf7ec');
+        SPR.ellipse(c, BX + 7, FY - 35, 5, 1, '#f6f0dc');              /* the white */
+        PIX.disc(c, BX + 7, FY - 35, 1, '#f0a83c');                    /* the yolk */
+        px(c, BX + 8, FY - 35, 3, 1, '#e8942c');                        /* where it ran */
+        for (let i = 0; i < 3; i++) {                                   /* soldiers */
+          px(c, BX + i * 3, FY - 37, 2, 3, '#c89448');
+          px(c, BX + i * 3, FY - 37, 2, 1, '#e0b060');
+        }
+      } else {
+        px(c, BX, FY - 37, 12, 1, '#7aaade');                           /* his bowl */
+        px(c, BX, FY - 36, 12, 2, '#5a8ac4');
+        px(c, BX + 1, FY - 34, 10, 1, '#4a78b0');
+        px(c, BX + 3, FY - 33, 6, 1, '#3a6090');
+        px(c, BX + 1, FY - 38, 10, 1, '#f4eedc');                       /* milk */
+        for (let i = 0; i < 5; i++) px(c, BX + 1 + i * 2, FY - 38 - (i % 2), 1, 1, '#d8a44a');
+      }
+      px(c, BX + 15, FY - 39, 4, 7, 'rgba(220,236,244,.8)');            /* his juice */
+      px(c, BX + 15, FY - 37, 4, 5, '#f0a030');
+      px(c, BX + 15, FY - 39, 1, 7, 'rgba(255,255,255,.5)');
       /* the near edge of the breakfast table: a checked cloth hanging over
          it and two legs under. A frog standing behind this line has his
          legs hidden by it, which is what sitting at a table looks like
@@ -1141,7 +1256,9 @@ const CUT = (() => {
            reach his egg. */
         { id: 'boy', x: TABLE - 6, y: FY - 20, face: -1, key: 'cutBoy',
           def: BOY_DEF, scale: 0.66, still: true, profile: false,
-          job: st.pan ? 'eat' : 'read', mood: 'pleased',
+          /* EATING, not reading. Cereal while the eggs are on, and once
+             one is on his plate, toast soldiers in the yolk. */
+          job: st.plate ? 'dip' : 'spoon', mood: 'pleased',
           label: 'TOBIAS', hint: 'TALK',
           tag: 'TOBIAS', tagCol: PIX.PAL.O },
       ],
@@ -1481,10 +1598,15 @@ const CUT = (() => {
       px(c, TABLE - 2, FY - 30, 5, 28, '#2e2216');
       px(c, TABLE + 47, FY - 30, 5, 28, '#2e2216');
       px(c, TABLE + 4, FY - 16, 44, 3, '#241a10');
-      /* two cups. One of them has been over for six hours. */
-      px(c, TABLE + 4, FY - 45, 9, 7, '#c0b7a2');
-      px(c, TABLE + 4, FY - 45, 9, 1, '#ded4bc');
-      px(c, TABLE + 13, FY - 43, 2, 4, '#a8a08c');
+      /* two cups. One of them has been over for six hours. The other one
+         is not a cup from this house at all -- white, heavier, and a small
+         blue shield on the side of it. Nobody looks twice at it the first
+         time. The finale does. */
+      px(c, TABLE + 4, FY - 45, 9, 7, '#e8e4dc');
+      px(c, TABLE + 4, FY - 45, 9, 1, '#ffffff');
+      px(c, TABLE + 13, FY - 43, 2, 4, '#c8c4bc');
+      px(c, TABLE + 6, FY - 43, 3, 3, '#2a4a8a');
+      px(c, TABLE + 6, FY - 42, 3, 1, '#d13b45');
       px(c, TABLE + 20, FY - 41, 10, 3, '#c0b7a2');              /* over on its side */
       px(c, TABLE + 20, FY - 41, 10, 1, '#ded4bc');
       px(c, TABLE + 30, FY - 40, 9, 2, 'rgba(86,66,38,.6)');     /* and what came out */

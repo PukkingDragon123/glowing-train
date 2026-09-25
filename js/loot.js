@@ -299,7 +299,7 @@ const LOOT = {
     (res.learned || []).forEach((t, i) => setTimeout(() => UI.tellToast(t), 300 + i * 700));
     const fresh = META.check();
     fresh.forEach((t, i) => setTimeout(() => UI.unlockToast(t), 600 + i * 700));
-    if (res.finale) { SCENE.close(); DUEL.stop(); STORY.endgame(); return; }
+    if (res.finale) { SCENE.close(); DUEL.stop(); STORY.endgame(res.finale); return; }
     if (res.heatDue) { LOOT.heatOverlay(res.heatDue); return; }
     /* back to the bullpen: pin what you took to the board, get the next lead */
     UI.goto(() => { G.phase = 'precinct'; });

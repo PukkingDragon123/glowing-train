@@ -82,6 +82,11 @@ const MENU = (() => {
       };
     });
   })();
+  const RAIN_SHADES = 8;
+  const RAIN_COL = Array.from({ length: RAIN_SHADES }, (_, i) =>
+    'rgba(170,205,235,' + (0.10 + 0.26 * i / (RAIN_SHADES - 1)).toFixed(3) + ')');
+  RAIN.forEach(d => { d.bk = Math.round((d.a - 0.10) / 0.26 * (RAIN_SHADES - 1)); });
+  const RAIN_BY_SHADE = RAIN.slice().sort((a, b) => a.bk - b.bk);
   /* and what it does when it lands */
   const SPLASH = (() => {
     const rng = U.mulberry32(19840517);
@@ -374,20 +379,28 @@ const MENU = (() => {
 
   /* the rain, the splashes and the muzzle flash: all in front */
   function onPaintFore(c, T, cam, vw) {
-    /* ---- the rain ---- */
+    /* ---- the rain ----
+       ONE FILL PER SHADE, NOT ONE PER PIXEL. Two hundred and sixty drops
+       at six or seven pixels each was seventeen hundred separate fills a
+       frame, each printing its own rgba string -- the single biggest cost
+       on the title card. The drops come in eight shades; each shade is one
+       path of little squares and one fill. */
     const span = 150;
-    for (const d of RAIN) {
+    let bk = -1;
+    for (const d of RAIN_BY_SHADE) {
+      if (d.bk !== bk) {
+        if (bk >= 0) { c.fillStyle = RAIN_COL[bk]; c.fill(); }
+        bk = d.bk; c.beginPath();
+      }
       const y = ((d.y * span + T * d.sp) % span) - 18;
       /* ON A SLANT, and the slant comes off the same fall the drop is
          doing -- rain that goes straight down in a still frame reads as a
          screen wipe, and rain whose angle is unrelated to its speed reads
          as confetti. */
       const x = cam - 10 + ((d.x * (vw + 40) + T * 14 * d.depth) % (vw + 40)) - y * 0.16;
-      for (let k = 0; k < d.len; k++) {
-        px(c, Math.round(x + k * 0.16), Math.round(y + k), 1, 1,
-          'rgba(170,205,235,' + d.a.toFixed(3) + ')');
-      }
+      for (let k = 0; k < d.len; k++) c.rect(Math.round(x + k * 0.16), Math.round(y + k), 1, 1);
     }
+    if (bk >= 0) { c.fillStyle = RAIN_COL[bk]; c.fill(); }
     /* ---- what it does when it lands ---- */
     for (const s of SPLASH) {
       const ph = (T * s.sp + s.ph) % 1;
@@ -454,12 +467,43 @@ const MENU = (() => {
   }
 
   /* somebody comes out of the alley. Not a character -- a coat. */
+  /* ============================================================
+     THREE COATS, NOT AN ENDLESS SUPPLY OF THEM.
+
+     Every walker used to be keyed off how many walkers there had
+     been -- mk0, mk1, mk2 -- and the sprite cache is keyed on that,
+     so every single walk-in rebuilt its frog from scratch: eight
+     walk frames, each face, each inked edge, a hitch you could see
+     every time something came out of the alley. And a title screen
+     left open overnight grew the cache without limit. There are
+     three coats. They are keyed as three coats.
+     ============================================================ */
+  const COATS = ['vig', 'cage', 'collector'];
   function walker(i) {
+    const name = COATS[i % 3];
     return {
       id: 'menu_walk' + i, x: ALLEY + 26, y: FY,
-      key: 'mk' + i, def: FROG_DEFS[['vig', 'cage', 'collector'][i % 3]] || FROG_DEFS.player,
+      key: 'mk_' + name, def: FROG_DEFS[name] || FROG_DEFS.player,
       face: -1, mood: 'hard', still: false,
     };
+  }
+  /* and the first one to come out is built while he is still smoking:
+     the hold is three and a half seconds of nothing to draw but rain */
+  function prewarm() {
+    if (!SCENE.rig) return;
+    const jobs = [];
+    COATS.forEach(name => {
+      const d = { key: 'mk_' + name, def: FROG_DEFS[name] || FROG_DEFS.player };
+      for (let f = 0; f < (SPR.WALK_FRAMES || 8); f++) {
+        ['angry', 'neutral', 'blink', 'squint'].forEach(ex => jobs.push(() => SCENE.rig(d, f, -1, false, ex, '')));
+      }
+    });
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(() => fn({ timeRemaining: () => 8 }), 30));
+    const run = (dl) => {
+      while (jobs.length && live && dl.timeRemaining() > 4) jobs.shift()();
+      if (jobs.length && live) idle(run);
+    };
+    idle(run);
   }
 
   async function reel() {
@@ -582,6 +626,7 @@ const MENU = (() => {
     if (typeof TOON !== 'undefined') TOON.clear();
     SCENE.open(street());
     SCENE.busy(true);                 /* nothing here is clickable */
+    prewarm();
     SCENE.place(HIM, 1);
     SCENE.meArm('up');
     camA = camB = CAM; camT = 1;

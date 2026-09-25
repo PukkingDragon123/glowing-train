@@ -4619,6 +4619,23 @@ const MESS_TUNING = {
    yours. Short, and never twice in a row.
    ------------------------------------------------------------ */
 const MARK_LINES = {
+  /* ============================================================
+     THE CAPTAIN, WITH THE IRON IN HIS HAND.
+
+     Everybody else at this table talks about the gun. He talks
+     about you -- because he made you, and because he was in your
+     kitchen, and he wants you to know both of those things before
+     one of you stops.
+     ============================================================ */
+  rook: [
+    'I TAUGHT YOU EVERYTHING YOU ARE ABOUT TO TRY.',
+    'SHE POURED ME COFFEE. SHE WAS KIND ABOUT IT.',
+    'THE BOY ASKED WHEN YOU WERE COMING. I SAID YOU WERE BUSY.',
+    'YOU PUT MINE IN A DOORWAY. I WAS QUIETER ABOUT YOURS.',
+    'EVERY FROG YOU KILLED, YOU KILLED FOR ME. SAY THANK YOU.',
+    'THE CODE WAS FOR YOU, SON. IT WAS NEVER FOR ME.',
+    'BE SURE. YOU WERE ALWAYS SO SURE.',
+  ],
   takes: [
     'MY TURN WITH IT.',
     'YOU SWEAT A LOT FOR A FROG.',
@@ -16935,6 +16952,62 @@ KWWK..KWWK..KWWK
       });
     },
 
+    /* ============================================================
+       BLOOD ON THE LENS.
+
+       When it is close enough, it is on the camera. Splats land on
+       the glass -- a hard-edged blot with a darker rim and a few
+       flecks round it -- and the heavy ones RUN: a drip crawls down
+       from the bottom of each, thins, and stops. Then the whole lot
+       fades, because a lens gets wiped. Drawn in screen pixels at a
+       blow-up of the room's own, so it is as chunky as the room is.
+       ============================================================ */
+    lens(n, o) {
+      o = o || {};
+      const w = window.innerWidth, h = window.innerHeight;
+      const k = o.k || 4;
+      const out = [];
+      for (let i = 0; i < (n || 4); i++) {
+        const rng = U.mulberry32((Math.random() * 1e9) | 0);
+        const cx = o.x !== undefined ? o.x + (rng() - 0.5) * w * 0.5 : rng() * w;
+        const cy = o.y !== undefined ? o.y + (rng() - 0.5) * h * 0.4 : rng() * h * 0.8;
+        const r = (o.r || 5) * (0.5 + rng());
+        const lobes = [];
+        for (let j = 0; j < 6; j++) {
+          const a = rng() * Math.PI * 2, dd = r * (0.3 + rng() * 0.7);
+          lobes.push({ x: Math.cos(a) * dd, y: Math.sin(a) * dd * 0.8, r: r * (0.35 + rng() * 0.5) });
+        }
+        const flecks = [];
+        for (let j = 0; j < 7; j++) {
+          const a = rng() * Math.PI * 2, dd = r * (1.3 + rng() * 1.6);
+          flecks.push({ x: Math.cos(a) * dd, y: Math.sin(a) * dd, r: rng() < 0.3 ? 1 : 0 });
+        }
+        const drips = [];
+        const nd = r > 4 ? 1 + Math.floor(rng() * 3) : 0;
+        for (let j = 0; j < nd; j++) drips.push({ x: (rng() - 0.5) * r * 1.4, len: 6 + rng() * 22, w: rng() < 0.5 ? 1 : 2 });
+        out.push(push({
+          x: cx, y: cy, life: o.life || (2600 + rng() * 1600), pop: false,
+          paint(c, it, u) {
+            c.save();
+            c.translate(Math.round(it.x), Math.round(it.y));
+            c.scale(k, k);
+            const run = Math.min(1, it.t / 1400);
+            drips.forEach(d => {
+              const L = Math.round(d.len * run);
+              PIX.rect(c, Math.round(d.x), 0, d.w, L, '#5a0c14');
+              PIX.rect(c, Math.round(d.x) - (d.w > 1 ? 0 : 0), L, d.w + 1, 2, '#6e1018');
+            });
+            lobes.forEach(l => PIX.disc(c, Math.round(l.x), Math.round(l.y), Math.round(l.r) + 1, '#3a060c'));
+            lobes.forEach(l => PIX.disc(c, Math.round(l.x), Math.round(l.y), Math.round(l.r), '#8c1420'));
+            lobes.slice(0, 2).forEach(l => PIX.rect(c, Math.round(l.x - l.r * 0.4), Math.round(l.y - l.r * 0.5), 1, 1, 'rgba(255,180,170,.55)'));
+            flecks.forEach(f => PIX.disc(c, Math.round(f.x), Math.round(f.y), f.r, '#7a1018'));
+            c.restore();
+          },
+        }));
+      }
+      return out;
+    },
+
     /* a scene change takes its marks with it */
     clear() { items.length = 0; if (lc && lay) lc.clearRect(0, 0, lay.width, lay.height); },
     live() { return items.length; },
@@ -18230,6 +18303,8 @@ const E = {
      who still thinks it is a case. */
   onRunOver() {
     META.save();
+    /* there is no ward after this one: he cleans up after himself */
+    if (G.duel && G.duel.opp && G.duel.opp.rook) return STORY.rookWins();
     return STORY.rushToWard();
   },
 
@@ -18382,6 +18457,8 @@ const E = {
     /* the Bullfrog himself, on the floor of his own flat: that is the end of
        the story, and the player picks which end it is */
     if (G.duel.opp.boss === 'owner') return { learned, finale: true };
+    /* and the man who wrote the Code, on the plastic in his own basement */
+    if (G.duel.opp.rook) return { learned, finale: 'code' };
     if (G.blind === 2) return { learned, heatDue: E.heatDue() };
     E.nextBlind();
     return { learned };
@@ -18644,6 +18721,8 @@ const SCENE = (() => {
   let back = null;               // painted backdrop canvas
   let backBand = '';             // the hour it was painted at
   let cv, ctx, K = 4;            // display canvas + integer scale
+  let R = 4;                     // buffer pixels per room pixel (see scale)
+  let fullBuf = false;           // the harness can ask for the old full-size buffer
   let raf = null, t0 = 0, last = 0;
   let cam = 0, camWant = 0, drag = null;
   /* THE WALKER HAS TWO AXES NOW.
@@ -18892,16 +18971,37 @@ const SCENE = (() => {
       while (k > 2 && w / k < 190) k--;
     }
     K = k;
-    cv.width = Math.ceil(w / K) * K;
+    /* ============================================================
+       THE BUFFER IS NOT THE SCREEN.
+
+       The canvas used to be exactly as big as the window -- 1280 by
+       800 on an ordinary laptop -- and every room pixel was filled as
+       a six-by-six block of it, every frame: the room, the cast, the
+       rain, the lamp cones, the grime. Profiled under a slower CPU
+       that came to seventeen frames a second in the kitchen and
+       forty in a street, and nearly all of it was the browser
+       rasterising blocks it was about to throw away.
+
+       The finest thing ever drawn in a room is the rig, at FOOT rig
+       pixels to the room pixel. So the buffer only needs THAT many
+       pixels per room pixel -- three, at six on screen -- and the
+       browser blows it up the rest of the way with nearest-neighbour,
+       which it does for free on the compositor. Same picture, pixel
+       for pixel. A quarter of the fill.
+       ============================================================ */
+    R = fullBuf ? K : FOOT / lodFor();
+    if (K % R) R = K;
+    const cols = Math.ceil(w / K);
+    cv.width = cols * R;
     /* How many world rows the frame can actually hold. More than the room
        is headroom and gets a ceiling; fewer means the bottom strip of
        foreground floor goes over the edge, which nobody misses — cropping
        the TOP would take the lamps, the signs and the arches with it. */
     const rows = Math.max(60, Math.floor(h / K));
     const worldH = Math.min(rows, H + ceilMax());
-    cv.height = worldH * K;
-    cv.style.width = cv.width + 'px';
-    cv.style.height = cv.height + 'px';
+    cv.height = worldH * R;
+    cv.style.width = cols * K + 'px';
+    cv.style.height = worldH * K + 'px';
     /* SETTING canvas.width WIPES THE CONTEXT — including the one flag that
        matters here. Without this the whole room is drawn through a bilinear
        filter at K times its size, which is exactly what "the scene is
@@ -18910,8 +19010,24 @@ const SCENE = (() => {
     oy = Math.max(0, worldH - H);    // the room stands on the bottom edge
   }
 
-  function viewW() { return Math.ceil(cv.width / K); }
-  function viewH() { return Math.floor(cv.height / K); }
+  function viewW() { return Math.ceil(cv.width / R); }
+  /* ============================================================
+     A ROOM-WIDE PICTURE, BUT ONLY THE PART IN FRAME.
+
+     The painted room is baked once at its full width -- 740 pixels
+     for the house -- and it was blitted whole every frame, and the
+     foreground with it: seven and a half screens of pixels a frame
+     to show one. The frame holds a third of the kitchen. Asking for
+     just those columns and rows is the same picture for a third of
+     the work, and on a machine that uploads the source it is the
+     difference between shipping a bitmap and shipping a crop.
+     ============================================================ */
+  function blitRoom(c, src, dy) {
+    const x0 = Math.max(0, Math.round(cam)), w = Math.min(src.width - x0, viewW() + 1);
+    const y0 = Math.max(0, -oy - dy), h = Math.min(src.height - y0, viewH() + 1);
+    if (w > 0 && h > 0) c.drawImage(src, x0, y0, w, h, x0, dy + y0, w, h);
+  }
+  function viewH() { return Math.floor(cv.height / R); }
 
   function open(d) {
     close();
@@ -20141,7 +20257,7 @@ const SCENE = (() => {
     c.imageSmoothingEnabled = false;
     c.clearRect(0, 0, cv.width, cv.height);
     c.save();
-    c.scale(K, K);
+    c.scale(R, R);
     /* THE CEILING. Whatever headroom the frame has over the room gets a
        real ceiling in it: joists, the cords the lamps hang off, and the
        dark these places keep up there. */
@@ -20217,7 +20333,7 @@ const SCENE = (() => {
 
     c.translate(-Math.round(cam), oy);
     /* the painted room, pulled up so its row 0 lands on the frame's row 0 */
-    c.drawImage(back, 0, -PAD);
+    blitRoom(c, back, -PAD);
 
     /* ---- THE BACKGROUND, seen through the holes in the room ----
        A wall with nothing behind it is a flat. Every room declares the
@@ -20353,7 +20469,7 @@ const SCENE = (() => {
     const foreY = (def.foreY === undefined ? def.floorY + 0.25 : def.foreY);
     if (fore || def.onPaintFront) {
       cast.push({ y: foreY, draw: () => {
-        if (fore) c.drawImage(fore, 0, -PAD);
+        if (fore) blitRoom(c, fore, -PAD);
         if (def.onPaintFront) def.onPaintFront(c, T);
       } });
     }
@@ -20528,7 +20644,8 @@ const SCENE = (() => {
     {
       const fo = foreCv(def, vw2);
       const off = -Math.round(cam * 1.3) % Math.max(1, fo.width - vw2);
-      c.drawImage(fo, Math.round(cam) + off, -oy);
+      const fw = Math.min(fo.width + off, vw2 + 1);
+      if (fw > 0) c.drawImage(fo, -off, 0, fw, fo.height, Math.round(cam), -oy, fw, fo.height);
     }
 
     /* ============================================================
@@ -20622,7 +20739,7 @@ const SCENE = (() => {
     const show = hover || near;
     if (show && !busy) plate(show);
     else { const pl = document.getElementById('scene-plate'); if (pl) pl.style.display = 'none'; }
-    if (def.onHud) def.onHud(c, K, viewW(), cam);
+    if (def.onHud) def.onHud(c, R, viewW(), cam);
   }
 
   /* ============================================================
@@ -20759,6 +20876,9 @@ const SCENE = (() => {
     read:   { per: 3.40, body: 'lean', prop: 'paper', arm: 'hold' },
     drink:  { per: 3.80, body: 'raise', prop: 'glass' },
     eat:    { per: 2.20, body: 'raise', prop: 'bite' },
+    /* a boy at breakfast: cereal while he waits, then his egg */
+    spoon:  { per: 1.65, body: 'raise', prop: 'spoon', chew: true },
+    dip:    { per: 2.05, body: 'raise', prop: 'soldier', chew: true },
     smoke:  { per: 4.60, body: 'raise', prop: 'cig' },
     wipe:   { per: 1.20, body: 'swing', prop: 'rag' },
     sweep:  { per: 1.70, body: 'swing', prop: 'broom' },
@@ -20798,6 +20918,37 @@ const SCENE = (() => {
       px(x, y, 5, 1, '#e8f2f6');
       px(x + 1, y + 2, 3, 4, '#8a5a1a');
       px(x, y + 6, 5, 1, 'rgba(0,0,0,.35)');
+    } else if (kind === 'spoon' || kind === 'soldier') {
+      /* WHAT A SMALL FROG EATS WITH, and what falls off it. The load is
+         on it going up and gone coming down; the crumbs leave his mouth on
+         the bite and fall to the cloth. */
+      const full = ph < 0.44;
+      if (kind === 'spoon') {
+        px(x - dir * 4, y + 1, 5, 1, '#1c1a24');            /* the handle, inked */
+        px(x - dir * 4, y, 5, 1, '#c8ced4');
+        const sx = x + (dir > 0 ? 1 : -4);
+        px(sx - 1, y - 1, 5, 3, '#1c1a24');                 /* the bowl of it */
+        px(sx, y - 1, 3, 2, '#e8eef2');
+        if (full) {
+          px(sx, y - 2, 3, 1, '#f4eedc');                   /* milk */
+          px(sx + 1, y - 2, 1, 1, '#d8a44a');               /* a flake */
+        }
+      } else {
+        /* a toast soldier, the end of it dipped in yolk */
+        const tx = x - dir * 2;
+        px(tx - 1, y - 3, 4, 8, '#1c1a24');
+        px(tx, y - 2, 2, 6, '#c89448');
+        px(tx, y - 2, 2, 1, '#e0b060');
+        if (full) px(tx, y - 3, 2, 2, '#f0a83c');
+        else px(tx, y - 2, 2, 1, '#8a5a2a');                /* bitten */
+      }
+      if (ph > 0.46 && ph < 0.80) {
+        const f = (ph - 0.46) / 0.34;
+        for (let i = 0; i < 3; i++) {
+          px(x + dir * (i - 1) * 2, Math.round(y - 3 + f * f * (10 + i * 3)), 1, 1,
+            kind === 'spoon' ? 'rgba(244,238,220,.8)' : 'rgba(200,148,72,.9)');
+        }
+      }
     } else if (kind === 'bite') {
       px(x, y, 7, 5, '#c9a24a');
       px(x, y, 7, 1, '#e2c274');
@@ -20830,7 +20981,7 @@ const SCENE = (() => {
       : (a.face === undefined ? -1 : a.face);
     /* an actor mid-line wears the talking face; the rest of the time he
        wears whatever his mood does when it is left alone */
-    const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
+    let ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
     /* ============================================================
        NO PROFILE. THE SIDE VIEW IS GONE.
 
@@ -20867,6 +21018,21 @@ const SCENE = (() => {
       else if (job.body === 'raise') {
         lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
         arm = ph > 0.20 && ph < 0.62 ? 'up' : 'reach';
+        /* ============================================================
+           AND HE CHEWS.
+
+           Eating used to be an arm going up and down with a lump in
+           the hand, and a face that never moved -- which is a frog
+           bringing a sandwich near his mouth and thinking about it.
+           Once the spoon has been to his mouth the jaw works: open,
+           shut, open, shut, on the quick count a small child chews
+           at, until the hand goes back down for more. Nobody is
+           talking; the face is the talking face because a mouth that
+           opens is a mouth that opens.
+           ============================================================ */
+        if (job.chew && !a.expr && !a.talking && ph > 0.42 && ph < 0.96) {
+          ex = Math.floor(T * 7.5) % 2 ? 'talk' : 'talk2';
+        }
       } else if (job.body === 'swing') {
         /* SIX FRAMES OF ONE SWEEP, out and back. This used to flip between
            two poses whose wrists sit eleven pixels apart on the y, so the
@@ -21262,12 +21428,24 @@ const SCENE = (() => {
     p.style.top = Math.round(Math.max(6, sy - p.offsetHeight)) + 'px';
   }
 
+  /* ============================================================
+     NOBODY IS LOOKING AT THE ROOM.
+
+     A first-person shot -- the eggs, the taps, the lock -- goes up
+     as an opaque card over the whole window, and the room under it
+     went on drawing itself sixty times a second, dream layer and
+     all, behind a picture that hid every pixel of it. The breakfast
+     was two full scenes a frame. While something covers the room it
+     keeps its clock and its walkers moving, and skips the paint.
+     ============================================================ */
+  let covered = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame);
     if (!def) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     step(dt);
+    if (covered > 0) return;
     draw(now);
   }
 
@@ -21288,12 +21466,19 @@ const SCENE = (() => {
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
     /* what the frame is actually rendering at, for the resolution probe */
     debugRes() {
-      return { K, H, FOOT, down: lodFor(), oy, cam, viewW: viewW(), viewH: viewH(),
+      return { K, R, H, FOOT, down: lodFor(), oy, cam, viewW: viewW(), viewH: viewH(),
         floorY: def ? def.floorY : null, roomW: def ? def.w : null };
     },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
     /* the harness compares the shot at both available scales */
     debugForceK(k) { forceK = k || 0; scale(); },
+    /* something opaque is over the whole room; counted, so two covers
+       nested inside each other do not uncover it early */
+    cover(on) { covered = Math.max(0, covered + (on ? 1 : -1)); },
+    covered() { return covered > 0; },
+    /* the old buffer, the size of the window, so a probe can prove the
+       quarter-size one draws the same picture */
+    debugFullBuffer(on) { fullBuf = !!on; scale(); },
     /* the live gait, so a probe can prove the bounce is actually moving him
        rather than take a picture of one frame of it and guess */
     debugGait() {
@@ -27079,7 +27264,7 @@ const JOBS = (() => {
         + Math.round(hi[2] + (lo[2] - hi[2]) * t) + ')';
       c.fillRect(0, y, FW, 1);
     }
-    ART.dither(c, 0, 0, FW, SURF + 2, 'rgba(0,0,0,.30)', 0.12, o.seed || 7);
+    ART.dither(c, 0, 0, FW, SURF + 2, 'rgba(0,0,0,.30)', o.grain === undefined ? 0.12 : o.grain, o.seed || 7);
     if (o.railY !== undefined) {
       ART.px(c, 0, o.railY, FW, 3, o.rail || 'rgba(255,255,255,.07)');
       ART.px(c, 0, o.railY + 3, FW, 2, 'rgba(0,0,0,.32)');
@@ -27415,8 +27600,16 @@ const JOBS = (() => {
       const padT = Math.floor((CH - FH) / 2), padB = CH - FH - padT;
 
       const wrap = U.el('div', 'job-card');
+      /* THE BUFFER IS THE SHOT, NOT THE SCREEN. This canvas was the size
+         of the window and every frame blitted the shot into it blown up by
+         K -- five full-screen drawImage calls a frame, which was the
+         breakfast at fourteen frames a second on a slower machine. It is
+         CW by CH now, one pixel per art pixel, and CSS does the blow-up
+         with nearest-neighbour on the compositor. Same picture. */
       const cv = document.createElement('canvas');
-      cv.width = CW * K; cv.height = CH * K;
+      cv.width = CW; cv.height = CH;
+      cv.style.width = (CW * K) + 'px';
+      cv.style.height = (CH * K) + 'px';
       cv.className = 'pix job-cv';
       wrap.appendChild(cv);
       root.appendChild(wrap);
@@ -27430,18 +27623,26 @@ const JOBS = (() => {
       /* one blit of the shot, plus four one-pixel slices stretched out to
          the edges of the screen */
       const present = () => {
-        const x0 = padL * K, y0 = padT * K, w0 = FW * K, h0 = FH * K;
-        dst.drawImage(fcv, 0, 0, FW, FH, x0, y0, w0, h0);
-        if (padL > 0) dst.drawImage(fcv, 0, 0, 1, FH, 0, y0, padL * K, h0);
-        if (padR > 0) dst.drawImage(fcv, FW - 1, 0, 1, FH, x0 + w0, y0, padR * K, h0);
+        const x0 = padL, y0 = padT, w0 = FW, h0 = FH;
+        dst.drawImage(fcv, x0, y0);
+        if (padL > 0) dst.drawImage(fcv, 0, 0, 1, FH, 0, y0, padL, h0);
+        if (padR > 0) dst.drawImage(fcv, FW - 1, 0, 1, FH, x0 + w0, y0, padR, h0);
         /* the top and bottom take the whole width that is now painted, so
            the corners are filled too */
-        if (padT > 0) dst.drawImage(cv, 0, y0, cv.width, 1, 0, 0, cv.width, padT * K);
+        if (padT > 0) dst.drawImage(cv, 0, y0, cv.width, 1, 0, 0, cv.width, padT);
         if (padB > 0) {
-          dst.drawImage(cv, 0, y0 + h0 - 1, cv.width, 1, 0, y0 + h0, cv.width, padB * K);
+          dst.drawImage(cv, 0, y0 + h0 - 1, cv.width, 1, 0, y0 + h0, cv.width, padB);
         }
       };
       requestAnimationFrame(() => wrap.classList.add('in'));
+      /* the room under this card is hidden by it, so it stops painting --
+         released exactly once, however this shot ends */
+      let uncovered = false;
+      const uncover = () => {
+        if (uncovered) return; uncovered = true;
+        if (typeof SCENE !== 'undefined' && SCENE.cover) SCENE.cover(false);
+      };
+      if (typeof SCENE !== 'undefined' && SCENE.cover) SCENE.cover(true);
 
       let round = 0, hits = 0, perfect = 0;
       let x = 0, dir = 1, live = true, flash = 0, done = false;
@@ -27465,6 +27666,10 @@ const JOBS = (() => {
 
       let last = performance.now(), T = 0;
       const step = (now) => {
+        /* TORN DOWN FROM OUTSIDE -- a skip, a scene change -- and nothing
+           called finish: this loop would go on painting a canvas nobody
+           can see for the rest of the session. It checks, and stops. */
+        if (!cv.isConnected) { done = true; uncover(); return; }
         const dt = Math.min(0.05, (now - last) / 1000);
         last = now; T += dt;
         const armed = live && T >= armAt;
@@ -27504,6 +27709,7 @@ const JOBS = (() => {
 
       const finish = () => {
         done = true;
+        uncover();
         JOBS._meter = null;
         window.removeEventListener('pointerdown', hit);
         window.removeEventListener('keydown', key);
@@ -27551,7 +27757,16 @@ const JOBS = (() => {
      the whole first-person pass was for.
      --------------------------------------------------------- */
   function drawPan(c, W, H, s) {
-    povWall(c, { hi: [150, 132, 88], lo: [96, 80, 50], railY: 52, seed: 9 });
+    /* THE SAME WALLPAPER AS THE ROOM. The kitchen you walk around in is
+       papered in butter yellow with little gold sprigs on it; the close-up
+       of the same wall was sandpaper. Less grain, and the sprigs. */
+    povWall(c, { hi: [168, 146, 92], lo: [118, 96, 56], railY: 52, seed: 9, grain: 0.035 });
+    for (let y = 6; y < 50; y += 12) {
+      for (let x = ((y / 12) & 1) ? 10 : 4; x < W; x += 13) {
+        ART.px(c, x, y - 1, 1, 3, 'rgba(232,196,96,.55)');
+        ART.px(c, x - 1, y, 3, 1, 'rgba(232,196,96,.55)');
+      }
+    }
     /* the window over the sink, with the garden in it */
     ART.px(c, 18, 8, 62, 40, '#4a3a20');
     ART.px(c, 21, 11, 56, 34, '#b8d8ea');
@@ -27640,22 +27855,80 @@ const JOBS = (() => {
     SPR.ellipse(c, pcx, pcy - 1, 36, 12, '#464146');
     SPR.ellipse(c, pcx, pcy, 33, 10, '#231f23');
     ART.px(c, pcx - 30, pcy - 12, 60, 3, 'rgba(255,255,255,.10)');
-    /* the butter, sliding with the needle */
+    /* the butter, sliding with the needle, and the fat it has made */
     const bx2 = pcx - 22 + Math.round(s.x * 44);
+    SPR.ellipse(c, pcx, pcy, 30, 8, 'rgba(255,214,120,.10)');
     ART.px(c, bx2, pcy + 2, 9, 4, 'rgba(255,222,140,.44)');
-    /* THE EGG, setting as the needle travels */
+
+    /* ============================================================
+       THE EGG, a real one. The first one was an oval with a disc
+       on it. A fried egg is a lumpy puddle of white that goes from
+       glassy to opaque, a lace of crisp brown round its edge once it
+       has been in long enough, blisters that rise in the white and
+       burst, and a yolk that is a dome -- it catches the window.
+       ============================================================ */
     const cook = Math.min(1, 0.22 + s.x * 0.92);
-    const ew = Math.round(9 + cook * 13), eh = Math.round(4 + cook * 6);
-    SPR.ellipse(c, pcx - 2, pcy - 1, ew + 2, eh + 1, '#0f0d0e');
-    SPR.ellipse(c, pcx - 2, pcy - 1, ew, eh, cook > 0.88 ? '#e8d894' : '#f6efc8');
-    SPR.ellipse(c, pcx - 2, pcy - 2, Math.round(ew * 0.7), Math.round(eh * 0.6),
-      'rgba(255,255,255,.16)');
-    PIX.disc(c, pcx, pcy - 1, Math.round(3 + cook * 3), cook > 0.88 ? '#dc8420' : '#f0a83c');
-    PIX.disc(c, pcx, pcy - 2, Math.max(1, Math.round(1 + cook * 2)), '#f8cc70');
-    if (cook > 0.94) {
-      for (let i = 0; i < 6; i++) {
-        ART.px(c, pcx - 20 + i * 7, pcy - 6 - (i % 3), 3, 2, 'rgba(80,60,42,.5)');
+    const ex = pcx - 8, ey = pcy - 1;
+    const ew = Math.round(12 + cook * 10), eh = Math.round(5 + cook * 5);
+    const lumps = [[0, 0, 1], [-0.55, 0.15, 0.62], [0.5, -0.2, 0.66], [0.2, 0.45, 0.55], [-0.3, -0.45, 0.5]];
+    /* the lace first, under the white, so it shows at the rim */
+    if (cook > 0.55) {
+      const lc = cook > 0.85 ? '#8a5a2a' : '#b8844a';
+      lumps.forEach(([ox, oy2, k]) => SPR.ellipse(c, ex + Math.round(ox * ew), ey + Math.round(oy2 * eh),
+        Math.round(ew * k) + 2, Math.round(eh * k) + 1, lc));
+      for (let i = 0; i < 14; i++) {
+        const a = i / 14 * Math.PI * 2;
+        ART.px(c, Math.round(ex + Math.cos(a) * (ew + 2)), Math.round(ey + Math.sin(a) * (eh + 1)), 2, 1, lc);
       }
+    }
+    const white = cook < 0.45 ? 'rgba(246,240,214,.62)' : cook < 0.7 ? '#f2ecd2' : '#fbf7ea';
+    lumps.forEach(([ox, oy2, k]) => SPR.ellipse(c, ex + Math.round(ox * ew), ey + Math.round(oy2 * eh),
+      Math.round(ew * k), Math.round(eh * k), white));
+    SPR.ellipse(c, ex - 3, ey - 2, Math.round(ew * 0.5), Math.round(eh * 0.4), 'rgba(255,255,255,.22)');
+    /* the blisters: they rise and burst in their own time */
+    for (let i = 0; i < 5; i++) {
+      const bp = (s.T * (0.9 + i * 0.23) + i * 0.37) % 1;
+      if (bp > 0.7 || cook < 0.3) continue;
+      const bxx = ex - ew + 4 + ((i * 37) % (ew * 2 - 6)), byy = ey - 2 + ((i * 13) % 5);
+      const br = bp < 0.5 ? 1 : 0;
+      ART.px(c, bxx, byy, 2 + br, 2, 'rgba(255,255,255,.75)');
+      ART.px(c, bxx, byy + 1 + br, 2 + br, 1, 'rgba(170,150,110,.5)');
+    }
+    /* the yolk: a dome, with the window in it, and it jiggles */
+    const jig = Math.round(Math.sin(s.T * 5) * 0.6);
+    const yr = Math.round(3 + cook * 2);
+    PIX.disc(c, ex + 2, ey - 1 + jig, yr + 1, 'rgba(120,60,10,.35)');
+    PIX.disc(c, ex + 2, ey - 2 + jig, yr, cook > 0.9 ? '#e08a24' : '#f4a830');
+    PIX.disc(c, ex + 2, ey - 3 + jig, Math.max(1, yr - 1), cook > 0.9 ? '#eca040' : '#fbbc48');
+    ART.px(c, ex, ey - 4 - yr + 2 + jig, 2, 1, '#fff4c8');
+    ART.px(c, ex, ey - 3 - yr + 2 + jig, 1, 1, '#fff4c8');
+    /* ============================================================
+       THE RASHERS, beside it. Breakfast is not one egg in a pan,
+       it is the smell of the whole morning: two streaky rashers
+       along the back of the pan, fat stripe and lean, going from
+       pink to brown and curling at the ends as the needle runs.
+       ============================================================ */
+    for (let r2 = 0; r2 < 2; r2++) {
+      const rx = pcx + 13 + r2 * 2, ry = pcy - 5 + r2 * 5;
+      const lean = cook < 0.5 ? '#d4606a' : cook < 0.85 ? '#b04a3a' : '#8a3a24';
+      const fat = cook < 0.5 ? '#f2d4c8' : cook < 0.85 ? '#e8c090' : '#d8a060';
+      for (let i = 0; i < 17; i++) {
+        const wob = Math.round(Math.sin(i * 0.7 + r2) * 1 + (i > 13 ? (i - 13) * cook * 0.8 : 0));
+        ART.px(c, rx + i, ry - wob - 1, 1, 5, '#2a1612');
+        ART.px(c, rx + i, ry - wob, 1, 3, lean);
+        ART.px(c, rx + i, ry - wob + 1, 1, 1, fat);
+        if (i % 5 === 2) ART.px(c, rx + i, ry - wob, 1, 1, fat);
+      }
+    }
+
+    /* and the fat spits */
+    for (let i = 0; i < 7; i++) {
+      const sp2 = (s.T * 1.7 + i * 0.41) % 1;
+      if (sp2 > 0.5) continue;
+      const k2 = sp2 / 0.5;
+      const sxx = pcx - 26 + ((i * 53) % 52) + Math.round(Math.cos(i) * k2 * 6);
+      const syy = pcy - 4 - Math.round(Math.sin(k2 * Math.PI) * (8 + i % 3 * 4));
+      ART.px(c, sxx, syy, 1, 1, 'rgba(255,248,220,' + (0.85 - k2).toFixed(2) + ')');
     }
     /* the handle, off to the right, and the steam over all of it */
     ART.px(c, pcx + 36, pcy - 4, 34, 7, '#1c1a1c');
@@ -27670,9 +27943,20 @@ const JOBS = (() => {
     SPR.ellipse(c, 196, SURF + 7, 20, 8, '#f0e8d4');
     SPR.ellipse(c, 196, SURF + 6, 17, 6, '#fbf7ec');
     SPR.ellipse(c, 196, SURF + 6, 12, 4, '#efe7d2');
+    /* two triangles of toast already on it, buttered */
+    for (let i = 0; i < 2; i++) {
+      const tx = 184 + i * 9;
+      for (let r3 = 0; r3 < 6; r3++) {
+        ART.px(c, tx + r3, SURF + 2 + r3, 8 - r3, 1, r3 === 0 ? '#e0b060' : '#c89448');
+      }
+      ART.px(c, tx + 1, SURF + 3, 3, 1, 'rgba(255,236,160,.8)');
+    }
     for (let i = 0; i < s.hits; i++) {
-      SPR.ellipse(c, 190 + i * 7, SURF + 6, 7, 3, '#e8d894');
-      PIX.disc(c, 190 + i * 7, SURF + 6, 2, '#f0a83c');
+      const px2 = 198 + i * 7;
+      SPR.ellipse(c, px2, SURF + 8, 8, 3, '#b8844a');
+      SPR.ellipse(c, px2, SURF + 7, 7, 3, '#fbf7ea');
+      PIX.disc(c, px2 + 1, SURF + 6, 2, '#f4a830');
+      ART.px(c, px2, SURF + 5, 1, 1, '#fff4c8');
     }
 
     /* ---- AND YOUR OWN TWO ARMS ---- */
@@ -27687,12 +27971,17 @@ const JOBS = (() => {
       k: 0.48, fist: true, hy: 4 });
     /* and his left, holding the slice, coming in low and left of the egg so
        the egg is never behind it */
-    ART.px(c, 38, 92, 46, 5, '#1c1a1c');
-    ART.px(c, 38, 92, 46, 2, '#4a4448');
-    ART.px(c, 74, 86, 24, 12, '#0f0d0e');
-    ART.px(c, 75, 87, 22, 10, '#7c848a');
-    ART.px(c, 75, 87, 22, 3, '#a2aab0');
-    for (let i = 0; i < 4; i++) ART.px(c, 78 + i * 5, 90, 2, 6, '#4a5058');
+    ART.px(c, 38, 92, 30, 5, '#1c1410');                    /* the wooden handle */
+    ART.px(c, 39, 93, 28, 3, '#8a5a32');
+    ART.px(c, 39, 93, 28, 1, '#b07a48');
+    ART.px(c, 66, 92, 10, 3, '#1c1a1c');                    /* the neck */
+    ART.px(c, 66, 93, 10, 1, '#9aa2a8');
+    ART.px(c, 74, 86, 24, 12, '#0f0d0e');                   /* the slotted head */
+    ART.px(c, 75, 87, 22, 10, '#8c949a');
+    ART.px(c, 75, 87, 22, 2, '#c4ccd2');
+    ART.px(c, 75, 95, 22, 2, '#5e666c');
+    for (let i = 0; i < 4; i++) ART.px(c, 78 + i * 5, 89, 2, 6, '#2a2e34');
+    ART.px(c, 76, 88, 1, 8, 'rgba(255,255,255,.35)');
     povArm(c, { x0: 2, y0: 148, x1: 46, y1: 88, w0: 24, w1: 13, sgn: -1,
       k: 0.46, fist: true, hy: 4 });
   }
@@ -29609,6 +29898,25 @@ const PLACE_CHAT = {
   ],
 };
 
+/* ============================================================
+   THE VOICE THAT IS NOT TALKING.
+
+   After each one there is a line, in the lobed balloon, that is
+   nobody's but yours -- cold, and counting. It is also where the
+   game plants what the finale pays off: the Driver laughs that you
+   work for the wrong frog, the Enforcer swears he never saw your
+   door, and the captain always has an answer for both.
+   ============================================================ */
+const PASSENGER = {
+  1: 'ONE. HE HAD ENVELOPES IN HIS COAT AND NOTHING IN HIS EYES. NEITHER DO I, NOW.',
+  2: 'TWO. INK ON HIS FINGERS. RED ON MINE. THE LEDGER BALANCES...',
+  3: 'THREE. HE LAUGHED AT THE END. HE SAID I WAS WORKING FOR THE WRONG FROG...',
+  4: 'FOUR. SIX YEARS I WAITED FOR THIS ONE. IT TOOK FOUR MINUTES...',
+  5: 'FIVE. FAMILY. I HAD ONE OF THOSE ONCE. FOR A WHILE...',
+  6: 'SIX. THE CAPTAIN SAID HE WAS AT MY DOOR. HE SWORE ON HIS KNEES HE NEVER SAW IT...',
+  7: 'SEVEN. THE CAPTAIN SAYS THEY ALL LIE AT THE END. THE CAPTAIN WOULD KNOW...',
+};
+
 const STORY = {
 
   /* ================= state ================= */
@@ -29689,6 +29997,18 @@ const STORY = {
       from: Math.min(a.from, SCENE.def.w - 10),
       to, ms: 1700,
     });
+    /* back in the bullpen with another one behind you: the slide, and the
+       voice */
+    if (kind === 'precinct' && G.passenger) {
+      const line = G.passenger;
+      G.passenger = null;
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall(G.slides === 1 ? 'ONE DROP. ONE SLIDE. THE BOX GOES BACK IN THE VENT.'
+          : 'SLIDE ' + G.slides + ' IN THE BOX');
+      }
+      await TUTOR.say(line, { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t,
+        kind: 'think', hold: 3400, top: true });
+    }
   },
 
   /* ============================================================
@@ -31589,6 +31909,12 @@ const STORY = {
   advance() {
     const ch = STORY.chapter();
     STORY.note('CLOSED: ' + ch.title + '.');
+    /* ONE DROP, ONE SLIDE. The same thing off every one of them: a drop
+       of him on a glass slide, and the slide in a box in the air vent of
+       a flat nobody visits. Bookkeeping only here -- the voice that
+       counts them is said when you are back in the bullpen. */
+    G.slides = (G.slides || 0) + 1;
+    G.passenger = PASSENGER[ch.id] || null;
     G.chapter = Math.min(CHAPTERS.length, (G.chapter || 1) + 1);
     G.hadCoffee = false;
     G.mayTalked = false;
@@ -31667,35 +31993,130 @@ const STORY = {
     UI.render();
   },
 
-  /* he is down and it is the last chapter: the player picks */
-  async endgame() {
+  /* ============================================================
+     HE IS DOWN, AND HE HAS SOMETHING TO SAY.
+
+     The Bullfrog on the floor of his own flat is where the file was
+     always going to end. It is where the story turns over instead.
+     He did not take them. Six years ago you shot a boy in a doorway,
+     a runner for him, and the boy's name was Rook -- and the boy's
+     father took a son for a son, left you a cigarette to follow to
+     Paris, signed you into his own precinct, and gave you a Code to
+     kill the rest of the Bullfrog's family by. Everything you did
+     since the letter, you did for him.
+
+     The proof was in your kitchen that night: two cups, and one of
+     them not yours. A Brigade mug, six years before you ever saw
+     Paris. Then there are three ways out of the room, and one of
+     them is back down the stairs to him.
+     ============================================================ */
+  async endgame(kind) {
+    if (kind === 'code') {
+      G.ending = 'code';
+      META.bump('wins');
+      STORY.note('ENDING: HE WENT INTO THE CANAL IN HIS OWN PLASTIC.');
+      META.save();
+      G.wonRun = true;
+      await CINE.ending('code');
+      G.phase = 'ending';
+      UI.render();
+      return;
+    }
+    const BULL = { name: 'THE BULLFROG', nameCol: PIX.PAL.R, rim: PIX.PAL.d };
+    const ME = { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t };
+    CINE.letterbox(true);
+    await TUTOR.say('I DID NOT TAKE YOUR FAMILY, DETECTIVE.', BULL);
+    await TUTOR.say('I KNEW YOU WERE COMING. I DID NOT KNOW WHY UNTIL YOU KILLED MY DRIVER.', BULL);
+    await TUTOR.say('SIX YEARS AGO YOU SHOT A BOY IN A DOORWAY. HE RAN MY ENVELOPES. HIS NAME WAS ROOK.', BULL);
+    await TUTOR.say('HIS FATHER NEVER FORGAVE ME FOR HIRING HIM. OR YOU FOR THE DOORWAY.', BULL);
+    await TUTOR.say('A SON FOR A SON. AND THEN HE NEEDED SOMEBODY WHO WOULD KILL THE REST OF US FOR HIM.', BULL);
+    await TUTOR.say('WHO SENT YOU TO PARIS? WHO LEFT YOU THE CIGARETTE?', BULL);
+    await TUTOR.say('THE SECOND CUP...', Object.assign({ kind: 'think' }, ME));
+    CINE.letterbox(false);
+    await CINE.recall();
+    CINE.letterbox(true);
+    await TUTOR.say('SIX YEARS I PUT INTO THAT FAMILY. HE WAS NOT TALKING ABOUT THEIRS...',
+      Object.assign({ kind: 'think' }, ME));
+    await TUTOR.say('ONE. BE SURE. TWO. ONLY THE ONES WHO HAVE IT COMING.', ME);
+    await TUTOR.say('I AM SURE.', ME);
+    CINE.letterbox(false);
+    STORY.note('HE WAS NEVER THE ONE. THE CAPTAIN WAS.');
+
     const clean = STORY.canFinish() && !G.badgePulled;
     let idx = -1;
     while (idx < 0) {
       idx = await CINE.pick({
         head: 'HE IS ON THE FLOOR AND STILL BREATHING',
-        sub: clean ? 'THE FILE IS IN YOUR COAT AND THE BADGE IS STILL YOURS'
-                   : 'NO FILE. NO BADGE. NOBODY WAITING ON PAPERWORK.',
+        sub: clean ? 'THE FILE IS IN YOUR COAT. THE MAN WHO GAVE IT TO YOU IS FOUR STREETS AWAY'
+                   : 'NO FILE. NO BADGE. AND THE MAN WHO WROTE THE CODE IS FOUR STREETS AWAY',
         cancel: false,
         items: [
-          { label: 'THE BADGE', sub: clean ? 'CUFF HIM' : 'NOTHING TO CHARGE HIM WITH',
+          { label: 'THE BADGE', sub: clean ? 'CUFF HIM. ROOK WALKS' : 'NOTHING TO CHARGE HIM WITH',
             art: ART.art('badge', 3), dim: !clean },
-          { label: 'THE BULLET', sub: 'WHAT HE DID AT YOUR DOOR',
+          { label: 'THE BULLET', sub: 'FINISH WHAT ROOK STARTED',
+            art: ART.art('gunprop', 3) },
+          { label: 'THE CODE', sub: 'HE WROTE IT. HE CAN DIE BY IT',
             art: ART.art('gunprop', 3) },
         ],
       });
     }
+    if (idx === 2) { await STORY.rookDuel(); return; }
     if (idx === 0 && clean) {
       G.ending = 'good';
       META.bump('wins');
-      STORY.note('ENDING: HE WENT DOWN IN A COURTROOM.');
+      STORY.note('ENDING: HE WENT DOWN IN A COURTROOM. ROOK PINNED THE MEDAL ON YOU.');
     } else {
       G.ending = 'bad';
-      STORY.note('ENDING: HE WENT DOWN IN THE DARK.');
+      STORY.note('ENDING: HE WENT DOWN IN THE DARK. ROOK SENT FLOWERS.');
     }
     META.save();
     G.wonRun = true;
     await CINE.ending(G.ending);
+    G.phase = 'ending';
+    UI.render();
+  },
+
+  /* ============================================================
+     THE PRECINCT, AFTER HOURS.
+
+     The last table in the game is in his own basement, with his
+     own cigar going, and he is the only frog in Paris who knows
+     every rule you play by -- because he wrote them. It is a duel
+     like any other, and the only one with nothing after it: win
+     and he goes onto the plastic, lose and he files you under the
+     Bullfrog and goes home.
+     ============================================================ */
+  async rookDuel() {
+    SCENE.close();
+    await CINE.driveTo('THE PRECINCT. AFTER HOURS.');
+    G.blind = 2;
+    E.startBlind();
+    const o = G.duel.opp;
+    Object.assign(o, {
+      name: 'CAPTAIN ROOK', boss: null, frog: null, rook: true,
+      def: Object.assign({}, HANDLER_DEF), traits: [],
+      hp: 10, maxHP: 10, aggro: 0.66,
+    });
+    G.hearts = E.maxHP();
+    G.chapter = CHAPTERS.length;
+    G.phase = 'blind';
+    E.sitDown();
+    UI.render();
+    await U.sleep(900);
+    if (typeof TALK !== 'undefined') await TALK.line('YOU TOOK YOUR TIME, SON. SIT DOWN.', 2600);
+  },
+
+  /* he wins, and he cleans up after himself */
+  async rookWins() {
+    /* the death card plays first; wait for the screen to be ours */
+    await U.sleep(1600);
+    for (let i = 0; i < 120 && CINE.busy; i++) await U.sleep(100);
+    SCENE.close();
+    if (typeof DUEL !== 'undefined' && DUEL.stop) DUEL.stop();
+    G.ending = 'rook';
+    STORY.note('ENDING: THE CAPTAIN CLEANED UP AFTER HIMSELF.');
+    META.save();
+    await CINE.ending('rook');
     G.phase = 'ending';
     UI.render();
   },
@@ -31789,6 +32210,11 @@ const MENU = (() => {
       };
     });
   })();
+  const RAIN_SHADES = 8;
+  const RAIN_COL = Array.from({ length: RAIN_SHADES }, (_, i) =>
+    'rgba(170,205,235,' + (0.10 + 0.26 * i / (RAIN_SHADES - 1)).toFixed(3) + ')');
+  RAIN.forEach(d => { d.bk = Math.round((d.a - 0.10) / 0.26 * (RAIN_SHADES - 1)); });
+  const RAIN_BY_SHADE = RAIN.slice().sort((a, b) => a.bk - b.bk);
   /* and what it does when it lands */
   const SPLASH = (() => {
     const rng = U.mulberry32(19840517);
@@ -32081,20 +32507,28 @@ const MENU = (() => {
 
   /* the rain, the splashes and the muzzle flash: all in front */
   function onPaintFore(c, T, cam, vw) {
-    /* ---- the rain ---- */
+    /* ---- the rain ----
+       ONE FILL PER SHADE, NOT ONE PER PIXEL. Two hundred and sixty drops
+       at six or seven pixels each was seventeen hundred separate fills a
+       frame, each printing its own rgba string -- the single biggest cost
+       on the title card. The drops come in eight shades; each shade is one
+       path of little squares and one fill. */
     const span = 150;
-    for (const d of RAIN) {
+    let bk = -1;
+    for (const d of RAIN_BY_SHADE) {
+      if (d.bk !== bk) {
+        if (bk >= 0) { c.fillStyle = RAIN_COL[bk]; c.fill(); }
+        bk = d.bk; c.beginPath();
+      }
       const y = ((d.y * span + T * d.sp) % span) - 18;
       /* ON A SLANT, and the slant comes off the same fall the drop is
          doing -- rain that goes straight down in a still frame reads as a
          screen wipe, and rain whose angle is unrelated to its speed reads
          as confetti. */
       const x = cam - 10 + ((d.x * (vw + 40) + T * 14 * d.depth) % (vw + 40)) - y * 0.16;
-      for (let k = 0; k < d.len; k++) {
-        px(c, Math.round(x + k * 0.16), Math.round(y + k), 1, 1,
-          'rgba(170,205,235,' + d.a.toFixed(3) + ')');
-      }
+      for (let k = 0; k < d.len; k++) c.rect(Math.round(x + k * 0.16), Math.round(y + k), 1, 1);
     }
+    if (bk >= 0) { c.fillStyle = RAIN_COL[bk]; c.fill(); }
     /* ---- what it does when it lands ---- */
     for (const s of SPLASH) {
       const ph = (T * s.sp + s.ph) % 1;
@@ -32161,12 +32595,43 @@ const MENU = (() => {
   }
 
   /* somebody comes out of the alley. Not a character -- a coat. */
+  /* ============================================================
+     THREE COATS, NOT AN ENDLESS SUPPLY OF THEM.
+
+     Every walker used to be keyed off how many walkers there had
+     been -- mk0, mk1, mk2 -- and the sprite cache is keyed on that,
+     so every single walk-in rebuilt its frog from scratch: eight
+     walk frames, each face, each inked edge, a hitch you could see
+     every time something came out of the alley. And a title screen
+     left open overnight grew the cache without limit. There are
+     three coats. They are keyed as three coats.
+     ============================================================ */
+  const COATS = ['vig', 'cage', 'collector'];
   function walker(i) {
+    const name = COATS[i % 3];
     return {
       id: 'menu_walk' + i, x: ALLEY + 26, y: FY,
-      key: 'mk' + i, def: FROG_DEFS[['vig', 'cage', 'collector'][i % 3]] || FROG_DEFS.player,
+      key: 'mk_' + name, def: FROG_DEFS[name] || FROG_DEFS.player,
       face: -1, mood: 'hard', still: false,
     };
+  }
+  /* and the first one to come out is built while he is still smoking:
+     the hold is three and a half seconds of nothing to draw but rain */
+  function prewarm() {
+    if (!SCENE.rig) return;
+    const jobs = [];
+    COATS.forEach(name => {
+      const d = { key: 'mk_' + name, def: FROG_DEFS[name] || FROG_DEFS.player };
+      for (let f = 0; f < (SPR.WALK_FRAMES || 8); f++) {
+        ['angry', 'neutral', 'blink', 'squint'].forEach(ex => jobs.push(() => SCENE.rig(d, f, -1, false, ex, '')));
+      }
+    });
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(() => fn({ timeRemaining: () => 8 }), 30));
+    const run = (dl) => {
+      while (jobs.length && live && dl.timeRemaining() > 4) jobs.shift()();
+      if (jobs.length && live) idle(run);
+    };
+    idle(run);
   }
 
   async function reel() {
@@ -32289,6 +32754,7 @@ const MENU = (() => {
     if (typeof TOON !== 'undefined') TOON.clear();
     SCENE.open(street());
     SCENE.busy(true);                 /* nothing here is clickable */
+    prewarm();
     SCENE.place(HIM, 1);
     SCENE.meArm('up');
     camA = camB = CAM; camT = 1;
@@ -33800,13 +34266,20 @@ const UI = {
 
   /* the last card of the story: which ending you got, and the log */
   buildEnding(app) {
-    const good = G.ending === 'good';
+    const END = {
+      good: ['CASE CLOSED', PIX.PAL.G,
+        'HE IS IN A CELL AND YOU ARE STILL A COP. THE MAN WHO TOOK THEM PINNED A MEDAL ON YOU.'],
+      bad: ['CASE BURIED', PIX.PAL.R,
+        'HE IS IN THE GROUND AND SO IS THE FILE. THE MAN WHO TOOK THEM SENT FLOWERS.'],
+      code: ['THE CODE', PIX.PAL.N,
+        'ONE. BE SURE. TWO. ONLY THE ONES WHO HAVE IT COMING. HE HAD IT COMING.'],
+      rook: ['CASE CLOSED', PIX.PAL.R,
+        'BY HIM. HE CLEANED UP AFTER HIMSELF, AND NOBODY ASKED HOW.'],
+    }[G.ending] || ['CASE BURIED', PIX.PAL.R, 'NOBODY WROTE IT DOWN.'];
     const wrap = U.el('div', 'end-wrap');
-    wrap.appendChild(UI.wrap(good ? 'CASE CLOSED' : 'CASE BURIED', 16,
-      { scale: 7, color: good ? PIX.PAL.G : PIX.PAL.R, outline: PIX.PAL.K }));
-    wrap.appendChild(UI.wrap(good
-      ? 'HE IS IN A CELL AND YOU ARE STILL A COP. THE FILE HELD.'
-      : 'HE IS IN THE GROUND AND SO IS THE FILE. NOBODY WROTE IT DOWN.', 40,
+    wrap.appendChild(UI.wrap(END[0], 16,
+      { scale: 7, color: END[1], outline: PIX.PAL.K }));
+    wrap.appendChild(UI.wrap(END[2], 40,
       { scale: 3, color: PIX.PAL.w }));
     const log = U.el('div', 'end-log');
     (G.log || []).slice(-8).forEach(line => {
@@ -34420,7 +34893,7 @@ const DUEL = {
     DUEL.shake = 0; DUEL.redPulse = 0; DUEL.whitePulse = 0;
     DUEL.opp = { recoil: 0, flash: 0, fall: -1, gone: false };
     DUEL.youFall = false;
-    DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0;
+    DUEL.corpse = false; DUEL.pool = 0; DUEL.jiggle = 0; DUEL.wallBlood = [];
     DUEL.dark = 0; DUEL.lamp = 1; DUEL.moths = [];
     DUEL.cocked = false; DUEL.cyl = 0; DUEL.cylT = 0; DUEL.smoke = [];
     DUEL.reach = null; DUEL.hoverSpot = -1; DUEL.hoverStain = -1; DUEL.react = null; DUEL.myGore = 0; DUEL.blood = []; DUEL.dying = 0; DUEL.slug = null; DUEL.panX = 0; DUEL.panT = 0;
@@ -34543,7 +35016,7 @@ const DUEL = {
     if (DUEL.opp.flash > 0) DUEL.opp.flash -= 0.07;
     if (DUEL.opp.fall >= 0 && DUEL.opp.fall < 1) DUEL.opp.fall = Math.min(1, DUEL.opp.fall + 0.035);
     if (DUEL.exprTimer > 0 && --DUEL.exprTimer === 0) DUEL.exprName = DUEL.exprBase();
-    if (DUEL.corpse && DUEL.pool < 26) DUEL.pool += 0.12;
+    if (DUEL.corpse && DUEL.pool < 44) DUEL.pool += DUEL.pool < 26 ? 0.12 : 0.05;
     if (DUEL.muzzle && ++DUEL.muzzle.t > 7) DUEL.muzzle = null;
     if (DUEL.cylT > 0) { DUEL.cylT = Math.max(0, DUEL.cylT - 0.14); DUEL.cyl += 0.14; }
     if (DUEL.kick > 0.002) DUEL.kick *= 0.79; else DUEL.kick = 0;
@@ -34689,7 +35162,7 @@ const DUEL = {
     x.closePath(); x.fill();
     x.restore();
 
-    if (DUEL.room !== 'back') DUEL.drawHouse(x);
+    if (DUEL.room !== 'back') { DUEL.drawHouse(x); DUEL.drawWallBlood(x); }
 
     /* --- table shadow, grounding it on the boards --- */
     x.globalAlpha = 0.35;
@@ -35003,6 +35476,54 @@ const DUEL = {
       if (y % 7 === 0) PIX.rect(x, -60, y, 480, 1, 'rgba(0,0,0,.20)');
     }
     PIX.rect(x, -60, HZ - 1, 480, 2, P.K);
+
+    /* ============================================================
+       THE PLASTIC.
+
+       The back room was a cellar with a drain in it. It is a kill
+       room now, the way a careful man does it: builder's sheeting
+       stapled up over the block wall from a batten under the
+       ceiling and laid across the floor under where he is going to
+       be, so that at the end of the night the whole room rolls up
+       and goes into the canal with him. The sheets are cloudy, they
+       sag between the staples, they fold where they hit the floor,
+       and they have been used before -- the brown on them is old.
+       ============================================================ */
+    PIX.rect(x, -60, -DUEL.OY, 480, 4, '#3a3226');                 /* the batten */
+    for (let sx = -60; sx < 420; sx += 58) {
+      /* one sheet: a cloudy panel, lighter down the folds */
+      PIX.rect(x, sx, -DUEL.OY + 3, 56, HZ + DUEL.OY - 1, 'rgba(210,222,230,.07)');
+      for (let f = 0; f < 4; f++) {
+        const fx = sx + 7 + f * 13 + ((sx / 58 | 0) % 2) * 3;
+        PIX.rect(x, fx, -DUEL.OY + 4, 1, HZ + DUEL.OY - 4, 'rgba(235,245,250,.10)');
+        PIX.rect(x, fx + 1, -DUEL.OY + 4, 1, HZ + DUEL.OY - 4, 'rgba(0,0,0,.10)');
+      }
+      /* the sag between the staples */
+      for (let i = 0; i < 56; i++) {
+        const sag = Math.round(Math.sin(i / 56 * Math.PI) * 3);
+        PIX.rect(x, sx + i, -DUEL.OY + 4 + sag, 1, 1, 'rgba(235,245,250,.16)');
+      }
+      PIX.rect(x, sx, -DUEL.OY + 2, 2, 3, P.M);                   /* staples */
+      PIX.rect(x, sx + 54, -DUEL.OY + 2, 2, 3, P.M);
+      /* the seam: grey tape down it */
+      PIX.rect(x, sx + 55, -DUEL.OY, 4, HZ + DUEL.OY, 'rgba(150,154,158,.34)');
+    }
+    /* the floor sheet, under him and out to the drain, creased */
+    SPR.ellipse(x, 176, FY - 16, 150, 24, 'rgba(210,222,230,.07)');
+    for (let i = 0; i < 6; i++) {
+      PIX.rect(x, 40 + i * 44, FY - 30 + (i % 3) * 5, 30, 1, 'rgba(235,245,250,.12)');
+    }
+    /* and what is left on it from the last time: old brown, not red */
+    const OLD = [[12, -30, 9], [70, -52, 5], [118, -20, 7], [214, -44, 11], [262, -12, 6], [330, -38, 8], [150, -64, 4]];
+    OLD.forEach(([ox, oy, r]) => {
+      PIX.disc(x, ox, HZ + oy, Math.max(1, r >> 1), 'rgba(90,30,20,.42)');
+      for (let k = 0; k < r; k++) {
+        PIX.rect(x, ox + ((k * 5) % (r + 3)) - 2, HZ + oy + 2 + k * 2, 1, 2 + (k % 4), 'rgba(90,30,20,.34)');
+      }
+    });
+    /* a hand dragged down the sheet, four fingers of it */
+    for (let k = 0; k < 4; k++) PIX.rect(x, 232 + k * 3, HZ - 58, 1, 30 + (k % 2) * 6, 'rgba(110,20,24,.40)');
+
     /* the drain he is lying next to */
     SPR.ellipse(x, 268, FY - 30, 13, 5, P.K);
     SPR.ellipse(x, 268, FY - 31, 11, 4, '#15141a');
@@ -35070,9 +35591,19 @@ const DUEL = {
       x.globalAlpha = 1;
     }
 
-    /* the pool, first and underneath: it keeps creeping outward */
+    /* the pool, first and underneath: it keeps creeping outward, from
+       his HEAD, because that is where it is coming from */
     SPR.ellipse(x, at.x - 4, at.y + 12, DUEL.pool * 2.4, DUEL.pool * 0.5, P.D);
     SPR.ellipse(x, at.x - 8, at.y + 11, DUEL.pool * 1.8, DUEL.pool * 0.34, P.d);
+    SPR.ellipse(x, at.x - 44, at.y + 4, DUEL.pool * 1.3, DUEL.pool * 0.46, P.D);
+    SPR.ellipse(x, at.x - 46, at.y + 3, DUEL.pool * 0.9, DUEL.pool * 0.3, P.d);
+    PIX.rect(x, at.x - 50, at.y + 1, Math.round(DUEL.pool * 0.5), 1, 'rgba(255,160,150,.18)');
+    /* and the spatter round it: the halo a head leaves on a floor */
+    for (let i = 0; i < 22; i++) {
+      const a = i * 2.39996, dd = 20 + ((i * 37) % 23);
+      PIX.disc(x, Math.round(at.x - 44 + Math.cos(a) * dd * 1.6), Math.round(at.y + 2 + Math.sin(a) * dd * 0.5),
+        i % 4 === 0 ? 1 : 0, i % 3 ? P.D : P.d);
+    }
 
     x.save();
     x.translate(at.x, at.y + jig);
@@ -35150,7 +35681,19 @@ const DUEL = {
     const hk = 1.1;
     x.drawImage(head, -Math.round(head.width * hk / 2), -Math.round(head.height * hk / 2),
       Math.round(head.width * hk), Math.round(head.height * hk));
+    /* WHERE IT WENT IN. A black hole with a red rim over one eye, what
+       ran out of it down the side of his face, and a flap of it on the
+       floor where the back of his head was. */
+    PIX.disc(x, -6, -6, 4, P.D);
+    PIX.disc(x, -6, -6, 3, P.K);
+    PIX.disc(x, -7, -7, 1, '#2a0408');
+    PIX.rect(x, -8, -3, 2, 12, P.d);
+    PIX.rect(x, -4, -2, 1, 9, P.D);
+    PIX.rect(x, -10, 8, 6, 2, P.d);
     x.restore();
+    /* his shirt, soaked from the collar down */
+    SPR.rrect(x, -14, -16, 11, 18, 3, 'rgba(120,14,24,.62)');
+    PIX.rect(x, -13, 0, 9, 6, 'rgba(120,14,24,.36)');
     /* his collar, closing the gap between head and chest */
     PIX.rect(x, -30, -11, 10, 21, INK);
     PIX.rect(x, -29, -10, 8, 19, suit);
@@ -36089,6 +36632,42 @@ const DUEL = {
      room with one lamp. It lands where the lead landed, it runs
      downhill from there, and it does not wipe off between pulls.
      ============================================================ */
+  /* ============================================================
+     THE WALL BEHIND HIM.
+
+     A round through a head at a card table does not stay at the
+     card table. It goes up the wall behind him in an arc -- a fan
+     of drops thrown out along the line of the shot, the heavy ones
+     running down the plaster in long thin drips -- and it stays
+     there for the rest of the night, round after round, because
+     nobody in this room is going to wash a wall.
+     ============================================================ */
+  wallBlood: [],
+  spray(n, big) {
+    const hx = 180, hy = 50;
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * (big ? 2.4 : 1.6);
+      const d = 8 + Math.random() * (big ? 70 : 38);
+      DUEL.wallBlood.push({
+        x: hx + Math.cos(a) * d * 1.5, y: hy + Math.sin(a) * d * 0.55 - 6,
+        r: Math.random() < 0.18 ? 2 : (Math.random() < 0.5 ? 1 : 0),
+        run: Math.random() < 0.35 ? 6 + Math.random() * (big ? 30 : 16) : 0,
+        grow: 0,
+      });
+    }
+    if (DUEL.wallBlood.length > 220) DUEL.wallBlood.splice(0, DUEL.wallBlood.length - 220);
+  },
+  drawWallBlood(x) {
+    if (!DUEL.wallBlood.length) return;
+    const P = PIX.PAL;
+    DUEL.wallBlood.forEach(b => {
+      b.grow = Math.min(b.run, b.grow + 0.12);
+      if (b.run) PIX.rect(x, Math.round(b.x), Math.round(b.y), 1, Math.round(b.grow), P.D);
+      if (b.run && b.grow >= b.run) PIX.rect(x, Math.round(b.x), Math.round(b.y + b.grow), 2, 1, P.d);
+      PIX.disc(x, Math.round(b.x), Math.round(b.y), b.r, b.r ? P.d : P.D);
+    });
+  },
+
   gore(n) {
     const w = DUEL.wounds[DUEL.wounds.length - 1] || { x: 0, y: -60 };
     for (let i = 0; i < n * 3; i++) {
@@ -36595,6 +37174,9 @@ const DUEL = {
         DUEL.setExpr('pain', 55);
         FX.screen.shake(ev.dmg >= 2 ? 18 : 12);
         FX.screen.flash(PIX.PAL.R, 0.3, 0.1);
+        /* up the wall behind him, and some of it on the lens */
+        DUEL.spray(ev.dmg >= 2 ? 46 : 18, ev.dmg >= 2);
+        if (ev.dmg >= 2 && typeof TOON !== 'undefined') TOON.lens(3, { r: 4, k: 4 });
         /* four-point stars off the head that just took it */
         if (typeof TOON !== 'undefined') {
           const sh = DUEL.screenXY(180, 58);
@@ -36631,6 +37213,12 @@ const DUEL = {
         if (ev.by === 'opp') DUEL.setExpr('grin', 80);
         FX.bloodBurst(60, 160, 1.6, -Math.PI / 2.4);
         FX.bloodDrip(58, 168, 190);
+        /* YOUR OWN, ON THE GLASS. You are the camera; when it is you the
+           lens takes it, and it runs. */
+        if (typeof TOON !== 'undefined') {
+          TOON.lens(3 + ev.dmg * 3, { r: 6 + ev.dmg * 2, k: 5,
+            x: window.innerWidth * 0.3, y: window.innerHeight * 0.7 });
+        }
         UI.flash('go-back');
         UI.stampBig('-' + ev.dmg, PIX.PAL.R);
         SFX.hurt();
@@ -36747,17 +37335,22 @@ const DUEL = {
   async killSequence() {
     DUEL.setPose('rest');
     SFX.lose();
+    if (typeof TOON !== 'undefined') TOON.lens(7, { r: 6, k: 5 });
+    DUEL.spray(60, true);
+    FX.gib(180, 58, 8);
+    FX.bloodBurst(180, 58, 3);
     await CINE.bloodWipe(() => {
       DUEL.opp.gone = true;
       DUEL.corpse = true;
       DUEL.ghost = null;
-      /* the body goes to the back room INTACT. What you did shows in the
-         pool under him, not in pieces of him. */
-      DUEL.wounds = [];
+      /* THE BODY GOES TO THE BACK ROOM THE WAY YOU LEFT IT. Every hole
+         your lead put in him goes with him, and the one that finished it
+         is in his head. */
+      if (!DUEL.wounds.some(w => w.big)) DUEL.wounds.push({ x: 0, y: -40, big: true });
       DUEL.blood = [];
       G.loot.dragged = true;
       DUEL.room = 'back';
-      DUEL.pool = 14;
+      DUEL.pool = 18;
       COPS.GROUND = DUEL.FY - 8;
       E.makeMess();
     }, 120);
@@ -38310,7 +38903,43 @@ const CINE = {
      THE TWO ENDINGS.
      ============================================================ */
   async ending(kind) {
+    if (kind === 'code') return CINE.endingCode();
+    if (kind === 'rook') return CINE.endingRook();
     const P = PIX.PAL;
+    const ROOK = { key: 'rookEnd', def: HANDLER_DEF };
+    /* THE LAST SHOT OF THE TWO ENDINGS THAT LET HIM WALK: his office, his
+       window, his cigar going, and whatever he did for you on the desk */
+    const office = (what) => (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#0c0b10');
+      c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 58, seed: 17 }), 0, 0);
+      c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 5 }), 0, 76);
+      /* the window behind him, and the city in it */
+      PIX.rect(c, 110, 10, 52, 40, P.K);
+      PIX.rect(c, 112, 12, 48, 36, '#1a2230');
+      for (let i = 0; i < 9; i++) PIX.rect(c, 114 + i * 5, 30 + (i * 7) % 12, 3, 18, '#10151e');
+      for (let i = 0; i < 12; i++) PIX.rect(c, 115 + (i * 11) % 44, 32 + (i * 5) % 12, 1, 1, P.G);
+      c.drawImage(ART.desk(84, 30, 4), 24, 66);
+      c.drawImage(SCENE.rigPic(ROOK, 0, 1), 110, 34);
+      /* the cigar, going */
+      const glow = 0.6 + 0.4 * Math.sin(t * 5);
+      PIX.rect(c, 142, 52, 2, 2, 'rgba(255,120,40,' + glow.toFixed(2) + ')');
+      for (let i = 0; i < 6; i++) {
+        PIX.rect(c, 144 + Math.round(Math.sin(t * 2 + i) * 2), 48 - i * 4 - Math.round(t * 3) % 4, 2, 2,
+          'rgba(200,200,210,' + (0.22 - i * 0.03).toFixed(2) + ')');
+      }
+      if (what === 'medal') {                   /* a medal in its box, open */
+        PIX.rect(c, 40, 62, 18, 8, P.K);
+        PIX.rect(c, 41, 63, 16, 6, '#3a1418');
+        PIX.disc(c, 49, 66, 3, P.G);
+        PIX.rect(c, 47, 59, 5, 4, P.r);
+      } else {                                  /* two bunches of flowers */
+        [36, 58].forEach(fx => {
+          PIX.rect(c, fx, 58, 2, 10, '#2e5a2a');
+          PIX.disc(c, fx + 1, 56, 3, '#f4efe0');
+          PIX.disc(c, fx - 1, 54, 2, '#e8a0b8');
+        });
+      }
+    };
 
     /* --- shared: rain that can stop --- */
     const rain = (c, t, W, H, amt) => {
@@ -38473,6 +39102,7 @@ const CINE = {
       await CINE.film([
         { len: 2.4, draw: court, cap: 'THE STATE VERSUS THE BULLFROG' },
         { len: 2.6, draw: graves, cap: 'IT STOPPED RAINING' },
+        { len: 2.4, draw: office('medal'), cap: 'ROOK PINNED THE MEDAL.' },
       ], { bars: true });
       await CINE.titleBeat('CASE CLOSED', 'YOU STAYED A COP.', P.G);
     } else {
@@ -38552,9 +39182,218 @@ const CINE = {
       await CINE.film([
         { len: 2.3, draw: room, cap: 'NOBODY WROTE IT DOWN' },
         { len: 2.6, draw: chair, cap: 'SOMEBODY HAS TO RUN IT' },
+        { len: 2.4, draw: office('flowers'), cap: 'ROOK SENT FLOWERS.' },
       ], { bars: true });
       await CINE.titleBeat('CASE BURIED', 'YOU BECAME THE ADDRESS.', P.R);
     }
+  },
+
+  /* ============================================================
+     THE CODE: the room, the slide, the water.
+
+     Three shots and no words but the captions. The kill room in
+     his own basement with him on the table under the bulb, wrapped
+     tight in the sheeting he taught you to buy -- then the box out
+     of the air vent, and the last slide going into it -- then the
+     canal at four in the morning, a boat with no lights, and a
+     long bundle going over the side into water that, for once,
+     does not bring anything back at the bend.
+     ============================================================ */
+  async endingCode() {
+    const P = PIX.PAL;
+    const ROOK = { key: 'rookWrapped', def: HANDLER_DEF };
+    const room = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#0a0a0e');
+      c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 60, seed: 29 }), 0, 0);
+      c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 13 }), 0, 76);
+      /* the sheeting, floor to ceiling */
+      for (let x = 0; x < W; x += 30) {
+        PIX.rect(c, x, 0, 28, 82, 'rgba(210,222,230,.08)');
+        for (let f = 0; f < 3; f++) PIX.rect(c, x + 6 + f * 8, 2, 1, 80, 'rgba(235,245,250,.12)');
+        PIX.rect(c, x + 28, 0, 2, 82, 'rgba(150,154,158,.30)');
+      }
+      /* the bulb, and the cone of it */
+      PIX.rect(c, 90, 0, 1, 14, P.T);
+      PIX.disc(c, 90, 16, 3, P.Y);
+      c.save(); c.globalAlpha = 0.12; c.fillStyle = '#ffd75e';
+      c.beginPath(); c.moveTo(90, 16); c.lineTo(40, 96); c.lineTo(140, 96); c.closePath(); c.fill(); c.restore();
+      /* the table, and him on it, head end toward us, wrapped */
+      PIX.rect(c, 44, 66, 92, 6, P.K);
+      PIX.rect(c, 45, 67, 90, 4, '#4a4648');
+      PIX.rect(c, 50, 72, 4, 20, P.K); PIX.rect(c, 126, 72, 4, 20, P.K);
+      const head = SPR.frogCustom('rookDead', HANDLER_DEF, 'dead');
+      c.drawImage(head, 0, 0, head.width, head.height, 40, 44, 26, 24);
+      SPR.rrect(c, 60, 52, 72, 16, 6, '#26303e');           /* his coat, under it */
+      /* the plastic over the lot, cloudy, taped in three places */
+      SPR.rrect(c, 38, 44, 96, 26, 8, 'rgba(215,228,236,.30)');
+      for (let i = 0; i < 3; i++) PIX.rect(c, 70 + i * 22, 44, 4, 26, 'rgba(160,164,168,.55)');
+      for (let i = 0; i < 5; i++) PIX.rect(c, 44 + i * 18, 48 + (i % 2) * 6, 10, 1, 'rgba(255,255,255,.35)');
+      /* and red on the inside of it */
+      [[52, 58, 4], [60, 64, 3], [88, 60, 5], [48, 66, 3]].forEach(([bx, by, r]) =>
+        PIX.disc(c, bx, by, r, 'rgba(140,20,30,.55)'));
+      PIX.rect(c, 60, 70, 3, 10 + Math.round(t * 4), P.D);
+      /* you, at the foot of it */
+      c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, -1), 136, 40);
+    };
+    const box = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#0c0a0c');
+      /* the vent grille, off, and the box that was behind it */
+      PIX.rect(c, 20, 10, 44, 30, P.K);
+      for (let i = 0; i < 6; i++) PIX.rect(c, 22, 13 + i * 4, 40, 2, '#3a3a40');
+      PIX.rect(c, 46, 42, 90, 50, P.K);
+      PIX.rect(c, 48, 44, 86, 46, '#5a2a18');
+      PIX.rect(c, 48, 44, 86, 2, '#7a3a20');
+      PIX.rect(c, 52, 50, 78, 36, '#2a1208');
+      /* the slides, standing in their slots, a drop on every one */
+      const n = Math.min(24, (G.slides || 7) + 1);
+      for (let i = 0; i < n; i++) {
+        const last = i === n - 1;
+        const rise = last ? Math.max(0, 1 - t / 1.2) : 0;
+        const sx = 55 + (i % 12) * 6, sy = 52 + Math.floor(i / 12) * 17 - Math.round(rise * 26);
+        PIX.rect(c, sx, sy, 5, 15, 'rgba(210,232,240,.55)');
+        PIX.rect(c, sx, sy, 1, 15, 'rgba(255,255,255,.55)');
+        PIX.disc(c, sx + 2, sy + 9, 1, last ? P.R : P.d);
+      }
+      /* your hand, putting the last one in */
+      PIX.rect(c, 120, 12 + Math.round(Math.min(1, t / 1.2) * 22), 26, 12, '#2e7d5b');
+    };
+    const water = (c, t, W, H) => {
+      for (let y = 0; y < 60; y++) {
+        const k = y / 60;
+        PIX.rect(c, 0, y, W, 1, 'rgb(' + Math.round(10 + k * 16) + ',' + Math.round(12 + k * 18) + ',' + Math.round(20 + k * 24) + ')');
+      }
+      /* Paris, far off, with its lamps still on */
+      for (let bx = 0; bx < W; bx += 13) {
+        const bh = 8 + ((bx * 7) % 17);
+        PIX.rect(c, bx, 58 - bh, 12, bh, '#0c1018');
+        if ((bx / 13) % 3 === 1) PIX.rect(c, bx + 4, 58 - bh + 4, 2, 2, P.G);
+      }
+      PIX.rect(c, 124, 18, 3, 40, '#0c1018');                  /* the tower */
+      PIX.rect(c, 120, 40, 11, 18, '#0c1018');
+      PIX.rect(c, 0, 58, W, H - 58, '#0a1420');
+      for (let i = 0; i < 40; i++) {
+        PIX.rect(c, (i * 23 + Math.round(t * 8)) % W, 62 + (i * 7) % 40, 4 + i % 5, 1, 'rgba(120,160,200,.14)');
+      }
+      /* the boat, no lights, and the bundle going over */
+      PIX.rect(c, 50, 78, 60, 8, P.K);
+      PIX.rect(c, 52, 80, 56, 5, '#2a2018');
+      c.drawImage(SCENE.rigPic(SCENE.meDef(), 0, 1), 68, 44);
+      const sink = Math.min(1, Math.max(0, (t - 0.6) / 1.6));
+      if (sink < 1) {
+        const bx = 110 + Math.round(sink * 10), by = 80 + Math.round(sink * 18);
+        SPR.rrect(c, bx, by, 26, 8, 3, 'rgba(200,214,222,.7)');
+        PIX.rect(c, bx + 8, by, 3, 8, 'rgba(150,154,158,.8)');
+      }
+      /* and the rings where it went */
+      if (t > 1.2) {
+        const r = Math.round((t - 1.2) * 10);
+        SPR.ellipse(c, 124, 98, 8 + r, 2 + (r >> 2), 'rgba(180,210,230,.18)');
+      }
+    };
+    await CINE.film([
+      { len: 2.8, draw: room, cap: 'HE WROTE EVERY RULE.' },
+      { len: 2.6, draw: box, cap: 'ONE DROP. ONE SLIDE.' },
+      { len: 3.2, draw: water, cap: 'NOTHING COMES BACK.' },
+    ], { bars: true });
+    await CINE.titleBeat('THE CODE', 'YOU KEPT IT. HE DID NOT.', P.N);
+  },
+
+  /* ============================================================
+     AND IF HE WINS. He files you under the Bullfrog, and the
+     paper runs it on the front page.
+     ============================================================ */
+  async endingRook() {
+    const P = PIX.PAL;
+    const ROOK = { key: 'rookStand', def: HANDLER_DEF };
+    const floor = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#08080c');
+      c.drawImage(ART.wall(W, 80, { tone: 'grey', railY: 60, seed: 41 }), 0, 0);
+      c.drawImage(ART.floor(W, H - 76, { tone: 'board', seed: 2 }), 0, 76);
+      /* you, face down, and what is spreading out from under you */
+      SPR.ellipse(c, 60, 92, 30 + Math.round(t * 6), 5 + Math.round(t), P.D);
+      PIX.rect(c, 40, 86, 40, 8, P.K);
+      PIX.rect(c, 41, 87, 38, 6, '#2a2f3e');
+      PIX.disc(c, 38, 89, 5, P.K); PIX.disc(c, 38, 89, 4, '#2e7d5b');
+      /* him, over you, the cigar the only light */
+      c.drawImage(SCENE.rigPic(ROOK, 0, -1), 96, 36);
+      const glow = 0.6 + 0.4 * Math.sin(t * 6);
+      PIX.rect(c, 108, 54, 2, 2, 'rgba(255,120,40,' + glow.toFixed(2) + ')');
+      PIX.rect(c, 0, 0, W, H, 'rgba(0,0,0,' + Math.min(0.5, t * 0.15).toFixed(2) + ')');
+    };
+    const paper = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#1a1612');
+      PIX.rect(c, 26, 8, 128, 92, '#d8cdb4');
+      PIX.rect(c, 26, 8, 128, 2, '#efe6cc');
+      const head = PIXFONT.render('DETECTIVE SLAIN', { scale: 1, color: '#1a1612', shadow: null });
+      const head2 = PIXFONT.render('BY BULLFROG GANG', { scale: 1, color: '#1a1612', shadow: null });
+      c.drawImage(head, 90 - head.width / 2, 14);
+      c.drawImage(head2, 90 - head2.width / 2, 24);
+      PIX.rect(c, 32, 34, 116, 1, '#1a1612');
+      /* his photograph, shaking hands with the prefect */
+      PIX.rect(c, 32, 38, 50, 40, '#2a2620');
+      c.drawImage(SCENE.rigPic(ROOK, 0, 1), 36, 36);
+      const sub = PIXFONT.render('CAPTAIN VOWS', { scale: 1, color: '#3a342c', shadow: null });
+      const sub2 = PIXFONT.render('JUSTICE', { scale: 1, color: '#3a342c', shadow: null });
+      c.drawImage(sub, 86, 44); c.drawImage(sub2, 86, 54);
+      for (let i = 0; i < 6; i++) PIX.rect(c, 86, 66 + i * 4, 60 - (i % 3) * 8, 1, 'rgba(26,22,18,.5)');
+    };
+    await CINE.film([
+      { len: 2.8, draw: floor, cap: 'HE CLEANED UP.' },
+      { len: 2.8, draw: paper, cap: 'NOBODY ASKED.' },
+    ], { bars: true });
+    await CINE.titleBeat('CASE CLOSED', 'BY HIM.', P.R);
+  },
+
+  /* ============================================================
+     THE SECOND CUP.
+
+     The kitchen that night, from the back of the room, dark: two
+     cups on the table and an ashtray with a cigarette in it -- the
+     same three things the opening made you look at, in the same
+     place. Then close on the one that was not yours, and the crest
+     on the side of it.
+     ============================================================ */
+  async recall() {
+    const P = PIX.PAL;
+    const mug = (c, x, y, k) => {
+      PIX.rect(c, x, y, 12 * k, 13 * k, P.K);
+      PIX.rect(c, x + k, y + k, 10 * k, 11 * k, '#e8e4dc');
+      PIX.rect(c, x + k, y + k, 10 * k, k, '#ffffff');
+      PIX.rect(c, x + 11 * k, y + 3 * k, 3 * k, 6 * k, P.K);
+      PIX.rect(c, x + 11 * k, y + 4 * k, 2 * k, 4 * k, '#e8e4dc');
+      /* the crest: a blue shield with a red band, and BRIGADE under it */
+      PIX.rect(c, x + 3 * k, y + 3 * k, 6 * k, 5 * k, '#2a4a8a');
+      PIX.rect(c, x + 3 * k, y + 5 * k, 6 * k, k, P.r);
+      PIX.rect(c, x + 4 * k, y + 8 * k, 4 * k, k, '#2a4a8a');
+      PIX.rect(c, x + 2 * k, y + 10 * k, 8 * k, Math.max(1, k >> 1), '#2a4a8a');
+    };
+    const table = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#07080c');
+      PIX.rect(c, 0, 0, W, 70, '#141824');
+      PIX.rect(c, 0, 70, W, H - 70, '#0e0c10');
+      PIX.rect(c, 20, 62, 140, 6, '#3a2c1e');
+      PIX.rect(c, 20, 62, 140, 1, '#5c4630');
+      PIX.rect(c, 30, 68, 4, 30, '#1e1810'); PIX.rect(c, 146, 68, 4, 30, '#1e1810');
+      mug(c, 56, 48, 1);
+      /* ours, on its side */
+      PIX.rect(c, 80, 55, 12, 7, P.K); PIX.rect(c, 81, 56, 10, 5, '#c0b7a2');
+      PIX.rect(c, 92, 58, 10, 3, 'rgba(86,66,38,.6)');
+      c.drawImage(ART.art('ashtray', 1), 110, 54);
+      PIX.rect(c, 116, 55, 5, 2, '#e8dcc0'); PIX.rect(c, 121, 55, 2, 2, '#8a2418');
+      PIX.rect(c, 0, 0, W, H, 'rgba(40,60,120,.14)');
+    };
+    const close = (c, t, W, H) => {
+      PIX.rect(c, 0, 0, W, H, '#07080c');
+      PIX.rect(c, 0, 76, W, H - 76, '#3a2c1e');
+      const k = 4;
+      mug(c, 62, 76 - 13 * k + Math.round(Math.max(0, 1 - t) * 6), k);
+      PIX.rect(c, 0, 0, W, H, 'rgba(40,60,120,.10)');
+    };
+    await CINE.film([
+      { len: 2.4, draw: table, cap: 'TWO CUPS. ONE NOT OURS.' },
+      { len: 2.4, draw: close, cap: 'A BRIGADE MUG.' },
+      { len: 2.0, draw: close, cap: 'SIX YEARS BEFORE PARIS.' },
+    ], { bars: true });
   },
 
   /* the card between chapters: what you closed, and what is left of him */
@@ -39209,81 +40048,154 @@ const CUT = (() => {
       x: rng(), y: rng(), s: 0.10 + rng() * 0.32, ph: rng() * 9,
       r: rng() < 0.28 ? 2 : 1,
     }));
+    /* ============================================================
+       PAINTED ONCE, BREATHED EVERY FRAME.
+
+       This layer used to draw itself from scratch sixty times a
+       second: every lamp bloomed as six stacked discs, the window
+       as thirteen more, four shafts a row at a time, and the warm
+       edges thirty-four strips a side -- about five thousand
+       translucent fills a frame, each with its own freshly printed
+       rgba string. Under a slower CPU that was the kitchen at
+       seventeen frames a second.
+
+       None of it changes shape. The glow, the shafts and the edges
+       are the same pictures every frame; all that moves is the
+       swell, which is an alpha, and the sway, which is a shift. So
+       each is painted once into its own canvas and put down with
+       globalAlpha -- a handful of blits instead of five thousand
+       fills, and the same picture to within a rounding step.
+       ============================================================ */
+    const GY = -70, GH = FY + 150;
+    let glow = null;
+    const buildGlow = () => {
+      const o = ART.cv(W, GH);
+      o.c.translate(0, -GY);
+      (lights || []).forEach(L => {
+        for (let r = L.r + 26; r >= 10; r -= 5) {
+          PIX.disc(o.c, L.x, L.fy === undefined ? L.y + 20 : (L.y + L.fy) / 2, r,
+            'rgba(255,232,176,' + (0.016 * (1 - r / (L.r + 34))).toFixed(4) + ')');
+        }
+      });
+      for (let r = 74; r >= 10; r -= 5) {
+        PIX.disc(o.c, winX, 38, r,
+          'rgba(255,240,196,' + (0.020 * (1 - r / 82)).toFixed(4) + ')');
+      }
+      return o.cv;
+    };
+    /* a shaft, drawn at rest; the sway is where it is put down */
+    const SX0 = winX - 40, SW = 200;
+    let shafts = null;
+    const buildShafts = () => [0, 1, 2, 3].map(i => {
+      const o = ART.cv(SW, FY + 10);
+      const off = i * 26 - 12;
+      const a = 0.060 + i * 0.008;
+      for (let y = 14; y < FY + 8; y++) {
+        const t = (y - 14) / (FY - 8);
+        const x = winX + off + t * 96;
+        const hw = 6 + t * 11;
+        ART.px(o.c, Math.round(x - hw) - SX0, y, Math.round(hw * 2), 1,
+          'rgba(255,228,168,' + (a * (1 - t * 0.5)).toFixed(4) + ')');
+      }
+      return o.cv;
+    });
+    /* the warm edges and the veil hang off the FRAME, so they are built
+       for the width of it and rebuilt only if that changes */
+    let frameCv = null, frameVw = -1;
+    const buildFrame = (vw) => {
+      const o = ART.cv(vw, 210);
+      for (let i = 0; i < 34; i++) {
+        const a = 0.105 * Math.pow(1 - i / 34, 1.6);
+        ART.px(o.c, i, 0, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(o.c, vw - 1 - i, 0, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
+        ART.px(o.c, 0, i, vw, 1, 'rgba(158,110,34,' + (a * 0.85).toFixed(4) + ')');
+        ART.px(o.c, 0, 172 - i, vw, 1, 'rgba(96,60,16,' + (a * 0.7).toFixed(4) + ')');
+      }
+      ART.px(o.c, 0, 0, vw, 210, 'rgba(255,226,170,0.0850)');
+      return o.cv;
+    };
+    /* and the haze band: one column of it, stretched across */
+    const bandCv = ART.cv(1, 44);
+    for (let i = -22; i < 22; i++) {
+      ART.px(bandCv.c, 0, i + 22, 1, 1,
+        'rgba(255,236,186,' + (0.055 * (1 - Math.abs(i) / 22)).toFixed(4) + ')');
+    }
+
+    /* ============================================================
+       AND COMPOSED AT THE SIZE OF THE ROOM, NOT THE SCREEN.
+
+       Painting the pieces once was half of it. The other half is
+       where they are put down: straight onto the scene buffer, each
+       one a big translucent blit at three buffer pixels to the room
+       pixel -- nine times the blending of the room grid, four times
+       over for the shafts. Every piece of this layer is drawn on the
+       room grid anyway, so the frame's worth of it is composed into
+       one small room-resolution canvas and that goes down in a
+       single blit. Nine times less blending for the same picture.
+       ============================================================ */
+    let view = null;
     return (c, T, cam, vw) => {
       /* the swell: everything below rides on it */
       const swell = 0.84 + 0.16 * Math.sin(T * 0.62);
+      if (!glow) glow = buildGlow();
+      if (!shafts) shafts = buildShafts();
+      if (vw !== frameVw) { frameCv = buildFrame(vw); frameVw = vw; }
 
-      /* ---- THE HALATION. The whole reason this reads as a memory. ---- */
+      /* ---- THE HALATION. The whole reason this reads as a memory. ----
+         Additive, so it has to land on the room itself and cannot be
+         composed ahead of time into a transparent layer. */
+      const camr = Math.round(cam);
       if (bloom) {
         const was = c.globalCompositeOperation;
         c.globalCompositeOperation = 'lighter';
         c.globalAlpha = 0.30 * swell;
-        c.drawImage(bloom, 0, 0);
+        /* only the part you can see: the bloom is the whole room */
+        const bx = Math.max(0, camr), bw = Math.min(bloom.width - bx, Math.ceil(vw) + 1);
+        if (bw > 0) c.drawImage(bloom, bx, 0, bw, bloom.height, bx, 0, bw, bloom.height);
         c.globalAlpha = 1;
         c.globalCompositeOperation = was;
       }
 
-      /* ---- EVERY LAMP IN THE ROOM BLOOMS ----
+      const VW = Math.ceil(vw) + 1, VH = 210, VY = -40;
+      if (!view || view.cv.width !== VW) view = ART.cv(VW, VH);
+      const v = view.c;
+      v.setTransform(1, 0, 0, 1, 0, 0);
+      v.clearRect(0, 0, VW, VH);
+      v.translate(-camr, -VY);
+
+      /* ---- EVERY LAMP IN THE ROOM BLOOMS, and the window hardest ----
          The first pass hung all of this off the window, and the window is
          at x 60 in a room 740 wide: stand anywhere but the sink and the
-         whole layer was off screen, which measured at plus three on the
-         mean pixel -- i.e. nothing. The room has its light sources
-         declared already; bloom every one of them and the morning is soft
-         wherever you are standing in it. */
-      (lights || []).forEach(L => {
-        for (let r = L.r + 26; r >= 10; r -= 5) {
-          PIX.disc(c, L.x, L.fy === undefined ? L.y + 20 : (L.y + L.fy) / 2, r,
-            'rgba(255,232,176,' + (0.016 * swell * (1 - r / (L.r + 34))).toFixed(4) + ')');
-        }
-      });
-      /* and the window hardest of all, because it is the sun */
-      for (let r = 74; r >= 10; r -= 5) {
-        PIX.disc(c, winX, 38, r,
-          'rgba(255,240,196,' + (0.020 * swell * (1 - r / 82)).toFixed(4) + ')');
-      }
+         whole layer was off screen. The room has its light sources
+         declared already; every one of them blooms. */
+      v.globalAlpha = swell;
+      const gx = Math.max(0, camr), gw = Math.min(glow.width - gx, VW);
+      if (gw > 0) v.drawImage(glow, gx, 0, gw, glow.height, gx, GY, gw, glow.height);
 
       /* ---- four shafts out of it, on the slant, breathing ---- */
       for (let i = 0; i < 4; i++) {
-        const off = i * 26 - 12;
-        const sway = Math.sin(T * 0.33 + i * 1.7) * 3;
-        const a = (0.060 + i * 0.008) * swell;
-        for (let y = 14; y < FY + 8; y++) {
-          const t = (y - 14) / (FY - 8);
-          const x = winX + off + sway + t * 96;
-          const hw = 6 + t * 11;
-          ART.px(c, Math.round(x - hw), y, Math.round(hw * 2), 1,
-            'rgba(255,228,168,' + (a * (1 - t * 0.5)).toFixed(4) + ')');
-        }
-      }
-
-      /* ---- the dust, which is what makes air visible ---- */
-      for (const m of motes) {
-        const y = FY + 10 - ((m.y * (FY + 24) + T * m.s * 24) % (FY + 24));
-        const x = cam + ((m.x * vw + Math.sin(T * 0.4 + m.ph) * 8) % vw);
-        ART.px(c, Math.round(x), Math.round(y), m.r, m.r,
-          'rgba(255,244,212,' + (0.34 * swell).toFixed(3) + ')');
+        v.drawImage(shafts[i], SX0 + Math.round(Math.sin(T * 0.33 + i * 1.7) * 3), 0);
       }
 
       /* ---- A ROW OF SOFT LIGHT, WALKING UP THE FRAME ----
          The one thing that says "this is being remembered" rather than
-         "this is warm": a band of haze drifting slowly upward, the way a
-         memory of a room is brighter in the part you are looking at. */
+         "this is warm": a band of haze drifting slowly upward. */
       const band = FY + 30 - ((T * 9) % (FY + 70));
-      for (let i = -22; i < 22; i++) {
-        const a = 0.055 * (1 - Math.abs(i) / 22) * swell;
-        ART.px(c, cam, Math.round(band + i), vw, 1, 'rgba(255,236,186,' + a.toFixed(4) + ')');
+      v.drawImage(bandCv.cv, 0, 0, 1, 44, camr, Math.round(band) - 22, VW, 44);
+
+      /* ---- and the edges go warm and soft, not black, under one veil ---- */
+      v.drawImage(frameCv, camr, VY);
+      v.globalAlpha = 1;
+
+      /* ---- the dust, which is what makes air visible ---- */
+      const dust = 'rgba(255,244,212,' + (0.34 * swell).toFixed(3) + ')';
+      for (const m of motes) {
+        const y = FY + 10 - ((m.y * (FY + 24) + T * m.s * 24) % (FY + 24));
+        const x = cam + ((m.x * vw + Math.sin(T * 0.4 + m.ph) * 8) % vw);
+        ART.px(v, Math.round(x), Math.round(y), m.r, m.r, dust);
       }
 
-      /* ---- and the edges go warm and soft, not black ---- */
-      for (let i = 0; i < 34; i++) {
-        const a = 0.105 * Math.pow(1 - i / 34, 1.6) * swell;
-        ART.px(c, cam + i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
-        ART.px(c, cam + vw - 1 - i, -40, 1, 210, 'rgba(126,80,20,' + a.toFixed(4) + ')');
-        ART.px(c, cam, -40 + i, vw, 1, 'rgba(158,110,34,' + (a * 0.85).toFixed(4) + ')');
-        ART.px(c, cam, 132 - i, vw, 1, 'rgba(96,60,16,' + (a * 0.7).toFixed(4) + ')');
-      }
-      /* one veil over the lot, so nothing in it is quite sharp */
-      ART.px(c, cam, -40, vw, 210, 'rgba(255,226,170,' + (0.085 * swell).toFixed(4) + ')');
+      c.drawImage(view.cv, camr, VY);
     };
   }
 
@@ -39622,10 +40534,15 @@ const CUT = (() => {
       px(c, TABLE - 28, FY - 35, 14, 1, '#fbf7ec');
       px(c, TABLE + 2, FY - 35, 14, 3, '#f0e8d4');
       px(c, TABLE + 2, FY - 35, 14, 1, '#fbf7ec');
-      if (st.plate) {                                   /* the boy's egg on it */
-        px(c, TABLE + 5, FY - 37, 8, 3, '#f6e8a8');
-        px(c, TABLE + 7, FY - 36, 3, 2, '#f0a83c');
+      /* the toast rack at the end, and Cleo's cup by her place */
+      px(c, TABLE - 32, FY - 36, 8, 3, '#b8b0a0');
+      for (let i = 0; i < 3; i++) {
+        px(c, TABLE - 31 + i * 3, FY - 40, 2, 5, '#c89448');
+        px(c, TABLE - 31 + i * 3, FY - 40, 2, 1, '#e0b060');
       }
+      px(c, TABLE - 23, FY - 38, 5, 4, '#f0e8d4');
+      px(c, TABLE - 23, FY - 38, 5, 1, '#8a5a3a');
+      px(c, TABLE - 18, FY - 37, 1, 2, '#f0e8d4');
       px(c, TABLE - 10, FY - 42, 9, 7, '#dce4e8');      /* the milk jug */
       px(c, TABLE - 10, FY - 42, 9, 1, '#f0f4f6');
       px(c, TABLE - 1, FY - 40, 3, 3, '#dce4e8');
@@ -39961,6 +40878,43 @@ const CUT = (() => {
 
     /* ---- and what is in FRONT of everybody ---- */
     const fore = (c) => {
+      /* ============================================================
+         HIS PLACE, and what is on it -- IN FRONT OF HIM.
+
+         It was painted on the table top behind the cast, which is
+         where a place setting goes, and he is sitting at it: so his
+         own body covered every pixel of his breakfast and he was a
+         boy eating out of thin air. What is on the table in front of
+         a person is in front of that person. It goes in this layer.
+
+         Before the eggs, a bowl: cereal and milk, and the spoon is in
+         his hand, not the bowl. After, his egg on a plate, the yolk
+         already broken where he got to it, and soldiers of toast --
+         three on the plate and the one he is eating. And juice,
+         because he is six.
+         ============================================================ */
+      const BX = TABLE - 14;
+      if (st.plate) {
+        SPR.ellipse(c, BX + 6, FY - 33, 9, 2, '#d8d0bc');              /* the plate */
+        SPR.ellipse(c, BX + 6, FY - 34, 8, 2, '#fbf7ec');
+        SPR.ellipse(c, BX + 7, FY - 35, 5, 1, '#f6f0dc');              /* the white */
+        PIX.disc(c, BX + 7, FY - 35, 1, '#f0a83c');                    /* the yolk */
+        px(c, BX + 8, FY - 35, 3, 1, '#e8942c');                        /* where it ran */
+        for (let i = 0; i < 3; i++) {                                   /* soldiers */
+          px(c, BX + i * 3, FY - 37, 2, 3, '#c89448');
+          px(c, BX + i * 3, FY - 37, 2, 1, '#e0b060');
+        }
+      } else {
+        px(c, BX, FY - 37, 12, 1, '#7aaade');                           /* his bowl */
+        px(c, BX, FY - 36, 12, 2, '#5a8ac4');
+        px(c, BX + 1, FY - 34, 10, 1, '#4a78b0');
+        px(c, BX + 3, FY - 33, 6, 1, '#3a6090');
+        px(c, BX + 1, FY - 38, 10, 1, '#f4eedc');                       /* milk */
+        for (let i = 0; i < 5; i++) px(c, BX + 1 + i * 2, FY - 38 - (i % 2), 1, 1, '#d8a44a');
+      }
+      px(c, BX + 15, FY - 39, 4, 7, 'rgba(220,236,244,.8)');            /* his juice */
+      px(c, BX + 15, FY - 37, 4, 5, '#f0a030');
+      px(c, BX + 15, FY - 39, 1, 7, 'rgba(255,255,255,.5)');
       /* the near edge of the breakfast table: a checked cloth hanging over
          it and two legs under. A frog standing behind this line has his
          legs hidden by it, which is what sitting at a table looks like
@@ -40051,7 +41005,9 @@ const CUT = (() => {
            reach his egg. */
         { id: 'boy', x: TABLE - 6, y: FY - 20, face: -1, key: 'cutBoy',
           def: BOY_DEF, scale: 0.66, still: true, profile: false,
-          job: st.pan ? 'eat' : 'read', mood: 'pleased',
+          /* EATING, not reading. Cereal while the eggs are on, and once
+             one is on his plate, toast soldiers in the yolk. */
+          job: st.plate ? 'dip' : 'spoon', mood: 'pleased',
           label: 'TOBIAS', hint: 'TALK',
           tag: 'TOBIAS', tagCol: PIX.PAL.O },
       ],
@@ -40391,10 +41347,15 @@ const CUT = (() => {
       px(c, TABLE - 2, FY - 30, 5, 28, '#2e2216');
       px(c, TABLE + 47, FY - 30, 5, 28, '#2e2216');
       px(c, TABLE + 4, FY - 16, 44, 3, '#241a10');
-      /* two cups. One of them has been over for six hours. */
-      px(c, TABLE + 4, FY - 45, 9, 7, '#c0b7a2');
-      px(c, TABLE + 4, FY - 45, 9, 1, '#ded4bc');
-      px(c, TABLE + 13, FY - 43, 2, 4, '#a8a08c');
+      /* two cups. One of them has been over for six hours. The other one
+         is not a cup from this house at all -- white, heavier, and a small
+         blue shield on the side of it. Nobody looks twice at it the first
+         time. The finale does. */
+      px(c, TABLE + 4, FY - 45, 9, 7, '#e8e4dc');
+      px(c, TABLE + 4, FY - 45, 9, 1, '#ffffff');
+      px(c, TABLE + 13, FY - 43, 2, 4, '#c8c4bc');
+      px(c, TABLE + 6, FY - 43, 3, 3, '#2a4a8a');
+      px(c, TABLE + 6, FY - 42, 3, 1, '#d13b45');
       px(c, TABLE + 20, FY - 41, 10, 3, '#c0b7a2');              /* over on its side */
       px(c, TABLE + 20, FY - 41, 10, 1, '#ded4bc');
       px(c, TABLE + 30, FY - 40, 9, 2, 'rgba(86,66,38,.6)');     /* and what came out */
@@ -43789,7 +44750,7 @@ const LOOT = {
     (res.learned || []).forEach((t, i) => setTimeout(() => UI.tellToast(t), 300 + i * 700));
     const fresh = META.check();
     fresh.forEach((t, i) => setTimeout(() => UI.unlockToast(t), 600 + i * 700));
-    if (res.finale) { SCENE.close(); DUEL.stop(); STORY.endgame(); return; }
+    if (res.finale) { SCENE.close(); DUEL.stop(); STORY.endgame(res.finale); return; }
     if (res.heatDue) { LOOT.heatOverlay(res.heatDue); return; }
     /* back to the bullpen: pin what you took to the board, get the next lead */
     UI.goto(() => { G.phase = 'precinct'; });
@@ -44133,12 +45094,22 @@ const TUTOR = {
 
   /* ---------------- the opening, before the first board ---------------- */
 
+  /* ============================================================
+     THE CODE.
+
+     He hands you a file and four rules, and you will keep every
+     one of them for the rest of the game -- and every one of them
+     reads differently the second time, once you know who wrote
+     them and why. "Six years I put into that family" is the line
+     the whole twist turns on: he is not talking about theirs.
+     ============================================================ */
   OPENING: [
     'SIX YEARS I PUT INTO THAT FAMILY, DETECTIVE. THE COURTS HANDED THEM BACK EVERY TIME.',
     'AFTER WHAT THEY DID TO YOUR HOUSE, NOBODY HERE IS GOING TO ASK HOW YOU CLOSE A CASE.',
-    'WORK THE FILE. PICK HIM OUT OF THE LINE. BE SURE.',
-    'BE SURE. THE WRONG NAME AND THE RIGHT FROG HEARS YOU COMING.',
-    'AND CLEAN UP AFTER YOURSELF. IF I HAVE TO SEE IT, I HAVE TO REPORT IT.',
+    'SO YOU WORK TO A CODE. MINE. ONE. BE SURE. PICK HIM OUT OF THE LINE BEFORE YOU PULL.',
+    'TWO. ONLY THE ONES WHO HAVE IT COMING. THE WRONG NAME AND THE RIGHT FROG HEARS YOU.',
+    'THREE. CLEAN UP AFTER YOURSELF. IF I HAVE TO SEE IT, I HAVE TO REPORT IT.',
+    'FOUR. NEVER GET CAUGHT. THAT ONE IS FOR BOTH OF US.',
   ],
 
   /* ---------------- the three things that keep you alive ---------------- */
@@ -44663,7 +45634,8 @@ const TALK = {
     if (TALK.busy || !G.duel || G.duel.over) return;
     const opp = G.duel.opp;
     const hurt = opp.hp <= Math.ceil(opp.maxHP / 3);
-    const pool = opp.boss ? MARK_LINES.boss
+    const pool = opp.rook ? MARK_LINES.rook
+      : opp.boss ? MARK_LINES.boss
       : hurt ? MARK_LINES.hurt
         : G.hearts <= 2 ? MARK_LINES.winning : MARK_LINES.takes;
     await TALK.line(TALK.pick(pool), 1250);
@@ -44672,7 +45644,7 @@ const TALK = {
   /* and after it goes off, one way or the other */
   async after(kind) {
     if (TALK.busy || !G.duel || G.duel.over) return;
-    const pool = MARK_LINES[kind];
+    const pool = G.duel.opp.rook ? MARK_LINES.rook : MARK_LINES[kind];
     if (!pool) return;
     await TALK.line(TALK.pick(pool), 1050);
   },
@@ -44688,7 +45660,7 @@ const TALK = {
          every taunt of every duel is wallpaper; a vein from a lieutenant,
          or from anybody at all once you are down to your last two, is
          somebody enjoying himself. */
-      const needled = opp.boss || (G.hearts || 6) <= 2;
+      const needled = opp.boss || opp.rook || (G.hearts || 6) <= 2;
       if (needled && typeof TOON !== 'undefined' && typeof DUEL !== 'undefined' && DUEL.screenXY) {
         const sp = DUEL.screenXY(180, 40);
         if (sp) TOON.mark(sp.x, sp.y, 'vein',

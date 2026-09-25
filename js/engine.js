@@ -632,6 +632,8 @@ const E = {
      who still thinks it is a case. */
   onRunOver() {
     META.save();
+    /* there is no ward after this one: he cleans up after himself */
+    if (G.duel && G.duel.opp && G.duel.opp.rook) return STORY.rookWins();
     return STORY.rushToWard();
   },
 
@@ -784,6 +786,8 @@ const E = {
     /* the Bullfrog himself, on the floor of his own flat: that is the end of
        the story, and the player picks which end it is */
     if (G.duel.opp.boss === 'owner') return { learned, finale: true };
+    /* and the man who wrote the Code, on the plastic in his own basement */
+    if (G.duel.opp.rook) return { learned, finale: 'code' };
     if (G.blind === 2) return { learned, heatDue: E.heatDue() };
     E.nextBlind();
     return { learned };

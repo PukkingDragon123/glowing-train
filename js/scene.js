@@ -22,6 +22,8 @@ const SCENE = (() => {
   let back = null;               // painted backdrop canvas
   let backBand = '';             // the hour it was painted at
   let cv, ctx, K = 4;            // display canvas + integer scale
+  let R = 4;                     // buffer pixels per room pixel (see scale)
+  let fullBuf = false;           // the harness can ask for the old full-size buffer
   let raf = null, t0 = 0, last = 0;
   let cam = 0, camWant = 0, drag = null;
   /* THE WALKER HAS TWO AXES NOW.
@@ -270,16 +272,37 @@ const SCENE = (() => {
       while (k > 2 && w / k < 190) k--;
     }
     K = k;
-    cv.width = Math.ceil(w / K) * K;
+    /* ============================================================
+       THE BUFFER IS NOT THE SCREEN.
+
+       The canvas used to be exactly as big as the window -- 1280 by
+       800 on an ordinary laptop -- and every room pixel was filled as
+       a six-by-six block of it, every frame: the room, the cast, the
+       rain, the lamp cones, the grime. Profiled under a slower CPU
+       that came to seventeen frames a second in the kitchen and
+       forty in a street, and nearly all of it was the browser
+       rasterising blocks it was about to throw away.
+
+       The finest thing ever drawn in a room is the rig, at FOOT rig
+       pixels to the room pixel. So the buffer only needs THAT many
+       pixels per room pixel -- three, at six on screen -- and the
+       browser blows it up the rest of the way with nearest-neighbour,
+       which it does for free on the compositor. Same picture, pixel
+       for pixel. A quarter of the fill.
+       ============================================================ */
+    R = fullBuf ? K : FOOT / lodFor();
+    if (K % R) R = K;
+    const cols = Math.ceil(w / K);
+    cv.width = cols * R;
     /* How many world rows the frame can actually hold. More than the room
        is headroom and gets a ceiling; fewer means the bottom strip of
        foreground floor goes over the edge, which nobody misses — cropping
        the TOP would take the lamps, the signs and the arches with it. */
     const rows = Math.max(60, Math.floor(h / K));
     const worldH = Math.min(rows, H + ceilMax());
-    cv.height = worldH * K;
-    cv.style.width = cv.width + 'px';
-    cv.style.height = cv.height + 'px';
+    cv.height = worldH * R;
+    cv.style.width = cols * K + 'px';
+    cv.style.height = worldH * K + 'px';
     /* SETTING canvas.width WIPES THE CONTEXT — including the one flag that
        matters here. Without this the whole room is drawn through a bilinear
        filter at K times its size, which is exactly what "the scene is
@@ -288,8 +311,24 @@ const SCENE = (() => {
     oy = Math.max(0, worldH - H);    // the room stands on the bottom edge
   }
 
-  function viewW() { return Math.ceil(cv.width / K); }
-  function viewH() { return Math.floor(cv.height / K); }
+  function viewW() { return Math.ceil(cv.width / R); }
+  /* ============================================================
+     A ROOM-WIDE PICTURE, BUT ONLY THE PART IN FRAME.
+
+     The painted room is baked once at its full width -- 740 pixels
+     for the house -- and it was blitted whole every frame, and the
+     foreground with it: seven and a half screens of pixels a frame
+     to show one. The frame holds a third of the kitchen. Asking for
+     just those columns and rows is the same picture for a third of
+     the work, and on a machine that uploads the source it is the
+     difference between shipping a bitmap and shipping a crop.
+     ============================================================ */
+  function blitRoom(c, src, dy) {
+    const x0 = Math.max(0, Math.round(cam)), w = Math.min(src.width - x0, viewW() + 1);
+    const y0 = Math.max(0, -oy - dy), h = Math.min(src.height - y0, viewH() + 1);
+    if (w > 0 && h > 0) c.drawImage(src, x0, y0, w, h, x0, dy + y0, w, h);
+  }
+  function viewH() { return Math.floor(cv.height / R); }
 
   function open(d) {
     close();
@@ -1519,7 +1558,7 @@ const SCENE = (() => {
     c.imageSmoothingEnabled = false;
     c.clearRect(0, 0, cv.width, cv.height);
     c.save();
-    c.scale(K, K);
+    c.scale(R, R);
     /* THE CEILING. Whatever headroom the frame has over the room gets a
        real ceiling in it: joists, the cords the lamps hang off, and the
        dark these places keep up there. */
@@ -1595,7 +1634,7 @@ const SCENE = (() => {
 
     c.translate(-Math.round(cam), oy);
     /* the painted room, pulled up so its row 0 lands on the frame's row 0 */
-    c.drawImage(back, 0, -PAD);
+    blitRoom(c, back, -PAD);
 
     /* ---- THE BACKGROUND, seen through the holes in the room ----
        A wall with nothing behind it is a flat. Every room declares the
@@ -1731,7 +1770,7 @@ const SCENE = (() => {
     const foreY = (def.foreY === undefined ? def.floorY + 0.25 : def.foreY);
     if (fore || def.onPaintFront) {
       cast.push({ y: foreY, draw: () => {
-        if (fore) c.drawImage(fore, 0, -PAD);
+        if (fore) blitRoom(c, fore, -PAD);
         if (def.onPaintFront) def.onPaintFront(c, T);
       } });
     }
@@ -1906,7 +1945,8 @@ const SCENE = (() => {
     {
       const fo = foreCv(def, vw2);
       const off = -Math.round(cam * 1.3) % Math.max(1, fo.width - vw2);
-      c.drawImage(fo, Math.round(cam) + off, -oy);
+      const fw = Math.min(fo.width + off, vw2 + 1);
+      if (fw > 0) c.drawImage(fo, -off, 0, fw, fo.height, Math.round(cam), -oy, fw, fo.height);
     }
 
     /* ============================================================
@@ -2000,7 +2040,7 @@ const SCENE = (() => {
     const show = hover || near;
     if (show && !busy) plate(show);
     else { const pl = document.getElementById('scene-plate'); if (pl) pl.style.display = 'none'; }
-    if (def.onHud) def.onHud(c, K, viewW(), cam);
+    if (def.onHud) def.onHud(c, R, viewW(), cam);
   }
 
   /* ============================================================
@@ -2137,6 +2177,9 @@ const SCENE = (() => {
     read:   { per: 3.40, body: 'lean', prop: 'paper', arm: 'hold' },
     drink:  { per: 3.80, body: 'raise', prop: 'glass' },
     eat:    { per: 2.20, body: 'raise', prop: 'bite' },
+    /* a boy at breakfast: cereal while he waits, then his egg */
+    spoon:  { per: 1.65, body: 'raise', prop: 'spoon', chew: true },
+    dip:    { per: 2.05, body: 'raise', prop: 'soldier', chew: true },
     smoke:  { per: 4.60, body: 'raise', prop: 'cig' },
     wipe:   { per: 1.20, body: 'swing', prop: 'rag' },
     sweep:  { per: 1.70, body: 'swing', prop: 'broom' },
@@ -2176,6 +2219,37 @@ const SCENE = (() => {
       px(x, y, 5, 1, '#e8f2f6');
       px(x + 1, y + 2, 3, 4, '#8a5a1a');
       px(x, y + 6, 5, 1, 'rgba(0,0,0,.35)');
+    } else if (kind === 'spoon' || kind === 'soldier') {
+      /* WHAT A SMALL FROG EATS WITH, and what falls off it. The load is
+         on it going up and gone coming down; the crumbs leave his mouth on
+         the bite and fall to the cloth. */
+      const full = ph < 0.44;
+      if (kind === 'spoon') {
+        px(x - dir * 4, y + 1, 5, 1, '#1c1a24');            /* the handle, inked */
+        px(x - dir * 4, y, 5, 1, '#c8ced4');
+        const sx = x + (dir > 0 ? 1 : -4);
+        px(sx - 1, y - 1, 5, 3, '#1c1a24');                 /* the bowl of it */
+        px(sx, y - 1, 3, 2, '#e8eef2');
+        if (full) {
+          px(sx, y - 2, 3, 1, '#f4eedc');                   /* milk */
+          px(sx + 1, y - 2, 1, 1, '#d8a44a');               /* a flake */
+        }
+      } else {
+        /* a toast soldier, the end of it dipped in yolk */
+        const tx = x - dir * 2;
+        px(tx - 1, y - 3, 4, 8, '#1c1a24');
+        px(tx, y - 2, 2, 6, '#c89448');
+        px(tx, y - 2, 2, 1, '#e0b060');
+        if (full) px(tx, y - 3, 2, 2, '#f0a83c');
+        else px(tx, y - 2, 2, 1, '#8a5a2a');                /* bitten */
+      }
+      if (ph > 0.46 && ph < 0.80) {
+        const f = (ph - 0.46) / 0.34;
+        for (let i = 0; i < 3; i++) {
+          px(x + dir * (i - 1) * 2, Math.round(y - 3 + f * f * (10 + i * 3)), 1, 1,
+            kind === 'spoon' ? 'rgba(244,238,220,.8)' : 'rgba(200,148,72,.9)');
+        }
+      }
     } else if (kind === 'bite') {
       px(x, y, 7, 5, '#c9a24a');
       px(x, y, 7, 1, '#e2c274');
@@ -2208,7 +2282,7 @@ const SCENE = (() => {
       : (a.face === undefined ? -1 : a.face);
     /* an actor mid-line wears the talking face; the rest of the time he
        wears whatever his mood does when it is left alone */
-    const ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
+    let ex = a.expr || (a.talking ? 'talk' : faceOf(a.mood, T, Math.round(a.x)));
     /* ============================================================
        NO PROFILE. THE SIDE VIEW IS GONE.
 
@@ -2245,6 +2319,21 @@ const SCENE = (() => {
       else if (job.body === 'raise') {
         lift = ph < 0.34 ? Math.round(ph * 9) : (ph < 0.5 ? 3 : 0);
         arm = ph > 0.20 && ph < 0.62 ? 'up' : 'reach';
+        /* ============================================================
+           AND HE CHEWS.
+
+           Eating used to be an arm going up and down with a lump in
+           the hand, and a face that never moved -- which is a frog
+           bringing a sandwich near his mouth and thinking about it.
+           Once the spoon has been to his mouth the jaw works: open,
+           shut, open, shut, on the quick count a small child chews
+           at, until the hand goes back down for more. Nobody is
+           talking; the face is the talking face because a mouth that
+           opens is a mouth that opens.
+           ============================================================ */
+        if (job.chew && !a.expr && !a.talking && ph > 0.42 && ph < 0.96) {
+          ex = Math.floor(T * 7.5) % 2 ? 'talk' : 'talk2';
+        }
       } else if (job.body === 'swing') {
         /* SIX FRAMES OF ONE SWEEP, out and back. This used to flip between
            two poses whose wrists sit eleven pixels apart on the y, so the
@@ -2640,12 +2729,24 @@ const SCENE = (() => {
     p.style.top = Math.round(Math.max(6, sy - p.offsetHeight)) + 'px';
   }
 
+  /* ============================================================
+     NOBODY IS LOOKING AT THE ROOM.
+
+     A first-person shot -- the eggs, the taps, the lock -- goes up
+     as an opaque card over the whole window, and the room under it
+     went on drawing itself sixty times a second, dream layer and
+     all, behind a picture that hid every pixel of it. The breakfast
+     was two full scenes a frame. While something covers the room it
+     keeps its clock and its walkers moving, and skips the paint.
+     ============================================================ */
+  let covered = 0;
   function frame(now) {
     raf = requestAnimationFrame(frame);
     if (!def) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     step(dt);
+    if (covered > 0) return;
     draw(now);
   }
 
@@ -2666,12 +2767,19 @@ const SCENE = (() => {
     /* the ?debug harness pokes these so a screenshot can catch the vermin */
     /* what the frame is actually rendering at, for the resolution probe */
     debugRes() {
-      return { K, H, FOOT, down: lodFor(), oy, cam, viewW: viewW(), viewH: viewH(),
+      return { K, R, H, FOOT, down: lodFor(), oy, cam, viewW: viewW(), viewH: viewH(),
         floorY: def ? def.floorY : null, roomW: def ? def.w : null };
     },
     debugRats(n) { for (let i = 0; i < (n || 1); i++) spawnRat(); },
     /* the harness compares the shot at both available scales */
     debugForceK(k) { forceK = k || 0; scale(); },
+    /* something opaque is over the whole room; counted, so two covers
+       nested inside each other do not uncover it early */
+    cover(on) { covered = Math.max(0, covered + (on ? 1 : -1)); },
+    covered() { return covered > 0; },
+    /* the old buffer, the size of the window, so a probe can prove the
+       quarter-size one draws the same picture */
+    debugFullBuffer(on) { fullBuf = !!on; scale(); },
     /* the live gait, so a probe can prove the bounce is actually moving him
        rather than take a picture of one frame of it and guess */
     debugGait() {

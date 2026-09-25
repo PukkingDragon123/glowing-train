@@ -111,6 +111,25 @@ const PLACE_CHAT = {
   ],
 };
 
+/* ============================================================
+   THE VOICE THAT IS NOT TALKING.
+
+   After each one there is a line, in the lobed balloon, that is
+   nobody's but yours -- cold, and counting. It is also where the
+   game plants what the finale pays off: the Driver laughs that you
+   work for the wrong frog, the Enforcer swears he never saw your
+   door, and the captain always has an answer for both.
+   ============================================================ */
+const PASSENGER = {
+  1: 'ONE. HE HAD ENVELOPES IN HIS COAT AND NOTHING IN HIS EYES. NEITHER DO I, NOW.',
+  2: 'TWO. INK ON HIS FINGERS. RED ON MINE. THE LEDGER BALANCES...',
+  3: 'THREE. HE LAUGHED AT THE END. HE SAID I WAS WORKING FOR THE WRONG FROG...',
+  4: 'FOUR. SIX YEARS I WAITED FOR THIS ONE. IT TOOK FOUR MINUTES...',
+  5: 'FIVE. FAMILY. I HAD ONE OF THOSE ONCE. FOR A WHILE...',
+  6: 'SIX. THE CAPTAIN SAID HE WAS AT MY DOOR. HE SWORE ON HIS KNEES HE NEVER SAW IT...',
+  7: 'SEVEN. THE CAPTAIN SAYS THEY ALL LIE AT THE END. THE CAPTAIN WOULD KNOW...',
+};
+
 const STORY = {
 
   /* ================= state ================= */
@@ -191,6 +210,18 @@ const STORY = {
       from: Math.min(a.from, SCENE.def.w - 10),
       to, ms: 1700,
     });
+    /* back in the bullpen with another one behind you: the slide, and the
+       voice */
+    if (kind === 'precinct' && G.passenger) {
+      const line = G.passenger;
+      G.passenger = null;
+      if (typeof UI !== 'undefined' && UI.stampSmall) {
+        UI.stampSmall(G.slides === 1 ? 'ONE DROP. ONE SLIDE. THE BOX GOES BACK IN THE VENT.'
+          : 'SLIDE ' + G.slides + ' IN THE BOX');
+      }
+      await TUTOR.say(line, { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t,
+        kind: 'think', hold: 3400, top: true });
+    }
   },
 
   /* ============================================================
@@ -2091,6 +2122,12 @@ const STORY = {
   advance() {
     const ch = STORY.chapter();
     STORY.note('CLOSED: ' + ch.title + '.');
+    /* ONE DROP, ONE SLIDE. The same thing off every one of them: a drop
+       of him on a glass slide, and the slide in a box in the air vent of
+       a flat nobody visits. Bookkeeping only here -- the voice that
+       counts them is said when you are back in the bullpen. */
+    G.slides = (G.slides || 0) + 1;
+    G.passenger = PASSENGER[ch.id] || null;
     G.chapter = Math.min(CHAPTERS.length, (G.chapter || 1) + 1);
     G.hadCoffee = false;
     G.mayTalked = false;
@@ -2169,35 +2206,130 @@ const STORY = {
     UI.render();
   },
 
-  /* he is down and it is the last chapter: the player picks */
-  async endgame() {
+  /* ============================================================
+     HE IS DOWN, AND HE HAS SOMETHING TO SAY.
+
+     The Bullfrog on the floor of his own flat is where the file was
+     always going to end. It is where the story turns over instead.
+     He did not take them. Six years ago you shot a boy in a doorway,
+     a runner for him, and the boy's name was Rook -- and the boy's
+     father took a son for a son, left you a cigarette to follow to
+     Paris, signed you into his own precinct, and gave you a Code to
+     kill the rest of the Bullfrog's family by. Everything you did
+     since the letter, you did for him.
+
+     The proof was in your kitchen that night: two cups, and one of
+     them not yours. A Brigade mug, six years before you ever saw
+     Paris. Then there are three ways out of the room, and one of
+     them is back down the stairs to him.
+     ============================================================ */
+  async endgame(kind) {
+    if (kind === 'code') {
+      G.ending = 'code';
+      META.bump('wins');
+      STORY.note('ENDING: HE WENT INTO THE CANAL IN HIS OWN PLASTIC.');
+      META.save();
+      G.wonRun = true;
+      await CINE.ending('code');
+      G.phase = 'ending';
+      UI.render();
+      return;
+    }
+    const BULL = { name: 'THE BULLFROG', nameCol: PIX.PAL.R, rim: PIX.PAL.d };
+    const ME = { name: 'YOU', nameCol: PIX.PAL.F, rim: PIX.PAL.t };
+    CINE.letterbox(true);
+    await TUTOR.say('I DID NOT TAKE YOUR FAMILY, DETECTIVE.', BULL);
+    await TUTOR.say('I KNEW YOU WERE COMING. I DID NOT KNOW WHY UNTIL YOU KILLED MY DRIVER.', BULL);
+    await TUTOR.say('SIX YEARS AGO YOU SHOT A BOY IN A DOORWAY. HE RAN MY ENVELOPES. HIS NAME WAS ROOK.', BULL);
+    await TUTOR.say('HIS FATHER NEVER FORGAVE ME FOR HIRING HIM. OR YOU FOR THE DOORWAY.', BULL);
+    await TUTOR.say('A SON FOR A SON. AND THEN HE NEEDED SOMEBODY WHO WOULD KILL THE REST OF US FOR HIM.', BULL);
+    await TUTOR.say('WHO SENT YOU TO PARIS? WHO LEFT YOU THE CIGARETTE?', BULL);
+    await TUTOR.say('THE SECOND CUP...', Object.assign({ kind: 'think' }, ME));
+    CINE.letterbox(false);
+    await CINE.recall();
+    CINE.letterbox(true);
+    await TUTOR.say('SIX YEARS I PUT INTO THAT FAMILY. HE WAS NOT TALKING ABOUT THEIRS...',
+      Object.assign({ kind: 'think' }, ME));
+    await TUTOR.say('ONE. BE SURE. TWO. ONLY THE ONES WHO HAVE IT COMING.', ME);
+    await TUTOR.say('I AM SURE.', ME);
+    CINE.letterbox(false);
+    STORY.note('HE WAS NEVER THE ONE. THE CAPTAIN WAS.');
+
     const clean = STORY.canFinish() && !G.badgePulled;
     let idx = -1;
     while (idx < 0) {
       idx = await CINE.pick({
         head: 'HE IS ON THE FLOOR AND STILL BREATHING',
-        sub: clean ? 'THE FILE IS IN YOUR COAT AND THE BADGE IS STILL YOURS'
-                   : 'NO FILE. NO BADGE. NOBODY WAITING ON PAPERWORK.',
+        sub: clean ? 'THE FILE IS IN YOUR COAT. THE MAN WHO GAVE IT TO YOU IS FOUR STREETS AWAY'
+                   : 'NO FILE. NO BADGE. AND THE MAN WHO WROTE THE CODE IS FOUR STREETS AWAY',
         cancel: false,
         items: [
-          { label: 'THE BADGE', sub: clean ? 'CUFF HIM' : 'NOTHING TO CHARGE HIM WITH',
+          { label: 'THE BADGE', sub: clean ? 'CUFF HIM. ROOK WALKS' : 'NOTHING TO CHARGE HIM WITH',
             art: ART.art('badge', 3), dim: !clean },
-          { label: 'THE BULLET', sub: 'WHAT HE DID AT YOUR DOOR',
+          { label: 'THE BULLET', sub: 'FINISH WHAT ROOK STARTED',
+            art: ART.art('gunprop', 3) },
+          { label: 'THE CODE', sub: 'HE WROTE IT. HE CAN DIE BY IT',
             art: ART.art('gunprop', 3) },
         ],
       });
     }
+    if (idx === 2) { await STORY.rookDuel(); return; }
     if (idx === 0 && clean) {
       G.ending = 'good';
       META.bump('wins');
-      STORY.note('ENDING: HE WENT DOWN IN A COURTROOM.');
+      STORY.note('ENDING: HE WENT DOWN IN A COURTROOM. ROOK PINNED THE MEDAL ON YOU.');
     } else {
       G.ending = 'bad';
-      STORY.note('ENDING: HE WENT DOWN IN THE DARK.');
+      STORY.note('ENDING: HE WENT DOWN IN THE DARK. ROOK SENT FLOWERS.');
     }
     META.save();
     G.wonRun = true;
     await CINE.ending(G.ending);
+    G.phase = 'ending';
+    UI.render();
+  },
+
+  /* ============================================================
+     THE PRECINCT, AFTER HOURS.
+
+     The last table in the game is in his own basement, with his
+     own cigar going, and he is the only frog in Paris who knows
+     every rule you play by -- because he wrote them. It is a duel
+     like any other, and the only one with nothing after it: win
+     and he goes onto the plastic, lose and he files you under the
+     Bullfrog and goes home.
+     ============================================================ */
+  async rookDuel() {
+    SCENE.close();
+    await CINE.driveTo('THE PRECINCT. AFTER HOURS.');
+    G.blind = 2;
+    E.startBlind();
+    const o = G.duel.opp;
+    Object.assign(o, {
+      name: 'CAPTAIN ROOK', boss: null, frog: null, rook: true,
+      def: Object.assign({}, HANDLER_DEF), traits: [],
+      hp: 10, maxHP: 10, aggro: 0.66,
+    });
+    G.hearts = E.maxHP();
+    G.chapter = CHAPTERS.length;
+    G.phase = 'blind';
+    E.sitDown();
+    UI.render();
+    await U.sleep(900);
+    if (typeof TALK !== 'undefined') await TALK.line('YOU TOOK YOUR TIME, SON. SIT DOWN.', 2600);
+  },
+
+  /* he wins, and he cleans up after himself */
+  async rookWins() {
+    /* the death card plays first; wait for the screen to be ours */
+    await U.sleep(1600);
+    for (let i = 0; i < 120 && CINE.busy; i++) await U.sleep(100);
+    SCENE.close();
+    if (typeof DUEL !== 'undefined' && DUEL.stop) DUEL.stop();
+    G.ending = 'rook';
+    STORY.note('ENDING: THE CAPTAIN CLEANED UP AFTER HIMSELF.');
+    META.save();
+    await CINE.ending('rook');
     G.phase = 'ending';
     UI.render();
   },

@@ -852,6 +852,62 @@ KWWK..KWWK..KWWK
       });
     },
 
+    /* ============================================================
+       BLOOD ON THE LENS.
+
+       When it is close enough, it is on the camera. Splats land on
+       the glass -- a hard-edged blot with a darker rim and a few
+       flecks round it -- and the heavy ones RUN: a drip crawls down
+       from the bottom of each, thins, and stops. Then the whole lot
+       fades, because a lens gets wiped. Drawn in screen pixels at a
+       blow-up of the room's own, so it is as chunky as the room is.
+       ============================================================ */
+    lens(n, o) {
+      o = o || {};
+      const w = window.innerWidth, h = window.innerHeight;
+      const k = o.k || 4;
+      const out = [];
+      for (let i = 0; i < (n || 4); i++) {
+        const rng = U.mulberry32((Math.random() * 1e9) | 0);
+        const cx = o.x !== undefined ? o.x + (rng() - 0.5) * w * 0.5 : rng() * w;
+        const cy = o.y !== undefined ? o.y + (rng() - 0.5) * h * 0.4 : rng() * h * 0.8;
+        const r = (o.r || 5) * (0.5 + rng());
+        const lobes = [];
+        for (let j = 0; j < 6; j++) {
+          const a = rng() * Math.PI * 2, dd = r * (0.3 + rng() * 0.7);
+          lobes.push({ x: Math.cos(a) * dd, y: Math.sin(a) * dd * 0.8, r: r * (0.35 + rng() * 0.5) });
+        }
+        const flecks = [];
+        for (let j = 0; j < 7; j++) {
+          const a = rng() * Math.PI * 2, dd = r * (1.3 + rng() * 1.6);
+          flecks.push({ x: Math.cos(a) * dd, y: Math.sin(a) * dd, r: rng() < 0.3 ? 1 : 0 });
+        }
+        const drips = [];
+        const nd = r > 4 ? 1 + Math.floor(rng() * 3) : 0;
+        for (let j = 0; j < nd; j++) drips.push({ x: (rng() - 0.5) * r * 1.4, len: 6 + rng() * 22, w: rng() < 0.5 ? 1 : 2 });
+        out.push(push({
+          x: cx, y: cy, life: o.life || (2600 + rng() * 1600), pop: false,
+          paint(c, it, u) {
+            c.save();
+            c.translate(Math.round(it.x), Math.round(it.y));
+            c.scale(k, k);
+            const run = Math.min(1, it.t / 1400);
+            drips.forEach(d => {
+              const L = Math.round(d.len * run);
+              PIX.rect(c, Math.round(d.x), 0, d.w, L, '#5a0c14');
+              PIX.rect(c, Math.round(d.x) - (d.w > 1 ? 0 : 0), L, d.w + 1, 2, '#6e1018');
+            });
+            lobes.forEach(l => PIX.disc(c, Math.round(l.x), Math.round(l.y), Math.round(l.r) + 1, '#3a060c'));
+            lobes.forEach(l => PIX.disc(c, Math.round(l.x), Math.round(l.y), Math.round(l.r), '#8c1420'));
+            lobes.slice(0, 2).forEach(l => PIX.rect(c, Math.round(l.x - l.r * 0.4), Math.round(l.y - l.r * 0.5), 1, 1, 'rgba(255,180,170,.55)'));
+            flecks.forEach(f => PIX.disc(c, Math.round(f.x), Math.round(f.y), f.r, '#7a1018'));
+            c.restore();
+          },
+        }));
+      }
+      return out;
+    },
+
     /* a scene change takes its marks with it */
     clear() { items.length = 0; if (lc && lay) lc.clearRect(0, 0, lay.width, lay.height); },
     live() { return items.length; },
